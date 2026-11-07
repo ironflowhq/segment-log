@@ -1,0 +1,8 @@
+[package]
+name = "segment-log-core"
+description = "Placeholder: embedded append-only segment log for Ironflow (not yet usable)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"

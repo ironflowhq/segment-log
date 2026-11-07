@@ -1,0 +1,8 @@
+[package]
+name = "segment-log-server"
+description = "Placeholder: socket server for the Ironflow segment log (not yet usable)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
