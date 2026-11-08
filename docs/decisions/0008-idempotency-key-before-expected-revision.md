@@ -17,7 +17,7 @@ enforced_by: none
 
 Source: the order of checks and the key lifetime are from the reviewed design (decision 4 and "Records"). The rules for a whole submit and the vocabulary `Empty` / `At(n)` are new in this repository and not reviewed.
 
-Recovery keeps an unacknowledged valid suffix ([ADR 0003](0003-recovery-keeps-the-checksum-valid-prefix.md)), so a caller that got no ack must retry. A retry usually carries a stale expected revision, because the first attempt may have succeeded. If the revision check runs first, the retry fails, and the caller cannot tell "my write landed" from "someone else wrote".
+Recovery keeps an unacknowledged valid suffix ([ADR 0003](0003-recovery-keeps-the-checksum-valid-prefix.md)), so a caller with an unknown outcome needs to determine whether its records survived. For fully keyed submits, a retry can resolve survivors. It usually carries a stale expected revision, because the first attempt may have succeeded. If the revision check runs first, the retry fails, and the caller cannot tell "my write landed" from "someone else wrote".
 
 The source design adopted no name for "this stream has no records" (no `NoStream`, no "empty", no "must exist", no `Any`). It also left open how a check sees an earlier record in the same submit. A first append needs some precondition, so this ADR has to choose one, and the PRD lists the choice as open item 2.
 
@@ -70,7 +70,7 @@ The exact signatures are in [api.md](../architecture/api.md).
 
 ## Enforcement
 
-None yet. Oracle check 4 in [testing.md](../architecture/testing.md#the-oracle) will check that a retry with the same keys resolves to the original result. The model test in [testing.md](../architecture/testing.md#property-and-unit-tests) will compare key and revision results with an in-memory model.
+None yet. Oracle check 4 in [testing.md](../architecture/testing.md#the-oracle) will check that a fully keyed survivor resolves to its original result. Absent records still follow expected-revision checks, and known rejections have no success guarantee. The M2 model test in [testing.md](../architecture/testing.md#property-and-unit-tests) will compare key and revision results with an in-memory model.
 
 ## Revisit if
 

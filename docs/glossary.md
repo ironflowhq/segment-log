@@ -15,7 +15,7 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Group** | The records of one or more submits that the writer writes as one frame and makes durable with one `fsync`. A group is not a transaction. |
 | **Frame** | The on-disk form of a group, a footer, a seal, or a locator: length, CRC (cyclic redundancy check), body. See [format.md](architecture/format.md). |
 | **Linger** | How long the writer waits for more submits after the first one, before it writes the group. |
-| **Byte cap** | The largest group, in bytes. The writer writes the group when the next submit would go over it. |
+| **Byte cap** | The largest encoded group body, in bytes, including its body header and record entries. It excludes the frame envelope. The writer writes the group when the next new submit would go over it. |
 | **Admission byte budget** | The limit on byte charges reserved for accepted, unanswered requests, including queued submits, writer groups and matched retry waiters. A reservation lasts until the request is answered ([ADR 0025](decisions/0025-admission-byte-reservations-live-until-the-answer.md)). |
 | **Admission charge** | A request's retained-allocation capacities plus explicit bookkeeping and result allowances under [the API formula](architecture/api.md#admission-charge). It includes unused input capacity and stays fixed until the answer. It is separate from encoded size and total resident memory ([ADR 0026](decisions/0026-admission-charges-retained-allocations.md)). |
 | **Log offset** | The index of a record across the whole log, starting at 0. Assigned by the writer. Monotonic. The tail cursor. |
@@ -28,16 +28,17 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Idempotency key** | The caller's dedupe token for a record, scoped to the whole log ([ADR 0019](decisions/0019-idempotency-keys-are-scoped-to-the-whole-log.md)). |
 | **Watermark** | The log offset just past the last durable record. The writer moves it only after an `fsync` returns success. Readers and acknowledgments never go past it. |
 | **Waiting cursor** | A consumer-owned position and policy for waiting until new durable records can be read. It lives above the core and is distinct from waiting for a submit's result through `Pending::wait` ([ADR 0035](decisions/0035-waiting-cursors-belong-above-the-core.md)). |
-| **Acknowledgment (ack)** | The success result of a submit. It means the group is durable, if the storage meets its [contract](architecture/overview.md#storage-contract). |
-| **Indeterminate** | The result when the writer cannot tell whether a submit is durable, for example after an `fsync` error. The caller must reopen and retry with the same keys. |
-| **Poisoned** | The writer's state after an I/O error. It refuses every submit until the log is reopened. |
+| **Acknowledgment (ack)** | The success result of a submit. Its records are durable, if the storage meets its [contract](architecture/overview.md#storage-contract). A deduplicated retry can confirm records from several original groups. |
+| **Indeterminate** | The result when the writer cannot tell whether a submit is durable, for example after an `fsync` error or a lost writer reply. Reopen before resolving the outcome. Fully keyed requests can confirm survivors by retry; [mixed and unkeyed requests](architecture/api.md#retry-after-an-unknown-outcome) have narrower guarantees. |
+| **Poisoned** | The writer's state after a write-path I/O or integrity failure, or after the writer stops unexpectedly. It accepts no more submits until the log is reopened. |
 | **Torn tail** | Bytes at the end of the active segment that do not form a complete, CRC-valid frame. Recovery removes them. |
 | **Writer epoch** | A number that each opening writer gets: one more than the highest epoch in the newest segment. Every frame stores it, inside the span that the CRC covers. |
 | **Log id** | A random id that the log gets at creation. Every segment header stores it. |
 | **Footer** | A frame near the end of a sealed segment. It lists each stream in that segment: stream id, last revision, last log offset, last file position. |
 | **Locator** | The last frame of a sealed segment (from M4). It holds the footer's file position, so that open can find the footer from the end of the file. |
 | **Log reader** | A read-only handle (`LogReader`) on a sealed log. It takes no lock and writes nothing. |
-| **Accept queue** | The bounded queue between callers and the writer thread. When it is full, `append` returns `Full`. |
+| **Accept queue** | The bounded queue between callers and the writer thread. Its count limit and the admission byte budget can each cause a capacity refusal with `Full`. |
+| **Full** | An immediate refusal when a size-eligible request lacks current queue capacity or admission byte budget. It retains no reservation and appends nothing. |
 | **Tail map** | The in-memory map from stream id to the stream's latest revision and log offset. A cache. |
 | **Sparse index** | A file that maps some log offsets to file positions in one segment. A cache. Not needed in M1. |
 | **Cache** | Any state that the log can rebuild by reading segments. A cache is never the only copy of a fact. |
@@ -109,7 +110,8 @@ after open:        [ok frame][ok frame][ok frame]
                                                  └ torn tail (bad length or CRC): cut off
 
 each open:  writer epoch = highest epoch seen + 1
-caller after Indeterminate: reopen, retry with the same idempotency key
+caller after Indeterminate: reopen, resolve keyed records with the same keys
+mixed or unkeyed original: follow the API's limited retry guarantees
 ```
 
 ### Caches and sealed-log reading

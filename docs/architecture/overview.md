@@ -67,16 +67,16 @@ These rules hold at every point. Code and tests must not break them. A change to
 
 ## The write path
 
-1. A caller sends a submit. Before queuing it, `append` rejects a repeated key within the submit with `Invalid` ([ADR 0020](../decisions/0020-reject-repeated-keys-within-a-submit.md)). Exceeding the group cap or entire admission budget, or charge overflow, gets `TooLarge` before capacity reservation ([ADR 0028](../decisions/0028-too-large-is-distinct-from-temporary-full.md)). A size-eligible submit must reserve its admission charge before acceptance. Unavailable current queue capacity or byte budget gives `Full` immediately and retains no reservation ([ADR 0025](../decisions/0025-admission-byte-reservations-live-until-the-answer.md)).
-2. The writer takes the first submit from the queue. Then it takes more, until the linger time ends or the next submit would make the group bigger than the byte cap. A submit bigger than the byte cap gets `TooLarge` at admission.
+1. A caller sends a submit. `append` follows the [admission order](api.md#admission-and-answer-ordering): structural validation, permanent size eligibility, writer state, then current capacity. Repeated keys get `Invalid`. Exceeding the standalone group-body cap or entire admission budget, or charge overflow, gets `TooLarge` before capacity reservation. A size-eligible request reserves its charge before acceptance. Unavailable current queue capacity or byte budget gives `Full` and retains no reservation.
+2. The writer takes submits in admission order and classifies each under step 3 while it gathers a group. It stops when linger ends or the next new submit would exceed the group-body cap. Count one body header and only the new records that will be written. Rejections and fully matched retries contribute no encoded bytes. A new submit that would exceed the current group's cap waits for the next group without reordering. A group with no new records causes no frame write or flush.
 3. For each submit, in order of admission, the writer:
    1. checks the idempotency keys ([ADR 0008](../decisions/0008-idempotency-key-before-expected-revision.md)). A key that identifies a pending or durable record with a different stream or payload rejects the entire submit with `KeyConflict` at its first conflicting record ([ADR 0022](../decisions/0022-reject-conflicting-key-reuse-from-m1.md)). Otherwise, a mix of matching existing records and new or unkeyed records rejects the entire submit with `PartialRetry` ([ADR 0023](../decisions/0023-reject-mixed-reused-and-new-records-from-m1.md)). Neither rejection consumes an offset or revision or poisons the writer. If every record has a key and matches a pending or durable record with the same stream and payload, it is a fully deduplicated retry regardless of original grouping ([ADR 0024](../decisions/0024-fully-matching-retries-ignore-original-grouping.md)). The writer adds no records, skips expected revisions, and returns original positions in request order once all referenced records are durable. Pending matches attach the retry as a waiter for their group.
    2. checks each expected revision against the tail map and the pending changes from earlier submits in this group. A mismatch rejects the whole submit, and the submit uses no offset.
    3. assigns log offsets and revisions, and adds the records to the group and to the pending changes.
 4. The writer writes the group as one frame at the end of the active segment, then calls `fsync` once.
 5. If the `fsync` succeeds: the writer applies the pending changes to the tail map and the key map, moves the watermark, and acks each new submit and each matched retry waiting for this group. Retry waiters get original positions in request order with `deduplicated: true`.
-6. If any write or `fsync` fails: the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). Each new submit in the group and each matched retry depending on it get `Indeterminate`, including retries with some already durable matches. Each submit still in the queue, and each later one, gets `Poisoned`.
-7. If the active segment is at or over the roll size, the writer rolls before it starts the next group. From M4, the writer also rolls before a group whose new streams would make the segment's footer pass the frame limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
+6. If a write, `fsync`, or durable-key lookup read or frame validation fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). Every unfinished request in the current group, including the lookup request and matched retry waiters, gets `Indeterminate`. This includes a group not yet written. Each request still queued or deferred to the next group, and each later admitted request, gets `Poisoned`. Results already finalized under the [answer-ordering rules](api.md#admission-and-answer-ordering) stay fixed. No later write or flush is attempted on the failed handle.
+7. From M3, if the active segment is at or over the roll size, the writer rolls before it starts the next group. From M4, the writer also rolls before a group whose new streams would make the segment's footer pass the frame limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
 
 A fully matching retry in step 3.1 may select subsets, reorder records, combine original submits, or mix pending and durable matches. All-durable matches need no new `fsync`. Pending matches wait for their existing group's flush and watermark publication. Normal admission limits still apply. Retry success confirms durability, not that the records originally committed atomically together. New writes retain their all-or-nothing submit guarantee.
 
@@ -87,10 +87,10 @@ Each accepted request holds its admission byte reservation through processing an
 The protocol is the indeterminate suffix ([ADR 0003](../decisions/0003-recovery-keeps-the-checksum-valid-prefix.md)). The contract is the one a disk already gives:
 
 - An ack means the group survived, if the storage meets its [contract](#storage-contract).
-- No ack means the group might have survived.
+- An unknown outcome means the group might have survived. A terminal rejection confirms that the request appended nothing.
 - Recovery cannot tell if the previous process saw `fsync` return.
 - Recovery removes a torn tail. It keeps the contiguous valid prefix, and that prefix sets the watermark. The log makes the kept prefix durable before it publishes the watermark ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)).
-- A retry with the same key and the same bytes finds the survivor and returns its original log offset and revision.
+- A fully keyed retry with the same stream ids and payloads finds surviving records and returns their original log offsets and revisions. [Mixed and unkeyed submissions](api.md#retry-after-an-unknown-outcome) have narrower retry guarantees.
 
 ![One group's life with four crash points. A crash before the write leaves the group absent. A crash during the fsync keeps a whole frame and cuts a torn one. A crash after the fsync and before the ack keeps the group, though the caller saw no ack. A crash after the ack keeps it. In the first three cases, the caller retries with the same key and gets the original offset if the group survived.](../images/what-an-ack-means.svg)
 
@@ -102,10 +102,15 @@ A stricter rule, "ignore a CRC-valid suffix after the last acknowledged group", 
 
 The flowchart shows the decisions in the steps below. The steps are the rule. If the two disagree, the steps win, and the flowchart must be fixed in the same change.
 
+The flowchart shows the cumulative algorithm. The [API's option and layout checks](api.md#opening-a-directory) run before recovery mutations. M1 and M2 handle one segment without roll. M3 adds the older-segment scans and roll recovery in the steps below. M4 adds the footer, seal and locator branches.
+
 ```mermaid
 flowchart TD
-    lock["1. Take LOCK without waiting"] -->|another process holds it| locked(["Locked"])
-    lock --> torn{"2. Newest file no longer than a header,<br/>with a bad header CRC?"}
+    prepare["Validate options;<br/>create only the final directory component"] --> lock["1. Take LOCK without waiting"]
+    lock -->|another process holds it| locked(["Locked"])
+    lock --> layout{"M1–M2: multiple segment files?"}
+    layout -->|yes| unsupported(["Io: Unsupported"])
+    layout -->|no, or from M3| torn{"2. Newest file no longer than a header,<br/>with a bad header CRC?"}
     torn -->|yes| del["Delete it, fsync the directory"]
     torn -->|no| any{"3. Any segment left?"}
     del --> any
@@ -131,13 +136,13 @@ flowchart TD
     next --> run
 ```
 
-1. If the directory does not exist, create it. Take the OS lock on `LOCK` without waiting. If another process holds it, fail with `Locked`.
+1. If the directory does not exist, create only its final component under an already durable parent. Missing ancestors fail with `Io`; do not create them recursively. Take the OS lock on `LOCK` without waiting. If another process holds it, fail with `Locked`. Before recovery mutations, apply the milestone layout check in [api.md](api.md#opening-a-directory).
 2. List the segment files and sort them by base offset. If the newest file is no longer than a segment header and its header CRC does not match, delete it and `fsync` the directory. A crash while creating the segment left it, and it holds no record, because the writer appends frames to a new segment only after its header and its directory entry are durable. Any other bad header is an error, never a deletion.
 3. If no segment is left, create the log. Take the `log_id` from the storage trait's random bytes. Write segment `00000000000000000000.seg` with its header and epoch 1, `sync_data` it, and `fsync` the directory.
 4. Check every header against the [rules for readers](format.md#rules-for-readers). A bad header fails with `Corrupt`. A different log id fails with `LogIdMismatch`.
-5. Read every segment except the newest. Each one is sealed. From M4, its successor proves that its real locator is its last frame. Until M4, scan all of its frames to rebuild the caches. From M4, read only its locator and its footer. Any frame that is not valid fails with `Corrupt`. Recovery never truncates a sealed segment. Each sealed segment's next unused offset must equal the next segment's base offset. A gap fails with `Gap`.
+5. From M3, read every segment except the newest. Each one is sealed. From M4, its successor proves that its real locator is its last frame. In M3, scan all of its frames to rebuild the caches. From M4, read only its locator and its footer, plus any separate lookup metadata chosen under [PRD item 1](../prd.md#open-items). The segment-file read limit still applies. Any frame that is not valid fails with `Corrupt`. Recovery never truncates a sealed segment. Each sealed segment's next unused offset must equal the next segment's base offset. A gap fails with `Gap`.
 6. Scan the newest segment forward from the header under the [rules for readers](format.md#rules-for-readers). From M4, the newest segment is sealed only if the scan reaches the end of the file through the closing run: a footer, then a seal frame if there is one, then a locator that points to that footer. The last bytes alone never decide this, because the tail of a record's payload can look like a locator.
-7. If the scan stopped before the end of the file, look at the file's last bytes. If they form a valid locator that points to a valid footer frame, fail with `Corrupt`, because this is a sealed segment with a bad frame and recovery never truncates one. Otherwise truncate the file where the scan stopped. Closing frames that this drops were written before an `fsync` that never returned, so no ack depends on them.
+7. If the scan stopped before the end of the file, apply the following check from M4 before changing the file. If its last bytes form a valid locator that points to a valid footer frame, fail with `Corrupt`, because this is a sealed segment with a bad frame and recovery never truncates one. Otherwise, or before M4, truncate where the scan stopped. Closing frames that truncation drops were written before an `fsync` that never returned, so no ack depends on them.
 8. Make the end of the newest segment durable ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)). Write back, at the same position and with the same bytes, the trailing closing frames if the segment ends with any. Otherwise, write back the last group frame. If it has neither, write back the header. Then call `sync_all` on the segment, and `fsync` the log directory and its parent. If a call fails, open fails with `Io`.
 9. Set the writer epoch to one more than the highest epoch in the newest segment's header and its kept frames ([ADR 0018](../decisions/0018-writer-epoch-from-the-segments.md)). If step 3 created the log, the writer epoch is 1, as in its header.
 10. Decide the state from the end of the newest segment:

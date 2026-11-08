@@ -43,6 +43,7 @@ We accept that a caller without a known head must read `stream_head` and handle 
 
 ## Consequences
 
+- Revision checks and `WrongRevision.actual` include earlier valid pending records. Public `stream_head` reports only durable records. Reading it gives a durable starting point, not a guarantee that a concurrent append or a pending revision will leave the next precondition valid. A rejection does not acknowledge the pending records it observed.
 - PRD open item 2 is resolved for M1. Missing-stream state and revision zero remain distinct.
 - This decision adds no API variant or on-disk field. It adopts the existing API sketch's choices.
 - The public API remains provisional overall. This decision settles M1's preconditions rather than freezing every signature.
