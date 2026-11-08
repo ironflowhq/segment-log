@@ -16,7 +16,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # ubuntu-latest warns until 2026-11-19 while GitHub moves that label to 26.04.
+        # Pin 24.04 so the job stays on the image that is already green.
+        # https://github.com/actions/runner-images/issues/14748
+        os: [ubuntu-24.04, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
