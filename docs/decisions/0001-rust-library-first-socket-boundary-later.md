@@ -42,6 +42,8 @@ We will build a Rust library first and add the socket server later, as a separat
 
 ## Consequences
 
+- [ADR 0034](0034-m6-builds-unix-socket-before-vsock.md) sets M6 implementation order to Unix socket first, then vsock, using a shared protocol. Both remain in M6, and protocol selection stays a separate M6 ADR.
+- [ADR 0033](0033-deployment-owns-volumes-and-reader-handoff.md) assigns volume provisioning, mounts, preservation and reader handoff to the deployment layer. The embedded core works on a supplied directory; concrete integration details remain pre-M6 work.
 - All of M1–M5 is library work and tests.
 - The socket protocol is a later decision, with its own ADR.
 - Callers in Rust can link the core crate directly.

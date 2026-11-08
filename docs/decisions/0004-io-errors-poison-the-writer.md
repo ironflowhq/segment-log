@@ -48,6 +48,7 @@ The caller must drop the log and open it again. Recovery then keeps the valid pr
 
 ## Consequences
 
+- [ADR 0021](0021-exact-pending-retries-wait-for-the-original.md) clarifies that a retry matched to an in-flight submit gets `Indeterminate` if the original does. Requests still in the queue get `Poisoned` as before.
 - `Indeterminate` is a normal result that callers must handle: reopen, then retry with the same keys.
 - The crash tests inject `fsync` errors, short writes and `ENOSPC` ([testing.md](../architecture/testing.md)).
 

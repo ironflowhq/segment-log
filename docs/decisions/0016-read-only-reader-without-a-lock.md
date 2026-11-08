@@ -48,6 +48,7 @@ We will add a separate `LogReader` type for sealed logs only, with no lock and n
 
 ## Consequences
 
+- [ADR 0033](0033-deployment-owns-volumes-and-reader-handoff.md) assigns the post-guest reader component and volume access to the deployment layer. Concrete paths and components remain pre-M6 choices. The sealed-reader and writable-recovery distinction is unchanged.
 - To read a crashed guest's log, open it with `SegmentLog::open` on a writable volume and call `seal`. Recovery makes the tail durable first.
 - The reader uses only the read calls of the storage trait.
 - The tests open a reader on storage that refuses every write, open two readers at once, and check that an unsealed log fails with `NotSealed`.

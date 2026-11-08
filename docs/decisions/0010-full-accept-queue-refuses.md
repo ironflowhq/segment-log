@@ -37,12 +37,14 @@ We will refuse an append at once with `Full` when the accept queue is full (opti
 
 ## Consequences
 
-- The queue capacity limits the number of submits, not their bytes, so it does not by itself limit memory. That is PRD open item 10.
+- [ADR 0028](0028-too-large-is-distinct-from-temporary-full.md) limits `Full` to temporary capacity exhaustion of size-eligible requests. Impossible size fits and charge overflow get `TooLarge` before capacity reservation.
+- [ADR 0025](0025-admission-byte-reservations-live-until-the-answer.md) adds a configurable byte budget alongside queue-count capacity from M1. Byte reservations last until the request is answered, including grouped requests and matched retry waiters.
+- Queue capacity still counts queued submits. [ADR 0026](0026-admission-charges-retained-allocations.md) defines retained-allocation charges. [ADR 0027](0027-default-admission-budget-is-an-accounting-ceiling.md) sets the initial default. ADR 0028 resolves requests that cannot fit it.
 - A caller that wants to wait builds that on top, for example with a backoff.
 
 ## Enforcement
 
-None yet. A unit test that fills the queue and expects `Full` would enforce it. [testing.md](../architecture/testing.md) does not list one yet.
+None yet. The M1 admission-budget cases in [testing.md](../architecture/testing.md#property-and-unit-tests) will check immediate `Full` when either limit prevents admission.
 
 ## Revisit if
 

@@ -2,6 +2,18 @@
 
 Status: provisional. This is the M1–M4 target for `segment-log-core`. Names can change during implementation. A change in behavior needs an ADR. This file is the only source for the public signatures and the default values.
 
+## Milestone availability
+
+The sketch below describes the cumulative target. Implement each behavior in its milestone; later features are not M1 requirements.
+
+| From milestone | Behavior |
+| --- | --- |
+| M1 | `SegmentLog::open`, `append`, `watermark`, bounded `read`, `stream_head`, `Pending::wait`, and writer-draining `Drop`. Expected revisions, key matching, recovery, poisoning and admission limits follow the accepted rules below. |
+| M3 | Segment roll and the effect of `roll_bytes`. M1 remains single-segment without roll. |
+| M4 | `seal`, `LogReader`, sealed-log read-only open, footers and locators, and optimized retained-key lookup with its chosen key-cache memory budget. |
+
+## Target signatures and defaults
+
 ```rust
 use std::path::Path;
 use std::time::Duration;
@@ -14,10 +26,12 @@ pub struct Options {
     pub linger: Duration,          // default 1 ms
     /// Largest group body in bytes. A submit that cannot fit alone gets TooLarge.
     pub group_byte_cap: usize,     // default 1 MiB; at most the group body limit in format.md
-    /// Roll the active segment when it reaches this size.
+    /// From M3, roll the active segment when it reaches this size.
     pub roll_bytes: u64,           // default 64 MiB; at most the roll size limit in format.md
     /// Submits the accept queue holds before append returns Full.
     pub queue_capacity: usize,     // default 4096
+    /// Accounting ceiling for accepted, unanswered requests, including retry waiters.
+    pub pending_byte_budget: usize, // default 16 MiB; retained-allocation charges
 }
 
 impl Default for Options { /* the defaults above */ }
@@ -32,7 +46,9 @@ impl SegmentLog {
     pub fn open(dir: impl AsRef<Path>, options: Options) -> Result<SegmentLog, OpenError>;
 
     /// Puts the submit in the accept queue and returns at once.
-    /// Never blocks on a full queue.
+    /// Never waits for queue capacity or admission byte budget.
+    /// Rejects repeated keys within the submit with Invalid before queuing it.
+    /// Returns TooLarge for an impossible size fit or charge overflow.
     pub fn append(&self, submit: Submit) -> Result<Pending, AppendError>;
 
     /// The offset just past the last durable record.
@@ -72,18 +88,21 @@ impl LogReader {
 }
 
 pub struct Submit {
-    /// At least one record. The log commits all of them or none.
+    /// At least one record. New records commit all or none.
+    /// A fully deduplicated retry only confirms existing durable records.
+    /// Present keys must be distinct within the submit.
     pub records: Vec<NewRecord>,
 }
 
 pub struct NewRecord {
     pub stream: Vec<u8>,                 // within the stream id limit in format.md
     pub expected: ExpectedRevision,
-    pub key: Option<Vec<u8>>,            // within the key limit in format.md when present
+    /// Scoped to the whole log. Within the key limit in format.md when present.
+    pub key: Option<Vec<u8>>,
     pub payload: Vec<u8>,
 }
 
-/// Provisional vocabulary (ADR 0008). There is no Any.
+/// M1 preconditions (ADR 0030). There is no unconditional Any variant.
 pub enum ExpectedRevision {
     /// The stream has no records. A successful append gets revision 0.
     Empty,
@@ -91,7 +110,7 @@ pub enum ExpectedRevision {
     At(Revision),
 }
 
-/// The handle for one submit in the queue.
+/// The result handle for a submit, including a matched pending retry.
 pub struct Pending { /* … */ }
 
 impl Pending {
@@ -102,8 +121,10 @@ impl Pending {
 
 pub struct Committed {
     /// One entry for each record, in submit order.
+    /// A retry's original positions need not have increasing offsets.
     pub records: Vec<Position>,
-    /// True when every key matched durable records and nothing was appended.
+    /// True when the submit reused original records and appended nothing.
+    /// Those records are durable before this result is returned.
     pub deduplicated: bool,
 }
 
@@ -127,9 +148,9 @@ pub struct StreamHead {
 
 /// Returned at once by append. Nothing was queued.
 pub enum AppendError {
-    Full,                  // the accept queue is full
-    TooLarge,              // the submit cannot fit in one group
-    Invalid(&'static str), // empty submit, or a field outside its limits
+    Full,                  // size-eligible submit lacks current queue or byte capacity
+    TooLarge,              // exceeds group cap or total byte budget, or charge overflows
+    Invalid(&'static str), // empty submit, repeated key, or a field outside its limits
     Sealed,                // seal has started or finished
     Poisoned,              // an earlier I/O error; reopen the log
 }
@@ -139,12 +160,15 @@ pub enum CommitError {
     /// Record `index` had the wrong expected revision. `actual` is None when
     /// the stream has no records. Nothing was appended. No offset was used.
     WrongRevision { index: usize, actual: Option<Revision> },
-    /// Record `index` has a key that matches a durable record with different bytes.
+    /// First record in submit order whose key matches a pending or durable
+    /// record with a different stream or payload. The whole submit is rejected.
     KeyConflict { index: usize },
-    /// Some keys in the submit matched durable records and others did not.
+    /// A matching pending or durable record is mixed with a new or unkeyed
+    /// record. The whole submit is rejected. KeyConflict takes precedence.
     PartialRetry,
     /// An I/O error happened while this submit was in flight. It might be
     /// durable. Reopen the log and retry with the same keys.
+    /// Also returned to a retry matched to that in-flight submit.
     Indeterminate,
     /// The writer was poisoned before it wrote this submit. Nothing was
     /// written. Reopen the log and retry.
@@ -168,20 +192,52 @@ pub enum SealError { Poisoned, Io(std::io::Error) }
 
 ## Behavior notes
 
-- **Same bytes.** For a key match, "same bytes" means the same stream id and the same payload. The expected revision is not compared, because a retry usually carries a stale one. The writer reads the original record from its segment to compare. It does not trust a hash.
-- **Retry of a whole submit.** If every record has a key, and every key matches a durable record with the same bytes, the submit is a retry. The answer is the original positions with `deduplicated: true`. If some keys match and others do not, or a record without a key is next to a matching key, the answer is `PartialRetry`. A record without a key is never deduplicated.
-- **Milestones.** M1 needs only the full-retry match (`deduplicated: true`). `KeyConflict` and `PartialRetry` are M2.
-- **Order of checks.** Keys first, for the whole submit. Then expected revisions, record by record. Records in the same submit and earlier pending submits count, in order of admission (R12). For a second record to the same stream in one submit, use `At(revision of the first)`.
+- **Admission byte budget.** M1 retains the queue-count limit and adds `pending_byte_budget` ([ADR 0025](../decisions/0025-admission-byte-reservations-live-until-the-answer.md)). A size-eligible submit reserves its [retained-allocation charge](#admission-charge) before acceptance; unavailable current queue capacity or byte budget gives `Full` immediately. Every accepted request, including a retry, holds its reservation while queued, grouped or waiting for a pending match. Dequeueing and retry matching do not release it. Release happens when the request is answered, without waiting for the caller to consume the result. Failed admission retains no reservation. Terminal rejection, success, poisoning and writer shutdown release the reservation. Dropping `Pending` does not release a request that is still being processed. The default is an accounting ceiling without a budget-sized preallocation ([ADR 0027](../decisions/0027-default-admission-budget-is-an-accounting-ceiling.md)).
+- **Permanent size refusal.** From M1, `append` returns `TooLarge` if the encoded submit cannot fit in one group, its charge exceeds the entire configured admission budget, or charge arithmetic overflows ([ADR 0028](../decisions/0028-too-large-is-distinct-from-temporary-full.md)). Check size eligibility before reserving capacity or queuing. Equality with a limit is allowed if enough capacity is currently available. `Full` is only for temporary capacity exhaustion of a size-eligible request. Both errors are immediate, retain no reservation, consume no offset or revision, and do not poison the writer. Retrying an unchanged `TooLarge` request under unchanged limits cannot succeed merely because other requests finish. The rule also applies to retries.
+- **Key scope.** A key is scoped to the whole log ([ADR 0019](../decisions/0019-idempotency-keys-are-scoped-to-the-whole-log.md)). Lookup uses the key bytes alone. Reusing a retained key on a different stream follows the key-conflict rule, even if the payload matches. Callers must choose keys across all streams in the log.
+- **Key lifetime.** A key remains valid while the segment holding its record is retained, including after roll and reopen ([ADR 0031](../decisions/0031-keys-live-with-retained-segments.md)). Rolling or sealing does not expire it. Segment deletion expires the key under R13. M4 must settle optimized key lookup and its key-cache memory budget before skipping retained record scans; M1 and M3 can rebuild keys through scanning.
+- **Repeated keys within a submit.** From M1, `append` rejects the whole submit with `Invalid` before queuing it if two records carry the same key bytes ([ADR 0020](../decisions/0020-reject-repeated-keys-within-a-submit.md)). The rule applies regardless of stream, payload or expected revision. Nothing is written, and no offset or revision is consumed. Multiple records without a key are allowed, subject to the other checks.
+- **Same bytes.** For a key match, "same bytes" means the same stream id and the same payload. The expected revision is not compared, because a retry usually carries a stale one. For durable records, the writer reads the original record from its segment to compare. For pending records, it compares against the buffered original submit. It does not trust a hash.
+- **Conflicting key reuse.** From M1, a key that identifies a pending or durable record with a different stream or payload rejects the whole new submit with `CommitError::KeyConflict { index }` ([ADR 0022](../decisions/0022-reject-conflicting-key-reuse-from-m1.md)). The index names the first conflicting record in submit order. This check precedes expected revisions. The rejected submit writes nothing and consumes no offset or revision. It leaves the original submit and its retry waiters unchanged and does not poison the writer. A pending original need not be flushed to reject the conflict.
+- **Fully matching retry.** From M1, if every record has a distinct key and every key matches a pending or durable record with the same stream and payload, the submit is a fully deduplicated retry ([ADR 0024](../decisions/0024-fully-matching-retries-ignore-original-grouping.md)). It may select subsets, reorder records, combine original submits, or mix pending and durable matches. Expected revisions are ignored. It appends nothing and consumes no offset or revision. Success waits until every referenced record is durable and covered by the published watermark, then returns original positions in request order with `deduplicated: true`. Offsets need not increase. A record without a key is never deduplicated.
+- **Mixed reused and new records.** From M1, a submit with at least one matching pending or durable record and at least one new or unkeyed record is rejected with `CommitError::PartialRetry` ([ADR 0023](../decisions/0023-reject-mixed-reused-and-new-records-from-m1.md)). The whole submit writes nothing and consumes no offset or revision. Existing submits and their retry waiters are unchanged. The rejection neither poisons the writer nor waits for a matching pending original to become durable. Any `KeyConflict` takes precedence; both errors precede expected-revision checks. If no record matches an existing key, the submit follows ordinary expected-revision checks, including when fresh keyed records are mixed with unkeyed records.
+- **Pending retry outcome.** Normal admission checks and queue limits apply, and `append` does not wait for durability. A matched retry referencing pending records waits for their existing group's successful flush and watermark publication, without another append or flush solely for the retry ([ADR 0021](../decisions/0021-exact-pending-retries-wait-for-the-original.md), [ADR 0024](../decisions/0024-fully-matching-retries-ignore-original-grouping.md)). If a referenced in-flight group fails, the matched retry gets `Indeterminate`, even if some matches were already durable. A request still queued when the writer is poisoned gets `Poisoned`. All-durable matches need no new flush.
+- **Atomic writes and retry confirmation.** New records in a submit commit all or none. A fully deduplicated retry only confirms that its referenced records are durable. It creates no new transaction and does not assert that the records originally committed atomically together ([ADR 0024](../decisions/0024-fully-matching-retries-ignore-original-grouping.md)).
+- **Milestones.** M1 includes admission byte budgeting, repeated-key rejection within a submit, fully matching retries against pending and durable records regardless of original grouping, and `KeyConflict` and `PartialRetry`. M2 adds full model-based verification of revisions and keys.
+- **Initial defaults and tuning.** Keep the defaults above as the configuration for the first benchmark baseline ([ADR 0036](../decisions/0036-measure-the-existing-defaults-before-tuning.md)). Benchmark defaults first, then report any changed options as separately named experimental configurations. Default changes require measurement evidence, a recorded reason and matching code and documentation updates in the same change. M1 has no roll; the roll-size setting becomes effective from M3. Queue-count and admission-budget defaults remain as already agreed.
+- **Waiting for future records.** Waiting cursors live above the core ([ADR 0035](../decisions/0035-waiting-cursors-belong-above-the-core.md)). M1 exposes `watermark()` and bounded `read()` without a native watermark-wait or subscription API. The consumer owns cursor positions, polling or scheduling, cancellation and timeouts. `Pending::wait` still waits for one submit's result and is not a general waiting cursor. A future notification primitive needs a separate decision based on a concrete consumer need.
+- **Expected revisions.** M1 uses `Empty` and `At(n)` without `Any` ([ADR 0030](../decisions/0030-expected-revisions-use-empty-and-at.md)). `Empty` requires no records in the stream and assigns the first revision zero. `At(n)` requires the current last revision to equal `n` and assigns the next revision `n + 1`. A mismatch rejects the entire submit with `WrongRevision`, the failing record's index, and the current revision or `None` for a stream with no records. It consumes no offset or revision and leaves no pending changes. A fully matching retry ignores expected revisions after checking keys.
+- **Order of checks.** Admission rejects repeated keys within a submit before queuing it. The writer checks keys for the whole submit, with `KeyConflict` before `PartialRetry`. For new submits, it then checks expected revisions, record by record. Records in the same submit and earlier pending submits count, in order of admission (R12). For a second record to the same stream in one submit, use `At(revision of the first)`.
 - **A sealed log** opens read-only. `append` returns `Sealed`.
+- **Directory and volume ownership.** The deployment or runner provisions, mounts and preserves the volume, supplies the directory to `SegmentLog::open`, and arranges the post-guest reader handoff ([ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)). The core validates, recovers and reads files in that directory. Concrete mount paths and the reader component are pre-M6 integration choices. Required writable recovery follows the existing API rather than an automatic deployment action inside the core.
+- **Complete-history retention.** M1–M6 retain all valid history segments without segment-level retention or automatic expiry ([ADR 0037](../decisions/0037-retain-complete-logs-through-current-milestones.md)). Deployment owns whole-log archival and expiry. The core gains no retention option or deletion endpoint. Existing recovery cleanup remains unchanged and does not authorize deletion of valid history.
 - **A reader after the guest is gone** uses `LogReader`, not `SegmentLog::open`, so that it changes nothing on the volume. It opens only a sealed log. To read an unsealed log, open it with `SegmentLog::open` on a writable volume and call `seal`.
 - **Corrupt is for a human to resolve.** `OpenError::Corrupt { segment, position }` names the file and the byte where open stopped. Open never repairs it, because it cannot tell a torn tail from a bad frame in a sealed segment, and truncating a sealed segment drops acknowledged records. Repair is manual for now. Copy the directory, inspect the segment at that position, and truncate the copy only if the bytes there are a torn tail. A repair tool is future work ([issue #1](https://github.com/ironflowhq/segment-log/issues/1)).
 - **Options.** `open` checks each option against its limit and returns `InvalidOptions`. `queue_capacity` must be at least 1, because a zero-capacity `sync_channel` refuses almost every `try_send`.
 - **Thread model.** One writer thread, owned by `SegmentLog`. Callers never write files.
 
+## Admission charge
+
+[ADR 0026](../decisions/0026-admission-charges-retained-allocations.md) defines retained-allocation accounting. Before admission, calculate:
+
+```text
+charge = bookkeeping
+       + records.capacity() * size_of::<NewRecord>()
+       + sum of stream.capacity(), key.capacity() when present, and payload.capacity()
+         for every initialized record
+       + records.len() * size_of::<Position>()
+```
+
+`bookkeeping` is the explicit per-request allowance for the library-owned envelope, reply metadata and possible retry waiter, excluding allocations already counted above. Derive it from the concrete types' sizes. Any additional request-owned copies or buffers must be included in those allowances or added to the charge. The implementation defines the allowance alongside its concrete request types; type changes must update the accounting.
+
+Unused record slots and unused byte-buffer capacity are charged. Result storage and a possible retry waiter are reserved even if a request will eventually be rejected or its result handle is dropped. Use checked multiplication and addition. An unrepresentable charge gets `TooLarge` before acceptance ([ADR 0028](../decisions/0028-too-large-is-distinct-from-temporary-full.md)).
+
+The charge is fixed until the request is answered. It does not decrease when data is moved or freed during processing. It varies with capacity and platform type sizes. It does not include caches, shared group-encoding buffers, allocator overhead, opaque standard-library channel internals, or results retained after the answer. It is not a limit on total process memory.
+
 ## Implementation notes
 
 - The core crate uses only `std` in M1. A new dependency needs an ADR ([ADR 0012](../decisions/0012-no-log-crate-dependency.md)). Dev-dependencies for tests and benches do not.
-- Accept queue: `std::sync::mpsc::sync_channel` with `try_send` gives "refuse when full" without a dependency.
+- Accept queue: `std::sync::mpsc::sync_channel` with `try_send` gives "refuse when full" without a dependency. Byte reservation must precede acceptance, and failed queue insertion must release it.
 - Lock: `std::fs::File::try_lock` (stable since Rust 1.89, an advisory lock).
 - Flush: `File::sync_data` for segments, and `sync_all` on an opened directory handle for directory entries. [ADR 0005](../decisions/0005-flush-calls-and-platforms.md) gives the mapping to system calls and what M1 must still verify.
 - All file I/O goes through a small storage trait, so that the tests can use simulated storage ([testing.md](testing.md)).

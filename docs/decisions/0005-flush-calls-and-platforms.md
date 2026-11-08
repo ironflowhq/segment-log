@@ -45,11 +45,15 @@ We will use only the flush calls in `std` (option A). We accept no control over 
 
 M1 must still verify:
 
-- with `strace` on Linux, that each group commit makes exactly one `fdatasync` call and that a roll makes the directory `fsync`;
-- that a directory `fsync` through `File::open(dir)?.sync_all()` works on both platforms.
+- with `strace` on Linux, that each new group commit makes exactly one `fdatasync` call, distinguishing initialization and recovery syncs;
+- that a directory sync through `File::open(dir)?.sync_all()` works on both platforms during creation and recovery.
+
+M3 must verify with `strace` on Linux that a roll makes the required directory `fsync`. Roll does not exist in M1.
 
 ## Consequences
 
+- [ADR 0032](0032-qualify-deployment-storage-before-m6.md) requires actual-stack qualification before the M6 guest benchmark and production durability claims. M1 syscall and directory-sync evidence does not qualify the guest's underlying storage.
+- [ADR 0029](0029-m1-completion-requires-correctness-and-measurement-evidence.md) makes M1 platform evidence part of the completion gate and moves the roll-specific trace to M3.
 - Benchmarks on macOS measure `F_FULLFSYNC`, which is much slower than Linux `fdatasync`. They are not used for the targets.
 
 ## Enforcement
