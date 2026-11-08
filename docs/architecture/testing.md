@@ -6,7 +6,7 @@ M1 requires the completion gate below, including the crash strategy in [ADR 0014
 
 All of the following evidence is required:
 
-1. Repository format, lint and correctness checks pass on Linux and macOS. M1 tests cover simulated `Kill`, `PowerLoss` and `PowerLossTorn`, real-process `SIGKILL`, I/O fault injection, durable recovery, one-writer locking, expected revisions, retry rules and admission limits. The oracle and M1 cases below define the required behavior. Full model-based verification remains M2.
+1. Repository format, lint and correctness checks pass on Linux and macOS. M1 tests cover simulated `Kill`, `PowerLoss` and `PowerLossTorn`, real-process `SIGKILL`, I/O fault injection, durable recovery, one-writer locking, expected revisions, retry rules and admission limits. The oracle and M1 cases below define the required behavior. Later-milestone cases are required only from their stated milestone. Full model-based verification remains M2.
 2. A Linux syscall trace shows exactly one `fdatasync` for each new committed group. Identify initialization and recovery syncs separately. A fully deduplicated retry adds no group or flush solely for that retry. Record the command, toolchain and trace used to verify the calls.
 3. Directory-sync checks succeed on Linux and macOS during log creation and recovery, using the actual storage implementation. Record the commands and results. These checks verify the calls used by the library; they do not certify a deployment's storage contract. [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) keeps actual-stack qualification as a pre-M6 requirement under PRD item 3.
 4. A reproducible Linux core benchmark report is saved in `docs/`. It includes the commands, workload parameters, actual hardware and software conditions, and applicable measurements in the benchmark section below. Record deviations from target conditions and do not claim a target passed under different conditions. Report seeds or other parameters needed to reproduce randomized workloads.
@@ -33,7 +33,7 @@ For each file, the simulated storage keeps two states:
 - **durable**: the bytes and the length at the last successful `sync_data` or `sync_all`;
 - **volatile**: everything written since then.
 
-For the directory, it keeps durable and volatile entry lists in the same way. `sync_dir` makes the current entry list durable.
+For each modeled directory, it keeps durable and volatile entry lists in the same way. `sync_dir` makes that directory's current entry list durable. Model the log directory and its parent separately. Test setup provisions durable ancestors, as required by the [directory contract](api.md#opening-a-directory).
 
 A test calls `crash(mode, seed)` at any step:
 
@@ -45,42 +45,65 @@ A test calls `crash(mode, seed)` at any step:
 
 A test can chain crashes, for example `Kill`, then a reopen, then `PowerLoss`.
 
-The storage can also fail on purpose: `sync_data`, `sync_all` or `sync_dir` returns an error, `write` writes only part of the buffer and then fails, or the disk is full (`ENOSPC`). After a failed `sync_data`, the volatile bytes stay readable, but a later successful `sync_data` does not make them durable. Only a new write to those bytes does. This models how Linux can mark pages clean after a writeback error ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)).
+The storage can also fail on purpose: `sync_data`, `sync_all` or `sync_dir` returns an error, `write` writes only part of the buffer and then fails, or the disk is full (`ENOSPC`). A durable-key lookup can return a read error, unexpected EOF or a frame with a bad CRC or malformed contents. These lookup faults poison the writer, rather than treating the key as absent or conflicting. After a failed `sync_data`, the volatile bytes stay readable, but a later successful `sync_data` does not make them durable. Only a new write to those bytes does. This models how Linux can mark pages clean after a writeback error ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)).
 
 ## The oracle
 
-A test runs many caller threads against the simulated storage. Each caller writes a log of what it sent and what it got back. After a crash and a reopen, the test checks:
+A test runs many caller threads against the simulated storage. Each caller writes a log of what it sent and what it got back. Distinguish success, an observed terminal rejection, and an unknown outcome. `Indeterminate` or a lost reply is unknown. A received `Invalid`, `TooLarge`, `Full`, `Poisoned`, `KeyConflict`, `PartialRetry` or `WrongRevision` confirms that this request appended no new record. The absence of a success reply alone does not put a request into a successful-retry test.
+
+Checks apply from M1 unless marked with a later milestone. After a crash and a reopen, the test checks:
 
 1. **Acknowledged means kept (I3).** Every acknowledged record is present with the same log offset, revision, stream, key and payload. This holds in every crash mode and every chain of crashes, because an ack comes only after a successful `sync_data` that made the record durable. A `deduplicated: true` answer counts as an ack.
 2. **Prefix only (I4).** The recovered records are a prefix of the order in which the writer wrote groups. There are no holes and no reordering.
 3. **All or nothing (I5).** Each submit of new records is present in full or absent in full. Fully deduplicated retries add no records and do not imply that their matches originally committed atomically together.
-4. **Retries resolve.** The test retries every submit that did not get an ack, with the same keys and bytes. Afterwards, each keyed record is present exactly once. A survivor returns its original offset and revision with `deduplicated: true`.
+4. **Keyed survivors resolve.** Replay fully keyed submits with unknown outcomes using the same keys, stream ids, payloads and expectations. When all records survived, the retry returns their original positions with `deduplicated: true` and adds no records. If no key survived, ordinary expected-revision checks apply; they can reject the replay. Other matching or conflicting keys follow the `PartialRetry` and `KeyConflict` rules. Use the model and recovered key state to predict rejection or a new append. A known terminal rejection has no promise of success on replay. Apply the mixed and unkeyed cases below separately.
 5. **Recovery is durable.** A `PowerLoss` right after open, before any append, gives the same log. Run this after every crash mode and after an injected `sync_data` error.
-6. **Sealed segments do not change (I7).** Their bytes are the same before and after recovery.
-7. **Poison (I10).** After an injected I/O error, every in-flight submit and its matched retry waiters get `Indeterminate`, and every queued or later submit gets `Poisoned`. A reopen in the same simulated boot, then a `PowerLoss`, then another reopen, satisfies checks 1–4.
+6. **Sealed segments do not change (I7, from M3).** Their bytes are the same before and after recovery. M3 uses group-only sealed segments; M4 adds closing frames.
+7. **Poison (I10).** After an injected write, flush or durable-key lookup failure, every unfinished request in the current group and its dependent retry waiters gets `Indeterminate`, even before the group is written. Queued or deferred requests get `Poisoned`. Finalized rejections and all-durable retry successes stay fixed. No subsequent write or flush uses the failed handle. A reopen in the same simulated boot, then a `PowerLoss`, then another reopen, satisfies checks 1–4 when the injected fault is disabled. Persistent corruption may instead make open fail; it must not produce a false key miss.
 8. **Readers see only durable records (I1).** Reader threads run during the test and record every record they read. After a crash and a reopen, every record a reader saw is present with the same log offset and payload.
 9. **The watermark never moves back (I2).** The watermark after a reopen is at least the highest watermark that any caller or reader saw before the crash.
 10. **Durable offsets are never used again (I6).** After a reopen, no new append gets a log offset that a caller or reader saw before the crash.
 11. **One writer (I8).** A second `SegmentLog::open` on the same directory fails with `Locked`, from another process and from the same process.
-12. **Caches can be rebuilt (I9).** After the test deletes every cache file, such as the sparse index, a reopen gives the same watermark, the same `stream_head` for every stream, and the same `read` results.
-13. **Open reads only the summary (M4).** The storage trait counts the bytes that open reads. From each sealed segment except the newest, open reads only its header, its locator and its footer.
+12. **Caches can be rebuilt (I9).** In M1, discard in-memory caches by closing and reopening. Delete cache files when their feature introduces them. A reopen gives the same watermark, the same `stream_head` for every stream, and the same `read` results. M4 also covers its chosen retained-key lookup metadata and memory budget.
+13. **Open reads only the segment summary (from M4).** The storage trait counts reads separately by file and purpose. From each sealed segment except the newest, open reads only its header, its locator and its footer. This restriction concerns segment files. Any separate lookup-metadata reads, their memory use and rebuild cost must be reported under the M4 design; they are not free or forbidden by this segment-file gate.
 
 Run each test with many seeds. Print the seed when a test fails, so that the failure can be replayed.
 
+### Retry cases required from M1
+
+Use these cases to check the scope of oracle check 4. No case changes expected revisions unless the case explicitly says so.
+
+| Original request and observed outcome | Recovered state and replay | Required result |
+| --- | --- | --- |
+| Fully keyed new submit, unknown outcome | Every key survives with the original stream and payload | Original positions, `deduplicated: true`, no append |
+| Fully keyed new submit, unknown outcome | No key survives | Ordinary revision checks decide a new append or `WrongRevision` |
+| Fully keyed submit, unknown outcome | Only a subset of matching keys exists, or a key identifies different bytes | `PartialRetry` or `KeyConflict` under the normal precedence rules, no append |
+| Fully keyed submit, received `WrongRevision` | No intervening state change, exact replay | `WrongRevision` again, no append |
+| New submit `[K1, unkeyed]`, unknown outcome | Both original records survive, exact replay | `PartialRetry`, no append |
+| No original mixed submit | Only the same keyed record K1 exists, submit `[K1, unkeyed]` | Also `PartialRetry`; no evidence that the unkeyed record ever existed |
+| Fully unkeyed submit, unknown outcome | Original survives, exact replay | `WrongRevision`, no append |
+| Fully unkeyed submit, unknown outcome | Original survives, caller changes expectations to the new heads | A new append can repeat the payloads; no deduplication guarantee |
+
+For a validated fully keyed original whose records were new, recovery's atomicity and prefix rules leave either all or none of its records. Do not use that fact to infer original-submit membership from an arbitrary `PartialRetry`. Regrouped retries confirm individual records, not a historical transaction.
+
 ## Real-process tests
 
-- **`SIGKILL` (Linux and macOS).** A child process appends from many threads and writes each ack to a pipe. The parent kills it at a random time with `SIGKILL`, reopens the directory, and runs oracle checks 1–4, 9 and 10 against the acks and watermarks it received. Repeat many times.
+- **`SIGKILL` (Linux and macOS, from M1).** A child process appends from many threads and writes requests, results and observed watermarks to a pipe. The parent kills it at a random time with `SIGKILL`, reopens the directory, and runs oracle checks 1–4, 9 and 10 against that record. Lost replies are unknown outcomes, not known rejections. Repeat many times.
 - **Power loss on a real filesystem (Linux, optional job).** Run the same test on [LazyFS](https://github.com/dsrhaslab/lazyfs). LazyFS is a FUSE filesystem that can drop data that was not flushed. If LazyFS is not practical in CI, run it by hand before M5 and record the result in `docs/`.
 
 ## Property and unit tests
 
+Cases apply from M1 unless they name another milestone. Mixed bullets identify the later parts explicitly.
+
 - Default options, from M1 ([ADR 0027](../decisions/0027-default-admission-budget-is-an-accounting-ceiling.md)). Check that `Options::default` matches [the API defaults](api.md). Changing `pending_byte_budget` must not change queue-count capacity or the group-byte cap.
+- Option validation, from M1. Cover zero queue capacity and byte budget, a group cap just below and exactly at the smallest valid group body, each upper limit, zero roll size, and zero linger. Invalid options return `InvalidOptions` without filesystem mutation. A positive budget below a request's charge opens successfully and gives that request `TooLarge`.
+- Admission precedence, from M1. Combine invalid records, impossible size, writer poisoning and exhausted capacity. Check the [specified order](api.md#admission-and-answer-ordering), including after a writer panic or disconnected queue. Outstanding `Pending` handles whose replies are lost return `Indeterminate`; new size-eligible requests get `Poisoned`. No request waits forever, and abandoned result handles do not leak reservations. From M4, include sealing and sealed states.
 - Admission budgets, from M1 ([ADR 0025](../decisions/0025-admission-byte-reservations-live-until-the-answer.md)). Fill queue-count capacity while byte budget remains, then exhaust byte budget while queue capacity remains. Both cases give immediate `Full` and accept no request. Concurrent producers cannot reserve more than the byte budget. A failed queue insertion releases its temporary reservation.
 - Permanent size refusal and temporary exhaustion, from M1 ([ADR 0028](../decisions/0028-too-large-is-distinct-from-temporary-full.md)). A group-sized submit whose retained-allocation charge exceeds the entire budget gets `TooLarge` even on an empty log. Charge overflow and exceeding the encoded group cap also get `TooLarge`. Check exact-limit eligibility, no write, no offset or revision consumed, and no retained reservation. A size-eligible submit gets `Full` when outstanding charges or a full queue prevent admission, then succeeds after temporary pressure clears. Impossible size fits remain `TooLarge` even while other requests occupy capacity. Cover retries as well as new submits.
-- Admission reservation lifetime, from M1. Pause the writer after dequeue and verify that the request's byte reservation remains held. Match pending retries and verify that their reservations also remain held. Dropping a `Pending` handle must not free an unfinished request's reservation. Check release on successful answers, validation rejections, `KeyConflict`, `PartialRetry`, `WrongRevision`, poison and writer shutdown. A completed answer releases the reservation even if the caller has not consumed it.
+- Admission reservation lifetime, from M1. Pause the writer after dequeue and verify that the request's byte reservation remains held. Match pending retries and verify that their reservations also remain held. Dropping a `Pending` handle must not free an unfinished request's reservation. Check release on successful answers, `KeyConflict`, `PartialRetry`, `WrongRevision`, poison and writer shutdown. Validation and permanent-size rejections retain no reservation. A completed answer releases the reservation even if the caller has not consumed it.
 - Retained-allocation charges, from M1 ([ADR 0026](../decisions/0026-admission-charges-retained-allocations.md)). Build equal-content submits with different record-vector and stream, key and payload capacities. They have equal encoded sizes but different admission charges under [the formula](api.md#admission-charge). Cover unused record slots, many small records, result-position storage and actual request-bookkeeping sizes. Retrying or moving a request's buffers must not grow its reserved charge or release it early. Checked arithmetic must refuse an unrepresentable charge without wrapping.
-- Codec round trip for every frame kind ([format.md](format.md)), plus the CRC check value.
-- A model test: a plain in-memory model of streams, revisions and keys. Random submits go to the model and to the log, and the results must be equal. This covers R9–R12.
+- Group codec round trips and the CRC check value, from M1 ([format.md](format.md)). Footer, seal and locator codec cases start in M4.
+- A full model test, from M2: a plain in-memory model of streams, revisions and keys. Random submits go to the model and to the log, and the results must be equal. This covers R9–R12. The directed revision and retry cases below remain required in M1.
 - Retained-key lifetime ([ADR 0031](../decisions/0031-keys-live-with-retained-segments.md)). In M1, commit keyed records, drop the log, reopen it, and verify that retries return the original positions without another append. In M3, repeat after rolling the original records into an older retained segment, both before and after reopen. M4 must test its chosen lookup mechanism and cache rebuilds against the same lifetime guarantee, and enforce its key-cache memory budget before replacing full scans with summary-based open.
 - Complete-history retention ([ADR 0037](../decisions/0037-retain-complete-logs-through-current-milestones.md)). In M1, retain committed records and keys across reopen. From M3, repeated rolls preserve every valid history segment, including streams with later records and streams that never appear again. From M4, later footer coverage still does not permit deletion, and sealing and read-only open preserve the complete readable history. Keep these cases distinct from permitted torn-tail and incomplete-new-segment recovery cleanup. No valid history is deleted through a retention policy in M1–M6.
 - Expected revisions, from M1 ([ADR 0030](../decisions/0030-expected-revisions-use-empty-and-at.md)). On separate streams with no records, `Empty` succeeds at revision zero and `At(0)` fails with actual revision `None`. On separate streams at revision zero, `Empty` fails with actual revision `Some(0)` and `At(0)` succeeds at revision one. Check successive records in one submit and valid earlier pending submits. A later failing record rejects the entire submit and leaves no offset, revision or key reservation consumed. Fully matching pending and durable retries succeed despite stale expectations.
@@ -93,18 +116,22 @@ Run each test with many seeds. Print the seed when a test fails, so that the fai
 - Exact pending retries, from M1 ([ADR 0021](../decisions/0021-exact-pending-retries-wait-for-the-original.md)). Stage an original multi-record submit and multiple exact retries in one group, including retries with stale expected revisions. Block the flush and verify that neither the original nor its retry waiters return success, and readers cannot see the group's records. After a successful flush and watermark publication, every retry returns the original positions with `deduplicated: true`. Only the original records appear in the group frame, and retries consume no offset or revision.
 - Regrouped retries, from M1 ([ADR 0024](../decisions/0024-fully-matching-retries-ignore-original-grouping.md)). Write originals with keys `[K1, K2]` and `[K3]`. Retry a subset, reorder records, and combine originals as `[K3, K1]`. Cover all-pending, all-durable, and mixed pending and durable matches, including multiple originals on the same stream. Use stale expected revisions. Success waits for every referenced record to be durable and returns original positions in request order with `deduplicated: true`, even when offsets decrease. Retries add no records, consume no offset or revision, and trigger no extra flush. Repeat with retained records after reopen.
 - Regrouped pending-retry failures, from M1. Match a retry against durable records and several pending originals in the current group. An injected write or flush failure gives that matched retry `Indeterminate`; an unprocessed queued retry gets `Poisoned`. Run the crash oracle against the original new submits, and verify that the regrouped retry added no record.
+- Durable-key lookup failures, from M1. Inject a read error, unexpected EOF, bad CRC and malformed frame while a retry is checked. The lookup request, unfinished new submits in the current group and their retry waiters get `Indeterminate`; queued requests get `Poisoned`. Check both before any group write and with valid new records already buffered. The failing lookup never gives `KeyConflict`, a key miss, or a new append. No later write or flush uses the failed handle.
+- Terminal answer timing, from M1. Buffer a valid new submit and process a `KeyConflict`, `PartialRetry`, `WrongRevision` and all-durable retry before flushing that group. Each result finalizes and releases its reservation without waiting for the flush. Then fail the group and verify that those results stay fixed. The rejected revision's `actual` can include the buffered submit, while `stream_head` still reports the durable head. A matched pending retry continues to wait and gets the group's failure result.
 - Pending-retry failures and crashes, from M1. Inject a short write, `ENOSPC`, or flush failure into the original group. The original and its matched retry waiters get `Indeterminate`. A retry still queued when poisoning happens gets `Poisoned`. At crash points before and after the flush, reopen and retry the original keys under oracle checks 1–5. Each original keyed record appears exactly once.
 - A rejected revision uses no offset: the next successful append gets the offset that the rejected one would have had.
-- Recovery on hand-made files: a zero-filled tail, a length past the end of the file, a bad CRC, a lower epoch, a wrong base offset, a header with the wrong log id, a file name that differs from its header's base offset, a missing middle segment, and a crash during a roll. Expected outcomes for the cases where a wrong answer loses data:
+- Directory creation, from M1. Create only the final component under a durable parent. A missing ancestor fails without creating it. Crash after directory creation, segment creation and each directory sync. Before any acknowledgment, both the segment entry in the log directory and the log entry in its parent must be durable. A power loss immediately after successful open preserves the reachable log.
+- Supported layouts, from M1. A directory with multiple segment files fails with `Io` of kind `Unsupported` before cleanup, truncation or rewrite. From M3, multi-segment fixtures instead exercise full-scan recovery, gaps and crashes during roll. M4 adds footer-based recovery.
+- Recovery on hand-made files, from M1: a zero-filled tail, a length past the end of the file, a bad CRC, a lower epoch, a wrong base offset, a header with the wrong log id, and a file name that differs from its header's base offset. Missing middle segments and crashes during roll start in M3. Expected outcomes for the cases where a wrong answer loses data:
   - A newest segment longer than a header with a bad header, or with the wrong log id, fails open. Open does not delete it.
   - A footer or seal frame with no locator after it (M4) is truncated, because its `fsync` never returned.
   - A record whose payload ends with bytes that form a valid footer, seal frame and locator (M4) leaves the segment active.
   - A locator that survives a power loss while its footer's page is lost (M4) leaves the segment active, and the closing frames are truncated.
   - A clean reopen, then `PowerLossTorn` during open's rewrite, keeps every acknowledged record.
   - A bad frame in a sealed log's final segment (M4) fails with `Corrupt`. Open does not truncate it.
-  - A seal on a segment with no group frame, then a failed `sync_data` or a `Kill`, then a reopen and a `PowerLoss`, still gives a sealed log.
-- The writer rolls early when a group's new streams would make the footer pass the frame limit.
-- `LogReader` on storage that refuses every write, and with two readers open at once. On an unsealed log, it fails with `NotSealed`.
+  - A seal on a segment with no group frame (M4), then a failed `sync_data` or a `Kill`, then a reopen and a `PowerLoss`, still gives a sealed log.
+- Early roll for footer size, from M4. The writer rolls when a group's new streams would make the footer pass the frame limit. Ordinary size-based roll starts in M3.
+- `LogReader`, from M4, on storage that refuses every write, and with two readers open at once. On an unsealed log, it fails with `NotSealed`.
 
 `proptest` is a suitable dev-dependency for these tests.
 
@@ -121,9 +148,12 @@ The benchmark measures the [PRD targets](../prd.md#footprint-and-performance-tar
 - append throughput and p50/p99/p999 latency;
 - the configured admission byte budget, admission refusals and peak outstanding charges;
 - the group size distribution (submits and bytes for each `fsync`);
+- record count, segment count and segment sizes at the start and end of each run, including reopen measurements;
 - open time, seal-to-exit time and idle resident set, where they apply.
 
 [ADR 0036](../decisions/0036-measure-the-existing-defaults-before-tuning.md) requires a run under the applicable [API defaults](api.md) before tuning experiments. Record all active options. Report changed settings as separate named variants with their exact configuration and the same correctness and durability contract. Preserve the baseline results. A proposed default change includes its measurement evidence, rationale and corresponding code and documentation update. M1 has no roll, so it does not measure or tune roll behavior; that setting becomes effective from M3.
+
+An M1 segment grows for the duration of the run. Record its actual size and scan cost instead of assuming that the later roll setting limits it. Benchmark code creates no sparse index in M1. The segment roll and sparse-index position bounds become relevant with their later features.
 
 A benchmark on macOS is for development only. The targets are for Linux.
 

@@ -39,7 +39,7 @@ The charge includes record-vector capacity, the capacities of every initialized 
 
 Compute the charge before acceptance and keep that reservation until the answer under ADR 0025. Freeing or moving some data during processing does not reduce the reservation. Reserve result and possible retry-waiter storage at admission so those states cannot grow the charge after acceptance.
 
-Use checked arithmetic. An unrepresentable charge must not wrap or be admitted. Its error classification is settled with requests that cannot fit the entire budget under PRD open item 10.
+Use checked arithmetic. An unrepresentable charge must not wrap or be admitted. [ADR 0028](0028-too-large-is-distinct-from-temporary-full.md) subsequently resolved its error classification with other impossible fits under PRD open item 10: return `TooLarge`.
 
 We accept platform-dependent charges and stricter treatment of preallocated inputs to account for the resources each request owns.
 

@@ -37,6 +37,7 @@ We will refuse an append at once with `Full` when the accept queue is full (opti
 
 ## Consequences
 
+- [ADR 0038](0038-m1-admission-and-recovery-boundaries.md) proposes a deterministic admission order when malformed input, impossible size, writer failure and capacity pressure overlap. The API defines the order and option bounds.
 - [ADR 0028](0028-too-large-is-distinct-from-temporary-full.md) limits `Full` to temporary capacity exhaustion of size-eligible requests. Impossible size fits and charge overflow get `TooLarge` before capacity reservation.
 - [ADR 0025](0025-admission-byte-reservations-live-until-the-answer.md) adds a configurable byte budget alongside queue-count capacity from M1. Byte reservations last until the request is answered, including grouped requests and matched retry waiters.
 - Queue capacity still counts queued submits. [ADR 0026](0026-admission-charges-retained-allocations.md) defines retained-allocation charges. [ADR 0027](0027-default-admission-budget-is-an-accounting-ceiling.md) sets the initial default. ADR 0028 resolves requests that cannot fit it.

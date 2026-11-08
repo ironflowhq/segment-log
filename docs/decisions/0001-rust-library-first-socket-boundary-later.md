@@ -42,6 +42,7 @@ We will build a Rust library first and add the socket server later, as a separat
 
 ## Consequences
 
+- [ADR 0038](0038-m1-admission-and-recovery-boundaries.md) proposes explicit single-segment layout handling for M1 and M2, plus the directory-creation boundary. Multi-segment recovery starts in M3.
 - [ADR 0034](0034-m6-builds-unix-socket-before-vsock.md) sets M6 implementation order to Unix socket first, then vsock, using a shared protocol. Both remain in M6, and protocol selection stays a separate M6 ADR.
 - [ADR 0033](0033-deployment-owns-volumes-and-reader-handoff.md) assigns volume provisioning, mounts, preservation and reader handoff to the deployment layer. The embedded core works on a supplied directory; concrete integration details remain pre-M6 work.
 - All of M1–M5 is library work and tests.
