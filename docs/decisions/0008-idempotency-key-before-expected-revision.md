@@ -57,10 +57,16 @@ The exact signatures are in [api.md](../architecture/api.md).
 
 ## Consequences
 
-- The decision compares the stream id on a key match, which assumes that keys are scoped to the whole log. That scope is still PRD open item 9, and this ADR changes when the item is settled.
+- [ADR 0031](0031-keys-live-with-retained-segments.md) confirms segment-lifetime keys across roll and reopen. Only the optimized lookup mechanism and key-cache memory budget remain open for M4 under PRD item 1.
+- [ADR 0030](0030-expected-revisions-use-empty-and-at.md) confirms `Empty` and `At(n)` without `Any` for M1 and resolves PRD open item 2. Other proposed material in this ADR is not accepted by that confirmation alone.
+- [ADR 0024](0024-fully-matching-retries-ignore-original-grouping.md) accepts fully matching retries regardless of original submit membership, ordering or grouping from M1 and resolves PRD open item 9.
+- [ADR 0023](0023-reject-mixed-reused-and-new-records-from-m1.md) amends this decision by rejecting mixed reused-and-new submits against pending and durable records from M1. `KeyConflict` takes precedence over `PartialRetry`, and both precede expected revisions.
+- [ADR 0022](0022-reject-conflicting-key-reuse-from-m1.md) amends this decision by rejecting conflicting key reuse against pending and durable records from M1, before expected-revision checks.
+- [ADR 0021](0021-exact-pending-retries-wait-for-the-original.md) amends this decision by recognizing exact pending retries before expected-revision checks, starting in M1. A matched retry waits for the original group's durability result.
+- [ADR 0020](0020-reject-repeated-keys-within-a-submit.md) amends this decision by rejecting repeated keys within a submit before admission, starting in M1.
+- [ADR 0019](0019-idempotency-keys-are-scoped-to-the-whole-log.md) amends this decision by confirming whole-log key scope.
 - The key map is a cache. Open rebuilds it from the segments.
-- **Open gap (blocks M4):** after footers exist, open does not scan sealed segments, and footers do not hold keys. Then nothing finds a key in a sealed segment. See PRD open item 1.
-- A retry of a record that is still in a group that is not yet durable does not match a key. M2 must decide whether it waits for that group.
+- **Lookup gap (blocks M4):** footers do not hold keys. M4 must choose a retained-key lookup mechanism and key-cache memory budget under ADR 0031 before it stops scanning old records. It cannot resolve that gap by expiring keys on roll.
 
 ## Enforcement
 

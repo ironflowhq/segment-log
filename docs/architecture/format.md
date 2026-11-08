@@ -100,7 +100,7 @@ A footer body has `count` entries, one for each stream that has a record in this
 | 20 | 8 | `last_position` — the file position of the frame that holds that record |
 | 28 | `stream_len` | stream id |
 
-The footer does not hold idempotency keys (PRD open item 1). The writer rolls before a group whose new streams would make the footer body pass the frame body limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
+The footer does not hold idempotency keys. Keys remain valid while their segments are retained ([ADR 0031](../decisions/0031-keys-live-with-retained-segments.md)). M4 must choose a lookup mechanism and key-cache memory budget before skipping retained record scans; those choices remain PRD open item 1. This decision selects no key-index format. The writer rolls before a group whose new streams would make the footer body pass the frame body limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
 
 ### Seal frame
 

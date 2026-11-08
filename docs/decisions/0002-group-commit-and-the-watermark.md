@@ -47,6 +47,7 @@ We will call `fsync` once per group, and ack and publish only after it returns (
 
 ## Consequences
 
+- [ADR 0036](0036-measure-the-existing-defaults-before-tuning.md) keeps the existing defaults for the initial baseline. Later default changes require measurements, a recorded reason and corresponding code and documentation updates.
 - Append latency depends on the linger and the device's `fsync` latency. The benchmark must report both.
 - Readers never see a record that could still be lost.
 - The contract depends on the device honoring the flush. The library cannot check that (PRD open item 3).
