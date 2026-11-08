@@ -2,14 +2,15 @@
 
 An embedded, append-only event log in Rust, for short-lived processes that need a durable history.
 
+> **Status: early design. Nothing is built yet.**
+> The repository holds the requirements, architecture and decision records. There is no working code, and both crates are placeholders. Some decision records are still proposed. The on-disk format is provisional until milestone M5, and the API can change. Do not depend on this yet. See the [milestones](docs/prd.md#milestones) for the plan.
+
 - Many callers append to many streams in one directory.
 - One writer thread packs their appends into groups. One `fsync` makes a group durable, and only then does the caller get an acknowledgment.
 - Each stream has revisions and checks the caller's expected revision. An idempotency key makes retries safe after a crash.
 - When the work ends, the log seals. The sealed segment files are the history.
 
 ![Without segment-log, every agent flushes its own file and the disk does one flush per agent. With segment-log, one writer packs many appends into one frame and one flush covers the group. Acks go out only after that flush returns.](docs/images/one-fsync-per-group.svg)
-
-**Status: design only. Not usable yet.**
 
 ## Documents
 
