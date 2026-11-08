@@ -132,7 +132,9 @@ Each milestone ends with a "done when" check that someone can run. A later miles
 
 | # | Scope | Done when |
 | --- | --- | --- |
-| M0 | Repository ready: edition 2024, pinned toolchain, CI, docs. | CI is green on Linux and macOS. |
+| ✅ M0 | Repository ready: edition 2024, pinned toolchain, CI, docs. | CI is green on Linux and macOS. |
+
+M0 passed on 2026-11-08. [CI run 42447941878](https://github.com/ironflowhq/segment-log/actions/runs/42447941878) is green on Ubuntu and macOS at `eb5af03`.
 | M1 | `open`, `append` with group commit, `read`, reopen with recovery, poison on I/O error. Submits with one or more records (R1). Expected revision. A minimal key map: a submit whose keys all match durable records with the same bytes returns the originals. Simulated storage and a crash harness. Provisional v0 format. One segment, no roll. | The [crash tests](architecture/testing.md) pass: simulated power loss, simulated `kill -9`, a real-process `SIGKILL` test, and `fsync` fault injection. Reopen keeps every acknowledged record. Retrying the unacknowledged keys appends each record once. |
 | M2 | The full key rules: `KeyConflict`, `PartialRetry`, and a decision on open items 8 and 9. | Property tests for R10–R12 pass against the model. A rejected revision uses no offset. |
 | M3 | Segment roll. | No submit crosses a roll in the crash tests. A crash at each step of a roll recovers. |
