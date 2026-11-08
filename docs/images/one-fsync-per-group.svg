@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" role="img" aria-labelledby="title desc">
+  <title id="title">One fsync per agent, compared with one fsync per group</title>
+  <desc id="desc">Left: five agents each flush their own file, so the disk works through one flush per agent. Right: the same agents put their appends in an accept queue, one writer thread writes them as one frame, and the disk does one flush for the whole group. Acks go back to the agents only after that flush returns.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .panel { fill: #f6f8fa; stroke: #d0d7de; }
+    .t { font: 600 18px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .s { font: 14px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .m { font: 13px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #59636e; }
+    .agent { fill: #ffffff; stroke: #8c959f; }
+    .line { stroke: #8c959f; stroke-width: 1.5; fill: none; }
+    .ack { stroke: #0969da; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
+    .head { fill: #8c959f; }
+    .headg { fill: #0969da; }
+    .bad { fill: #bc4c00; }
+    .badbox { fill: #ffffff; stroke: #bc4c00; stroke-width: 1.5; }
+    .good { fill: #0969da; }
+    .goodbox { fill: #ffffff; stroke: #0969da; stroke-width: 1.5; }
+    .soft { fill: #ddf4ff; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .panel { fill: #161b22; stroke: #30363d; }
+      .t, .s { fill: #e6edf3; }
+      .m { fill: #9198a1; }
+      .agent { fill: #0d1117; stroke: #6e7681; }
+      .line { stroke: #6e7681; }
+      .ack { stroke: #4493f8; }
+      .head { fill: #6e7681; }
+      .headg { fill: #4493f8; }
+      .bad { fill: #f0883e; }
+      .badbox { fill: #0d1117; stroke: #f0883e; }
+      .good { fill: #4493f8; }
+      .goodbox { fill: #0d1117; stroke: #4493f8; }
+      .soft { fill: #1f2a44; }
+    }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+    <marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="headg"/></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="960" height="440" rx="14"/>
+
+  <!-- Left: one fsync per agent -->
+  <rect class="panel" x="20" y="20" width="450" height="400" rx="12"/>
+  <text class="t" x="44" y="56">Without it: one fsync per agent</text>
+  <text class="m" x="44" y="78">Every agent flushes its own file.</text>
+
+  <g>
+    <rect class="agent" x="44" y="104" width="96" height="28" rx="6"/><text class="s" x="92" y="123" text-anchor="middle">agent 1</text>
+    <rect class="agent" x="44" y="144" width="96" height="28" rx="6"/><text class="s" x="92" y="163" text-anchor="middle">agent 2</text>
+    <rect class="agent" x="44" y="184" width="96" height="28" rx="6"/><text class="s" x="92" y="203" text-anchor="middle">agent 3</text>
+    <rect class="agent" x="44" y="224" width="96" height="28" rx="6"/><text class="s" x="92" y="243" text-anchor="middle">agent 4</text>
+    <text class="m" x="92" y="278" text-anchor="middle">⋮</text>
+    <rect class="agent" x="44" y="292" width="96" height="28" rx="6"/><text class="s" x="92" y="311" text-anchor="middle">agent N</text>
+  </g>
+  <g>
+    <path class="line" d="M140,118 C230,118 230,176 318,176" marker-end="url(#ah)"/>
+    <path class="line" d="M140,158 C230,158 230,200 318,200" marker-end="url(#ah)"/>
+    <path class="line" d="M140,198 C230,198 230,224 318,224" marker-end="url(#ah)"/>
+    <path class="line" d="M140,238 C230,238 230,248 318,248" marker-end="url(#ah)"/>
+    <path class="line" d="M140,306 C230,306 230,272 318,272" marker-end="url(#ah)"/>
+  </g>
+  <rect class="badbox" x="320" y="150" width="126" height="150" rx="8"/>
+  <text class="s" x="383" y="172" text-anchor="middle">disk</text>
+  <g class="bad">
+    <rect x="337" y="186" width="18" height="8" rx="2"/><rect x="361" y="186" width="18" height="8" rx="2"/><rect x="385" y="186" width="18" height="8" rx="2"/><rect x="409" y="186" width="18" height="8" rx="2"/>
+    <rect x="337" y="202" width="18" height="8" rx="2"/><rect x="361" y="202" width="18" height="8" rx="2"/><rect x="385" y="202" width="18" height="8" rx="2"/><rect x="409" y="202" width="18" height="8" rx="2"/>
+    <rect x="337" y="218" width="18" height="8" rx="2"/><rect x="361" y="218" width="18" height="8" rx="2"/><rect x="385" y="218" width="18" height="8" rx="2"/><rect x="409" y="218" width="18" height="8" rx="2"/>
+    <rect x="337" y="234" width="18" height="8" rx="2"/><rect x="361" y="234" width="18" height="8" rx="2"/><rect x="385" y="234" width="18" height="8" rx="2"/><rect x="409" y="234" width="18" height="8" rx="2"/>
+    <rect x="337" y="250" width="18" height="8" rx="2"/><rect x="361" y="250" width="18" height="8" rx="2"/><rect x="385" y="250" width="18" height="8" rx="2"/><rect x="409" y="250" width="18" height="8" rx="2"/>
+    <rect x="337" y="266" width="18" height="8" rx="2"/><rect x="361" y="266" width="18" height="8" rx="2"/><rect x="385" y="266" width="18" height="8" rx="2"/><rect x="409" y="266" width="18" height="8" rx="2"/>
+  </g>
+  <text class="s" x="383" y="324" text-anchor="middle">one flush per agent,</text>
+  <text class="s" x="383" y="342" text-anchor="middle">one after another</text>
+  <text class="m" x="44" y="386">The disk's flush rate caps how many agents can run.</text>
+
+  <!-- Right: one fsync per group -->
+  <rect class="panel" x="490" y="20" width="450" height="400" rx="12"/>
+  <text class="t" x="514" y="56">segment-log: one fsync per group</text>
+  <text class="m" x="514" y="78">One writer packs many appends into one frame.</text>
+
+  <g>
+    <rect class="agent" x="514" y="104" width="96" height="28" rx="6"/><text class="s" x="562" y="123" text-anchor="middle">agent 1</text>
+    <rect class="agent" x="514" y="144" width="96" height="28" rx="6"/><text class="s" x="562" y="163" text-anchor="middle">agent 2</text>
+    <rect class="agent" x="514" y="184" width="96" height="28" rx="6"/><text class="s" x="562" y="203" text-anchor="middle">agent 3</text>
+    <rect class="agent" x="514" y="224" width="96" height="28" rx="6"/><text class="s" x="562" y="243" text-anchor="middle">agent 4</text>
+    <text class="m" x="562" y="278" text-anchor="middle">⋮</text>
+    <rect class="agent" x="514" y="292" width="96" height="28" rx="6"/><text class="s" x="562" y="311" text-anchor="middle">agent N</text>
+  </g>
+  <g>
+    <path class="line" d="M610,118 C630,118 630,176 648,176" marker-end="url(#ah)"/>
+    <path class="line" d="M610,158 C630,158 630,198 648,198" marker-end="url(#ah)"/>
+    <path class="line" d="M610,198 C630,198 630,220 648,220" marker-end="url(#ah)"/>
+    <path class="line" d="M610,238 C630,238 630,242 648,242" marker-end="url(#ah)"/>
+    <path class="line" d="M610,306 C630,306 630,264 648,264" marker-end="url(#ah)"/>
+  </g>
+  <rect class="goodbox" x="650" y="160" width="72" height="120" rx="8"/>
+  <g class="soft">
+    <rect x="662" y="172" width="48" height="14" rx="3"/><rect x="662" y="192" width="48" height="14" rx="3"/><rect x="662" y="212" width="48" height="14" rx="3"/><rect x="662" y="232" width="48" height="14" rx="3"/><rect x="662" y="252" width="48" height="14" rx="3"/>
+  </g>
+  <text class="s" x="686" y="302" text-anchor="middle">accept queue</text>
+
+  <path class="line" d="M722,220 L750,220" marker-end="url(#ah)"/>
+  <rect class="goodbox" x="752" y="190" width="80" height="60" rx="8"/>
+  <text class="s" x="792" y="216" text-anchor="middle">writer</text>
+  <text class="s" x="792" y="234" text-anchor="middle">thread</text>
+
+  <path class="line" d="M832,220 L850,220" marker-end="url(#ah)"/>
+  <rect class="goodbox" x="852" y="160" width="72" height="120" rx="8"/>
+  <text class="s" x="888" y="182" text-anchor="middle">disk</text>
+  <rect class="good" x="868" y="214" width="40" height="10" rx="2"/>
+  <text class="s" x="888" y="302" text-anchor="middle">1 flush</text>
+
+  <path class="ack" d="M792,190 V96 H562 V100" marker-end="url(#ahg)"/>
+  <text class="m" x="802" y="132">acks go out</text>
+  <text class="m" x="802" y="149">after the fsync</text>
+  <text class="m" x="802" y="166">returns</text>
+
+  <text class="m" x="514" y="366">Many agents share each flush.</text>
+  <text class="m" x="514" y="386">An ack means the group is on disk.</text>
+</svg>

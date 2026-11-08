@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
+  <title id="title">What an ack means after a crash</title>
+  <desc id="desc">One group's life: the writer writes the frame, the fsync returns, and the ack is sent. A crash before the write leaves the group absent. A crash during the fsync leaves it kept if the frame is whole, otherwise cut. A crash after the fsync and before the ack leaves it kept, though the caller saw no ack. A crash after the ack leaves it kept. In the first three cases the caller retries with the same key, and gets the original offset if the group survived.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .card { fill: #f6f8fa; stroke: #d0d7de; }
+    .t { font: 600 20px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .h { font: 600 14px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .s { font: 13px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .m { font: 13px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #59636e; }
+    .k { font: 600 11px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #59636e; letter-spacing: 0.06em; }
+    .p { font: 600 12px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .axis { stroke: #8c959f; stroke-width: 2; }
+    .event { fill: #0969da; }
+    .crash { fill: #cf222e; }
+    .x { stroke: #ffffff; stroke-width: 2.2; stroke-linecap: round; }
+    .stripe-absent { fill: #8c959f; } .pill-absent { fill: #eaeef2; } .txt-absent { fill: #59636e; }
+    .stripe-maybe { fill: #9a6700; } .pill-maybe { fill: #fff8c5; } .txt-maybe { fill: #9a6700; }
+    .stripe-kept { fill: #0969da; } .pill-kept { fill: #ddf4ff; } .txt-kept { fill: #0969da; }
+    .stripe-acked { fill: #1a7f37; } .pill-acked { fill: #dafbe1; } .txt-acked { fill: #1a7f37; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .card { fill: #161b22; stroke: #30363d; }
+      .t, .h, .s { fill: #e6edf3; }
+      .m, .k { fill: #9198a1; }
+      .axis { stroke: #6e7681; }
+      .event { fill: #4493f8; }
+      .crash { fill: #f85149; }
+      .x { stroke: #0d1117; }
+      .stripe-absent { fill: #6e7681; } .pill-absent { fill: #21262d; } .txt-absent { fill: #9198a1; }
+      .stripe-maybe { fill: #d29922; } .pill-maybe { fill: #2e2410; } .txt-maybe { fill: #d29922; }
+      .stripe-kept { fill: #4493f8; } .pill-kept { fill: #12223d; } .txt-kept { fill: #4493f8; }
+      .stripe-acked { fill: #3fb950; } .pill-acked { fill: #12261a; } .txt-acked { fill: #3fb950; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="960" height="560" rx="14"/>
+  <text class="t" x="40" y="46">What an ack means after a crash</text>
+  <text class="m" x="40" y="70">One group's life, and what recovery keeps if the process or the power dies at each point.</text>
+
+  <!-- Timeline -->
+  <line class="axis" x1="40" y1="134" x2="920" y2="134"/>
+  <circle class="event" cx="255" cy="134" r="7"/><text class="s" x="255" y="114" text-anchor="middle">frame written</text>
+  <circle class="event" cx="480" cy="134" r="7"/><text class="s" x="480" y="114" text-anchor="middle">fsync returns</text>
+  <circle class="event" cx="705" cy="134" r="7"/><text class="s" x="705" y="114" text-anchor="middle">ack sent</text>
+
+  <g>
+    <circle class="crash" cx="142" cy="134" r="12"/><path class="x" d="M137,129 L147,139 M147,129 L137,139"/>
+    <circle class="crash" cx="367" cy="134" r="12"/><path class="x" d="M362,129 L372,139 M372,129 L362,139"/>
+    <circle class="crash" cx="592" cy="134" r="12"/><path class="x" d="M587,129 L597,139 M597,129 L587,139"/>
+    <circle class="crash" cx="817" cy="134" r="12"/><path class="x" d="M812,129 L822,139 M822,129 L812,139"/>
+    <text class="m" x="142" y="168" text-anchor="middle">crash A</text>
+    <text class="m" x="367" y="168" text-anchor="middle">crash B</text>
+    <text class="m" x="592" y="168" text-anchor="middle">crash C</text>
+    <text class="m" x="817" y="168" text-anchor="middle">crash D</text>
+  </g>
+
+  <!-- Card A -->
+  <rect class="card" x="40" y="186" width="205" height="282" rx="10"/>
+  <rect class="stripe-absent" x="40" y="186" width="205" height="5" rx="2"/>
+  <text class="h" x="54" y="216">A. Before the write</text>
+  <rect class="pill-absent" x="54" y="228" width="62" height="22" rx="11"/><text class="p txt-absent" x="85" y="243" text-anchor="middle">absent</text>
+  <text class="k" x="54" y="280">CALLER SAW</text>
+  <text class="s" x="54" y="298">no ack</text>
+  <text class="k" x="54" y="328">RECOVERY</text>
+  <text class="s" x="54" y="346">nothing to keep</text>
+  <text class="k" x="54" y="408">CALLER THEN</text>
+  <text class="s" x="54" y="426">retries with the same key,</text>
+  <text class="s" x="54" y="442">and the log appends it</text>
+
+  <!-- Card B -->
+  <rect class="card" x="265" y="186" width="205" height="282" rx="10"/>
+  <rect class="stripe-maybe" x="265" y="186" width="205" height="5" rx="2"/>
+  <text class="h" x="279" y="216">B. During the fsync</text>
+  <rect class="pill-maybe" x="279" y="228" width="62" height="22" rx="11"/><text class="p txt-maybe" x="310" y="243" text-anchor="middle">maybe</text>
+  <text class="k" x="279" y="280">CALLER SAW</text>
+  <text class="s" x="279" y="298">no ack</text>
+  <text class="k" x="279" y="328">RECOVERY</text>
+  <text class="s" x="279" y="346">keeps a whole frame and</text>
+  <text class="s" x="279" y="362">makes it durable. Cuts</text>
+  <text class="s" x="279" y="378">a torn frame.</text>
+  <text class="k" x="279" y="408">CALLER THEN</text>
+  <text class="s" x="279" y="426">retries with the same key,</text>
+  <text class="s" x="279" y="442">and gets the original</text>
+  <text class="s" x="279" y="458">offset or a new append</text>
+
+  <!-- Card C -->
+  <rect class="card" x="490" y="186" width="205" height="282" rx="10"/>
+  <rect class="stripe-kept" x="490" y="186" width="205" height="5" rx="2"/>
+  <text class="h" x="504" y="216">C. Before the ack</text>
+  <rect class="pill-kept" x="504" y="228" width="72" height="22" rx="11"/><text class="p txt-kept" x="540" y="243" text-anchor="middle">survived</text>
+  <text class="k" x="504" y="280">CALLER SAW</text>
+  <text class="s" x="504" y="298">no ack</text>
+  <text class="k" x="504" y="328">RECOVERY</text>
+  <text class="s" x="504" y="346">keeps it</text>
+  <text class="k" x="504" y="408">CALLER THEN</text>
+  <text class="s" x="504" y="426">retries with the same key,</text>
+  <text class="s" x="504" y="442">and gets the original</text>
+  <text class="s" x="504" y="458">offset, deduplicated</text>
+
+  <!-- Card D -->
+  <rect class="card" x="715" y="186" width="205" height="282" rx="10"/>
+  <rect class="stripe-acked" x="715" y="186" width="205" height="5" rx="2"/>
+  <text class="h" x="729" y="216">D. After the ack</text>
+  <rect class="pill-acked" x="729" y="228" width="62" height="22" rx="11"/><text class="p txt-acked" x="760" y="243" text-anchor="middle">acked</text>
+  <text class="k" x="729" y="280">CALLER SAW</text>
+  <text class="s" x="729" y="298">ack</text>
+  <text class="k" x="729" y="328">RECOVERY</text>
+  <text class="s" x="729" y="346">keeps it (I3)</text>
+  <text class="k" x="729" y="408">CALLER THEN</text>
+  <text class="s" x="729" y="426">has nothing to do</text>
+
+  <text class="s" x="40" y="508">No ack means maybe. A retry with the same key gets the original offset if the group survived,</text>
+  <text class="s" x="40" y="528">so a retry never appends twice. That is why recovery keeps every whole frame.</text>
+</svg>
