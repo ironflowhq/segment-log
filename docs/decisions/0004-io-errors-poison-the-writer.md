@@ -48,13 +48,14 @@ The caller must drop the log and open it again. Recovery then keeps the valid pr
 
 ## Consequences
 
+- [ADR 0038](0038-m1-admission-and-recovery-boundaries.md) and the [API](../architecture/api.md#admission-and-answer-ordering) make current-group lookup failures and finalized answers explicit. A durable-key lookup read error, unexpected EOF, bad CRC or malformed frame poisons the writer. Unfinished requests in the current group, including the lookup request, get `Indeterminate` even before a write. Queued requests get `Poisoned`. A result already finalized does not change.
 - [ADR 0021](0021-exact-pending-retries-wait-for-the-original.md) clarifies that a retry matched to an in-flight submit gets `Indeterminate` if the original does. Requests still in the queue get `Poisoned` as before.
-- `Indeterminate` is a normal result that callers must handle: reopen, then retry with the same keys.
+- `Indeterminate` is a normal result that callers must handle. Reopen, then resolve fully keyed requests with the same keys and bytes. [Mixed and unkeyed requests](../architecture/api.md#retry-after-an-unknown-outcome) cannot rely on full-submit deduplication.
 - The crash tests inject `fsync` errors, short writes and `ENOSPC` ([testing.md](../architecture/testing.md)).
 
 ## Enforcement
 
-None yet. Oracle check 7 in [testing.md](../architecture/testing.md#the-oracle) will check the poison rule after injected `fsync` errors, short writes and `ENOSPC`.
+None yet. Oracle check 7 and the durable-key lookup cases in [testing.md](../architecture/testing.md#the-oracle) will check the poison rule after injected flush, write and lookup failures.
 
 ## Revisit if
 

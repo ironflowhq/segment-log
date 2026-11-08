@@ -48,7 +48,7 @@ We accept rejecting mixed submits so callers and recovery have no successful app
 - [ADR 0024](0024-fully-matching-retries-ignore-original-grouping.md) accepts fully matching retries regardless of original submit membership, ordering or grouping from M1 and resolves PRD open item 9.
 - This decision amends ADR 0008 and moves `PartialRetry` from M2 into M1 for both pending and durable matches.
 - Rejection does not acknowledge the durability of any matching pending record.
-- Callers can retry their original submit or submit a separate new operation with fresh keys.
+- Fully keyed originals can resolve surviving records through retry matching. An original containing both keyed and unkeyed records gets `PartialRetry` on exact replay if it survives. `PartialRetry` alone does not prove that every original record existed. Callers must reconcile that unknown outcome before choosing a new operation. Fresh keys identify a new operation and can repeat a surviving payload. The [API retry guidance](../architecture/api.md#retry-after-an-unknown-outcome) states the limits.
 - A submit made entirely of matching existing records is not a mixed reused-and-new submit. Full durable retries and exact pending retries retain their rules.
 - No new frame or recovery metadata is needed.
 
