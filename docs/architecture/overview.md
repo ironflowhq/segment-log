@@ -10,7 +10,9 @@ A segment log for each agent, with each agent calling `fsync`, is the shape this
 
 The sealed segments must be on a volume that outlives the guest. When the microVM is destroyed, a file on an ephemeral disk is lost. Recovery never needs the old process to still be there.
 
-Orchestration is above the log. Leases, waiting for events, dashboards and SDKs are a different layer, in another process and possibly another language. The log does not store subscribers.
+The deployment or runner layer owns volume provisioning, mounting, preservation and post-guest reader handoff ([ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)). The core operates on the directory supplied to `SegmentLog::open`. Before M6, the deployment must identify the mount paths, reader component and handoff procedure, including access for writable recovery of unsealed crash logs. Those integration choices do not block M1.
+
+Orchestration is above the log. Leases, waiting for events, dashboards and SDKs are a different layer, in another process and possibly another language. The log does not store subscribers. Waiting cursors, their positions, cancellation, timeouts and scheduling also belong above the core ([ADR 0035](../decisions/0035-waiting-cursors-belong-above-the-core.md)). M1 provides `watermark()` and bounded `read()` without a native watermark-wait API. Per-submit `Pending::wait` remains unchanged.
 
 ```text
 callers (threads, or a socket server in M6)
@@ -34,7 +36,7 @@ callers (threads, or a socket server in M6)
 
 ## Components
 
-- **Accept queue.** A bounded multi-producer queue. `append` puts the submit in it, or returns `Full` at once.
+- **Accept queue.** A bounded multi-producer queue. `append` checks size eligibility, then reserves the submit's admission byte charge before accepting it. Impossible size fits give `TooLarge`; unavailable current queue capacity or byte budget gives `Full` at once. The byte reservation remains until the request is answered, including time in a writer group or as a matched retry waiter ([ADR 0025](../decisions/0025-admission-byte-reservations-live-until-the-answer.md)).
 - **Writer thread.** The only thread that writes segment files. It owns the tail map and the key map, and it assigns log offsets and revisions. Because one thread does every check, a check is atomic with respect to other appends.
 - **Segments.** Append-only files. The active segment takes new frames. Sealed segments never change.
 - **Watermark.** An atomic value that readers load. Only the writer stores it.
@@ -42,7 +44,7 @@ callers (threads, or a socket server in M6)
 
 ## Storage contract
 
-The durability invariants hold only if the storage under the log meets this contract. The library cannot check any of it. Each deployment must check it ([PRD open item 3](../prd.md#open-items)).
+The durability invariants hold only if the storage under the log meets this contract. The library cannot check any of it. Each deployment must check it ([PRD open item 3](../prd.md#open-items)). [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) requires qualification of the actual stack before the M6 guest benchmark and production durability claims. M1 implements and tests the explicit conditional contract; its completion evidence does not certify the eventual guest stack.
 
 - The device honors the flush. When `fsync` returns success, the bytes survive a power loss ([ADR 0005](../decisions/0005-flush-calls-and-platforms.md)).
 - The device writes each sector atomically. After a power loss, a sector holds either its old or its new contents. Open relies on this when it rewrites bytes that are already durable ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)).
@@ -56,7 +58,7 @@ These rules hold at every point. Code and tests must not break them. A change to
 - **I2. The watermark never moves back.** In one process it only grows. A reopen sets it to at least the last watermark of the previous process, if the storage meets its [contract](#storage-contract). It can be higher, because recovery keeps a valid suffix that was never acknowledged.
 - **I3. Acknowledged means kept.** If the storage meets its [contract](#storage-contract), recovery keeps every acknowledged record with its log offset and revision.
 - **I4. Prefix only.** After recovery, the log is a prefix of the order in which groups were written. It has no hole and no change of order.
-- **I5. A submit is all or nothing.** It is in one frame, or in none.
+- **I5. New records in a submit are all or nothing.** The writer puts all of them in one frame, or writes none. A fully deduplicated retry only confirms existing durable records ([ADR 0024](../decisions/0024-fully-matching-retries-ignore-original-grouping.md)).
 - **I6. Durable offsets are never used again.** Offsets from a torn tail can be.
 - **I7. Sealed segments never change.** Recovery never truncates them.
 - **I8. One writer.** At most one process holds the directory lock and writes.
@@ -65,18 +67,20 @@ These rules hold at every point. Code and tests must not break them. A change to
 
 ## The write path
 
-1. A caller sends a submit. If the accept queue is full, the caller gets `Full`.
+1. A caller sends a submit. Before queuing it, `append` rejects a repeated key within the submit with `Invalid` ([ADR 0020](../decisions/0020-reject-repeated-keys-within-a-submit.md)). Exceeding the group cap or entire admission budget, or charge overflow, gets `TooLarge` before capacity reservation ([ADR 0028](../decisions/0028-too-large-is-distinct-from-temporary-full.md)). A size-eligible submit must reserve its admission charge before acceptance. Unavailable current queue capacity or byte budget gives `Full` immediately and retains no reservation ([ADR 0025](../decisions/0025-admission-byte-reservations-live-until-the-answer.md)).
 2. The writer takes the first submit from the queue. Then it takes more, until the linger time ends or the next submit would make the group bigger than the byte cap. A submit bigger than the byte cap gets `TooLarge` at admission.
 3. For each submit, in order of admission, the writer:
-   1. checks the idempotency keys ([ADR 0008](../decisions/0008-idempotency-key-before-expected-revision.md)). If every key matches a durable record with the same bytes, the submit is a retry. The writer answers it with the original offsets and revisions, and it does not add it to the group.
+   1. checks the idempotency keys ([ADR 0008](../decisions/0008-idempotency-key-before-expected-revision.md)). A key that identifies a pending or durable record with a different stream or payload rejects the entire submit with `KeyConflict` at its first conflicting record ([ADR 0022](../decisions/0022-reject-conflicting-key-reuse-from-m1.md)). Otherwise, a mix of matching existing records and new or unkeyed records rejects the entire submit with `PartialRetry` ([ADR 0023](../decisions/0023-reject-mixed-reused-and-new-records-from-m1.md)). Neither rejection consumes an offset or revision or poisons the writer. If every record has a key and matches a pending or durable record with the same stream and payload, it is a fully deduplicated retry regardless of original grouping ([ADR 0024](../decisions/0024-fully-matching-retries-ignore-original-grouping.md)). The writer adds no records, skips expected revisions, and returns original positions in request order once all referenced records are durable. Pending matches attach the retry as a waiter for their group.
    2. checks each expected revision against the tail map and the pending changes from earlier submits in this group. A mismatch rejects the whole submit, and the submit uses no offset.
    3. assigns log offsets and revisions, and adds the records to the group and to the pending changes.
 4. The writer writes the group as one frame at the end of the active segment, then calls `fsync` once.
-5. If the `fsync` succeeds: the writer applies the pending changes to the tail map and the key map, moves the watermark, and acks each submit.
-6. If any write or `fsync` fails: the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). Each submit in the group gets `Indeterminate`. Each submit still in the queue, and each later one, gets `Poisoned`.
+5. If the `fsync` succeeds: the writer applies the pending changes to the tail map and the key map, moves the watermark, and acks each new submit and each matched retry waiting for this group. Retry waiters get original positions in request order with `deduplicated: true`.
+6. If any write or `fsync` fails: the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). Each new submit in the group and each matched retry depending on it get `Indeterminate`, including retries with some already durable matches. Each submit still in the queue, and each later one, gets `Poisoned`.
 7. If the active segment is at or over the roll size, the writer rolls before it starts the next group. From M4, the writer also rolls before a group whose new streams would make the segment's footer pass the frame limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
 
-A submit that is answered as a retry (step 3.1) refers only to records that are already durable. So its answer does not wait for the `fsync`. A retry of a record that is still pending in this group or in another group that is not yet durable does not match in step 3.1. It gets the normal revision check, which usually fails. This is [PRD open item 8](../prd.md#open-items).
+A fully matching retry in step 3.1 may select subsets, reorder records, combine original submits, or mix pending and durable matches. All-durable matches need no new `fsync`. Pending matches wait for their existing group's flush and watermark publication. Normal admission limits still apply. Retry success confirms durability, not that the records originally committed atomically together. New writes retain their all-or-nothing submit guarantee.
+
+Each accepted request holds its admission byte reservation through processing and retry waiting. Every answer path releases it, including rejection, success and poison. Queue insertion failure and writer shutdown must not leak reservations. A dropped result handle does not release a request that is still being processed. The charge includes retained allocation capacities and explicit bookkeeping and result allowances under [ADR 0026](../decisions/0026-admission-charges-retained-allocations.md). The [formula](api.md#admission-charge) is separate from encoded group size and does not bound total process memory. The default is an accounting ceiling without a budget-sized preallocation ([ADR 0027](../decisions/0027-default-admission-budget-is-an-accounting-ceiling.md)). Requests that cannot fit the entire budget get `TooLarge` under ADR 0028.
 
 ## Commit protocol
 
@@ -143,6 +147,8 @@ flowchart TD
 11. Set the watermark to the offset after the last kept record. Rebuild the tail map and the key map from the kept frames.
 12. Start the writer thread.
 
+Through M3, recovery rebuilds keys by scanning retained segment records. A key remains valid after roll and reopen while its segment is retained. Before M4 replaces old record scans with summaries, it must settle the key lookup mechanism and key-cache memory budget ([ADR 0031](../decisions/0031-keys-live-with-retained-segments.md)). Footers alone do not contain the keys.
+
 Open reads all of the newest segment. In the open-time target's conditions, that is the small active segment. A sealed log's final segment can be as large as the roll size.
 
 There is no clean-shutdown marker. Recovery always scans the active segment, and that costs little because the segment is small. The seal frame marks a sealed log ([ADR 0011](../decisions/0011-sealed-footer-and-no-shutdown-marker.md)).
@@ -175,11 +181,15 @@ A reader after the guest is gone uses `LogReader` ([ADR 0016](../decisions/0016-
 
 ## Retention
 
-Retention is deferred ([PRD open item 11](../prd.md#open-items)). The rule from the source design deletes only whole segments, and only after a later footer covers every stream in them. That rule keeps a stream's revisions from restarting at 0. But a stream that ends never appears in a later footer, so with one stream for each agent run, almost no segment becomes deletable. Deleting a segment would also expire the idempotency keys that lived only in it.
+M1–M6 retain complete valid history without segment-level retention ([ADR 0037](../decisions/0037-retain-complete-logs-through-current-milestones.md)). The core does not delete valid history segments even when a later footer covers their streams. Deployment owns whole-log archival and expiry under its lifecycle policy. Storage can grow until that policy archives or expires a complete log.
+
+Recovery still keeps the valid prefix and removes invalid, uncommitted tails or incomplete new segments under its existing rules. That cleanup is separate from retention. A future bounded-history feature needs durable revision checkpoints, key-expiry rules, deleted-offset reads and crash-safe deletion behavior before it can remove valid segments.
 
 ## Language boundary
 
 The library is Rust. It has no async runtime, SQL or protobuf on the write path. A caller in another language reaches it over a Unix socket or vsock through `segment-log-server` (M6). There is no in-process C ABI. A separate process can be sealed and killed without the orchestrator. A guest can be just the Rust server, with no other runtime in it. See [ADR 0001](../decisions/0001-rust-library-first-socket-boundary-later.md).
+
+M6 implements Unix socket first, followed by vsock with the same protocol ([ADR 0034](../decisions/0034-m6-builds-unix-socket-before-vsock.md)). Both transports remain required for M6. This sequence establishes a local Go-client protocol path before guest transport integration. Actual caller placement still determines the deployed transport, and the wire format remains a separate M6 decision. M1 remains library-only.
 
 ## What a library build must still show
 

@@ -65,6 +65,7 @@ A directory entry cannot be written back like file bytes. If a directory `fsync`
 
 ## Consequences
 
+- [ADR 0032](0032-qualify-deployment-storage-before-m6.md) keeps the rewrite's storage assumptions explicit. Qualification of the actual guest stack is required before M6 guest validation and production durability claims; M1 tests the conditional contract without claiming that qualification.
 - R14 makes the kept prefix durable, not only the truncation.
 - The storage trait needs a write at a position.
 - The simulated storage keeps bytes written before a `Kill` volatile. After a failed `sync_data`, it keeps the volatile bytes readable, and a later successful `sync_data` does not make them durable. Only a new write to those bytes does ([testing.md](../architecture/testing.md)).

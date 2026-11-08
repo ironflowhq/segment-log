@@ -11,20 +11,23 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Roll** | Stop appending to the active segment and create a new active segment. The old one becomes sealed. |
 | **Seal (the log)** | The dispose path: stop admission, commit the last submits, write the seal frame, make it durable, close. A sealed log opens read-only. Different from a roll, which seals one segment and keeps the log open. |
 | **Record** | One event: stream id, stream revision, optional idempotency key, payload. |
-| **Submit** | One `append` call from a caller. It holds one or more records, and it is the atomic unit. |
+| **Submit** | One `append` call from a caller, holding one or more records. It is the atomic unit for new writes. A fully deduplicated retry confirms existing durable records and appends nothing ([ADR 0024](decisions/0024-fully-matching-retries-ignore-original-grouping.md)). |
 | **Group** | The records of one or more submits that the writer writes as one frame and makes durable with one `fsync`. A group is not a transaction. |
 | **Frame** | The on-disk form of a group, a footer, a seal, or a locator: length, CRC (cyclic redundancy check), body. See [format.md](architecture/format.md). |
 | **Linger** | How long the writer waits for more submits after the first one, before it writes the group. |
 | **Byte cap** | The largest group, in bytes. The writer writes the group when the next submit would go over it. |
+| **Admission byte budget** | The limit on byte charges reserved for accepted, unanswered requests, including queued submits, writer groups and matched retry waiters. A reservation lasts until the request is answered ([ADR 0025](decisions/0025-admission-byte-reservations-live-until-the-answer.md)). |
+| **Admission charge** | A request's retained-allocation capacities plus explicit bookkeeping and result allowances under [the API formula](architecture/api.md#admission-charge). It includes unused input capacity and stays fixed until the answer. It is separate from encoded size and total resident memory ([ADR 0026](decisions/0026-admission-charges-retained-allocations.md)). |
 | **Log offset** | The index of a record across the whole log, starting at 0. Assigned by the writer. Monotonic. The tail cursor. |
 | **Base offset** | The log offset of the first record in a segment or a group. |
 | **File position** | The byte position of a frame or record inside one segment. Not an identity that callers store. |
 | **Stream** | A named sequence of records inside the log, for example one entity or one run. |
 | **Stream id** | The bytes that name a stream. |
 | **Stream revision** | The index of a record inside its stream, starting at 0. |
-| **Expected revision** | The precondition in a request: the caller's view of the stream's current revision. It is not stored. |
-| **Idempotency key** | The caller's dedupe token for a record. Whether a key is scoped to one stream or to the whole log is PRD open item 9. |
+| **Expected revision** | A new record's stream-state precondition. M1 uses `Empty` for a stream with no records and `At(n)` for a stream whose last revision is `n`. There is no unconditional `Any`. The precondition is not stored ([ADR 0030](decisions/0030-expected-revisions-use-empty-and-at.md)). |
+| **Idempotency key** | The caller's dedupe token for a record, scoped to the whole log ([ADR 0019](decisions/0019-idempotency-keys-are-scoped-to-the-whole-log.md)). |
 | **Watermark** | The log offset just past the last durable record. The writer moves it only after an `fsync` returns success. Readers and acknowledgments never go past it. |
+| **Waiting cursor** | A consumer-owned position and policy for waiting until new durable records can be read. It lives above the core and is distinct from waiting for a submit's result through `Pending::wait` ([ADR 0035](decisions/0035-waiting-cursors-belong-above-the-core.md)). |
 | **Acknowledgment (ack)** | The success result of a submit. It means the group is durable, if the storage meets its [contract](architecture/overview.md#storage-contract). |
 | **Indeterminate** | The result when the writer cannot tell whether a submit is durable, for example after an `fsync` error. The caller must reopen and retry with the same keys. |
 | **Poisoned** | The writer's state after an I/O error. It refuses every submit until the log is reopened. |

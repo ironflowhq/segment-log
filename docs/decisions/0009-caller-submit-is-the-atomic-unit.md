@@ -39,6 +39,7 @@ Checks run in order of admission. A record's expected revision sees the records 
 
 ## Consequences
 
+- [ADR 0024](0024-fully-matching-retries-ignore-original-grouping.md) clarifies that fully deduplicated retries confirm existing durable records without asserting that they originally committed atomically together. New writes retain the all-or-nothing guarantee.
 - The largest submit is limited by the byte cap.
 - The crash tests check that each submit is present in full or absent in full.
 

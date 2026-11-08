@@ -66,6 +66,7 @@ This extends the footer contents in ADR 0011. The layout and the limits are in [
 
 ## Consequences
 
+- [ADR 0031](0031-keys-live-with-retained-segments.md) preserves key lifetime across roll and reopen. M4 must choose key lookup and its memory budget before summary-based open skips retained record scans; footer contents alone do not solve it.
 - A sealed segment from M4 ends with the footer, then the seal frame if it is the final segment of a sealed log, then the locator. A roll writes two frames before one `sync_data`, and a seal writes three.
 - Open reads the locator of each sealed segment except the newest, then its footer. A successor segment proves that a segment's real locator is its last frame. The newest segment has no successor, and a payload can end with bytes that look like a locator, so open scans the newest segment forward ([overview.md](../architecture/overview.md#open-and-recovery)). The M4 gate counts the bytes that open reads through the storage trait.
 
