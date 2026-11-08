@@ -17,7 +17,7 @@ enforced_by: none
 
 The accept queue limits the number of queued submits, not their bytes. Requests can also leave the queue while remaining in a writer group or waiting for a pending original's durability. A queue-only byte limit would stop charging those unanswered requests.
 
-The owner approved adding a configurable admission byte budget alongside the queue-count limit during the M1 readiness discussion on 8 November 2026. This ADR amends ADR 0010. The accounting method and default value remain PRD open item 10.
+The owner approved adding a configurable admission byte budget alongside the queue-count limit during the M1 readiness discussion on 8 November 2026. This ADR amends ADR 0010. At that point, the accounting method and default value remained PRD open item 10. [ADR 0026](0026-admission-charges-retained-allocations.md) and [ADR 0027](0027-default-admission-budget-is-an-accounting-ceiling.md) subsequently resolved them.
 
 ## Options & trade-offs
 

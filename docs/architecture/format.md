@@ -87,6 +87,14 @@ A group body has `count` entries after the body header, one after another.
 
 The log offset of entry `i` (from 0) is `base_offset + i`. It is not stored. A record's file position is the frame's file position plus the entry's offset inside the frame. The entries must fill the body exactly. Extra or missing bytes make the frame invalid.
 
+For admission, a submit's standalone group-body size is:
+
+```text
+body_len = 24 + sum(16 + stream.len() + key_len + payload.len())
+```
+
+Here `key_len` is zero for an unkeyed record. The formula includes one body header and every record entry, and excludes the frame envelope and segment header. A submit fits alone when this size is at most `group_byte_cap`. Use checked arithmetic. This encoded size uses initialized lengths, separately from the capacity-based admission charge in [api.md](api.md#admission-charge).
+
 ### Footer entry (M4)
 
 A footer body has `count` entries, one for each stream that has a record in this segment.
