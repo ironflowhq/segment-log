@@ -240,10 +240,13 @@ impl SegmentLog {
         if max == 0 || from >= state.watermark {
             return Ok(vec![]);
         }
-        let frames = state.frames.clone();
+        let first = state.frames.partition_point(|frame| frame.end <= from);
+        let end = from.saturating_add(max as u64);
+        let last = state.frames.partition_point(|frame| frame.base < end);
+        let frames = state.frames[first..last].to_vec();
         drop(state);
         let mut records = Vec::new();
-        for frame in frames.into_iter().filter(|f| f.end > from) {
+        for frame in frames {
             let bytes = read_bytes(
                 self.storage.as_ref(),
                 &self.segment,

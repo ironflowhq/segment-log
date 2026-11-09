@@ -1,0 +1,101 @@
+#[path = "../src/acceptance/support/deadline.rs"]
+mod deadline;
+
+use segment_log_core::*;
+use std::{sync::Barrier, time::Duration};
+
+fn append(log: &SegmentLog, start: u64, count: u64) {
+    let committed = log
+        .append(Submit {
+            records: (start..start + count)
+                .map(|i| NewRecord {
+                    stream: b"s".to_vec(),
+                    expected: if i == 0 {
+                        ExpectedRevision::Empty
+                    } else {
+                        ExpectedRevision::At(i - 1)
+                    },
+                    key: (i % 2 == 0).then(|| i.to_le_bytes().to_vec()),
+                    payload: i.to_le_bytes().to_vec(),
+                })
+                .collect(),
+        })
+        .unwrap()
+        .wait()
+        .unwrap();
+    assert!(!committed.deduplicated);
+    assert_eq!(committed.records.len(), count as usize);
+    for (p, i) in committed.records.iter().zip(start..) {
+        assert_eq!((p.offset, p.revision), (i, i));
+    }
+}
+fn check(records: &[Record], from: u64, count: usize) {
+    assert_eq!(records.len(), count);
+    for (record, i) in records.iter().zip(from..) {
+        assert_eq!((record.offset, record.revision), (i, i));
+        assert_eq!(record.stream, b"s");
+        assert_eq!(record.payload, i.to_le_bytes());
+        assert_eq!(
+            record.key.as_deref(),
+            (i % 2 == 0)
+                .then_some(i.to_le_bytes())
+                .as_ref()
+                .map(|key| key.as_slice())
+        );
+    }
+}
+fn ranges(log: &SegmentLog) {
+    for from in 0..=12 {
+        for max in [0, 1, 2, 3, 4, 7, 12, usize::MAX] {
+            check(
+                &log.read(from, max).unwrap(),
+                from,
+                max.min(12 - from as usize),
+            );
+        }
+    }
+    assert!(log.read(u64::MAX, usize::MAX).unwrap().is_empty());
+}
+
+#[test]
+fn reads_boundaries_and_snapshot_during_appends() {
+    let _deadline = deadline::Deadline::new(Duration::from_secs(30), || {});
+    let dir = std::env::temp_dir().join(format!("segment-log-read-ranges-{}", std::process::id()));
+    let options = || Options {
+        linger: Duration::ZERO,
+        ..Options::default()
+    };
+    let log = SegmentLog::open(&dir, options()).unwrap();
+    assert!(log.read(0, usize::MAX).unwrap().is_empty());
+    for (start, count) in [(0, 3), (3, 1), (4, 5), (9, 3)] {
+        append(&log, start, count);
+    }
+    ranges(&log);
+    drop(log);
+    let log = SegmentLog::open(&dir, options()).unwrap();
+    ranges(&log);
+    let barrier = Barrier::new(2);
+    std::thread::scope(|scope| {
+        scope.spawn(|| {
+            for i in 12..76 {
+                barrier.wait();
+                append(&log, i, 1);
+                barrier.wait();
+            }
+        });
+        for i in 12..76 {
+            barrier.wait();
+            let records = log.read(0, usize::MAX).unwrap();
+            assert!((i as usize..=i as usize + 1).contains(&records.len()));
+            check(&records, 0, records.len());
+            check(&log.read(3, 4).unwrap(), 3, 4);
+            barrier.wait();
+        }
+    });
+    check(&log.read(0, usize::MAX).unwrap(), 0, 76);
+    drop(log);
+    let log = SegmentLog::open(&dir, options()).unwrap();
+    check(&log.read(0, usize::MAX).unwrap(), 0, 76);
+    drop(log);
+    std::fs::remove_dir_all(dir).unwrap();
+}
