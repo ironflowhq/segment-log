@@ -229,6 +229,8 @@ The benchmark measures the [PRD targets](../prd.md#footprint-and-performance-tar
 
 [ADR 0036](../decisions/0036-measure-the-existing-defaults-before-tuning.md) requires a run under the applicable [API defaults](api.md) before tuning experiments. Record all active options. Report changed settings as separate named variants with their exact configuration and the same correctness and durability contract. Preserve the baseline results. A proposed default change includes its measurement evidence, rationale and corresponding code and documentation update. M1 has no roll, so it does not measure or tune roll behavior; that setting becomes effective from M3.
 
+The default workload is a closed loop: each caller submits again as soon as it is answered, so the offered load follows the log's own speed. Setting `SEGMENT_LOG_BENCH_INTERVAL_US` selects the paced variant. Each caller then submits once per interval, and the callers are spread evenly over the interval. Paced latency starts at the scheduled send, so a late caller still counts its delay. Report the paced variant by name, with its interval and offered rate. It does not replace the default run.
+
 An M1 segment grows for the duration of the run. Record its actual size and scan cost instead of assuming that the later roll setting limits it. Benchmark code creates no sparse index in M1. The segment roll and sparse-index position bounds become relevant with their later features.
 
 A benchmark on macOS is for development only. The targets are for Linux.
