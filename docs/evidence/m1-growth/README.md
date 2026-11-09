@@ -43,6 +43,8 @@ Guest-warm reopen starts a fresh process without cache eviction immediately afte
 
 At a fixed 100 groups, zero keys, and one stream, 1k, 10k, and 100k records release the same requested heap on engine drop. Reopen still scans the larger history and requests temporary allocations. At 10k records and 100 groups, adding keys or streams increases retained heap independently. At 10k records, zero keys, and one stream, increasing groups increases retained heap. These observations support the existing frame/key/stream ownership explanation. They do not establish an unbounded-memory leak.
 
+The following table uses `guest_warm` observations for reads and validation-buffer deltas. Caller-build deltas use `seed`, the mode that constructs caller submissions.
+
 | Case | Start read us | End read us | Start thread allocation bytes | Caller live delta bytes | Full validation buffer live delta bytes |
 | --- | --- | --- | --- | --- | --- |
 | records_1000 | 82.51 [34.32, 83.80] | 69.36 [28.51, 74.12] | 17336.00 [17336.00, 17336.00] | 128402.00 [128402.00, 128402.00] | 130112.00 [130112.00, 130274.00] |

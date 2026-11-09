@@ -1,4 +1,3 @@
-//! Linux growth diagnostics. Requested heap counters and RSS are separate measurements.
 use segment_log_core::*;
 use std::{
     alloc::{GlobalAlloc, Layout, System},
