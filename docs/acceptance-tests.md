@@ -31,7 +31,7 @@ Use a small fixture builder for repeated setup, such as a log with given options
 ## Implement one behavior
 
 1. Select a case from a group in the [coverage tables](architecture/testing.md#milestone-acceptance-coverage). Read its requirements, invariants and ADRs.
-2. Check that the contract defines every expected outcome. If it does not, settle the outcome in api.md, or in an ADR when it changes behavior, before writing the test. Do not settle it in the test. See [outcomes the contract must define first](#outcomes-the-contract-must-define-first).
+2. Check that the contract defines every expected outcome. If it does not, settle the outcome in api.md, or in an ADR when it changes behavior, before writing the test. Do not settle it in the test. See [boundary outcomes](#boundary-outcomes).
 3. Write the scenario's doc comment and its test. Derive every expected value from the contract, not from the code under test.
 4. Run the test and confirm that it fails on its behavioral assertion. If the API is missing, add only enough structure to reach that assertion. Note the observed failure in the pull request description.
 5. Implement the smallest complete behavior that passes the scenario.
@@ -85,7 +85,7 @@ Stop the writer at a boundary by holding a storage call. Hold the call, wait unt
 
 Add a probe inside the writer only for a boundary that no storage call reaches, such as the moment after dequeue. List each such probe in the support module, compile it only for tests, and keep it free of behavior.
 
-Do not add a clock to the storage trait. To make the members of a group deterministic, hold the previous group's flush while later submits enter the queue. Whether the writer then takes all of them depends on linger semantics that the contract must define first. Test linger itself with one real-time liveness scenario under a watchdog.
+Do not add a clock to the storage trait. To make the members of a group deterministic, hold the previous group's flush while later submits enter the queue. Use the [zero-linger rule](architecture/api.md#option-validation) to gather queued submits. Test linger itself with one real-time liveness scenario under a watchdog.
 
 Do not use a sleep to assume that a request reached a state or joined a group. For a negative assertion, first establish that the work reached the held call, then check that no success or reader visibility occurred. Use bounded watchdog timeouts to fail a hung scenario, never as evidence of ordering.
 
@@ -122,12 +122,12 @@ Keep earlier scenarios as regression tests, and extend them when a later milesto
 
 From M3, rerun the M1 scenarios through their fixtures with a small `roll_bytes`, so that retries, recovery and crash cases also run across rolls. From M4, extend them with sealing where it applies.
 
-## Outcomes the contract must define first
+## Boundary outcomes
 
-These outcomes are not defined yet. Settle each one in api.md, or in an ADR if it changes behavior, before the scenario that depends on it:
+[ADR 0043](decisions/0043-zero-linger-and-empty-read-boundaries.md) settles the boundary outcomes needed by deterministic scenarios. Use their definitions in api.md:
 
-- Whether zero `linger` takes submits that are already queued into the current group ([api.md](architecture/api.md#option-validation), [write path step 2](architecture/overview.md#the-write-path)). Deterministic group scenarios depend on it.
-- What `read` returns when `from` is past the watermark, and when `max` is zero ([api.md](architecture/api.md#target-signatures-and-defaults)). `READ-BOUNDED` depends on it.
+- [Zero linger](architecture/api.md#option-validation) governs queued submits in deterministic group scenarios.
+- [Read boundaries](architecture/api.md#target-signatures-and-defaults) govern `READ-BOUNDED`.
 
 ## Start M1
 
