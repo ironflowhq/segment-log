@@ -10,7 +10,15 @@ use std::{
     sync::{Arc, Mutex, mpsc},
     thread::{self, JoinHandle},
 };
+mod keys;
 mod recovery;
+use keys::{Classification, DurableKeys};
+
+struct Writer {
+    epoch: u64,
+    keys: DurableKeys,
+    lookup: Vec<u8>,
+}
 
 #[derive(Clone)]
 struct Frame {
@@ -18,6 +26,7 @@ struct Frame {
     length: usize,
     base: u64,
     end: u64,
+    epoch: u64,
 }
 #[derive(Default)]
 struct Published {
@@ -115,7 +124,11 @@ impl SegmentLog {
                     writer_published,
                     writer_poisoned,
                     receiver,
-                    recovered.epoch,
+                    Writer {
+                        epoch: recovered.epoch,
+                        keys: recovered.keys,
+                        lookup: Vec::new(),
+                    },
                     writer_options,
                 );
             })
@@ -378,7 +391,7 @@ fn run(
     published: Arc<Mutex<Published>>,
     poisoned: Arc<std::sync::atomic::AtomicBool>,
     receiver: mpsc::Receiver<Request>,
-    epoch: u64,
+    mut writer: Writer,
     options: Arc<Options>,
 ) {
     let mut deferred = None;
@@ -405,30 +418,52 @@ fn run(
         let mut size = 24;
         let mut next = Some(first);
         while let Some(request) = next.take() {
-            match revisions(&request.submit, &heads) {
-                Err(error) => {
+            match writer.keys.classify(
+                storage.as_ref(),
+                &segment,
+                &request.submit,
+                &mut writer.lookup,
+            ) {
+                Classification::New => match revisions(&request.submit, &heads) {
+                    Err(error) => {
+                        request.answer(Err(error));
+                    }
+                    Ok(revisions) => {
+                        let added = body_size(&request.submit).unwrap() - 24;
+                        if size + added > options.group_byte_cap {
+                            deferred = Some(request);
+                            break;
+                        }
+                        if base
+                            .checked_add(assigned.len() as u64)
+                            .and_then(|next| next.checked_add(request.submit.records.len() as u64))
+                            .is_none()
+                        {
+                            request.answer(Err(CommitError::Exhausted));
+                        } else {
+                            size += added;
+                            for (record, revision) in request.submit.records.iter().zip(&revisions)
+                            {
+                                heads.insert(record.stream.clone(), revision.revision);
+                            }
+                            assigned.extend(revisions.iter().map(|slot| slot.revision));
+                            requests.push(request);
+                        }
+                    }
+                },
+                Classification::Retry(records) => {
+                    request.answer(Ok(Committed {
+                        records,
+                        deduplicated: true,
+                    }));
+                }
+                Classification::Rejected(error) => {
                     request.answer(Err(error));
                 }
-                Ok(revisions) => {
-                    let added = body_size(&request.submit).unwrap() - 24;
-                    if size + added > options.group_byte_cap {
-                        deferred = Some(request);
-                        break;
-                    }
-                    if base
-                        .checked_add(assigned.len() as u64)
-                        .and_then(|next| next.checked_add(request.submit.records.len() as u64))
-                        .is_none()
-                    {
-                        request.answer(Err(CommitError::Exhausted));
-                    } else {
-                        size += added;
-                        for (record, revision) in request.submit.records.iter().zip(&revisions) {
-                            heads.insert(record.stream.clone(), revision.revision);
-                        }
-                        assigned.extend(revisions.iter().map(|slot| slot.revision));
-                        requests.push(request);
-                    }
+                Classification::LookupFailure => {
+                    requests.push(request);
+                    poison(&poisoned, requests, deferred.take(), receiver);
+                    return;
                 }
             }
             next = if requests.is_empty() || options.linger.is_zero() {
@@ -457,7 +492,7 @@ fn run(
             })
             .collect();
         let group = codec::Group {
-            epoch,
+            epoch: writer.epoch,
             base_offset: base,
             entries,
         };
@@ -471,28 +506,18 @@ fn run(
         )
         .and_then(|_| call(storage.as_ref(), &segment, Purpose::Group, Op::SyncData));
         if result.is_err() {
-            poisoned.store(true, std::sync::atomic::Ordering::Release);
-            for request in requests {
-                request.answer(Err(CommitError::Indeterminate));
-            }
-            if let Some(request) = deferred.take() {
-                request.answer(Err(CommitError::Poisoned));
-            }
-            for request in receiver {
-                request.answer(Err(CommitError::Poisoned));
-            }
+            poison(&poisoned, requests, deferred.take(), receiver);
             return;
         }
-        publish(
-            &mut published.lock().unwrap(),
-            Frame {
-                position,
-                length,
-                base,
-                end: base + assigned.len() as u64,
-            },
-            &group,
-        );
+        let frame = Frame {
+            position,
+            length,
+            base,
+            end: base + assigned.len() as u64,
+            epoch: writer.epoch,
+        };
+        writer.keys.publish(&frame, &group);
+        publish(&mut published.lock().unwrap(), frame, &group);
         let mut index = 0;
         for request in requests {
             let records = (0..request.submit.records.len())
@@ -533,4 +558,22 @@ fn charge(submit: &Submit) -> Option<usize> {
             .checked_add(r.key.as_ref().map_or(0, Vec::capacity))?
             .checked_add(r.payload.capacity())
     })
+}
+
+fn poison(
+    poisoned: &std::sync::atomic::AtomicBool,
+    requests: Vec<Request>,
+    deferred: Option<Request>,
+    receiver: mpsc::Receiver<Request>,
+) {
+    poisoned.store(true, std::sync::atomic::Ordering::Release);
+    for request in requests {
+        request.answer(Err(CommitError::Indeterminate));
+    }
+    if let Some(request) = deferred {
+        request.answer(Err(CommitError::Poisoned));
+    }
+    for request in receiver {
+        request.answer(Err(CommitError::Poisoned));
+    }
 }

@@ -4,6 +4,7 @@ pub(super) struct Recovered {
     pub lock: Box<dyn Lock>,
     pub published: Published,
     pub epoch: u64,
+    pub keys: DurableKeys,
 }
 impl From<io::Error> for OpenError {
     fn from(error: io::Error) -> Self {
@@ -118,6 +119,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         });
     }
     let mut published = Published::default();
+    let mut keys = DurableKeys::default();
     let mut epoch = header.epoch;
     let mut position = 64;
     let mut tail = (0, bytes);
@@ -153,16 +155,15 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         };
         epoch = group.epoch;
         let bytes = frame.as_ref().unwrap();
-        publish(
-            &mut published,
-            Frame {
-                position,
-                length: bytes.len(),
-                base: group.base_offset,
-                end: group.base_offset + group.entries.len() as u64,
-            },
-            &group,
-        );
+        let kept = Frame {
+            position,
+            length: bytes.len(),
+            base: group.base_offset,
+            end: group.base_offset + group.entries.len() as u64,
+            epoch: group.epoch,
+        };
+        keys.publish(&kept, &group);
+        publish(&mut published, kept, &group);
         tail = (position, frame.unwrap());
         position += tail.1.len() as u64;
     }
@@ -192,5 +193,6 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         lock,
         published,
         epoch,
+        keys,
     })
 }

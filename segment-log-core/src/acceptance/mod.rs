@@ -12,3 +12,5 @@ mod counters;
 mod recovery_fixtures;
 
 mod open_faults;
+
+mod durable_keys;
