@@ -1,0 +1,29 @@
+$ .audit/memory/baseline .audit/memory/data 512 0 1 1 32 4096
+phase,thread_allocated_bytes,process_live_delta_bytes,process_peak_extra_bytes,process_live_bytes
+open_empty,264868,263852,263852,265796
+caller_build,77824,77818,77818,343614
+append_and_release_caller,344112,-56560,3736,287054
+drop_before_reopen,0,-285062,0,1992
+warm_reopen,474955,284773,284773,286765
+read_start,21207,658,21282,287423
+
+thread 'main' (141683137) panicked at segment-log-core/examples/memory_probe.rs:164:13:
+read_start allocated 21207 bytes
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+exit_status=101
+
+$ .audit/memory/bounded .audit/memory/data 512 0 1 1 32 4096
+phase,thread_allocated_bytes,process_live_delta_bytes,process_peak_extra_bytes,process_live_bytes
+open_empty,264868,263852,263852,265795
+caller_build,77824,78026,78026,343821
+append_and_release_caller,344112,-56768,3528,287053
+drop_before_reopen,0,-285062,0,1991
+warm_reopen,474955,284773,284773,286764
+read_start,767,658,842,287422
+read_end,703,392,576,287422
+validation_buffer,269472,65536,86160,352566
+validation_check,0,0,0,352566
+validation_release,0,-65536,0,287030
+drop_engine,0,-285039,0,1991
+validated_records=512,failures=0,groups=512
+exit_status=0
