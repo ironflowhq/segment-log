@@ -22,7 +22,7 @@ The [PRD milestone gates](../prd.md#milestones) remain the source for completion
 | M4-LOOKUP-OPEN | `ORACLE-13`, M4 parts of `ORACLE-12` and `KEY-LIFETIME` | Open-time target result; lookup reads, rebuild cost and key-cache memory under the [M4 design](../prd.md#open-items) | Planned |
 | M5-FORMAT-FUZZ | `FUZZ-DECODER`, `FUZZ-RECOVERY` | Accepted format ADR; one-hour fuzz run in CI | Planned |
 | M6-TRANSPORT | `TRANSPORT-CONFORMANCE`, `TRANSPORT-UNKNOWN`, `TRANSPORT-RESTART` | Protocol version, commands, topology and results for each transport | Planned |
-| M6-DEPLOYMENT | `HANDOFF` | [Storage qualification](#deployment-storage-qualification-before-m6), [handoff record](#surviving-volume-handoff-before-m6), [guest benchmark report](#benchmarks-m1-for-the-core-m6-for-the-server) | Planned |
+| M6-DEPLOYMENT | `HANDOFF` | [Storage qualification](#deployment-storage-qualification-before-m6) with every [volume requirement](volume-requirements.md) case, [handoff record](#surviving-volume-handoff-before-m6), [guest benchmark report](#benchmarks-m1-for-the-core-m6-for-the-server) | Planned |
 
 Record an unresolved later-milestone decision as a dependency. Do not guess its expected outcome in a test.
 
@@ -231,17 +231,13 @@ For M1, the Linux report is required by the completion gate even if the provisio
 
 [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) requires a record in `docs/` for the actual guest stack before its M6 benchmark and production durability claims. This is separate from M1's mandatory tests, syscall checks and Linux benchmark.
 
-The record identifies the hypervisor, virtual block device, backing storage, filesystem and mount options, including relevant versions and configuration. For each storage-contract assumption, it states the qualification method, supporting evidence, limitations and unresolved conditions:
+[volume-requirements.md](volume-requirements.md) ([ADR 0040](../decisions/0040-volumes-meet-testable-minimum-requirements.md)) defines the requirements V1–V11, their verification cases, the testability rules, the power-cut harness and the [record format](volume-requirements.md#qualification-record). The record identifies every layer of the stack and gives one row for each requirement, with its evidence class, commands, known-bad control result, result and limitations.
 
-- successful flushes make the bytes survive power loss;
-- sector writes are atomic as required by recovery's identical-byte rewrite;
-- the filesystem stops accepting writes after metadata-write errors as the recovery contract assumes.
-
-Evidence must apply to the identified setup. A syscall trace alone does not establish the assumptions. An unverified or contradicted assumption blocks qualification. M6 evidence names the qualified stack used for its guest benchmark. Changes to that stack require reviewing whether the qualification still applies. No qualification is claimed by this checklist itself.
+Evidence must apply to the identified setup. A syscall trace alone does not establish a requirement. An unverified or contradicted MUST requirement blocks qualification. M6 evidence names the qualified stack used for its guest benchmark. Changes to that stack rerun the cases in the [requalification table](volume-requirements.md#requalification-triggers). No qualification is claimed by this checklist itself.
 
 ## Surviving-volume handoff (before M6)
 
-[ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md) assigns the volume lifecycle and reader handoff to the deployment layer. Before M6 deployment validation, record the surviving volume, its writer and reader mount paths, the concrete reader service or tool, and the handoff procedure. The procedure must respect the single-writer contract and identify access for writable recovery when the guest exits with an unsealed log.
+[ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md) assigns the volume lifecycle and reader handoff to the deployment layer. Before M6 deployment validation, record the surviving volume, its writer and reader mount paths, the concrete reader service or tool, and the handoff procedure. The procedure must respect the single-writer contract, including one writing kernel ([V5](volume-requirements.md#v5-one-writing-kernel)), and identify access for writable recovery when the guest exits with an unsealed log. `HANDOFF` is also the case for [V6](volume-requirements.md#v6-the-volume-outlives-the-guest), so it destroys the guest through the platform's real teardown path.
 
 `HANDOFF`. Integration evidence must show that acknowledged records remain available on the surviving volume after guest exit and can be read by the selected component. Cover sealed history through `LogReader` and an unsealed crash log through writable `SegmentLog::open` recovery. Using `LogReader` afterward requires explicitly sealing the recovered log; the test must state that policy rather than silently finalizing a resumable log.
 
