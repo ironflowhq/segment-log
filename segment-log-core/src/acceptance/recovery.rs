@@ -137,3 +137,133 @@ fn unsupported_header_version_is_reported_without_repair() {
         assert_eq!(sim.image(), image);
     });
 }
+
+/// Given acknowledged groups and a multi-record submit spanning sectors and pages
+/// When a held data flush fails and Kill retains the readable unknown suffix
+/// Then open publishes the entire suffix only after making it durable across every crash mode
+/// Cases: ORACLE-1, ORACLE-2, ORACLE-3, ORACLE-5, ORACLE-9
+#[test]
+fn failed_data_flush_recovery_makes_the_readable_submit_durable() {
+    bounded(|| {
+        let sim = Sim::new(220);
+        let log = open(&sim);
+        append(&log, b"s").wait().unwrap();
+        let payload = vec![0xb6; 9000];
+        let records = (0..3)
+            .map(|i| NewRecord {
+                stream: b"s".to_vec(),
+                expected: ExpectedRevision::At(i),
+                key: None,
+                payload: payload.clone(),
+            })
+            .collect();
+        let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let pending = log.append(Submit { records }).unwrap();
+        hold.wait();
+        assert_eq!(log.watermark(), 1);
+        assert!(pending.probe().is_none());
+        hold.release(Some(storage::sim::Fault::NoSpace));
+        assert!(matches!(pending.wait(), Err(CommitError::Indeterminate)));
+        drop(log);
+        sim.crash(storage::sim::Crash::Kill, 0);
+        let (seed, before) = sim.trace();
+        let reopened = open(&sim);
+        let mut expected = vec![Record {
+            offset: 0,
+            stream: b"s".to_vec(),
+            revision: 0,
+            key: Some(b"key".to_vec()),
+            payload: vec![0, 255, 7],
+        }];
+        expected.extend((1..=3).map(|i| Record {
+            offset: i,
+            stream: b"s".to_vec(),
+            revision: i,
+            key: None,
+            payload: payload.clone(),
+        }));
+        assert_records(&reopened.read(0, 100).unwrap(), &expected);
+        drop(reopened);
+        for mode in [
+            storage::sim::Crash::Kill,
+            storage::sim::Crash::PowerLoss,
+            storage::sim::Crash::PowerLossTorn,
+        ] {
+            for crash_seed in 0..8 {
+                let replay = Sim::replay(seed, &sim.trace().1);
+                replay.crash(mode, crash_seed);
+                let log = open(&replay);
+                assert_records(&log.read(0, 100).unwrap(), &expected);
+            }
+        }
+        let trace = sim.trace().1;
+        for end in before.len()..=trace.len() {
+            for crash_seed in 0..8 {
+                let replay = Sim::replay(seed, &trace[..end]);
+                replay.crash(storage::sim::Crash::PowerLossTorn, crash_seed);
+                let log = open(&replay);
+                let records = log.read(0, 100).unwrap();
+                assert!(records.len() == 1 || records.len() == 4);
+                assert_records(&records, &expected[..records.len()]);
+                drop(log);
+                replay.crash(storage::sim::Crash::PowerLoss, crash_seed);
+                assert_records(&open(&replay).read(0, 100).unwrap(), &records);
+            }
+        }
+    });
+}
+
+/// Given several acknowledged groups spanning sector and page boundaries
+/// When PowerLossTorn interrupts every call of a clean recovery's identical rewrites
+/// Then all acknowledged bytes and positions survive and the next reopen is durable
+/// Cases: ORACLE-1, ORACLE-5, RECOVERY-FIXTURES
+#[test]
+fn identical_rewrites_of_durable_groups_never_tear() {
+    bounded(|| {
+        let sim = Sim::new(221);
+        let log = open(&sim);
+        for i in 0..3 {
+            let record = NewRecord {
+                stream: b"s".to_vec(),
+                expected: if i == 0 {
+                    ExpectedRevision::Empty
+                } else {
+                    ExpectedRevision::At(i - 1)
+                },
+                key: None,
+                payload: vec![i as u8; 5000],
+            };
+            log.append(Submit {
+                records: vec![record],
+            })
+            .unwrap()
+            .wait()
+            .unwrap();
+        }
+        let expected: Vec<_> = (0..3)
+            .map(|i| Record {
+                offset: i,
+                stream: b"s".to_vec(),
+                revision: i,
+                key: None,
+                payload: vec![i as u8; 5000],
+            })
+            .collect();
+        assert_records(&log.read(0, 100).unwrap(), &expected);
+        drop(log);
+        let (seed, before) = sim.trace();
+        drop(open(&sim));
+        let trace = sim.trace().1;
+        for end in before.len()..=trace.len() {
+            for crash_seed in 0..8 {
+                let replay = Sim::replay(seed, &trace[..end]);
+                replay.crash(storage::sim::Crash::PowerLossTorn, crash_seed);
+                let log = open(&replay);
+                assert_records(&log.read(0, 100).unwrap(), &expected);
+                drop(log);
+                replay.crash(storage::sim::Crash::PowerLoss, crash_seed);
+                assert_records(&open(&replay).read(0, 100).unwrap(), &expected);
+            }
+        }
+    });
+}

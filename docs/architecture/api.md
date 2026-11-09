@@ -9,7 +9,7 @@ The sketch below describes the cumulative target. Implement each behavior in its
 | From milestone | Behavior |
 | --- | --- |
 | M1 | `SegmentLog::open`, `append`, `watermark`, bounded `read`, `stream_head`, `Pending::wait`, and writer-draining `Drop`. Expected revisions, key matching, recovery, poisoning and admission limits follow the accepted rules below. |
-| M3 | Segment roll and the effect of `roll_bytes`. M1 remains single-segment without roll. |
+| M3 | Segment roll and the effect of `roll_bytes`, multi-segment recovery and cross-segment log-id comparison under [ADR 0042](../decisions/0042-log-id-comparison-fixtures-start-with-multiple-segments.md). M1 remains single-segment without roll. |
 | M4 | `seal`, `LogReader`, sealed-log read-only open, footers and locators, and optimized retained-key lookup with its chosen key-cache memory budget. |
 
 ## Target signatures and defaults
