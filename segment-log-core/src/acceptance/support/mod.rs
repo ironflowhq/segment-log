@@ -1,12 +1,18 @@
 //! Counter fixtures under [ADR 0041](../../../../docs/decisions/0041-counter-exhaustion-refuses-without-poisoning.md).
 //!
-//! `SegmentLog::seed_counters` is a cfg(test) setup hook used only on an idle,
+//! `SegmentLog::seed_counters` is a cfg(test) setup hook used only on an idle
 //! log. It supplies synthetic watermark and head values because reaching
 //! u64 limits through real appends is impractical. These are not recovery histories.
 //! `fixtures::epoch_fixture` writes a legal header and optional legal first group
 //! with extreme epochs, optionally followed by an invalid tail.
 //! Counter scenarios count mutation calls to prove the mandated absence of writes;
 //! results, watermarks and stream heads carry the behavioral assertions.
+//!
+//! `engine::admission_support` is cfg(test) only. Concrete type sizes anchor the
+//! allowance without exporting those types. Scalar charge probes cover refusals
+//! and shutdown, where a later admitted storage barrier cannot run. `finish` joins
+//! a panicked writer while retaining its disconnected sender. For poison it closes
+//! admission so the writer can finish draining without consuming old results.
 mod coverage;
 
 pub(crate) fn bounded(f: impl FnOnce() + Send + 'static) {
