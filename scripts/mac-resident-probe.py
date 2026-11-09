@@ -30,13 +30,19 @@ def run(args):
         result = None
         barrier_samples = 0
         ps_ns = 0
+        ps_user_s = 0.0
+        ps_system_s = 0.0
 
         def sample(label):
-            nonlocal ps_ns
+            nonlocal ps_ns, ps_user_s, ps_system_s
+            usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
             start = time.time_ns()
             observed = subprocess.run(['ps', '-o', 'rss=', '-p', str(process.pid)],
                                       capture_output=True, text=True, timeout=5)
             end = time.time_ns()
+            usage_after = resource.getrusage(resource.RUSAGE_CHILDREN)
+            ps_user_s += usage_after.ru_utime - usage_before.ru_utime
+            ps_system_s += usage_after.ru_stime - usage_before.ru_stime
             ps_ns += end - start
             row = {'start_ns': start, 'end_ns': end, 'phase': label,
                    'kind': 'barrier' if barrier is not None else 'active',
@@ -122,6 +128,10 @@ def run(args):
     summary = {'pid': process.pid, 'returncode': code, 'result': result, 'failures': failures,
                'samples': len(samples), 'ps_elapsed_ns': ps_ns,
                'observer_cpu_s': cpu(start_usage, end_usage),
+               'observer_user_s': end_usage.ru_utime - start_usage.ru_utime,
+               'observer_system_s': end_usage.ru_stime - start_usage.ru_stime,
+               'ps_user_s': ps_user_s, 'ps_system_s': ps_system_s,
+               'workload_cpu_s': None if args.maps else cpu(start_children, end_children) - ps_user_s - ps_system_s,
                'child_and_tools_cpu_s': cpu(start_children, end_children)}
     (args.output / 'status.json').write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary))
