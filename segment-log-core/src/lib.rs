@@ -10,3 +10,6 @@ mod api;
 pub use api::*;
 mod engine;
 pub use engine::{Pending, SegmentLog};
+
+#[cfg(test)]
+mod pipeline;
