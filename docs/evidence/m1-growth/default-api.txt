@@ -1,0 +1,45 @@
+    Finished `release` profile [optimized] target(s) in 0.04s
+     Running unittests src/lib.rs (target/release/deps/segment_log_core-3d365a8d7243eacd)
+
+running 1 test
+CONFIG callers=4 rounds=4 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=8 min=1085768 p50=1125797 p99=1215071 p999=1215071 max=1215071 sum=9103971
+DEVICE start_bytes=0 end_bytes=2097152 append_bytes=262144 failures=0
+OPEN initial_ns=2004803 records=0 segments=1 bytes=64
+APPEND records=16 elapsed_ns=8372796 records_per_second=1910.951 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=1920 admission_call_sum_ns=105427
+METRIC append_ns count=16 min=1978395 p50=2011954 p99=2193737 p999=2193737 max=2193737 sum=33075708
+METRIC group_submits count=4 min=4 p50=4 p99=4 p999=4 max=4 sum=16
+METRIC group_frame_bytes count=4 min=1216 p50=1216 p99=1216 p999=1216 max=1216 sum=4864
+STORAGE kind=Group.Append count=4 sum_ns=50466
+STORAGE kind=Group.SyncData count=4 sum_ns=3700376
+STORAGE kind=Lookup.Other count=4 sum_ns=30065
+STORAGE kind=Open.Other count=7 sum_ns=137826
+STORAGE kind=Open.SyncData count=1 sum_ns=924816
+STORAGE kind=Open.SyncDir count=1 sum_ns=7481
+STORAGE kind=Recovery.Other count=2 sum_ns=6630
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=813408
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=10546
+END records=16 segments=1 bytes=4928
+REOPEN ns=1275601 start_records=16 end_records=16 start_segments=1 end_segments=1 start_bytes=4928 end_bytes=4928 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 135 filtered out; finished in 0.03s
+
+     Running tests/process_crash.rs (target/release/deps/process_crash-01a552049a610cfa)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/read_ranges.rs (target/release/deps/read_ranges-af15a7de0a3cc27f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/real_storage.rs (target/release/deps/real_storage-323a21c4e3a7c09d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
