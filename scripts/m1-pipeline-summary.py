@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Join request and group clocks, reject invalid traces, and attribute slow requests."""
 import collections
 import csv
 import json
