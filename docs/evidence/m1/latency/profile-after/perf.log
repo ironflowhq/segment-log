@@ -1,0 +1,2 @@
+[ perf record: Woken up 56 times to write data ]
+[ perf record: Captured and wrote 14.291 MB /root/latency/profiles-after/perf.data (1524 samples) ]

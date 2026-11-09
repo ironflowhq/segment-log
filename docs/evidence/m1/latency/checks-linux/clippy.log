@@ -1,0 +1,3 @@
+    Checking segment-log-core v0.0.1 (/root/latency/src/segment-log-core)
+    Checking segment-log-server v0.0.1 (/root/latency/src/segment-log-server)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.30s

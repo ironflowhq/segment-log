@@ -1,0 +1,168 @@
+   Compiling segment-log-core v0.0.1 (/root/latency/src/segment-log-core)
+   Compiling segment-log-server v0.0.1 (/root/latency/src/segment-log-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.86s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-07bae76b75e6f41c)
+
+running 138 tests
+test acceptance::admission::charge_arithmetic_refuses_unrepresentable_counts_and_totals ... ok
+test acceptance::admission::concurrent_producers_cannot_overrun_the_byte_ceiling ... ok
+test acceptance::admission::encoded_size_equality_and_retry_eligibility_are_independent_of_pressure ... ok
+test acceptance::admission::durable_retries_must_still_fit_standalone_limits ... ok
+test acceptance::admission::malformed_and_oversized_requests_are_refused_before_admission ... ok
+test acceptance::admission::failed_groups_release_matched_abandoned_and_queued_reservations ... ok
+test acceptance::admission::maximum_fields_fit_by_length_even_with_unused_buffers ... ok
+test acceptance::admission::matched_and_abandoned_pending_handles_keep_fixed_charges_until_answered ... ok
+test acceptance::admission::every_terminal_answer_releases_bytes_before_the_caller_receives_it ... ok
+test acceptance::admission::peak_charges_remember_answered_requests ... ok
+test acceptance::admission::pending_bytes_remain_charged_until_the_answer ... ok
+test acceptance::admission::each_retained_capacity_and_result_slot_is_charged ... ok
+test acceptance::admission::queue_slots_end_at_dequeue_and_failed_insertion_releases_bytes ... ok
+test acceptance::admission::structural_size_state_and_capacity_failures_have_defined_precedence ... ok
+test acceptance::admission::repeated_keys_ignore_stream_payload_and_expected_revision_differences ... ok
+test acceptance::codec::group_bytes_follow_the_provisional_format ... ok
+test acceptance::codec::malformed_groups_are_rejected_without_panicking ... ok
+test acceptance::codec::header_bytes_and_validation_follow_the_format ... ok
+test acceptance::counters::first_input_failure_wins_over_stream_sort_order_and_offset_exhaustion ... ok
+test acceptance::counters::invalid_frame_epoch_does_not_exhaust_the_kept_prefix ... ok
+test acceptance::counters::maximum_header_epoch_refuses_before_recovery_mutations ... ok
+test acceptance::counters::maximum_kept_epoch_refuses_before_truncating_invalid_tail ... ok
+test acceptance::counters::offset_refusal_preserves_room_for_a_smaller_submit ... ok
+test acceptance::counters::revision_refusal_preserves_the_last_revision_and_other_streams ... ok
+test acceptance::counters::maximum_writer_epoch_can_commit_but_cannot_reopen ... ok
+test acceptance::drop::dropping_an_already_failed_writer_releases_the_lock ... ok
+test acceptance::drop::drop_holds_the_lock_until_its_drain_finishes ... ok
+test acceptance::durability::append_is_invisible_until_its_group_flush_succeeds ... ok
+test acceptance::drop::failure_after_drop_closes_admission_poisons_deferred_and_queued_work ... ok
+test acceptance::durability::read_boundaries_return_empty ... ok
+test acceptance::durable_keys::a_failed_group_poisons_deferred_work_without_overtaking ... ok
+test acceptance::durability::zero_linger_drains_queued_submits_up_to_the_cap ... ok
+test acceptance::durable_keys::a_short_valid_lookup_frame_cannot_ack_or_reject_a_retry ... ok
+test acceptance::codec::checksums_and_frames_match_the_bitwise_fixture ... ok
+test acceptance::durable_keys::durable_classification_precedes_counter_exhaustion ... ok
+test acceptance::durable_keys::acknowledged_keys_survive_each_crash_and_reboot ... ok
+test acceptance::durable_keys::durable_only_classification_does_not_wait_for_linger ... ok
+test acceptance::durable_keys::durable_subsets_reorder_and_regroup_after_reopen ... ok
+test acceptance::durable_keys::fresh_mixes_use_revisions_and_repeated_durable_keys_remain_invalid ... ok
+test acceptance::durable_keys::lookup_compares_stored_stream_and_payload_not_cached_contents ... ok
+test acceptance::durable_keys::conflicts_use_input_order_and_leave_no_changes ... ok
+test acceptance::durable_keys::malformed_lookup_also_aborts_the_unwritten_group ... ok
+test acceptance::durable_keys::lookup_faults_poison_instead_of_rejecting_or_matching ... ok
+test acceptance::durable_keys::malformed_lookup_frame_is_not_a_cached_success ... ok
+test acceptance::durable_keys::lookup_failure_aborts_buffered_work_but_preserves_finalized_answers ... ok
+test acceptance::durable_keys::recovery_does_not_index_keys_from_a_discarded_frame ... ok
+test acceptance::durable_keys::matching_and_fresh_records_reject_in_either_order ... ok
+test acceptance::durable_keys::regrouped_retries_still_obey_the_admission_group_cap ... ok
+test acceptance::durable_keys::retry_bytes_do_not_fill_groups_or_overtake_deferred_new_work ... ok
+test acceptance::durable_keys::terminal_answers_do_not_wait_for_a_new_flush ... ok
+test acceptance::durable_keys::terminal_classification_releases_capacity_before_wait ... ok
+PHASE provision
+PHASE create
+PHASE commit-0
+PHASE commit-1
+test acceptance::durable_keys::unknown_keyed_outcomes_resolve_from_the_recovered_prefix ... ok
+PHASE retry
+PHASE drop
+PHASE recovery
+test acceptance::open::creation_is_durable_and_exclusively_locked_before_returning ... ok
+test acceptance::open::defaults_match_the_api_and_budgets_are_independent ... ok
+PHASE recovered-drop
+PHASE done
+test acceptance::evidence::real_storage_sync_phases ... ok
+test acceptance::open::inclusive_option_boundaries_open_without_budget_sized_allocation ... ok
+test acceptance::open::invalid_options_do_not_touch_storage ... ok
+test acceptance::open::invalid_options_precede_locks_missing_ancestors_and_permissions ... ok
+test acceptance::open::multiple_segments_are_refused_before_any_recovery_mutation ... ok
+test acceptance::open::open_cannot_publish_before_parent_directory_sync ... ok
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+test acceptance::pending_keys::deferred_original_keys_do_not_leak_into_the_previous_group ... ok
+test acceptance::pending_keys::dropped_matched_waiter_holds_its_full_charge_until_answer ... ok
+test acceptance::pending_keys::dropping_the_log_drains_originals_and_matched_waiters ... ok
+test acceptance::pending_keys::failed_groups_drain_matched_waiters_and_poison_queued_retries ... ok
+test acceptance::open_faults::failed_open_releases_its_lock_and_can_recover_without_sync_retries ... ok
+test acceptance::pending_keys::lookup_failure_drains_pending_waiters_before_any_group_write ... ok
+test acceptance::pending_keys::pending_and_mixed_retries_wait_for_the_one_original_group ... ok
+test acceptance::pending_keys::pending_keys_precede_exhausted_counters ... ok
+test acceptance::pending_keys::failed_pending_groups_recover_originals_without_retry_records ... ok
+test acceptance::pending_keys::pending_rejections_are_immediate_and_leave_no_reservations ... ok
+test acceptance::pending_keys::terminal_answers_do_not_wait_for_positive_linger ... ok
+test acceptance::poison::failed_flush_hides_the_group_and_stops_the_writer ... ok
+test acceptance::poison::failed_writes_never_ack_and_recovery_keeps_only_complete_frames ... ok
+test acceptance::poison::lookup_failure_without_new_records_poisons_both_kinds_of_queued_work ... ok
+test acceptance::codec::binary_groups_round_trip_and_encoding_enforces_limits ... ok
+test acceptance::poison::short_valid_lookup_aborts_buffered_originals_and_waiters ... ok
+test acceptance::recovery::acknowledged_record_survives_each_crash_mode ... ok
+test acceptance::open::every_creation_boundary_recovers_a_reachable_log ... ok
+test acceptance::recovery::crash_during_a_flush_has_an_unknown_but_atomic_outcome ... ok
+test acceptance::recovery::every_creation_and_recovery_boundary_can_crash ... ok
+test acceptance::pending_keys::pending_rejections_and_originals_survive_only_as_a_valid_prefix ... ok
+test acceptance::recovery::unsupported_header_version_is_reported_without_repair ... ok
+test acceptance::recovery::variable_binary_payloads_recover_atomically_at_each_group_boundary ... ok
+test acceptance::recovery_fixtures::handmade_invalid_tails_stop_at_the_first_bad_frame ... ok
+test acceptance::recovery_fixtures::incomplete_headers_can_be_recreated ... ok
+test acceptance::recovery_fixtures::invalid_complete_headers_are_never_repaired ... ok
+test acceptance::recovery_fixtures::recovery_rewrites_a_readable_group_after_failed_writeback ... ok
+test acceptance::revisions::empty_and_revision_zero_are_distinct_preconditions ... ok
+test acceptance::revisions::finalized_revision_rejection_is_unchanged_by_a_later_flush_failure ... ok
+test acceptance::revisions::finalized_revision_rejection_is_unchanged_by_each_crash_mode ... ok
+test acceptance::revisions::first_failing_input_wins_regardless_of_stream_sort_order ... ok
+test acceptance::revisions::interleaved_records_see_successive_revisions_in_input_order ... ok
+test acceptance::revisions::later_failure_discards_fresh_streams_keys_and_revision_advances_across_crashes ... ok
+test acceptance::revisions::pending_revisions_are_checked_before_flush_and_publish_only_after_success ... ok
+test acceptance::revisions::wrong_revision_does_not_consume_a_position ... ok
+test acceptance::seeded::oracle_rejects_a_false_permanent_size_refusal ... ok
+test acceptance::seeded::oracle_rejects_partial_group_reader_states ... ok
+test acceptance::seeded::recovery_verification_respects_the_saved_small_group_cap ... ok
+test acceptance::seeded::saved_metadata_retains_reader_observations ... ok
+test acceptance::seeded::saved_trace_replays_the_oracle ... ok
+test acceptance::seeded::threaded_seeded_traces_long_run ... ignored, long run
+test acceptance::poison::poisoned_groups_recover_durably_before_unknown_keys_are_retried ... ok
+test acceptance::support::coverage::case_discovery_includes_standalone_definitions ... ok
+test acceptance::support::coverage::cited_cases_are_defined_and_uncited_cases_are_reported ... FAILED
+test acceptance::recovery::identical_rewrites_of_durable_groups_never_tear ... ok
+test acceptance::support::trace::saving_a_trace_preserves_broken_pipe_errors ... ok
+test acceptance::unknown_retries::known_revision_rejection_has_no_replay_success_guarantee ... ok
+test acceptance::unknown_retries::partial_retry_cannot_prove_an_unkeyed_original_existed ... ok
+test acceptance::unknown_retries::unkeyed_survivors_require_revisions_and_can_repeat_payloads ... ok
+test acceptance::recovery::failed_data_flush_recovery_makes_the_readable_submit_durable ... ok
+test acceptance::unknown_retries::unknown_regrouped_retry_can_have_only_a_subset_of_matches ... ok
+test storage::sim::tests::a_held_call_cannot_write_after_its_process_dies ... ok
+test storage::sim::tests::canceled_syncs_cannot_change_the_new_boot ... ok
+test storage::sim::tests::disk_full_sync_errors_also_require_a_rewrite ... ok
+test acceptance::unknown_retries::unknown_rejections_do_not_imply_an_atomic_original ... ok
+test storage::sim::tests::failed_full_file_sync_requires_a_rewrite ... ok
+test storage::sim::tests::held_calls_report_start_and_wait_for_release ... ok
+test storage::sim::tests::injected_faults_have_observable_results_and_replay ... ok
+test storage::sim::tests::kill_keeps_volatile_data_without_making_it_durable ... ok
+test storage::sim::tests::metadata_sync_errors_stop_further_writes ... ok
+test storage::sim::tests::parent_and_log_entries_need_separate_syncs ... ok
+test storage::sim::tests::failed_sync_requires_rewriting_each_byte ... ok
+test storage::sim::tests::repeated_power_loss_never_restores_an_entry_without_its_file ... ok
+test storage::sim::tests::rewriting_one_page_does_not_flush_failed_bytes_in_another ... ok
+test storage::sim::tests::stale_lock_guards_cannot_release_a_new_boot_lock ... ok
+test storage::sim::tests::successful_sync_preserves_truncated_length_and_bytes ... ok
+test storage::sim::tests::power_loss_selects_pages_independently ... ok
+test storage::sim::tests::tearing_an_append_preserves_the_durable_prefix_in_its_sector ... ok
+test storage::sim::tests::trace_replay_reproduces_chained_crash_states ... ok
+test storage::sim::tests::unsupported_fault_kinds_are_rejected_before_injection ... ok
+test storage::sim::tests::unsynced_removal_can_restore_the_durable_file ... ok
+test storage::sim::tests::writes_and_reads_can_be_held_and_released_successfully ... ok
+test storage::tests::real_and_simulated_operations_match_without_crashes ... ok
+test storage::tests::replacing_a_locked_file_does_not_reuse_its_lock ... ok
+test storage::sim::tests::torn_rewrites_preserve_identical_durable_sectors ... ok
+test acceptance::support::deadline_tests::deadlines_do_not_wait_for_diagnostic_locks ... ok
+test acceptance::seeded::threaded_seeded_traces_preserve_the_contract ... ok
+
+failures:
+
+---- acceptance::support::coverage::cited_cases_are_defined_and_uncited_cases_are_reported stdout ----
+
+thread 'acceptance::support::coverage::cited_cases_are_defined_and_uncited_cases_are_reported' (46929) panicked at segment-log-core/src/acceptance/support/coverage.rs:11:52:
+called `Result::unwrap()` on an `Err` value: Error { kind: InvalidData, message: "stream did not contain valid UTF-8" }
+
+
+failures:
+    acceptance::support::coverage::cited_cases_are_defined_and_uncited_cases_are_reported
+
+test result: FAILED. 136 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.53s
+
+error: test failed, to rerun pass `-p segment-log-core --lib`

@@ -1,0 +1,142 @@
+54739 16:44:21.957401 write(1</root/latency/checks/syscalls-workload.log>, "\nrunning 1 test\n", 16) = 16 <0.000082>
+54740 16:44:21.963489 write(2</root/latency/checks/syscalls-workload.log>, "PHASE provision\n", 16) = 16 <0.000049>
+54740 16:44:21.964335 fsync(3</tmp/evidence-54739-0>) = 0 <0.001298>
+54740 16:44:21.965928 fsync(3</tmp>)    = 0 <0.000699>
+54740 16:44:21.966930 fsync(3</>)       = 0 <0.000693>
+54740 16:44:21.967827 write(2</root/latency/checks/syscalls-workload.log>, "PHASE create\n", 13) = 13 <0.000049>
+54740 16:44:21.969411 write(5</tmp/evidence-54739-0/log/00000000000000000000.seg>, "SGLG\0\0@\0Y\32c\322\354\n\346\360\6\356\337\271\347@\345\336\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\4\276\337H", 64) = 64 <0.000055>
+54740 16:44:21.969536 fdatasync(5</tmp/evidence-54739-0/log/00000000000000000000.seg>) = 0 <0.001142>
+54740 16:44:21.970744 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000029>
+54740 16:44:21.970826 write(2</root/latency/checks/syscalls-workload.log>, "Open.SyncData", 13) = 13 <0.000025>
+54740 16:44:21.970895 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000025>
+54740 16:44:21.970971 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0/log/00000000000000000000.seg", 50) = 50 <0.000025>
+54740 16:44:21.971037 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000025>
+54740 16:44:21.971104 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000025>
+54740 16:44:21.971171 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000025>
+54740 16:44:21.971238 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000025>
+54740 16:44:21.971304 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000025>
+54740 16:44:21.971370 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000025>
+54740 16:44:21.971500 fsync(6</tmp/evidence-54739-0/log>) = 0 <0.000751>
+54740 16:44:21.972355 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000028>
+54740 16:44:21.972432 write(2</root/latency/checks/syscalls-workload.log>, "Open.SyncDir", 12) = 12 <0.000025>
+54740 16:44:21.972499 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000025>
+54740 16:44:21.972566 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0/log", 25) = 25 <0.000025>
+54740 16:44:21.972632 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000025>
+54740 16:44:21.972710 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000027>
+54740 16:44:21.972780 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000026>
+54740 16:44:21.972848 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000025>
+54740 16:44:21.972914 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000033>
+54740 16:44:21.972988 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000026>
+54740 16:44:21.973323 write(5</tmp/evidence-54739-0/log/00000000000000000000.seg>, "SGLG\0\0@\0Y\32c\322\354\n\346\360\6\356\337\271\347@\345\336\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\4\276\337H", 64) = 64 <0.000028>
+54740 16:44:21.973397 fsync(5</tmp/evidence-54739-0/log/00000000000000000000.seg>) = 0 <0.000918>
+54740 16:44:21.974362 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000028>
+54740 16:44:21.974439 write(2</root/latency/checks/syscalls-workload.log>, "Recovery.SyncAll", 16) = 16 <0.000026>
+54740 16:44:21.974507 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000026>
+54740 16:44:21.974574 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0/log/00000000000000000000.seg", 50) = 50 <0.000025>
+54740 16:44:21.974641 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000043>
+54740 16:44:21.974733 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000027>
+54740 16:44:21.974802 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000026>
+54740 16:44:21.974881 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000026>
+54740 16:44:21.974955 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000025>
+54740 16:44:21.975022 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000025>
+54740 16:44:21.975145 fsync(6</tmp/evidence-54739-0/log>) = 0 <0.000686>
+54740 16:44:21.975931 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000030>
+54740 16:44:21.976020 write(2</root/latency/checks/syscalls-workload.log>, "Recovery.SyncDir", 16) = 16 <0.000026>
+54740 16:44:21.976089 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000025>
+54740 16:44:21.976155 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0/log", 25) = 25 <0.000025>
+54740 16:44:21.976223 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000025>
+54740 16:44:21.976288 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000025>
+54740 16:44:21.976354 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000025>
+54740 16:44:21.976420 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000025>
+54740 16:44:21.976486 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000025>
+54740 16:44:21.976551 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000025>
+54740 16:44:21.976689 fsync(6</tmp/evidence-54739-0>) = 0 <0.000785>
+54740 16:44:21.977576 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000029>
+54740 16:44:21.977655 write(2</root/latency/checks/syscalls-workload.log>, "Recovery.SyncDir", 16) = 16 <0.000046>
+54740 16:44:21.977744 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000025>
+54740 16:44:21.977813 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0", 21) = 21 <0.000043>
+54740 16:44:21.977901 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000031>
+54740 16:44:21.977978 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000027>
+54740 16:44:21.978048 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000026>
+54740 16:44:21.978116 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000025>
+54740 16:44:21.978182 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000025>
+54740 16:44:21.978248 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000025>
+54740 16:44:21.978928 write(2</root/latency/checks/syscalls-workload.log>, "PHASE commit-0\n", 15) = 15 <0.000029>
+54742 16:44:21.981204 write(5</tmp/evidence-54739-0/log/00000000000000000000.seg>, "@\1\0\0#\304\320\37\1\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000069>
+54742 16:44:21.981355 fdatasync(5</tmp/evidence-54739-0/log/00000000000000000000.seg>) = 0 <0.000974>
+54742 16:44:21.982396 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000048>
+54742 16:44:21.982511 write(2</root/latency/checks/syscalls-workload.log>, "Group.SyncData", 14) = 14 <0.000040>
+54742 16:44:21.982608 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000040>
+54742 16:44:21.982762 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0/log/00000000000000000000.seg", 50) = 50 <0.000045>
+54742 16:44:21.982870 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000041>
+54742 16:44:21.982975 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000039>
+54742 16:44:21.983071 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000039>
+54742 16:44:21.983167 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000041>
+54742 16:44:21.983270 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000039>
+54742 16:44:21.983366 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000039>
+54740 16:44:21.983581 write(2</root/latency/checks/syscalls-workload.log>, "PHASE commit-1\n", 15) = 15 <0.000027>
+54742 16:44:21.985009 write(5</tmp/evidence-54739-0/log/00000000000000000000.seg>, "@\1\0\0\333\261\345u\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000053>
+54742 16:44:21.985131 fdatasync(5</tmp/evidence-54739-0/log/00000000000000000000.seg>) = 0 <0.000950>
+54742 16:44:21.986145 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000049>
+54742 16:44:21.986259 write(2</root/latency/checks/syscalls-workload.log>, "Group.SyncData", 14) = 14 <0.000040>
+54742 16:44:21.986357 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000039>
+54742 16:44:21.986453 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0/log/00000000000000000000.seg", 50) = 50 <0.000040>
+54742 16:44:21.986549 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000040>
+54742 16:44:21.986645 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000084>
+54742 16:44:21.986789 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000039>
+54742 16:44:21.986885 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000046>
+54742 16:44:21.986993 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000040>
+54742 16:44:21.987113 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000040>
+54740 16:44:21.987314 write(2</root/latency/checks/syscalls-workload.log>, "PHASE retry\n", 12) = 12 <0.000027>
+54740 16:44:21.987746 write(2</root/latency/checks/syscalls-workload.log>, "PHASE drop\n", 11) = 11 <0.000029>
+54742 16:44:21.988590 +++ exited with 0 +++
+54740 16:44:21.988756 write(2</root/latency/checks/syscalls-workload.log>, "PHASE recovery\n", 15) = 15 <0.000027>
+54740 16:44:21.990261 write(6</tmp/evidence-54739-0/log/00000000000000000000.seg>, "@\1\0\0\333\261\345u\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000028>
+54740 16:44:21.990343 fsync(6</tmp/evidence-54739-0/log/00000000000000000000.seg>) = 0 <0.000956>
+54740 16:44:21.991350 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000028>
+54740 16:44:21.991427 write(2</root/latency/checks/syscalls-workload.log>, "Recovery.SyncAll", 16) = 16 <0.000026>
+54740 16:44:21.991495 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000025>
+54740 16:44:21.991562 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0/log/00000000000000000000.seg", 50) = 50 <0.000025>
+54740 16:44:21.991628 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000025>
+54740 16:44:21.991706 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000028>
+54740 16:44:21.991778 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000025>
+54740 16:44:21.991845 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000025>
+54740 16:44:21.991912 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000034>
+54740 16:44:21.991987 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000025>
+54740 16:44:21.992113 fsync(7</tmp/evidence-54739-0/log>) = 0 <0.000690>
+54740 16:44:21.992910 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000049>
+54740 16:44:21.993024 write(2</root/latency/checks/syscalls-workload.log>, "Recovery.SyncDir", 16) = 16 <0.000025>
+54740 16:44:21.993094 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000026>
+54740 16:44:21.993162 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0/log", 25) = 25 <0.000025>
+54740 16:44:21.993228 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000026>
+54740 16:44:21.993295 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000025>
+54740 16:44:21.993360 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000026>
+54740 16:44:21.993428 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000026>
+54740 16:44:21.993494 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000026>
+54740 16:44:21.993561 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000027>
+54740 16:44:21.993708 fsync(7</tmp/evidence-54739-0>) = 0 <0.000781>
+54740 16:44:21.994603 write(2</root/latency/checks/syscalls-workload.log>, "STORAGE ", 8) = 8 <0.000030>
+54740 16:44:21.994696 write(2</root/latency/checks/syscalls-workload.log>, "Recovery.SyncDir", 16) = 16 <0.000027>
+54740 16:44:21.994768 write(2</root/latency/checks/syscalls-workload.log>, " path=", 6) = 6 <0.000025>
+54740 16:44:21.994835 write(2</root/latency/checks/syscalls-workload.log>, "/tmp/evidence-54739-0", 21) = 21 <0.000026>
+54740 16:44:21.994902 write(2</root/latency/checks/syscalls-workload.log>, " result=", 8) = 8 <0.000034>
+54740 16:44:21.994977 write(2</root/latency/checks/syscalls-workload.log>, "Ok", 2) = 2 <0.000025>
+54740 16:44:21.995043 write(2</root/latency/checks/syscalls-workload.log>, "(", 1) = 1 <0.000025>
+54740 16:44:21.995110 write(2</root/latency/checks/syscalls-workload.log>, "()", 2) = 2 <0.000025>
+54740 16:44:21.995175 write(2</root/latency/checks/syscalls-workload.log>, ")", 1) = 1 <0.000025>
+54740 16:44:21.995241 write(2</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000025>
+54740 16:44:21.996315 write(2</root/latency/checks/syscalls-workload.log>, "PHASE recovered-drop\n", 21) = 21 <0.000031>
+54743 16:44:21.997913 +++ exited with 0 +++
+54740 16:44:21.998161 write(2</root/latency/checks/syscalls-workload.log>, "PHASE done\n", 11) = 11 <0.000047>
+54741 16:44:22.000796 +++ exited with 0 +++
+54740 16:44:22.001524 +++ exited with 0 +++
+54739 16:44:22.001579 write(1</root/latency/checks/syscalls-workload.log>, "test acceptance::evidence::real_storage_sync_phases ... ", 56) = 56 <0.000112>
+54739 16:44:22.001815 write(1</root/latency/checks/syscalls-workload.log>, "ok", 2) = 2 <0.000067>
+54739 16:44:22.002002 write(1</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000064>
+54739 16:44:22.002175 write(1</root/latency/checks/syscalls-workload.log>, "\n", 1) = 1 <0.000063>
+54739 16:44:22.002342 write(1</root/latency/checks/syscalls-workload.log>, "test result: ", 13) = 13 <0.000063>
+54739 16:44:22.002507 write(1</root/latency/checks/syscalls-workload.log>, "ok", 2) = 2 <0.000063>
+54739 16:44:22.002674 write(1</root/latency/checks/syscalls-workload.log>, ". 1 passed; 0 failed; 0 ignored; 0 measured; 137 filtered out", 61) = 61 <0.000086>
+54739 16:44:22.002929 write(1</root/latency/checks/syscalls-workload.log>, "; finished in 0.04s", 19) = 19 <0.000064>
+54739 16:44:22.003115 write(1</root/latency/checks/syscalls-workload.log>, "\n\n", 2) = 2 <0.000064>
+54739 16:44:22.004043 +++ exited with 0 +++

@@ -1,0 +1,38 @@
+
+running 1 test
+DIAGNOSTIC measured_storage=false phase_cpu=false
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=876584 p50=1613159 p99=2124516 p999=3531074 max=5241288 sum=1580922774
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=2667750 records=0 segments=1 bytes=64
+APPEND records=1000000 elapsed_ns=17897821372 records_per_second=55872.722 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=480000 admission_call_sum_ns=885270635
+METRIC append_ns count=1000000 min=3273127 p50=16594129 p99=25532906 p999=33171837 max=35589951 sum=17853813220981
+END records=1000000 segments=1 bytes=296078016
+REOPEN ns=2062334476 start_records=1000000 end_records=1000000 start_segments=1 end_segments=1 start_bytes=296078016 end_bytes=296078016 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 135 filtered out; finished in 26.71s
+
+	Command being timed: "/root/latency/src/target/release/deps/segment_log_core-3d365a8d7243eacd --exact acceptance::evidence::measured_appends_survive_reopen --nocapture"
+	User time (seconds): 20.38
+	System time (seconds): 13.73
+	Percent of CPU this job got: 127%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:26.71
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 652260
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 237909
+	Voluntary context switches: 1027279
+	Involuntary context switches: 4647
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 1109728
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
