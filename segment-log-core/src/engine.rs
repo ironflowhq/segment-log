@@ -87,6 +87,8 @@ pub struct SegmentLog {
     options: Arc<Options>,
     used: Arc<std::sync::atomic::AtomicUsize>,
     _lock: Mutex<Box<dyn Lock>>,
+    #[cfg(test)]
+    drop_closed: Option<mpsc::Sender<()>>,
 }
 impl SegmentLog {
     pub fn open(dir: impl AsRef<Path>, options: Options) -> Result<Self, OpenError> {
@@ -149,7 +151,15 @@ impl SegmentLog {
             options,
             used: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
             _lock: Mutex::new(recovered.lock),
+            #[cfg(test)]
+            drop_closed: None,
         })
+    }
+    #[cfg(test)]
+    pub(crate) fn observe_drop(&mut self) -> mpsc::Receiver<()> {
+        let (sender, receiver) = mpsc::channel();
+        self.drop_closed = Some(sender);
+        receiver
     }
     #[cfg(test)]
     pub(crate) fn seed_counters(&self, watermark: u64, heads: &[(&[u8], u64)]) {
@@ -268,6 +278,10 @@ impl SegmentLog {
 impl Drop for SegmentLog {
     fn drop(&mut self) {
         self.sender.take();
+        #[cfg(test)]
+        if let Some(observer) = self.drop_closed.take() {
+            let _ = observer.send(());
+        }
         if let Some(writer) = self.writer.take() {
             let _ = writer.join();
         }
