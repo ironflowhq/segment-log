@@ -8,3 +8,7 @@ mod revisions;
 pub(crate) mod support;
 
 mod counters;
+
+mod recovery_fixtures;
+
+mod open_faults;

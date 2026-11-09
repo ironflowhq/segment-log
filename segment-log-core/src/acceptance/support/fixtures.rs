@@ -92,3 +92,14 @@ pub(crate) fn epoch_fixture(
     sim.call(Call::new(SEG, Purpose::Recovery, Op::SyncAll))
         .unwrap();
 }
+
+pub(crate) fn assert_records(actual: &[Record], expected: &[Record]) {
+    assert_eq!(actual.len(), expected.len());
+    for (a, e) in actual.iter().zip(expected) {
+        assert_eq!((a.offset, a.revision), (e.offset, e.revision));
+        assert_eq!(
+            (&a.stream, &a.key, &a.payload),
+            (&e.stream, &e.key, &e.payload)
+        );
+    }
+}
