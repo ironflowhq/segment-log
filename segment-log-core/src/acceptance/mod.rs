@@ -18,3 +18,5 @@ mod durable_keys;
 mod pending_keys;
 
 mod unknown_retries;
+
+mod drop;

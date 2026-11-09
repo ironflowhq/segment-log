@@ -13,6 +13,10 @@
 //! and shutdown, where a later admitted storage barrier cannot run. `finish` joins
 //! a panicked writer while retaining its disconnected sender. For poison it closes
 //! admission so the writer can finish draining without consuming old results.
+//!
+//! `SegmentLog::observe_drop` is a cfg(test) notification after Drop closes
+//! admission. Cap deferral can reach storage before Drop starts, so a held call
+//! cannot establish this boundary when testing queued failures during drain.
 mod coverage;
 
 pub(crate) fn bounded(f: impl FnOnce() + Send + 'static) {
