@@ -103,3 +103,19 @@ pub(crate) fn assert_records(actual: &[Record], expected: &[Record]) {
         );
     }
 }
+
+pub(crate) fn stored(
+    stream: &[u8],
+    key: Option<&[u8]>,
+    payload: &[u8],
+    offset: u64,
+    revision: u64,
+) -> Record {
+    Record {
+        stream: stream.to_vec(),
+        key: key.map(<[u8]>::to_vec),
+        payload: payload.to_vec(),
+        offset,
+        revision,
+    }
+}

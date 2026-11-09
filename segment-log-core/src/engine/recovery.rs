@@ -4,7 +4,7 @@ pub(super) struct Recovered {
     pub lock: Box<dyn Lock>,
     pub published: Published,
     pub epoch: u64,
-    pub keys: DurableKeys,
+    pub keys: Keys,
 }
 impl From<io::Error> for OpenError {
     fn from(error: io::Error) -> Self {
@@ -119,7 +119,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         });
     }
     let mut published = Published::default();
-    let mut keys = DurableKeys::default();
+    let mut keys = Keys::default();
     let mut epoch = header.epoch;
     let mut position = 64;
     let mut tail = (0, bytes);
