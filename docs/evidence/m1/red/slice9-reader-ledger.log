@@ -1,0 +1,145 @@
+   Compiling segment-log-core v0.0.1 (/Volumes/p7/t3/worktrees/segment-log/t3-2a3ba012/segment-log-core)
+warning: unused imports: `self` and `trace`
+ --> segment-log-core/src/acceptance/seeded.rs:1:62
+  |
+1 | use super::support::{fixtures::{Sim, SEG, options}, oracle::{self, Answer, Input, Observation, Request}, trace};
+  |                                                              ^^^^                                        ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `Event` and `Fault`
+ --> segment-log-core/src/acceptance/seeded.rs:2:54
+  |
+2 | use crate::storage::{Call, Op, Purpose, sim::{Crash, Event, Fault}};
+  |                                                      ^^^^^  ^^^^^
+
+warning: unused imports: `Mutex`, `PathBuf`, `mpsc`, and `thread`
+ --> segment-log-core/src/acceptance/seeded.rs:4:24
+  |
+4 | use std::{path::{Path, PathBuf}, sync::{Arc, Mutex, mpsc}, thread, time::Duration};
+  |                        ^^^^^^^               ^^^^^  ^^^^   ^^^^^^
+
+warning: methods `new_record` and `matches` are never used
+  --> segment-log-core/src/acceptance/support/oracle.rs:14:12
+   |
+13 | impl Input {
+   | ---------- methods in this implementation
+14 |     pub fn new_record(&self) -> NewRecord {
+   |            ^^^^^^^^^^
+...
+25 |     pub fn matches(&self, r: &Record) -> bool {
+   |            ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated functions `commit` and `admission` are never used
+  --> segment-log-core/src/acceptance/support/oracle.rs:36:12
+   |
+35 | impl Answer {
+   | ----------- associated functions in this implementation
+36 |     pub fn commit(result: Result<Committed, CommitError>) -> Self {
+   |            ^^^^^^
+...
+43 |     pub fn admission(e: AppendError) -> Self {
+   |            ^^^^^^^^^
+
+warning: fields `before`, `after`, `from`, and `max` are never read
+  --> segment-log-core/src/acceptance/support/oracle.rs:56:9
+   |
+55 | pub(crate) struct Observation {
+   |                   ----------- fields in this struct
+56 |     pub before: u64,
+   |         ^^^^^^
+57 |     pub after: u64,
+   |         ^^^^^
+58 |     pub from: u64,
+   |         ^^^^
+59 |     pub max: usize,
+   |         ^^^
+   |
+   = note: `Observation` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: function `submit` is never used
+  --> segment-log-core/src/acceptance/support/oracle.rs:64:15
+   |
+64 | pub(crate) fn submit(inputs: &[Input]) -> Submit {
+   |               ^^^^^^
+
+warning: function `execute` is never used
+  --> segment-log-core/src/acceptance/support/oracle.rs:67:15
+   |
+67 | pub(crate) fn execute(log: &SegmentLog, inputs: &[Input]) -> Answer {
+   |               ^^^^^^^
+
+warning: function `predict` is never used
+  --> segment-log-core/src/acceptance/support/oracle.rs:77:15
+   |
+77 | pub(crate) fn predict(inputs: &[Input], history: &mut Vec<Record>) -> Answer {
+   |               ^^^^^^^
+
+warning: function `frame_inputs` is never used
+   --> segment-log-core/src/acceptance/support/oracle.rs:106:15
+    |
+106 | pub(crate) fn frame_inputs(frame: &[u8]) -> Vec<(Vec<u8>, Option<Vec<u8>>, Vec<u8>)> {
+    |               ^^^^^^^^^^^^
+
+warning: function `written` is never used
+   --> segment-log-core/src/acceptance/support/oracle.rs:129:15
+    |
+129 | pub(crate) fn written(trace: &[crate::storage::sim::Event], requests: &[Request]) -> (Vec<Record>, Vec<usize>) {
+    |               ^^^^^^^
+
+warning: function `history` is never used
+   --> segment-log-core/src/acceptance/support/oracle.rs:156:15
+    |
+156 | pub(crate) fn history(log: &SegmentLog, expected: &[Record]) {
+    |               ^^^^^^^
+
+warning: function `observations` is never used
+   --> segment-log-core/src/acceptance/support/oracle.rs:164:15
+    |
+164 | pub(crate) fn observations(requests: &[Request], reads: &[Observation], kept: &[Record]) {
+    |               ^^^^^^^^^^^^
+
+warning: function `opts` is never used
+  --> segment-log-core/src/acceptance/seeded.rs:14:4
+   |
+14 | fn opts(o: &Options) -> Options { Options { linger:o.linger,group_byte_cap:o.group_byte_cap,queue_capacity:o.queue_capacity,pending_...
+   |    ^^^^
+
+warning: function `open` is never used
+  --> segment-log-core/src/acceptance/seeded.rs:15:4
+   |
+15 | fn open(sim: &Sim, o: &Options) -> SegmentLog {
+   |    ^^^^
+
+warning: function `flush` is never used
+  --> segment-log-core/src/acceptance/seeded.rs:18:4
+   |
+18 | fn flush() -> Call { Call::new(SEG,Purpose::Group,Op::SyncData) }
+   |    ^^^^^
+
+warning: `segment-log-core` (lib test) generated 16 warnings (run `cargo fix --lib -p segment-log-core --tests` to apply 3 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.32s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 1 test
+test acceptance::seeded::saved_metadata_retains_reader_observations ... FAILED
+
+failures:
+
+---- acceptance::seeded::saved_metadata_retains_reader_observations stdout ----
+
+thread 'acceptance::seeded::saved_metadata_retains_reader_observations' (130006695) panicked at segment-log-core/src/acceptance/seeded.rs:41:5:
+assertion `left == right` failed: saved replay must retain independent reader observations
+  left: 0
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    acceptance::seeded::saved_metadata_retains_reader_observations
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 125 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p segment-log-core --lib`

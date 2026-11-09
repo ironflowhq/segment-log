@@ -1,0 +1,9 @@
+   Compiling segment-log-core v0.0.1 (/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/segment-log-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.46s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 1 test
+trace seeds=1000..=1099 scenarios=2700 (9 workloads x 3 crash modes per seed)
+test acceptance::seeded::threaded_seeded_traces_long_run ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 131 filtered out; finished in 52.19s

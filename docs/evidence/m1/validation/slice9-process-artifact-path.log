@@ -1,0 +1,8 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running tests/process_crash.rs (target/debug/deps/process_crash-333bc969f23db883)
+
+running 1 test
+seed=808 mode=SIGKILL transcript=/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/path-proof/process/segment-log-slice8-61532-SIGKILL-808/protocol.txt
+test killed_writers_preserve_the_recorded_contract ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.02s

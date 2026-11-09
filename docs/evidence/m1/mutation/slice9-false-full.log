@@ -1,0 +1,80 @@
+Mutation inserted after permanent-size checks:
+        if self.options.queue_capacity <= 3 && self.used.load(std::sync::atomic::Ordering::Acquire) > 0 { return Err(AppendError::Full); }
+
+   Compiling segment-log-core v0.0.1 (/private/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice9-mutants-x18vt6vz/segment-log-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.21s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 7 tests
+test acceptance::seeded::threaded_seeded_traces_long_run ... ignored, long run
+
+thread 'acceptance::seeded::oracle_rejects_partial_group_reader_states' (130309967) panicked at segment-log-core/src/acceptance/support/oracle.rs:331:9:
+read length has no committed snapshot in its bracket
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'acceptance::seeded::oracle_rejects_a_false_permanent_size_refusal' (130309966) panicked at segment-log-core/src/acceptance/support/oracle.rs:397:17:
+false permanent size refusal: Request { inputs: [Input { stream: [115, 50], key: Some([107, 50, 58, 48]), payload: [2, 3, 0, 1, 6, 7, 4], expected: None, spare: 0 }, Input { stream: [115, 50], key: Some([107, 50, 58, 49]), payload: [3, 2, 1, 0, 7, 6, 5], expected: Some(0), spare: 0 }], original: true, answer: Refused("TooLarge"), watermark: 0 }
+test acceptance::seeded::saved_metadata_retains_reader_observations ... ok
+
+thread 'acceptance::seeded::oracle_rejects_partial_group_reader_states' (130309967) panicked at segment-log-core/src/acceptance/support/oracle.rs:339:13:
+stream head has no committed snapshot in its bracket
+test acceptance::seeded::oracle_rejects_partial_group_reader_states ... ok
+test acceptance::seeded::oracle_rejects_a_false_permanent_size_refusal ... ok
+test acceptance::seeded::recovery_verification_respects_the_saved_small_group_cap ... ok
+test acceptance::seeded::saved_trace_replays_the_oracle ... ok
+
+thread 'acceptance::seeded::threaded_seeded_traces_preserve_the_contract' (130309971) panicked at segment-log-core/src/acceptance/seeded/workloads.rs:262:9:
+eligible competitors must enter the empty queue
+
+thread '<unnamed>' (130310268) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310269) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310270) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310271) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310272) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310273) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310274) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310275) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310276) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310277) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310278) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread '<unnamed>' (130310267) panicked at segment-log-core/src/acceptance/seeded/actors.rs:92:48:
+called `Result::unwrap()` on an `Err` value: PoisonError { .. }
+
+thread 'segment-log-writer' (130310266) panicked at segment-log-core/src/storage/sim.rs:270:18:
+held call was not released: Disconnected
+SIM-MODEL, SIM-CONFORMANCE initial seed 900 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-59591-0.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 900 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-59591-1.trace
+cases=ORACLE-1..5,7..12 seed=900 mode=Kill variant=8 artifacts=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-traces/59591-900-Kill-8
+SIM-MODEL, SIM-CONFORMANCE initial seed 900 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-59591-2.trace
+test acceptance::seeded::threaded_seeded_traces_preserve_the_contract ... FAILED
+
+failures:
+
+failures:
+    acceptance::seeded::threaded_seeded_traces_preserve_the_contract
+
+test result: FAILED. 5 passed; 1 failed; 1 ignored; 0 measured; 125 filtered out; finished in 0.20s
+
+error: test failed, to rerun pass `-p segment-log-core --lib`
