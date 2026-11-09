@@ -12,6 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod cpu;
 mod measured;
 use measured::Measured;
 
@@ -168,6 +169,13 @@ fn measured_appends_survive_reopen() {
     let rounds = setting("SEGMENT_LOG_BENCH_ROUNDS", 4);
     let device_rounds = setting("SEGMENT_LOG_DEVICE_ROUNDS", 8);
     assert!(callers > 0 && rounds > 0 && device_rounds > 0);
+    let measured = match std::env::var("SEGMENT_LOG_BENCH_STORAGE").as_deref() {
+        Err(std::env::VarError::NotPresent) | Ok("measured") => true,
+        Ok("real") => false,
+        other => panic!("invalid SEGMENT_LOG_BENCH_STORAGE: {other:?}"),
+    };
+    let profile_cpu = std::env::var_os("SEGMENT_LOG_BENCH_CPU").is_some();
+    println!("DIAGNOSTIC measured_storage={measured} phase_cpu={profile_cpu}");
     let options = Options::default();
     println!(
         "CONFIG callers={callers} rounds={rounds} payload=256 records_per_submit=1 seed=none_literal_formula linger_ns={} group_byte_cap={} roll_bytes={} queue_capacity={} pending_byte_budget={}",
@@ -202,8 +210,12 @@ fn measured_appends_survive_reopen() {
     let path = workspace.0.join("log");
     let storage = Arc::new(Measured::new(false));
     let now = Instant::now();
-    let log =
-        Arc::new(SegmentLog::with_storage(&path, Options::default(), storage.clone()).unwrap());
+    let backend: Arc<dyn Storage> = if measured {
+        storage.clone()
+    } else {
+        Arc::new(Real::default())
+    };
+    let log = Arc::new(SegmentLog::with_storage(&path, Options::default(), backend).unwrap());
     println!(
         "OPEN initial_ns={} records=0 segments=1 bytes={}",
         now.elapsed().as_nanos(),
@@ -224,6 +236,7 @@ fn measured_appends_survive_reopen() {
                     if start.recv().is_err() {
                         return None;
                     }
+                    let cpu_start = profile_cpu.then(cpu::current);
                     let mut latencies = Vec::with_capacity(rounds);
                     let mut offsets = Vec::with_capacity(rounds);
                     let mut full = 0;
@@ -251,7 +264,8 @@ fn measured_appends_survive_reopen() {
                         assert_eq!(result.records[0].revision, revision as u64);
                         offsets.push(result.records[0].offset);
                     }
-                    Some((latencies, offsets, full, admission_ns))
+                    let cpu = cpu_start.map(|start| cpu::current() - start);
+                    Some((latencies, offsets, full, admission_ns, cpu))
                 });
             match worker {
                 Ok(worker) => {
@@ -274,6 +288,7 @@ fn measured_appends_survive_reopen() {
         for _ in 0..callers {
             ready_rx.recv_timeout(Duration::from_secs(30)).unwrap();
         }
+        let writer_start = profile_cpu.then(cpu::writer);
         let now = Instant::now();
         for gate in gates {
             gate.send(()).unwrap();
@@ -282,26 +297,36 @@ fn measured_appends_survive_reopen() {
         let mut positions = Vec::new();
         let mut refusals = 0;
         let mut admission_ns = 0;
+        let mut callers_cpu = cpu::Times::default();
         for worker in workers {
-            let (times, offsets, full, admission) = worker.join().unwrap().unwrap();
+            let (times, offsets, full, admission, cpu) = worker.join().unwrap().unwrap();
+            if let Some(cpu) = cpu {
+                callers_cpu += cpu;
+            }
             latencies.extend(times);
             positions.push(offsets);
             refusals += full;
             admission_ns += admission;
         }
         let elapsed = now.elapsed();
+        if let Some(start) = writer_start {
+            (cpu::writer() - start).report("writer");
+            callers_cpu.report("callers");
+        }
         (latencies, positions, refusals, admission_ns, elapsed)
     });
     let peak = admission_support::peak(&log);
     assert_eq!(admission_support::used(&log), 0);
     validate(&log, &positions);
     let groups = storage.groups();
-    assert_eq!(groups.len(), storage.group_flushes());
-    assert_eq!(
-        groups.iter().map(|g| g.0).sum::<u64>(),
-        (callers * rounds) as u64
-    );
-    assert_eq!(64 + groups.iter().map(|g| g.1).sum::<u64>(), size(&path));
+    if measured {
+        assert_eq!(groups.len(), storage.group_flushes());
+        assert_eq!(
+            groups.iter().map(|g| g.0).sum::<u64>(),
+            (callers * rounds) as u64
+        );
+        assert_eq!(64 + groups.iter().map(|g| g.1).sum::<u64>(), size(&path));
+    }
     println!(
         "APPEND records={} elapsed_ns={} records_per_second={:.3} full={} other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes={peak} admission_call_sum_ns={admission_ns}",
         callers * rounds,
@@ -310,14 +335,16 @@ fn measured_appends_survive_reopen() {
         refusals
     );
     distribution("append_ns", latencies);
-    distribution("group_submits", groups.iter().map(|g| g.0).collect());
-    distribution("group_frame_bytes", groups.iter().map(|g| g.1).collect());
-    storage.report();
-    if let Some(out) = std::env::var_os("SEGMENT_LOG_GROUPS_OUT") {
-        let mut file = fs::File::create(out).unwrap();
-        writeln!(file, "group\tsubmits\tframe_bytes").unwrap();
-        for (index, (submits, bytes)) in groups.iter().enumerate() {
-            writeln!(file, "{index}\t{submits}\t{bytes}").unwrap();
+    if measured {
+        distribution("group_submits", groups.iter().map(|g| g.0).collect());
+        distribution("group_frame_bytes", groups.iter().map(|g| g.1).collect());
+        storage.report();
+        if let Some(out) = std::env::var_os("SEGMENT_LOG_GROUPS_OUT") {
+            let mut file = fs::File::create(out).unwrap();
+            writeln!(file, "group\tsubmits\tframe_bytes").unwrap();
+            for (index, (submits, bytes)) in groups.iter().enumerate() {
+                writeln!(file, "{index}\t{submits}\t{bytes}").unwrap();
+            }
         }
     }
     println!(
