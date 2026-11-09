@@ -50,6 +50,7 @@ We accept explicit deployment work to keep environment-specific lifecycle policy
 
 ## Consequences
 
+- [ADR 0040](0040-volumes-meet-testable-minimum-requirements.md) adds deployment obligations for the volume: one writing kernel (V5), a declared failure domain (V7), crash-consistent copies with one writable lineage (V8), capacity sizing (V9) and a fingerprint check before every open (V10).
 - [ADR 0037](0037-retain-complete-logs-through-current-milestones.md) assigns whole-log archival and expiry to the deployment layer. Current milestones retain all valid history segments without a core retention API.
 - The responsibility boundary in PRD open item 4 is settled. Concrete paths, components and handoff procedure remain pre-M6 integration work.
 - Provisioning and mount permissions belong to the deployment layer. The core retains its existing file I/O and recovery responsibilities.
