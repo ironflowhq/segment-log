@@ -267,3 +267,59 @@ fn identical_rewrites_of_durable_groups_never_tear() {
         }
     });
 }
+
+/// Given one submit with binary payloads across byte, sector and page boundaries
+/// When each group storage boundary is replayed through every crash mode
+/// Then recovery exposes all payloads or none, and a completed flush preserves all
+/// Cases: ORACLE-1, ORACLE-2, ORACLE-3, ORACLE-9
+#[test]
+fn variable_binary_payloads_recover_atomically_at_each_group_boundary() {
+    bounded(|| {
+        let sim = Sim::new(431);
+        let log = open(&sim);
+        let start = sim.trace().1.len();
+        let payloads: Vec<Vec<u8>> = [0, 1, 255, 256, 257, 4096, 8193]
+            .into_iter()
+            .map(|len| (0..len).map(|n| ((n * 97 + n / 251) % 256) as u8).collect())
+            .collect();
+        let records = payloads
+            .iter()
+            .enumerate()
+            .map(|(i, payload)| NewRecord {
+                stream: b"s".to_vec(),
+                expected: if i == 0 {
+                    ExpectedRevision::Empty
+                } else {
+                    ExpectedRevision::At(i as u64 - 1)
+                },
+                key: None,
+                payload: payload.clone(),
+            })
+            .collect();
+        log.append(Submit { records }).unwrap().wait().unwrap();
+        let (seed, trace) = sim.trace();
+        drop(log);
+        for end in start..=trace.len() {
+            for mode in [
+                storage::sim::Crash::Kill,
+                storage::sim::Crash::PowerLoss,
+                storage::sim::Crash::PowerLossTorn,
+            ] {
+                let replay = Sim::replay(seed, &trace[..end]);
+                replay.crash(mode, end as u64);
+                let recovered = open(&replay);
+                let records = recovered.read(0, payloads.len() + 1).unwrap();
+                if end == trace.len() {
+                    assert_eq!(records.len(), payloads.len());
+                }
+                assert!(records.is_empty() || records.len() == payloads.len());
+                for (i, record) in records.iter().enumerate() {
+                    assert_eq!((record.offset, record.revision), (i as u64, i as u64));
+                    assert_eq!(record.payload, payloads[i]);
+                    assert_eq!(record.stream, b"s");
+                    assert!(record.key.is_none());
+                }
+            }
+        }
+    });
+}

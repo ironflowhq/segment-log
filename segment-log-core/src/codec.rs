@@ -23,12 +23,24 @@ pub(crate) struct Group<'a> {
     pub entries: Vec<Entry<'a>>,
 }
 pub(crate) fn crc32c(bytes: &[u8]) -> u32 {
+    const TABLE: [u32; 256] = {
+        let mut table = [0; 256];
+        let mut index = 0;
+        while index < table.len() {
+            let mut crc = index as u32;
+            let mut bit = 0;
+            while bit < 8 {
+                crc = (crc >> 1) ^ (0x82f63b78 & 0u32.wrapping_sub(crc & 1));
+                bit += 1;
+            }
+            table[index] = crc;
+            index += 1;
+        }
+        table
+    };
     let mut crc = !0u32;
     for &byte in bytes {
-        crc ^= u32::from(byte);
-        for _ in 0..8 {
-            crc = (crc >> 1) ^ (0x82f63b78 & 0u32.wrapping_sub(crc & 1));
-        }
+        crc = (crc >> 8) ^ TABLE[((crc ^ u32::from(byte)) & 0xff) as usize];
     }
     !crc
 }
