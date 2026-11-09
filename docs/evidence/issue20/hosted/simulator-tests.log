@@ -31,4 +31,3 @@ test storage::sim::tests::rewriting_one_page_does_not_flush_failed_bytes_in_anot
 test storage::sim::tests::power_loss_selects_pages_independently ... ok
 
 test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 113 filtered out; finished in 0.69s
-

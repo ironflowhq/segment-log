@@ -1,7 +1,8 @@
 # Local validation on 9 November 2026
 
 Source: `64cc15dc250c855b28c0d012465c3e3780a382cc`.
-Commands ran from the repository root. The selected logs are direct captures;
+Commands ran from the repository root. The selected logs are direct captures
+with the final blank line removed from `simulator-tests.log`;
 the strict check before the change used baseline
 `911e809e72fc9c9ef5571f7022c89e55a48d6cb1`.
 
