@@ -17,7 +17,7 @@ use std::{
 mod actors;
 mod saved;
 mod workloads;
-use actors::{Caller, Command, Reader, Watchdog, observe};
+use actors::{Caller, Command, Reader, observe, watchdog, watchdog_with_failure};
 use workloads::{pressure, workload};
 
 struct Ledger {
@@ -63,7 +63,7 @@ fn literal(id: u64, count: usize, size: usize, keying: u64) -> Vec<Input> {
 /// Cases: SIM-MODEL, ORACLE-8, ORACLE-9
 #[test]
 fn saved_metadata_retains_reader_observations() {
-    let _watchdog = Watchdog::new("metadata round-trip".into());
+    let _watchdog = watchdog("metadata round-trip".into());
     let inputs = literal(42, 2, 19, 1);
     let ledger = Ledger {
         seed: 9,
@@ -251,7 +251,6 @@ fn artifact(seed: u64, mode: Crash, variant: usize) -> PathBuf {
     let root = std::env::var_os("SEGMENT_LOG_TRACE_ARTIFACT_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| std::env::temp_dir().join("segment-log-traces"));
-    std::fs::create_dir_all(&root).unwrap();
     root.join(format!("{}-{seed}-{mode:?}-{variant}", std::process::id()))
 }
 fn save_pair(path: &Path, sim: &Sim, ledger: &Ledger) {
@@ -282,11 +281,12 @@ fn run(seed: u64, mode: Crash, variant: usize, keep: bool) -> PathBuf {
     let watcher_sim = sim.clone();
     let watcher_ledger = ledger.clone();
     let watcher_path = path.clone();
-    let _watchdog = Watchdog::with_failure(label.clone(), move || {
+    let _watchdog = watchdog_with_failure(label.clone(), move || {
         if let Ok(ledger) = watcher_ledger.try_lock() {
             save_pair(&watcher_path, &watcher_sim, &ledger);
         }
     });
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         if variant == 8 {
             pressure(&sim, &ledger)
@@ -361,10 +361,10 @@ fn threaded_seeded_traces_long_run() {
 /// Cases: SIM-MODEL, ORACLE-1, ORACLE-8, ORACLE-12
 #[test]
 fn saved_trace_replays_the_oracle() {
-    let _watchdog = Watchdog::new("saved oracle replay".into());
+    let _watchdog = watchdog("saved oracle replay".into());
     if let Some(path) = std::env::var_os("SEGMENT_LOG_TRACE_REPLAY") {
         let path = PathBuf::from(path);
-        let _watchdog = Watchdog::new(format!("replay {}", path.display()));
+        let _watchdog = watchdog(format!("replay {}", path.display()));
         replay(&path);
     } else {
         let path = run(919, Crash::PowerLoss, 6, true);
@@ -384,7 +384,7 @@ fn saved_trace_replays_the_oracle() {
 /// Cases: ORACLE-10, ADM-SIZE
 #[test]
 fn recovery_verification_respects_the_saved_small_group_cap() {
-    let _watchdog = Watchdog::new("reduced pressure seed 1000".into());
+    let _watchdog = watchdog("reduced pressure seed 1000".into());
     replay(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/evidence/m1/seeded/pressure-1000"));
 }
 
@@ -394,7 +394,7 @@ fn recovery_verification_respects_the_saved_small_group_cap() {
 /// Cases: ADM-SIZE, SIM-MODEL
 #[test]
 fn oracle_rejects_a_false_permanent_size_refusal() {
-    let _watchdog = Watchdog::new("false size refusal".into());
+    let _watchdog = watchdog("false size refusal".into());
     let request = Request {
         inputs: literal(2, 2, 7, 0),
         original: true,
@@ -414,7 +414,7 @@ fn oracle_rejects_a_false_permanent_size_refusal() {
 /// Cases: ORACLE-8, READ-BOUNDED
 #[test]
 fn oracle_rejects_partial_group_reader_states() {
-    let _watchdog = Watchdog::new("partial group reader states".into());
+    let _watchdog = watchdog("partial group reader states".into());
     let records: Vec<_> = literal(8, 4, 3, 0)
         .iter()
         .enumerate()

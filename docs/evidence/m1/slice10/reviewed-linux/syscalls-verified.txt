@@ -1,0 +1,22 @@
+provision: fdatasync=0 fsync=3 success
+5276  05:32:58.428283 fsync(3</tmp/evidence-5275-0>) = 0 <0.000391>
+5276  05:32:58.428851 fsync(3</tmp>)    = 0 <0.000015>
+5276  05:32:58.429003 fsync(3</>)       = 0 <0.000014>
+create: fdatasync=1 fsync=4 success
+5276  05:32:58.429976 fdatasync(5</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000443>
+5276  05:32:58.431438 fsync(6</tmp/evidence-5275-0/log>) = 0 <0.000014>
+5276  05:32:58.432394 fsync(5</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000252>
+5276  05:32:58.433350 fsync(6</tmp/evidence-5275-0/log>) = 0 <0.000008>
+5276  05:32:58.434081 fsync(6</tmp/evidence-5275-0>) = 0 <0.000008>
+commit-0: fdatasync=1 fsync=0 success
+5278  05:32:58.436522 fdatasync(5</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000232>
+commit-1: fdatasync=1 fsync=0 success
+5278  05:32:58.439074 fdatasync(5</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000229>
+retry: fdatasync=0 fsync=0 success
+drop: fdatasync=0 fsync=0 success
+recovery: fdatasync=0 fsync=3 success
+5276  05:32:58.441208 fsync(6</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000223>
+5276  05:32:58.442130 fsync(7</tmp/evidence-5275-0/log>) = 0 <0.000009>
+5276  05:32:58.442841 fsync(7</tmp/evidence-5275-0>) = 0 <0.000009>
+recovered-drop: fdatasync=0 fsync=0 success
+done: fdatasync=0 fsync=0 success

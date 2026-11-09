@@ -88,6 +88,8 @@ pub struct SegmentLog {
     used: Arc<std::sync::atomic::AtomicUsize>,
     _lock: Mutex<Box<dyn Lock>>,
     #[cfg(test)]
+    peak: std::sync::atomic::AtomicUsize,
+    #[cfg(test)]
     drop_closed: Option<mpsc::Sender<()>>,
 }
 impl SegmentLog {
@@ -152,6 +154,8 @@ impl SegmentLog {
             used: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
             _lock: Mutex::new(recovered.lock),
             #[cfg(test)]
+            peak: std::sync::atomic::AtomicUsize::new(0),
+            #[cfg(test)]
             drop_closed: None,
         })
     }
@@ -188,7 +192,8 @@ impl SegmentLog {
         if self.poisoned.load(std::sync::atomic::Ordering::Acquire) {
             return Err(AppendError::Poisoned);
         }
-        self.used
+        let _previous = self
+            .used
             .try_update(
                 std::sync::atomic::Ordering::AcqRel,
                 std::sync::atomic::Ordering::Acquire,
@@ -198,6 +203,9 @@ impl SegmentLog {
                 },
             )
             .map_err(|_| AppendError::Full)?;
+        #[cfg(test)]
+        self.peak
+            .fetch_max(_previous + bytes, std::sync::atomic::Ordering::Relaxed);
         let reservation = Reservation {
             bytes,
             used: self.used.clone(),
@@ -626,6 +634,9 @@ pub(crate) mod admission_support {
     use super::*;
     pub(crate) fn bookkeeping() -> usize {
         std::mem::size_of::<RetryWaiter>() + std::mem::size_of::<Pending>()
+    }
+    pub(crate) fn peak(log: &SegmentLog) -> usize {
+        log.peak.load(std::sync::atomic::Ordering::Relaxed)
     }
     pub(crate) fn used(log: &SegmentLog) -> usize {
         log.used.load(std::sync::atomic::Ordering::Acquire)

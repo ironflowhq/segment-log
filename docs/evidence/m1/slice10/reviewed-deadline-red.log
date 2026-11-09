@@ -1,0 +1,19 @@
+   Compiling segment-log-core v0.0.1 (/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/segment-log-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.92s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 1 test
+
+thread 'acceptance::support::deadline_tests::deadlines_do_not_wait_for_diagnostic_locks' (130560833) panicked at segment-log-core/src/acceptance/support/deadline_tests.rs:42:13:
+deadline blocked on stderr
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test acceptance::support::deadline_tests::deadlines_do_not_wait_for_diagnostic_locks ... FAILED
+
+failures:
+
+failures:
+    acceptance::support::deadline_tests::deadlines_do_not_wait_for_diagnostic_locks
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 135 filtered out; finished in 3.00s
+
+error: test failed, to rerun pass `-p segment-log-core --lib`

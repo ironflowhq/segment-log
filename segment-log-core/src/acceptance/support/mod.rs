@@ -20,9 +20,16 @@
 //! The seeded admission oracle uses the existing concrete-size probe to rebuild
 //! the [charge formula](../../../../docs/architecture/api.md#admission-charge)
 //! from test-owned inputs without calling the production charge implementation.
+//! `admission_support::peak` retains the maximum successful reservation CAS
+//! total, including temporary reservations before failed queue insertion. It is
+//! exact after callers join, without sampling or changing admission decisions.
+//! One relaxed atomic fetch_max per reservation exists only under cfg(test).
 mod coverage;
+pub(crate) mod deadline;
+mod deadline_tests;
 
 pub(crate) fn bounded(f: impl FnOnce() + Send + 'static) {
+    let _deadline = deadline::Deadline::new(std::time::Duration::from_secs(10), || {});
     let (tx, rx) = std::sync::mpsc::channel();
     let worker = std::thread::spawn(move || {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
