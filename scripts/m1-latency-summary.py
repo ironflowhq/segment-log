@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Summarize five successful repetitions per prefix without dropping slow runs."""
 import re
 import statistics
 import sys

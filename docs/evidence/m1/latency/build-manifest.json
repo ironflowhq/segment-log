@@ -1,0 +1,62 @@
+{
+  "toolchain": "Rust 1.99.1",
+  "records": [
+    {
+      "role": "timing-before",
+      "source_commit": "e9f3a4a53fd8afdc89998a848e6745ea16871fff",
+      "binary_sha256": "e7606a380cac5af479184de34b95366da76346db853c8eb71250866efa3e967a",
+      "captured_binary_path": "/root/latency/src/target/release/deps/segment_log_core-3d365a8d7243eacd",
+      "cargo_profile": {
+        "opt_level": "3",
+        "debuginfo": 0,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": true
+      },
+      "captured_build_log": "ablation/build.jsonl"
+    },
+    {
+      "role": "timing-after",
+      "source_commit": "8277b69cd8f1b5464fa48c82b0ee9eadc6e72532",
+      "binary_sha256": "4488aebac50470d7f43397c3de8f4946539764a50c12cce74d85932a6c392f5e",
+      "captured_binary_path": "/root/latency/after-bin",
+      "cargo_profile": {
+        "opt_level": "3",
+        "debuginfo": 0,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": true
+      },
+      "captured_build_log": "checks/build.jsonl"
+    },
+    {
+      "role": "profile-before",
+      "source_commit": "e9f3a4a53fd8afdc89998a848e6745ea16871fff",
+      "binary_sha256": "d88585ff15c5376ca13c2eae0ef082c3e4854bcbd476b24168b246ab0f4c80aa",
+      "captured_binary_path": "/root/latency/profile-build/release/deps/segment_log_core-f4822bf9a09e5b4f",
+      "cargo_profile": {
+        "opt_level": "3",
+        "debuginfo": 1,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": true
+      },
+      "captured_build_log": "profiles/build.jsonl"
+    },
+    {
+      "role": "profile-after",
+      "source_commit": "8277b69cd8f1b5464fa48c82b0ee9eadc6e72532",
+      "binary_sha256": "555f7ca82177a0e8bb4e646961c3de22804fb0d0a7c9f6c51da0c663f08481b4",
+      "captured_binary_path": "/root/latency/profile-after-build/release/deps/segment_log_core-f4822bf9a09e5b4f",
+      "cargo_profile": {
+        "opt_level": "3",
+        "debuginfo": 1,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": true
+      },
+      "captured_build_log": "profiles-after/build.jsonl"
+    }
+  ],
+  "provenance": "Extracted from preserved Cargo compiler-artifact records, binary digest files, and diagnostic/candidate Git bundle heads under ignored .audit/latency. This manifest identifies measured and separately profiled artifacts; it does not imply bit-reproducible builds."
+}

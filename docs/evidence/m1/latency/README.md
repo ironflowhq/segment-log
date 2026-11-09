@@ -140,6 +140,7 @@ The baseline uses `baseline.sh` from this directory on the unchanged source.
 The storage experiment uses `scripts/m1-latency-linux.sh` at the diagnostic SHA.
 The CRC comparison uses `scripts/m1-compare-latency.sh BEFORE_BINARY AFTER_BINARY OUTPUT_DIRECTORY`.
 Both binaries use release optimization and the same diagnostic workload. Their SHA256 digests are recorded with the outputs.
+[build-manifest.json](build-manifest.json) associates source commits, binary digests, and captured Cargo profiles for both timing and profiling artifacts.
 Every comparison runs before then after, five times, following a short warmup for each side.
 The separate CPU run follows the repetitions. No profile or other benchmark runs concurrently on the VM.
 
