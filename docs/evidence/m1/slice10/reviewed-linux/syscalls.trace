@@ -1,0 +1,142 @@
+5275  05:32:58.425995 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\nrunning 1 test\n", 16) = 16 <0.000073>
+5276  05:32:58.427694 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "PHASE provision\n", 16) = 16 <0.000069>
+5276  05:32:58.428283 fsync(3</tmp/evidence-5275-0>) = 0 <0.000391>
+5276  05:32:58.428851 fsync(3</tmp>)    = 0 <0.000015>
+5276  05:32:58.429003 fsync(3</>)       = 0 <0.000014>
+5276  05:32:58.429115 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "PHASE create\n", 13) = 13 <0.000036>
+5276  05:32:58.429881 write(5</tmp/evidence-5275-0/log/00000000000000000000.seg>, "SGLG\0\0@\0,\16\310u\6a\5@m%\373}\22FU\202\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1JFi", 64) = 64 <0.000020>
+5276  05:32:58.429976 fdatasync(5</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000443>
+5276  05:32:58.430504 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000055>
+5276  05:32:58.430645 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Open.SyncData", 13) = 13 <0.000036>
+5276  05:32:58.430737 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000034>
+5276  05:32:58.430823 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0/log/00000000000000000000.seg", 49) = 49 <0.000033>
+5276  05:32:58.430907 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000033>
+5276  05:32:58.430989 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000033>
+5276  05:32:58.431072 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000033>
+5276  05:32:58.431155 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000039>
+5276  05:32:58.431243 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000033>
+5276  05:32:58.431326 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000033>
+5276  05:32:58.431438 fsync(6</tmp/evidence-5275-0/log>) = 0 <0.000014>
+5276  05:32:58.431538 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000033>
+5276  05:32:58.431627 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Open.SyncDir", 12) = 12 <0.000032>
+5276  05:32:58.431708 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000034>
+5276  05:32:58.431795 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0/log", 24) = 24 <0.000030>
+5276  05:32:58.431876 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000025>
+5276  05:32:58.431939 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000025>
+5276  05:32:58.432002 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000024>
+5276  05:32:58.432064 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000025>
+5276  05:32:58.432133 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000024>
+5276  05:32:58.432193 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000025>
+5276  05:32:58.432346 write(5</tmp/evidence-5275-0/log/00000000000000000000.seg>, "SGLG\0\0@\0,\16\310u\6a\5@m%\373}\22FU\202\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1JFi", 64) = 64 <0.000010>
+5276  05:32:58.432394 fsync(5</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000252>
+5276  05:32:58.432688 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000026>
+5276  05:32:58.432757 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Recovery.SyncAll", 16) = 16 <0.000025>
+5276  05:32:58.432820 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000024>
+5276  05:32:58.432882 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0/log/00000000000000000000.seg", 49) = 49 <0.000025>
+5276  05:32:58.432944 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000024>
+5276  05:32:58.433005 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000026>
+5276  05:32:58.433077 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000025>
+5276  05:32:58.433147 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000024>
+5276  05:32:58.433209 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000024>
+5276  05:32:58.433270 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000024>
+5276  05:32:58.433350 fsync(6</tmp/evidence-5275-0/log>) = 0 <0.000008>
+5276  05:32:58.433412 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000024>
+5276  05:32:58.433478 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000026>
+5276  05:32:58.433543 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000024>
+5276  05:32:58.433603 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0/log", 24) = 24 <0.000024>
+5276  05:32:58.433664 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000024>
+5276  05:32:58.433724 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000024>
+5276  05:32:58.433784 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000024>
+5276  05:32:58.433844 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000048>
+5276  05:32:58.433931 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000025>
+5276  05:32:58.434000 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000024>
+5276  05:32:58.434081 fsync(6</tmp/evidence-5275-0>) = 0 <0.000008>
+5276  05:32:58.434144 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000024>
+5276  05:32:58.434205 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000024>
+5276  05:32:58.434266 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000025>
+5276  05:32:58.434329 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0", 20) = 20 <0.000024>
+5276  05:32:58.434391 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000024>
+5276  05:32:58.434452 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000024>
+5276  05:32:58.434518 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000024>
+5276  05:32:58.434579 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000026>
+5276  05:32:58.434641 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000024>
+5276  05:32:58.434701 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000027>
+5276  05:32:58.435005 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "PHASE commit-0\n", 15) = 15 <0.000025>
+5278  05:32:58.436450 write(5</tmp/evidence-5275-0/log/00000000000000000000.seg>, "@\1\0\0#\304\320\37\1\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000014>
+5278  05:32:58.436522 fdatasync(5</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000232>
+5278  05:32:58.436795 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000031>
+5278  05:32:58.436872 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Group.SyncData", 14) = 14 <0.000033>
+5278  05:32:58.436947 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000030>
+5278  05:32:58.437023 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0/log/00000000000000000000.seg", 49) = 49 <0.000031>
+5278  05:32:58.437095 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000027>
+5278  05:32:58.437161 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000028>
+5278  05:32:58.437226 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000027>
+5278  05:32:58.437291 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000027>
+5278  05:32:58.437363 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000027>
+5278  05:32:58.437428 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000043>
+5276  05:32:58.437554 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "PHASE commit-1\n", 15) = 15 <0.000025>
+5278  05:32:58.439016 write(5</tmp/evidence-5275-0/log/00000000000000000000.seg>, "@\1\0\0\333\261\345u\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000011>
+5278  05:32:58.439074 fdatasync(5</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000229>
+5278  05:32:58.439345 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000031>
+5278  05:32:58.439420 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Group.SyncData", 14) = 14 <0.000033>
+5278  05:32:58.439496 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000031>
+5278  05:32:58.439570 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0/log/00000000000000000000.seg", 49) = 49 <0.000031>
+5278  05:32:58.439643 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000034>
+5278  05:32:58.439719 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000030>
+5278  05:32:58.439791 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000030>
+5278  05:32:58.439863 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000031>
+5278  05:32:58.439936 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000030>
+5278  05:32:58.440008 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000028>
+5276  05:32:58.440112 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "PHASE retry\n", 12) = 12 <0.000025>
+5276  05:32:58.440265 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "PHASE drop\n", 11) = 11 <0.000024>
+5278  05:32:58.440523 +++ exited with 0 +++
+5276  05:32:58.440587 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "PHASE recovery\n", 15) = 15 <0.000025>
+5276  05:32:58.441153 write(6</tmp/evidence-5275-0/log/00000000000000000000.seg>, "@\1\0\0\333\261\345u\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000011>
+5276  05:32:58.441208 fsync(6</tmp/evidence-5275-0/log/00000000000000000000.seg>) = 0 <0.000223>
+5276  05:32:58.441478 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000029>
+5276  05:32:58.441556 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Recovery.SyncAll", 16) = 16 <0.000025>
+5276  05:32:58.441618 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000024>
+5276  05:32:58.441680 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0/log/00000000000000000000.seg", 49) = 49 <0.000027>
+5276  05:32:58.441744 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000025>
+5276  05:32:58.441806 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000024>
+5276  05:32:58.441866 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000025>
+5276  05:32:58.441927 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000024>
+5276  05:32:58.441988 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000025>
+5276  05:32:58.442049 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000025>
+5276  05:32:58.442130 fsync(7</tmp/evidence-5275-0/log>) = 0 <0.000009>
+5276  05:32:58.442196 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000026>
+5276  05:32:58.442258 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000024>
+5276  05:32:58.442319 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000024>
+5276  05:32:58.442379 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0/log", 24) = 24 <0.000024>
+5276  05:32:58.442440 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000032>
+5276  05:32:58.442511 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000024>
+5276  05:32:58.442575 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000024>
+5276  05:32:58.442636 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000024>
+5276  05:32:58.442697 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000028>
+5276  05:32:58.442761 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000025>
+5276  05:32:58.442841 fsync(7</tmp/evidence-5275-0>) = 0 <0.000009>
+5276  05:32:58.442905 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "STORAGE ", 8) = 8 <0.000025>
+5276  05:32:58.442970 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000025>
+5276  05:32:58.443033 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " path=", 6) = 6 <0.000024>
+5276  05:32:58.443098 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "/tmp/evidence-5275-0", 20) = 20 <0.000024>
+5276  05:32:58.443159 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, " result=", 8) = 8 <0.000024>
+5276  05:32:58.443219 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "Ok", 2) = 2 <0.000025>
+5276  05:32:58.443281 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "(", 1) = 1 <0.000024>
+5276  05:32:58.443341 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "()", 2) = 2 <0.000024>
+5276  05:32:58.443401 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ")", 1) = 1 <0.000024>
+5276  05:32:58.443463 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000024>
+5276  05:32:58.443790 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "PHASE recovered-drop\n", 21) = 21 <0.000024>
+5279  05:32:58.443966 +++ exited with 0 +++
+5276  05:32:58.444026 write(2</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "PHASE done\n", 11) = 11 <0.000026>
+5277  05:32:58.444642 +++ exited with 0 +++
+5276  05:32:58.444804 +++ exited with 0 +++
+5275  05:32:58.444822 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "test acceptance::evidence::real_storage_sync_phases ... ", 56) = 56 <0.000026>
+5275  05:32:58.444886 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "ok", 2) = 2 <0.000027>
+5275  05:32:58.444950 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000025>
+5275  05:32:58.445014 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n", 1) = 1 <0.000024>
+5275  05:32:58.445073 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "test result: ", 13) = 13 <0.000024>
+5275  05:32:58.445132 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "ok", 2) = 2 <0.000024>
+5275  05:32:58.445192 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, ". 1 passed; 0 failed; 0 ignored; 0 measured; 135 filtered out", 61) = 61 <0.000024>
+5275  05:32:58.445253 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "; finished in 0.02s", 19) = 19 <0.000024>
+5275  05:32:58.445313 write(1</run/host_virtiofs/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/.audit/slice10-parent-linux/sync-phases.log>, "\n\n", 2) = 2 <0.000024>
+5275  05:32:58.445526 +++ exited with 0 +++

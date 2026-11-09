@@ -1,0 +1,15 @@
+platform	command_or_check	exit	result
+linux	cargo fmt --all --check	0	passed
+linux	cargo clippy --workspace --all-targets -- -D warnings	0	passed
+linux	cargo test --workspace	0	139 Rust tests pass;1 ignored long run
+linux	python3 -B -m unittest discover -s scripts -p 'test_m1_*.py'	0	3 Python tests pass
+linux	RUSTFLAGS='--cfg fuzzing' cargo check -p segment-log-core	0	compiled;24 existing simulator warnings
+macos	cargo fmt --all --check	0	passed
+macos	cargo clippy --workspace --all-targets -- -D warnings	0	passed
+macos	cargo test --workspace	0	139 Rust tests pass;1 ignored long run
+macos	python3 -m unittest discover -s scripts -p 'test_m1_*.py'	0	3 Python tests pass
+macos	RUSTFLAGS='--cfg fuzzing' cargo check -p segment-log-core	0	compiled;24 existing simulator warnings
+linux	release real_storage_sync_phases plus strace and target-aware verifier	0	one fdatasync per new group;zero retry;directory targets verified
+macos	real_storage_sync_phases --exact --nocapture	0	actual Real directory syncs successful
+parent	capture-source hash resolution	0	49 original source hashes resolve
+parent	measurement body comparison	0	unchanged after timeout constructor/comment normalization

@@ -1,3 +1,4 @@
 target/
 .DS_Store
 /.audit/
+scripts/__pycache__/

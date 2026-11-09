@@ -1,0 +1,6 @@
+check	exit	result
+diff	0
+shell-syntax	0
+new-file-whitespace	0	all new text files checked
+artifact-and-source-hashes	0	all match
+task-container-cleanup	0	no task-owned containers remain

@@ -1,5 +1,8 @@
 #![cfg(unix)]
 
+#[path = "../src/acceptance/support/deadline.rs"]
+mod deadline;
+
 use segment_log_core::*;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -27,8 +30,7 @@ fn options() -> Options {
 struct Scenario {
     root: PathBuf,
     child: Arc<Mutex<Option<Child>>>,
-    cancel: mpsc::Sender<()>,
-    watchdog: Option<JoinHandle<()>>,
+    deadline: Option<deadline::Deadline>,
 }
 
 fn stop(child: &mut Option<Child>) {
@@ -40,7 +42,6 @@ fn stop(child: &mut Option<Child>) {
                 Ok(Some(_)) => break,
                 Ok(None) if Instant::now() < deadline => thread::yield_now(),
                 _ => {
-                    eprintln!("child cleanup watchdog");
                     std::process::abort();
                 }
             }
@@ -55,27 +56,23 @@ impl Scenario {
             "segment-log-slice8-{}-{mode}-{seed}",
             std::process::id()
         ));
-        fs::create_dir(&root).unwrap();
         let child = Arc::new(Mutex::new(None));
-        let (cancel, rx) = mpsc::channel();
         let owned = child.clone();
         let message = format!(
             "seed={seed} mode={mode} transcript={}",
             root.join("protocol.txt").display()
         );
-        eprintln!("{message}");
-        let watchdog = thread::spawn(move || {
-            if rx.recv_timeout(LIMIT).is_err() {
-                eprintln!("scenario watchdog: {message}");
-                stop(&mut owned.lock().unwrap_or_else(|e| e.into_inner()));
-                std::process::abort();
-            }
+        let initial = message.clone();
+        let watchdog = deadline::Deadline::new(LIMIT, move || {
+            stop(&mut owned.lock().unwrap_or_else(|e| e.into_inner()));
+            eprintln!("scenario watchdog: {message}");
         });
+        fs::create_dir(&root).unwrap();
+        eprintln!("{initial}");
         Self {
             root,
             child,
-            cancel,
-            watchdog: Some(watchdog),
+            deadline: Some(watchdog),
         }
     }
     fn log(&self) -> PathBuf {
@@ -85,11 +82,10 @@ impl Scenario {
 impl Drop for Scenario {
     fn drop(&mut self) {
         stop(&mut self.child.lock().unwrap_or_else(|e| e.into_inner()));
-        let _ = self.cancel.send(());
-        self.watchdog.take().unwrap().join().unwrap();
         if !thread::panicking() {
             fs::remove_dir_all(&self.root).unwrap();
         }
+        drop(self.deadline.take());
     }
 }
 
@@ -752,7 +748,6 @@ impl Drop for Pipe {
         let deadline = Instant::now() + Duration::from_secs(5);
         while !reader.is_finished() {
             if Instant::now() >= deadline {
-                eprintln!("pipe reader watchdog");
                 std::process::abort();
             }
             thread::yield_now();

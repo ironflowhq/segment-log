@@ -1,0 +1,2 @@
+Captured and reviewed evidence.rs bodies from fn input onward are identical after normalizing only Watchdog constructor statements and removing ordinary comments.
+No input, validation, timer, worker, percentile, grouping, error, device calibration, throughput or reopen code changed.
