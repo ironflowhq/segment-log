@@ -1,0 +1,25 @@
+seed=808 repetitions=1
+['cargo', '+1.99.1', 'test', '--manifest-path', '/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-process-evidence-l2p7t3u9/Cargo.toml', '--test', 'process_crash', 'killed_writers_preserve_the_recorded_contract', '--', '--exact', '--nocapture']
+     Locking 1 package to highest Rust 1.99.1 compatible version
+   Compiling segment-log-core v0.0.1 (/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/segment-log-core)
+   Compiling segment-log-process-evidence v0.0.0 (/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-process-evidence-l2p7t3u9)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.50s
+     Running process_crash.rs (/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-process-evidence-l2p7t3u9/target/debug/deps/process_crash-1b591ccf18191d5a)
+
+running 1 test
+seed=808 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-91957-SIGKILL-808/protocol.txt
+
+thread 'killed_writers_preserve_the_recorded_contract' (129965917) panicked at process_crash.rs:719:5:
+abandoned reply must exercise unknown outcomes
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test killed_writers_preserve_the_recorded_contract ... FAILED
+
+failures:
+
+failures:
+    killed_writers_preserve_the_recorded_contract
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.08s
+
+error: test failed, to rerun pass `--test process_crash`
+Exit code: 101

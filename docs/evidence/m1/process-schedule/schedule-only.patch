@@ -1,0 +1,40 @@
+--- a/segment-log-core/tests/process_crash.rs
++++ b/segment-log-core/tests/process_crash.rs
+@@ -326,6 +326,7 @@
+     for lane in 0..6 {
+         let log = log.clone();
+         workers.push(thread::spawn(move || {
++            if lane == 0 { loop { thread::park(); } }
+             let mut serial = 0;
+             let mut send = |records| {
+                 let request = Request {
+@@ -350,7 +351,7 @@
+                 emit(&format!("W {}", log.watermark()));
+                 answer
+             };
+-            for batch in 0.. {
++            for batch in 0..10 {
+                 let original = [literal(lane, batch, 0), literal(lane, batch, 1)];
+                 let answer = send(original.iter().map(copy_record).collect());
+                 assert!(
+@@ -386,6 +387,8 @@
+                 conflict.payload = b"conflict".to_vec();
+                 send(vec![conflict]);
+             }
++            fs::write(std::env::var_os("SEGMENT_LOG_PROCESS_DIR").map(PathBuf::from).unwrap().join(format!("review-done-{lane}")), b"").unwrap();
++            loop { thread::park(); }
+         }));
+     }
+     for worker in workers {
+@@ -822,6 +825,11 @@
+         let seed = seed.wrapping_add(repetition);
+         let s = Scenario::new("SIGKILL", seed);
+         let pipe = start(&s);
++        let review_deadline = Instant::now() + Duration::from_secs(5);
++        while !(1..6).all(|lane| s.log().join(format!("review-done-{lane}")).exists()) {
++            assert!(Instant::now() < review_deadline, "review schedule watchdog");
++            thread::yield_now();
++        }
+         let target = 100 + (mix(seed) % 100) as usize;
+         let mut ledger = Ledger::default();
+         let mut locked = false;

@@ -1,0 +1,66 @@
+--- a/segment-log-core/tests/process_crash.rs
++++ b/segment-log-core/tests/process_crash.rs
+@@ -322,10 +322,15 @@
+ fn child_workload(dir: PathBuf) {
+     let log = Arc::new(SegmentLog::open(dir, options()).unwrap());
+     emit("READY");
++    let completed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+     let mut workers = vec![];
+     for lane in 0..6 {
+         let log = log.clone();
++        let completed = completed.clone();
+         workers.push(thread::spawn(move || {
++            if lane == 0 {
++                while completed.load(std::sync::atomic::Ordering::SeqCst) < 250 { thread::yield_now(); }
++            }
+             let mut serial = 0;
+             let mut send = |records| {
+                 let request = Request {
+@@ -346,12 +351,14 @@
+                 } else {
+                     let answer = execute(&log, &request);
+                     emit(&answer_line(request.id, &answer));
++                    if lane != 0 { completed.fetch_add(1, std::sync::atomic::Ordering::SeqCst); }
+                     answer
+                 };
+                 emit(&format!("W {}", log.watermark()));
+                 answer
+             };
+             for batch in 0.. {
++                if lane != 0 && batch == 10 { loop { thread::park(); } }
+                 let original = [literal(lane, batch, 0), literal(lane, batch, 1)];
+                 let answer = send(original.iter().map(copy_record).collect());
+                 assert!(
+@@ -426,6 +433,9 @@
+             "B" => {
+                 assert_eq!(fields.as_slice(), ["B", "0"]);
+                 assert!(self.requests.contains_key(&0));
++                assert!(self.answers.len() >= 250, "five other lanes completed before B0");
++                assert!(!self.answers.contains_key(&0));
++                eprintln!("controlled schedule verified {} prior answers before B0", self.answers.len());
+                 self.abandoned = true;
+             }
+             "W" => self.watermark = self.watermark.max(fields[1].parse().unwrap()),
+@@ -832,6 +842,7 @@
+         let target = 100 + (mix(seed) % 100) as usize;
+         let mut ledger = Ledger::default();
+         let mut locked = false;
++        let mut previously_exposed_gate = false;
+         loop {
+             let line = pipe
+                 .lines
+@@ -845,12 +856,14 @@
+                 ));
+                 locked = true;
+             }
++            if locked && !ledger.abandoned && ledger.requests.len() >= target && ledger.watermark > 0 && line.starts_with("SL8 Q ") { previously_exposed_gate = true; }
+             if locked
+                 && ledger.abandoned
+                 && ledger.requests.len() >= target
+                 && ledger.watermark > 0
+                 && line.starts_with("SL8 Q ")
+             {
++                assert!(previously_exposed_gate, "schedule must hit old gate before B0");
+                 let mut child = s.child.lock().unwrap_or_else(|e| e.into_inner());
+                 let child = child.as_mut().unwrap();
+                 assert!(

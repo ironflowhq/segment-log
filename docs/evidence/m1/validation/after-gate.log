@@ -1,0 +1,20 @@
+seed=30000 repetitions=3
+['cargo', '+1.99.1', 'test', '--manifest-path', '/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-process-evidence-9kxfmu_b/Cargo.toml', '--test', 'process_crash', 'killed_writers_preserve_the_recorded_contract', '--', '--exact', '--nocapture']
+     Locking 1 package to highest Rust 1.99.1 compatible version
+   Compiling segment-log-core v0.0.1 (/Volumes/p7/t3/worktrees/segment-log/t3-c464f0fd/segment-log-core)
+   Compiling segment-log-process-evidence v0.0.0 (/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-process-evidence-9kxfmu_b)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.99s
+     Running process_crash.rs (/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-process-evidence-9kxfmu_b/target/debug/deps/process_crash-1b591ccf18191d5a)
+
+running 1 test
+seed=30000 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92008-SIGKILL-30000/protocol.txt
+controlled schedule verified 250 prior answers before B0
+seed=30001 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92008-SIGKILL-30001/protocol.txt
+controlled schedule verified 250 prior answers before B0
+seed=30002 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92008-SIGKILL-30002/protocol.txt
+controlled schedule verified 250 prior answers before B0
+test killed_writers_preserve_the_recorded_contract ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.27s
+
+Exit code: 0
