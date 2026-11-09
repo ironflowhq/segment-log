@@ -17,6 +17,9 @@
 //! `SegmentLog::observe_drop` is a cfg(test) notification after Drop closes
 //! admission. Cap deferral can reach storage before Drop starts, so a held call
 //! cannot establish this boundary when testing queued failures during drain.
+//! The seeded admission oracle uses the existing concrete-size probe to rebuild
+//! the [charge formula](../../../../docs/architecture/api.md#admission-charge)
+//! from test-owned inputs without calling the production charge implementation.
 mod coverage;
 
 pub(crate) fn bounded(f: impl FnOnce() + Send + 'static) {
@@ -38,3 +41,5 @@ pub(crate) mod trace;
 pub(crate) mod fixtures;
 
 pub(crate) mod raw;
+
+pub(crate) mod oracle;

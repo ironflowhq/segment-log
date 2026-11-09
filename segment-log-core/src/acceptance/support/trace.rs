@@ -7,19 +7,19 @@ use std::{
     os::unix::ffi::{OsStrExt, OsStringExt},
     path::{Path, PathBuf},
 };
-fn number(w: &mut impl Write, n: u64) -> io::Result<()> {
+pub(crate) fn number(w: &mut impl Write, n: u64) -> io::Result<()> {
     w.write_all(&n.to_le_bytes())
 }
-fn bytes(w: &mut impl Write, b: &[u8]) -> io::Result<()> {
+pub(crate) fn bytes(w: &mut impl Write, b: &[u8]) -> io::Result<()> {
     number(w, b.len() as u64)?;
     w.write_all(b)
 }
-fn read_number(r: &mut impl Read) -> io::Result<u64> {
+pub(crate) fn read_number(r: &mut impl Read) -> io::Result<u64> {
     let mut b = [0; 8];
     r.read_exact(&mut b)?;
     Ok(u64::from_le_bytes(b))
 }
-fn read_bytes(r: &mut impl Read) -> io::Result<Vec<u8>> {
+pub(crate) fn read_bytes(r: &mut impl Read) -> io::Result<Vec<u8>> {
     let len = usize::try_from(read_number(r)?).map_err(|_| invalid())?;
     if len > 64 * 1024 * 1024 {
         return Err(invalid());

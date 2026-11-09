@@ -28,24 +28,30 @@ Record an unresolved later-milestone decision as a dependency. Do not guess its 
 
 ### M1 acceptance coverage
 
-Storage-model, conformance, codec and first engine scenarios are partial. The engine scenarios cover the flush visibility boundary, basic queued grouping, bounded reads, initial rejection checks and directed crash/fault variants. Counter scenarios cover append boundaries, first-failure ordering, refusal without mutations and epoch recovery including crash variants. Durable-key scenarios cover whole-log scope, conflicts, partial retries, regrouping, frame lookup faults, immediate answers and counter-free retries. Directed crash and reopen scenarios rebuild keys from the kept prefix and preserve full history. Pending-key scenarios now cover immediate classification, matched waiters, mixed and regrouped retries, retained waiter charges, cap deferral, exhausted counters and write, flush and lookup failures. Directed crash cases cover pending rejections and atomic originals before write, before flush and after acknowledgment. The unknown-outcome table has directed examples for each row. These cases do not cover the full randomized oracle. No completion evidence exists yet. A group lists only the M1 part of each requirement and case. Rolling, sealed-segment handling, footers, locators and read-only open keep their later gates. Seeded crash-oracle coverage starts in M1; the full model test remains M2.
+The directed M1 scenarios and threaded seeded trace oracle now cover the applicable
+M1 cases. The [slice 9 audit](../evidence/m1/slice9.md#coverage-audit) lists the
+evidence for each former Partial row and distinguishes fixed synthetic boundaries
+from generated workloads. The oracle saves caller and reader ledgers with storage
+traces and reruns recovery without replaying thread scheduling. Full model-based
+verification remains M2. Rolling, sealed segments, footers, locators and read-only
+open retain their later gates. M1 completion artifacts remain outstanding.
 
 | Group | Requirements or invariants | Scenario cases | Status |
 | --- | --- | --- | --- |
-| M1-SIMULATOR | [ADR 0014](../decisions/0014-crash-testing-strategy.md) | `SIM-MODEL`, `SIM-CONFORMANCE` | Partial |
-| M1-CODEC | R7, R16–R17 | `CODEC-GROUP` | Partial |
-| M1-DURABILITY | R2–R4, R18–R19; I1–I3 | `ORACLE-1`, `ORACLE-8`, `ORACLE-9`, `GROUP-FORMATION`, `READ-BOUNDED` | Partial |
-| M1-ATOMICITY | R1, R3, R7–R8; I4–I6 | `ORACLE-2`, `ORACLE-3`, `ORACLE-10` | Partial |
-| M1-RECOVERY | R8, R14, R16–R17; I2–I6 | `ORACLE-1`–`ORACLE-5`, `RECOVERY-FIXTURES`, `OPEN-FAULTS` | Partial |
-| M1-COUNTERS | [ADR 0041](../decisions/0041-counter-exhaustion-refuses-without-poisoning.md) | `COUNTER-EXHAUSTION` | Partial |
-| M1-REVISIONS | R9, R11–R12 | `REV-EXPECTED`, `REV-NO-OFFSET` | Partial |
-| M1-RETRY-CLASSIFICATION | R1, R10, R12 | `KEY-REPEATED`, `KEY-SCOPE`, `KEY-CONFLICT`, `KEY-PARTIAL`, `RETRY-REGROUPED` | Partial |
+| M1-SIMULATOR | [ADR 0014](../decisions/0014-crash-testing-strategy.md) | `SIM-MODEL`, `SIM-CONFORMANCE` | Implemented |
+| M1-CODEC | R7, R16–R17 | `CODEC-GROUP` | Implemented |
+| M1-DURABILITY | R2–R4, R18–R19; I1–I3 | `ORACLE-1`, `ORACLE-8`, `ORACLE-9`, `GROUP-FORMATION`, `READ-BOUNDED` | Implemented |
+| M1-ATOMICITY | R1, R3, R7–R8; I4–I6 | `ORACLE-2`, `ORACLE-3`, `ORACLE-10` | Implemented |
+| M1-RECOVERY | R8, R14, R16–R17; I2–I6 | `ORACLE-1`–`ORACLE-5`, `RECOVERY-FIXTURES`, `OPEN-FAULTS` | Implemented |
+| M1-COUNTERS | [ADR 0041](../decisions/0041-counter-exhaustion-refuses-without-poisoning.md) | `COUNTER-EXHAUSTION` | Implemented |
+| M1-REVISIONS | R9, R11–R12 | `REV-EXPECTED`, `REV-NO-OFFSET` | Implemented |
+| M1-RETRY-CLASSIFICATION | R1, R10, R12 | `KEY-REPEATED`, `KEY-SCOPE`, `KEY-CONFLICT`, `KEY-PARTIAL`, `RETRY-REGROUPED` | Implemented |
 | M1-PENDING-RETRIES | R4, R10, R12; I1 | `RETRY-PENDING`, `RETRY-PENDING-FAIL`, `RETRY-REGROUPED-FAIL`, `ANSWER-TIMING` | Implemented |
-| M1-UNKNOWN-OUTCOMES | R1, R10–R12 | `ORACLE-4`, `RETRY-UNKNOWN-1`–`RETRY-UNKNOWN-8`, `KEY-CONFLICT-CRASH`, `KEY-PARTIAL-CRASH` | Partial |
+| M1-UNKNOWN-OUTCOMES | R1, R10–R12 | `ORACLE-4`, `RETRY-UNKNOWN-1`–`RETRY-UNKNOWN-8`, `KEY-CONFLICT-CRASH`, `KEY-PARTIAL-CRASH` | Implemented |
 | M1-ADMISSION | R5 | `OPT-DEFAULTS`, `ADM-PRECEDENCE`, `ADM-BUDGETS`, `ADM-SIZE`, `ADM-RESERVATION`, `ADM-CHARGE` | Implemented |
 | M1-POISON | R6; I10 | `ORACLE-7`, `POISON-LOOKUP` | Implemented |
 | M1-OPEN-BOUNDARIES | R14, R16–R17; I8 | `OPT-VALIDATION`, `OPEN-DIR`, `OPEN-LAYOUT`, `ORACLE-11` | Implemented |
-| M1-REOPEN-HISTORY | R13, R18–R19, R22; I9 | `ORACLE-12`, `KEY-LIFETIME`, `HISTORY` | Partial |
+| M1-REOPEN-HISTORY | R13, R18–R19, R22; I9 | `ORACLE-12`, `KEY-LIFETIME`, `HISTORY` | Implemented |
 | M1-DROP | R4, R16; I8 | `DROP` | Implemented |
 | M1-PROCESS-CRASH | R4, R8, R14, R16 | `PROC-SIGKILL` | Implemented |
 

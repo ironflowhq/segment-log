@@ -103,6 +103,13 @@ On failure, print the case IDs, the crash mode and the seed, and save the trace 
 
 Simulated `Kill`, `PowerLoss` and `PowerLossTorn` and real-process `SIGKILL` have distinct roles under [ADR 0014](decisions/0014-crash-testing-strategy.md). Do not treat a process kill as a power-loss test.
 
+The implementation and saved replay commands are documented in the
+[slice 9 record](evidence/m1/slice9.md#reproduce). The ordinary workspace run
+uses two trace seeds. `SEGMENT_LOG_TRACE_SEED` and `SEGMENT_LOG_TRACE_SEEDS`
+select the start and count. The named `m1-long-run` scheduled job runs the ignored
+variant on Linux and macOS. `SEGMENT_LOG_TRACE_REPLAY` loads paired storage and
+caller/reader artifacts without reproducing the original schedule.
+
 ## Real-process harness
 
 The test binary starts itself again as the child: it runs `std::env::current_exe()` with the child test's exact name and an environment variable that selects child mode. The child runs with `--nocapture`. It writes each request before it calls `append`, and each result after, as lines on its standard output with a fixed prefix, so that the parent can skip the test runner's own output. The parent stops it with `Child::kill`, which sends `SIGKILL` on Unix, then reopens the directory and runs the oracle checks that `PROC-SIGKILL` lists. A request with no recorded result is an unknown outcome. The same harness checks that a second process gets `Locked` while the child holds the log. No new dependency is needed.

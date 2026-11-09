@@ -1,0 +1,27 @@
+   Compiling segment-log-core v0.0.1 (/Volumes/p7/t3/worktrees/segment-log/t3-2a3ba012/segment-log-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.47s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 1 test
+test acceptance::seeded::recovery_verification_respects_the_saved_small_group_cap ... FAILED
+
+failures:
+
+---- acceptance::seeded::recovery_verification_respects_the_saved_small_group_cap stdout ----
+
+thread 'acceptance::seeded::recovery_verification_respects_the_saved_small_group_cap' (130020397) panicked at segment-log-core/src/acceptance/seeded.rs:358:5:
+assertion `left == right` failed
+  left: Refused("TooLarge")
+ right: Ack(false, [(6, 0), (7, 1)])
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+SIM-MODEL, SIM-CONFORMANCE initial seed 1000 crash Some(Crash(PowerLossTorn, 1002)) trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-19456-0.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 1000 crash Some(Crash(PowerLossTorn, 1002)) trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-19456-1.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 1000 crash Some(Crash(PowerLossTorn, 1002)) trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-19456-2.trace
+
+
+failures:
+    acceptance::seeded::recovery_verification_respects_the_saved_small_group_cap
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 129 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p segment-log-core --lib`
