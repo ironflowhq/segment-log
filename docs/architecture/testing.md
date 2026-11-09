@@ -28,22 +28,23 @@ Record an unresolved later-milestone decision as a dependency. Do not guess its 
 
 ### M1 acceptance coverage
 
-Storage-model, conformance and group-codec scenarios are partial. No completion evidence exists yet. A group lists only the M1 part of each requirement and case. Rolling, sealed-segment handling, footers, locators and read-only open keep their later gates. Seeded crash-oracle coverage starts in M1; the full model test remains M2.
+Storage-model, conformance, codec and first engine scenarios are partial. The engine scenarios cover the flush visibility boundary, basic queued grouping, bounded reads, initial rejection checks and directed crash/fault variants. Counter scenarios cover append boundaries, first-failure ordering, refusal without mutations and epoch recovery including crash variants. Counter-free retries and their key-classification precedence await the retry slice. Retry lookup and deduplication are not implemented. No completion evidence exists yet. A group lists only the M1 part of each requirement and case. Rolling, sealed-segment handling, footers, locators and read-only open keep their later gates. Seeded crash-oracle coverage starts in M1; the full model test remains M2.
 
 | Group | Requirements or invariants | Scenario cases | Status |
 | --- | --- | --- | --- |
 | M1-SIMULATOR | [ADR 0014](../decisions/0014-crash-testing-strategy.md) | `SIM-MODEL`, `SIM-CONFORMANCE` | Partial |
 | M1-CODEC | R7, R16–R17 | `CODEC-GROUP` | Partial |
-| M1-DURABILITY | R2–R4, R18–R19; I1–I3 | `ORACLE-1`, `ORACLE-8`, `ORACLE-9`, `GROUP-FORMATION`, `READ-BOUNDED` | Planned |
-| M1-ATOMICITY | R1, R3, R7–R8; I4–I6 | `ORACLE-2`, `ORACLE-3`, `ORACLE-10` | Planned |
-| M1-RECOVERY | R8, R14, R16–R17; I2–I6 | `ORACLE-1`–`ORACLE-5`, `RECOVERY-FIXTURES`, `OPEN-FAULTS` | Planned |
-| M1-REVISIONS | R9, R11–R12 | `REV-EXPECTED`, `REV-NO-OFFSET` | Planned |
-| M1-RETRY-CLASSIFICATION | R1, R10, R12 | `KEY-REPEATED`, `KEY-SCOPE`, `KEY-CONFLICT`, `KEY-PARTIAL`, `RETRY-REGROUPED` | Planned |
+| M1-DURABILITY | R2–R4, R18–R19; I1–I3 | `ORACLE-1`, `ORACLE-8`, `ORACLE-9`, `GROUP-FORMATION`, `READ-BOUNDED` | Partial |
+| M1-ATOMICITY | R1, R3, R7–R8; I4–I6 | `ORACLE-2`, `ORACLE-3`, `ORACLE-10` | Partial |
+| M1-RECOVERY | R8, R14, R16–R17; I2–I6 | `ORACLE-1`–`ORACLE-5`, `RECOVERY-FIXTURES`, `OPEN-FAULTS` | Partial |
+| M1-COUNTERS | [ADR 0041](../decisions/0041-counter-exhaustion-refuses-without-poisoning.md) | `COUNTER-EXHAUSTION` | Partial |
+| M1-REVISIONS | R9, R11–R12 | `REV-EXPECTED`, `REV-NO-OFFSET` | Partial |
+| M1-RETRY-CLASSIFICATION | R1, R10, R12 | `KEY-REPEATED`, `KEY-SCOPE`, `KEY-CONFLICT`, `KEY-PARTIAL`, `RETRY-REGROUPED` | Partial |
 | M1-PENDING-RETRIES | R4, R10, R12; I1 | `RETRY-PENDING`, `RETRY-PENDING-FAIL`, `RETRY-REGROUPED-FAIL`, `ANSWER-TIMING` | Planned |
 | M1-UNKNOWN-OUTCOMES | R1, R10–R12 | `ORACLE-4`, `RETRY-UNKNOWN-1`–`RETRY-UNKNOWN-8`, `KEY-CONFLICT-CRASH`, `KEY-PARTIAL-CRASH` | Planned |
-| M1-ADMISSION | R5 | `OPT-DEFAULTS`, `ADM-PRECEDENCE`, `ADM-BUDGETS`, `ADM-SIZE`, `ADM-RESERVATION`, `ADM-CHARGE` | Planned |
-| M1-POISON | R6; I10 | `ORACLE-7`, `POISON-LOOKUP` | Planned |
-| M1-OPEN-BOUNDARIES | R14, R16–R17; I8 | `OPT-VALIDATION`, `OPEN-DIR`, `OPEN-LAYOUT`, `ORACLE-11` | Planned |
+| M1-ADMISSION | R5 | `OPT-DEFAULTS`, `ADM-PRECEDENCE`, `ADM-BUDGETS`, `ADM-SIZE`, `ADM-RESERVATION`, `ADM-CHARGE` | Partial |
+| M1-POISON | R6; I10 | `ORACLE-7`, `POISON-LOOKUP` | Partial |
+| M1-OPEN-BOUNDARIES | R14, R16–R17; I8 | `OPT-VALIDATION`, `OPEN-DIR`, `OPEN-LAYOUT`, `ORACLE-11` | Partial |
 | M1-REOPEN-HISTORY | R13, R18–R19, R22; I9 | `ORACLE-12`, `KEY-LIFETIME`, `HISTORY` | Planned |
 | M1-DROP | R4, R16; I8 | `DROP` | Planned |
 | M1-PROCESS-CRASH | R4, R8, R14, R16 | `PROC-SIGKILL` | Planned |
@@ -110,7 +111,7 @@ The crash tests are only as good as the crash model ([ADR 0014](../decisions/001
 
 ## The oracle
 
-A test runs many caller threads against the simulated storage. Each caller writes a log of what it sent and what it got back. Distinguish success, an observed terminal rejection, and an unknown outcome. `Indeterminate` or a lost reply is unknown. A received `Invalid`, `TooLarge`, `Full`, `Poisoned`, `KeyConflict`, `PartialRetry` or `WrongRevision` confirms that this request appended no new record. The absence of a success reply alone does not put a request into a successful-retry test.
+A test runs many caller threads against the simulated storage. Each caller writes a log of what it sent and what it got back. Distinguish success, an observed terminal rejection, and an unknown outcome. `Indeterminate` or a lost reply is unknown. A received `Invalid`, `TooLarge`, `Full`, `Poisoned`, `KeyConflict`, `PartialRetry`, `WrongRevision` or `Exhausted` confirms that this request appended no new record. The absence of a success reply alone does not put a request into a successful-retry test.
 
 Checks apply from M1 unless marked with a later milestone. After a crash and a reopen, the test checks:
 
@@ -185,6 +186,7 @@ Cases apply from M1 unless they name another milestone. Mixed bullets identify t
 - `DROP`. Writer-draining `Drop`, from M1 ([api.md](api.md#target-signatures-and-defaults)). Dropping the last handle commits the submits already queued. `Pending` handles that outlive the log handle get those answers. The lock is released, so a reopen in the same process succeeds and recovers those records. Drop on a poisoned writer, and after the writer thread stopped without answering, still returns and releases the lock. A write or flush failure during the drain gives the unfinished current group `Indeterminate` and queued requests `Poisoned`, under the poison rule.
 - `OPEN-FAULTS`. I/O faults during open, from M1. Inject a failure into the directory sync during creation, the parent directory sync, the tail rewrite and its `sync_all`, including `ENOSPC`. Open fails with `Io` and returns no handle. A later open with the fault disabled, then a `PowerLoss`, then another open satisfies oracle checks 1–5.
 - `REV-NO-OFFSET`. A rejected revision uses no offset, from M1: the next successful append gets the offset that the rejected one would have had.
+- `COUNTER-EXHAUSTION`. Counter boundaries, from M1, under [ADR 0041](../decisions/0041-counter-exhaustion-refuses-without-poisoning.md). Use private fixtures for otherwise impractical counter states. Cover the last assignable offset and revision, whole-submit refusal, expected-revision precedence, unchanged public state and continued writer use. An exhausted epoch refuses open before recovery mutations. Cover a valid maximum epoch followed by an invalid tail.
 - `OPEN-DIR`. Directory creation, from M1. Create only the final component under a durable parent. A missing ancestor fails without creating it. Crash after directory creation, segment creation and each directory sync. Before any acknowledgment, both the segment entry in the log directory and the log entry in its parent must be durable. A power loss immediately after successful open preserves the reachable log.
 - `OPEN-LAYOUT`. Supported layouts, from M1. A directory with multiple segment files fails with `Io` of kind `Unsupported` before cleanup, truncation or rewrite. From M3, multi-segment fixtures instead exercise full-scan recovery, gaps and crashes during roll. M4 adds footer-based recovery.
 - `RECOVERY-FIXTURES`. Recovery on hand-made files, from M1: a zero-filled tail, a length past the end of the file, a bad CRC, a lower epoch, a wrong base offset, a header with the wrong log id, and a file name that differs from its header's base offset. Missing middle segments and crashes during roll start in M3. Expected outcomes for the cases where a wrong answer loses data:

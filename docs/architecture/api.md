@@ -158,6 +158,9 @@ pub enum AppendError {
 
 /// Returned by Pending::wait.
 pub enum CommitError {
+    /// A new record would exhaust the log-offset or stream-revision space.
+    /// Nothing was appended and the writer remains usable.
+    Exhausted,
     /// Record `index` had the wrong expected revision. `actual` includes earlier
     /// valid pending records and is None when the stream has no records.
     /// Nothing was appended. No offset was used.
@@ -179,6 +182,7 @@ pub enum CommitError {
 }
 
 pub enum OpenError {
+    Exhausted,                                    // no next writer epoch; no recovery mutations
     Locked,                                        // another process holds LOCK
     InvalidOptions(&'static str),                  // an option outside its limits
     Corrupt { segment: LogOffset, position: u64 }, // bad frame in a sealed segment
@@ -254,6 +258,14 @@ A positive byte budget smaller than a request's charge is valid configuration. T
 `open` creates only the final directory component. Its parent and ancestor entries must already exist durably. A missing ancestor returns `Io`; the core does not create it recursively. The [recovery sequence](overview.md#open-and-recovery) syncs the log directory and its parent before publishing records.
 
 M1 and M2 accept at most one segment file. After taking the writer lock, they reject a directory with multiple segment files with `Io` whose kind is `Unsupported`, before segment cleanup or recovery writes. M3 adds multi-segment recovery with full scans. M4 adds footer-based open and read-only sealed logs. This scope check avoids applying a partial recovery algorithm to later-milestone layouts.
+
+## Counter exhaustion
+
+[ADR 0041](../decisions/0041-counter-exhaustion-refuses-without-poisoning.md) defines exhaustion as a known refusal. The writer returns `CommitError::Exhausted` if a new submit would require an unrepresentable stream revision or next unused log offset. It writes nothing for that submit, consumes no offset or revision, releases the reservation, and remains usable. Fully matching retries still return existing positions without advancing counters.
+
+Key classification keeps its existing precedence. For new records, expected-revision and revision-exhaustion checks run in request order. The first failing check decides the result. After those checks and the group-cap decision, the writer checks whether the entire new submit fits the remaining offset space. A refused submit leaves no pending changes. A later smaller submit may still fit.
+
+The last representable stream revision is `u64::MAX`. The watermark must remain representable, so the last assignable record offset is `u64::MAX - 1`. A writer epoch may equal `u64::MAX`, but a later open cannot increment it. If the highest epoch in the valid kept prefix cannot be incremented, `open` returns `OpenError::Exhausted` before truncation, tail rewrite or recovery syncs. Lock acquisition and layout validation still precede the recovery scan.
 
 ## Admission charge
 
