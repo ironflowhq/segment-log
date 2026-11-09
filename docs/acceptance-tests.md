@@ -107,6 +107,29 @@ Simulated `Kill`, `PowerLoss` and `PowerLossTorn` and real-process `SIGKILL` hav
 
 The test binary starts itself again as the child: it runs `std::env::current_exe()` with the child test's exact name and an environment variable that selects child mode. The child runs with `--nocapture`. It writes each request before it calls `append`, and each result after, as lines on its standard output with a fixed prefix, so that the parent can skip the test runner's own output. The parent stops it with `Child::kill`, which sends `SIGKILL` on Unix, then reopens the directory and runs the oracle checks that `PROC-SIGKILL` lists. A request with no recorded result is an unknown outcome. The same harness checks that a second process gets `Locked` while the child holds the log. No new dependency is needed.
 
+Run `cargo test -p segment-log-core --test process_crash` for the process scenarios.
+`SEGMENT_LOG_PROCESS_SEED` selects the first seed (default 808), and
+`SEGMENT_LOG_PROCESS_REPETITIONS` selects consecutive seeds (default 3).
+Each run kills at a seeded request-event boundary while six callers continue working.
+This varies the kill point without using a sleep to infer ordering.
+The protocol serializes and flushes each line; request fields use hex encoding.
+Only complete result lines count as answers. The oracle uses the pre-recovery
+file to constrain written group order, and the request ledger supplies expected
+record contents, revisions, atomic submit membership and retry classification.
+It does not infer a transaction from a regrouped retry acknowledgment.
+One admitted result handle is deliberately abandoned, so unknown-outcome coverage
+does not depend on whether a pipe event still describes unfinished work at kill time.
+The parent waits for its post-admission abandonment event before enabling the kill.
+
+Each process repetition prints its seed, mode and transcript path. A failed repetition keeps
+its temporary directory and `protocol.txt`; a passing scenario removes them.
+The transcript records the pipe, including test-runner output and any partial
+last line. It supports ledger inspection, not deterministic replay of scheduling.
+Child cleanup kills and reaps the process before joining its pipe reader.
+Pipe and exit waits have watchdogs. A scenario-wide watchdog also bounds open,
+recovery and retry waits; on expiry it cleans up the child and aborts the test
+binary so a stuck local writer cannot outlive the test.
+
 ## Choose test techniques
 
 - Start each behavior with directed scenarios. Randomized and model tests broaden a covered contract; they do not replace its directed examples.
