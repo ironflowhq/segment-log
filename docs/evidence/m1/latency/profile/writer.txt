@@ -1,0 +1,25 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 1K of event 'cpu-clock'
+# Event count (approx.): 19414141220
+#
+# Overhead  Symbol                                                                                                                                                                                                                                                                                                                                                                                               IPC   [IPC Coverage]
+# ........  ...................................................................................................................................................................................................................................................................................................................................................................................................  ....................
+#
+    24.45%  [.] _RNvNtCs1yfmUvvQcVR_16segment_log_core5codec9frame_crc                                                                                                                                                                                                                                                                                                                                           -      -
+     5.36%  [.] 0x0000000000188919                                                                                                                                                                                                                                                                                                                                                                               -      -
+     3.59%  [.] _RNvMsi_NtNtNtCsgFX3jaOk65H_5alloc11collections5btree3mapINtB5_8BTreeMapINtNtBb_3vec3VechENtNtNtCs1yfmUvvQcVR_16segment_log_core6engine4keys11KeyLocationE6insertB1v_                                                                                                                                                                                                                            -      -
+     3.28%  [.] _RNvNtCs1yfmUvvQcVR_16segment_log_core6engine3run                                                                                                                                                                                                                                                                                                                                                -      -
+     2.97%  [.] 0x000000000018891d                                                                                                                                                                                                                                                                                                                                                                               -      -
+     2.39%  [.] cfree                                                                                                                                                                                                                                                                                                                                                                                            -      -
+     1.87%  [.] _RNvMs0_NtNtNtCs8ZKwes1zzDd_3std4sync4mpmc5wakerNtB5_9SyncWaker6notify                                                                                                                                                                                                                                                                                                                           -      -
+     1.51%  [.] syscall                                                                                                                                                                                                                                                                                                                                                                                          -      -
+     1.09%  [k] futex_wake                                                                                                                                                                                                                                                                                                                                                                                       -      -
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

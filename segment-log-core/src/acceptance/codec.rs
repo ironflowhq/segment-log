@@ -219,3 +219,37 @@ fn header_bytes_and_validation_follow_the_format() {
         }
     });
 }
+
+/// Given all two-byte values and groups with empty and variable binary payloads
+/// When CRC32C and complete frames are compared with the independent bitwise fixture
+/// Then checksums and every durable byte remain identical
+/// Cases: CODEC-GROUP
+#[test]
+fn checksums_and_frames_match_the_bitwise_fixture() {
+    use super::support::raw;
+    assert_eq!(codec::crc32c(&[]), 0);
+    for word in 0..=u16::MAX {
+        let bytes = word.to_le_bytes();
+        assert_eq!(codec::crc32c(&bytes), raw::crc(&bytes));
+    }
+    let payload: Vec<u8> = (0..8193)
+        .map(|n| ((n * 97 + n / 251) % 256) as u8)
+        .collect();
+    for len in [0, 1, 7, 8, 255, 256, 257, 4095, 4096, 8193] {
+        let bytes = &payload[..len];
+        assert_eq!(codec::crc32c(bytes), raw::crc(bytes));
+        let group = Group {
+            epoch: 3,
+            base_offset: 5,
+            entries: vec![Entry {
+                stream: b"s",
+                key: None,
+                payload: bytes,
+                revision: 5,
+            }],
+        };
+        let expected = raw::group(3, 5, &[bytes]);
+        assert_eq!(codec::encode(&group).unwrap(), expected);
+        assert_eq!(codec::decode(&expected).unwrap(), group);
+    }
+}
