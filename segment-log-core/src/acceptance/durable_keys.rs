@@ -981,3 +981,86 @@ fn a_short_valid_lookup_frame_cannot_ack_or_reject_a_retry() {
         }
     });
 }
+
+fn numbered(offset: u64, payload: &str) -> NewRecord {
+    record(
+        format!("s{offset}").as_bytes(),
+        Some(format!("k{offset}").as_bytes()),
+        format!("{payload}{offset}").as_bytes(),
+    )
+}
+
+/// Given durable groups of one, three, two and five keyed records
+/// When one submit retries keys from the first, middle and last entries of several groups
+/// And another reuses a middle group's key with a different payload
+/// Then the retry returns the original positions in request order without a write
+/// And the reuse gets `KeyConflict` at its own index
+/// When a fifth group of four records is appended and each of its storage boundaries is
+/// replayed through every crash mode
+/// Then each key of a surviving group still returns its original position after reopen
+/// And the records of a lost fifth group append as new at the next unused offsets
+/// Cases: KEY-LIFETIME, RETRY-REGROUPED, KEY-CONFLICT, ORACLE-1, ORACLE-4, ORACLE-12
+#[test]
+fn keys_resolve_to_their_own_frames_across_groups_and_crashes() {
+    bounded(|| {
+        let sim = Sim::new(733);
+        let log = open(&sim);
+        let group = |log: &SegmentLog, offsets: std::ops::Range<u64>| {
+            let expected: Vec<_> = offsets.clone().map(|offset| (offset, 0)).collect();
+            let records = offsets.map(|offset| numbered(offset, "p")).collect();
+            positions(send(log, records).wait().unwrap(), &expected, false);
+        };
+        for offsets in [0..1, 1..4, 4..6, 6..11] {
+            group(&log, offsets);
+        }
+        let retry = |log: &SegmentLog, offsets: &[u64]| {
+            let expected: Vec<_> = offsets.iter().map(|offset| (*offset, 0)).collect();
+            let records = offsets
+                .iter()
+                .map(|offset| numbered(*offset, "p"))
+                .collect();
+            positions(send(log, records).wait().unwrap(), &expected, true);
+        };
+        retry(&log, &[10, 0, 4, 3, 6, 1, 5]);
+        let mut reused = numbered(5, "p");
+        reused.payload = b"other".to_vec();
+        assert!(matches!(
+            send(&log, vec![numbered(1, "p"), reused]).wait(),
+            Err(CommitError::KeyConflict { index: 1 })
+        ));
+        calls(&sim, 4);
+        let start = sim.trace().1.len();
+        group(&log, 11..15);
+        retry(&log, &[14, 11, 0, 12]);
+        calls(&sim, 5);
+        let history = log.read(0, 100).unwrap();
+        assert_eq!(history.len(), 15);
+        let (seed, trace) = sim.trace();
+        drop(log);
+        for end in start..=trace.len() {
+            for mode in [Crash::Kill, Crash::PowerLoss, Crash::PowerLossTorn] {
+                let replay = Sim::replay(seed, &trace[..end]);
+                replay.crash(mode, end as u64);
+                let recovered = open(&replay);
+                let kept = recovered.watermark();
+                assert!(kept == 11 || kept == 15, "end {end} kept {kept}");
+                if end == trace.len() {
+                    assert_eq!(kept, 15);
+                }
+                let writes = replay.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![]));
+                for offset in 0..kept {
+                    retry(&recovered, &[offset]);
+                }
+                retry(&recovered, &[kept - 1, 0, 5]);
+                assert_eq!(
+                    replay.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                    writes
+                );
+                if kept == 11 {
+                    group(&recovered, 11..15);
+                }
+                assert_records(&recovered.read(0, 100).unwrap(), &history);
+            }
+        }
+    });
+}
