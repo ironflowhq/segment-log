@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import shutil
 import subprocess
 
 p = argparse.ArgumentParser(description=__doc__)
@@ -33,7 +34,9 @@ for name, cmd in {'uptime': ['uptime'], 'cpu': ['lscpu'], 'memory': ['free', '-b
 (a.output / 'environment.json').write_text(json.dumps(metadata, indent=2))
 
 cases = [(f'records_{n}', n, 0, 1, 100) for n in (1000, 10000, 100000)]
-cases += [('keys_half', 10000, 5000, 1, 100), ('keys_all', 10000, 10000, 1, 100),
+cases += [('records_1000_fixed_groups', 1000, 0, 1, 10),
+          ('records_100000_fixed_groups', 100000, 0, 1, 1000),
+          ('keys_half', 10000, 5000, 1, 100), ('keys_all', 10000, 10000, 1, 100),
           ('streams_1000', 10000, 0, 1000, 100), ('groups_1000', 10000, 0, 1, 10),
           ('groups_10000', 10000, 0, 1, 1)]
 with (a.output / 'phases.csv').open('w', newline='') as out:
@@ -63,7 +66,6 @@ with (a.output / 'phases.csv').open('w', newline='') as out:
                     assert len(row) == 8, row
                     writer.writerow([name, rep, mode, n, keys, streams, group, 32, *row])
                 out.flush()
-            import shutil
             shutil.rmtree(data)
 (a.output / 'commands.json').write_text(json.dumps(commands, indent=2))
 (a.output / 'uptime-end.txt').write_text(command(['uptime']))
