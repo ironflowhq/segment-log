@@ -11,6 +11,7 @@ Read these before you change code. Start with the PRD.
 - [docs/architecture/format.md](docs/architecture/format.md): byte layout v0. The only source for field widths.
 - [docs/architecture/api.md](docs/architecture/api.md): public API and defaults. The only source for signatures.
 - [docs/architecture/testing.md](docs/architecture/testing.md): crash model, oracle, benchmarks.
+- [docs/acceptance-tests.md](docs/acceptance-tests.md): how to implement a behavior scenario-first, and where the tests go.
 - [docs/architecture/prior-art.md](docs/architecture/prior-art.md): Kafka, the crate survey, and the evidence limits.
 - [docs/glossary.md](docs/glossary.md): use each term with that meaning only.
 - Decisions are recorded as ADRs (Architecture Decision Records) in `docs/decisions/`. Read [docs/decisions/README.md](docs/decisions/README.md) for the format and rules before writing or contradicting one.
@@ -27,7 +28,7 @@ All ADRs are `Proposed` until the owner accepts them. A Proposed ADR is still th
 - **Never retry an `fsync`** after it returns an error. Poison the writer ([0004](docs/decisions/0004-io-errors-poison-the-writer.md)). The retry on `EINTR` inside `std` does not count, because that call did not complete.
 - **One source per fact.** Widths live in format.md, signatures and defaults in api.md, targets in the PRD. Other docs link to them. When code changes one of these facts, update that file in the same change.
 - **Open items are open.** Do not settle a PRD open item in code. Propose an ADR.
-- **Tests:** every change on the write or recovery path adds crash cases to the simulation. A bug fix starts with a failing test. Print the seed of a failing randomized test.
+- **Tests:** follow the [acceptance-test workflow](docs/acceptance-tests.md) for every implementation milestone, starting with M1. Each behavior starts with a Given/When/Then scenario that fails. Every change on the write or recovery path adds crash cases to the simulation. A bug fix starts with a failing test. A failing randomized test prints its seed and saves the storage trace needed to rebuild its crash state.
 
 ## Build and test
 
