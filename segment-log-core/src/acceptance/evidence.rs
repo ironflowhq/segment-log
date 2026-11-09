@@ -167,6 +167,7 @@ fn measured_appends_survive_reopen() {
     let workspace = Workspace::new();
     let callers = setting("SEGMENT_LOG_BENCH_CALLERS", 4);
     let rounds = setting("SEGMENT_LOG_BENCH_ROUNDS", 4);
+    crate::pipeline::init(callers, rounds);
     let device_rounds = setting("SEGMENT_LOG_DEVICE_ROUNDS", 8);
     assert!(callers > 0 && rounds > 0 && device_rounds > 0);
     let measured = match std::env::var("SEGMENT_LOG_BENCH_STORAGE").as_deref() {
@@ -243,6 +244,7 @@ fn measured_appends_survive_reopen() {
                     let mut admission_ns = 0;
                     for revision in 0..rounds {
                         let now = Instant::now();
+                        crate::pipeline::caller(caller, revision, crate::pipeline::START);
                         let pending = loop {
                             let request = input(caller, revision);
                             let admission = Instant::now();
@@ -257,11 +259,14 @@ fn measured_appends_survive_reopen() {
                                 Err(error) => panic!("admission failure: {error:?}"),
                             }
                         };
+                        crate::pipeline::caller(caller, revision, crate::pipeline::ADMITTED);
                         let result = pending.wait().expect("commit failure");
+                        crate::pipeline::caller(caller, revision, crate::pipeline::WAKE);
                         latencies.push(now.elapsed().as_nanos() as u64);
                         assert!(!result.deduplicated);
                         assert_eq!(result.records.len(), 1);
                         assert_eq!(result.records[0].revision, revision as u64);
+                        crate::pipeline::committed(caller, revision, result.records[0].offset);
                         offsets.push(result.records[0].offset);
                     }
                     let cpu = cpu_start.map(|start| cpu::current() - start);
@@ -353,6 +358,7 @@ fn measured_appends_survive_reopen() {
         size(&path)
     );
     drop(log);
+    crate::pipeline::report();
     let before = size(&path);
     let now = Instant::now();
     let log = SegmentLog::open(&path, Options::default()).unwrap();

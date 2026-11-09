@@ -1,0 +1,24 @@
+{
+  "base_sha": "e409b1d88bdbbe7dbbb36ae7b08c54861e744a2a",
+  "toolchain": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "profile": "cargo test --release -p segment-log-core --lib --no-run -j2; default release optimization; no RUSTFLAGS override",
+  "trace_source_sha256": {
+    "segment-log-core/src/lib.rs": "737f95ad7c9dca2bec4cc840dcbbbfac670697cb067f3532a3271c7245a45278",
+    "segment-log-core/src/engine.rs": "2224ca02a4db1a321612995816acdc378025d1c8f11b1bacd330db20b1255863",
+    "segment-log-core/src/acceptance/evidence.rs": "6fe1eda990558995ab5a184d1489db8726a9aac7afbab28513433ea43ab9b4a7",
+    "segment-log-core/src/pipeline.rs": "c8c3f7606e21dd1b5507c21320c5bf7ec9a39ef1131e53164b632bb5f18d26ab",
+    "scripts/m1-pipeline-run.py": "26a8b52b9fdcf359df70493e3f586e6aae9e306f723cf2140e2593aa3260287d",
+    "scripts/m1-pipeline-summary.py": "ed20c3bf76a813099081907ee2d79534c34420c5ceca566c1b620f4ef99aa102",
+    "scripts/test_m1_pipeline.py": "c99ac9755379f9b062e64eb24dc1bb26bf7ecabcb3f1868af5a6805da5f28567"
+  },
+  "binaries": {
+    "control": {
+      "sha256": "147d4845d2a7c97063b80df1995bbcc58e7e7c9ac49c4152eb4fb4638ffcb5c5",
+      "path": ".audit/p99/control-source/target/release/deps/segment_log_core-7f9ed641480dc3db"
+    },
+    "trace": {
+      "sha256": "cb2ce7dfe1f87be5f2868c33bfaaf4a314e43c5b3d72e1b817e63ed228eada6d",
+      "path": "target/release/deps/segment_log_core-7f9ed641480dc3db"
+    }
+  }
+}

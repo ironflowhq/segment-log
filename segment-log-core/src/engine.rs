@@ -57,6 +57,8 @@ const REQUEST_BOOKKEEPING: usize =
     std::mem::size_of::<RetryWaiter>() + std::mem::size_of::<Pending>();
 impl Request {
     fn answer(self, result: Result<Committed, CommitError>) {
+        #[cfg(test)]
+        crate::pipeline::request(&self.submit, crate::pipeline::SEND);
         drop(self.reservation);
         let _ = self.reply.send(result);
     }
@@ -181,6 +183,8 @@ impl SegmentLog {
         }
     }
     pub fn append(&self, submit: Submit) -> Result<Pending, AppendError> {
+        #[cfg(test)]
+        crate::pipeline::request(&submit, crate::pipeline::ADMISSION);
         validate(&submit)?;
         if body_size(&submit).ok_or(AppendError::TooLarge)? > self.options.group_byte_cap {
             return Err(AppendError::TooLarge);
@@ -211,6 +215,8 @@ impl SegmentLog {
             used: self.used.clone(),
         };
         let (reply, receiver) = mpsc::channel();
+        #[cfg(test)]
+        crate::pipeline::request(&submit, crate::pipeline::ENQUEUE);
         match self.sender.as_ref().unwrap().try_send(Request {
             submit,
             reply,
@@ -431,6 +437,8 @@ fn run(
             Some(r) => r,
             None => return,
         };
+        #[cfg(test)]
+        crate::pipeline::request(&first.submit, crate::pipeline::DEQUEUE);
         let snapshot = published.lock().unwrap();
         let base = snapshot.watermark;
         let mut heads: BTreeMap<_, _> = snapshot
@@ -450,6 +458,8 @@ fn run(
         let mut size = 24;
         let mut next = Some(first);
         while let Some(request) = next.take() {
+            #[cfg(test)]
+            crate::pipeline::request(&request.submit, crate::pipeline::CLASSIFY);
             match writer.keys.classify(
                 storage.as_ref(),
                 &segment,
@@ -486,6 +496,8 @@ fn run(
                                 heads.insert(record.stream.clone(), revision.revision);
                             }
                             assigned.extend(revisions.iter().map(|slot| slot.revision));
+                            #[cfg(test)]
+                            crate::pipeline::request(&request.submit, crate::pipeline::READY);
                             requests.push(request);
                         }
                     }
@@ -518,10 +530,16 @@ fn run(
                     receiver.recv_timeout(remaining).ok()
                 }
             };
+            #[cfg(test)]
+            if let Some(request) = &next {
+                crate::pipeline::request(&request.submit, crate::pipeline::DEQUEUE);
+            }
         }
         if requests.is_empty() {
             continue;
         }
+        #[cfg(test)]
+        let mut timeline = crate::pipeline::Group::new(base, requests.len());
         let entries = requests
             .iter()
             .flat_map(|r| &r.submit.records)
@@ -540,13 +558,21 @@ fn run(
         };
         let bytes = codec::encode(&group).expect("validated group");
         let length = bytes.len();
+        #[cfg(test)]
+        timeline.mark(1);
         let result = call(
             storage.as_ref(),
             &segment,
             Purpose::Group,
             Op::Append(bytes),
         )
-        .and_then(|_| call(storage.as_ref(), &segment, Purpose::Group, Op::SyncData));
+        .and_then(|_| {
+            #[cfg(test)]
+            timeline.mark(2);
+            call(storage.as_ref(), &segment, Purpose::Group, Op::SyncData)
+        });
+        #[cfg(test)]
+        timeline.mark(3);
         if result.is_err() {
             poison(&poisoned, requests, waiters, deferred.take(), receiver);
             return;
@@ -560,8 +586,12 @@ fn run(
         };
         writer.keys.publish(&frame, &group);
         publish(&mut published.lock().unwrap(), frame, &group);
+        #[cfg(test)]
+        timeline.mark(4);
         let mut index = 0;
         for request in requests {
+            #[cfg(test)]
+            crate::pipeline::group_id(&request.submit, base);
             let records = (0..request.submit.records.len())
                 .map(|_| {
                     let p = Position {
@@ -577,6 +607,8 @@ fn run(
                 deduplicated: false,
             }));
         }
+        #[cfg(test)]
+        timeline.finish();
         for waiter in waiters {
             waiter.request.answer(Ok(Committed {
                 records: waiter.positions,
