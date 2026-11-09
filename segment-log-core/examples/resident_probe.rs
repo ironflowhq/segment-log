@@ -1,4 +1,3 @@
-//! Phase barriers for external resident-memory sampling. No production instrumentation.
 use segment_log_core::*;
 use std::{
     hint::black_box,

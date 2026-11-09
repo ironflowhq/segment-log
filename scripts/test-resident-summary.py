@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Check phase isolation and missing-sample semantics on known synthetic observations."""
 import importlib.util
 import json
 from pathlib import Path
