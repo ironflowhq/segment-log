@@ -1,0 +1,181 @@
+    Checking segment-log-core v0.0.1 (/Volumes/p7/t3/worktrees/segment-log/t3-28d54c8c-5bb84dbfd5910c4e/segment-log-core)
+error: struct `File` is never constructed
+ --> segment-log-core/src/storage/sim.rs:8:8
+  |
+8 | struct File {
+  |        ^^^^
+  |
+  = note: `-D dead-code` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[expect(dead_code)]` or `#[allow(dead_code)]`
+
+error: struct `Directory` is never constructed
+  --> segment-log-core/src/storage/sim.rs:14:8
+   |
+14 | struct Directory {
+   |        ^^^^^^^^^
+
+error: struct `Image` is never constructed
+  --> segment-log-core/src/storage/sim.rs:19:19
+   |
+19 | pub(crate) struct Image {
+   |                   ^^^^^
+
+error: enum `Crash` is never used
+  --> segment-log-core/src/storage/sim.rs:25:17
+   |
+25 | pub(crate) enum Crash {
+   |                 ^^^^^
+
+error: constant `ERROR_KINDS` is never used
+  --> segment-log-core/src/storage/sim.rs:30:18
+   |
+30 | pub(crate) const ERROR_KINDS: &[io::ErrorKind] = &[
+   |                  ^^^^^^^^^^^
+
+error: struct `FaultError` is never constructed
+  --> segment-log-core/src/storage/sim.rs:72:19
+   |
+72 | pub(crate) struct FaultError(io::ErrorKind);
+   |                   ^^^^^^^^^^
+
+error: method `kind` is never used
+  --> segment-log-core/src/storage/sim.rs:74:19
+   |
+73 | impl FaultError {
+   | --------------- method in this implementation
+74 |     pub(crate) fn kind(self) -> io::ErrorKind {
+   |                   ^^^^
+
+error: associated function `error` is never used
+  --> segment-log-core/src/storage/sim.rs:79:19
+   |
+78 | impl Fault {
+   | ---------- associated function in this implementation
+79 |     pub(crate) fn error(kind: io::ErrorKind) -> Result<Self, io::ErrorKind> {
+   |                   ^^^^^
+
+error: enum `Fault` is never used
+  --> segment-log-core/src/storage/sim.rs:88:17
+   |
+88 | pub(crate) enum Fault {
+   |                 ^^^^^
+
+error: enum `Outcome` is never used
+  --> segment-log-core/src/storage/sim.rs:97:17
+   |
+97 | pub(crate) enum Outcome {
+   |                 ^^^^^^^
+
+error: enum `Event` is never used
+   --> segment-log-core/src/storage/sim.rs:103:17
+    |
+103 | pub(crate) enum Event {
+    |                 ^^^^^
+
+error: struct `Held` is never constructed
+   --> segment-log-core/src/storage/sim.rs:110:8
+    |
+110 | struct Held {
+    |        ^^^^
+
+error: struct `Hold` is never constructed
+   --> segment-log-core/src/storage/sim.rs:115:19
+    |
+115 | pub(crate) struct Hold {
+    |                   ^^^^
+
+error: methods `wait` and `release` are never used
+   --> segment-log-core/src/storage/sim.rs:120:19
+    |
+119 | impl Hold {
+    | --------- methods in this implementation
+120 |     pub(crate) fn wait(&self) {
+    |                   ^^^^
+...
+125 |     pub(crate) fn release(self, fault: Option<Fault>) {
+    |                   ^^^^^^^
+
+error: struct `State` is never constructed
+   --> segment-log-core/src/storage/sim.rs:129:8
+    |
+129 | struct State {
+    |        ^^^^^
+
+error: struct `Sim` is never constructed
+   --> segment-log-core/src/storage/sim.rs:140:19
+    |
+140 | pub(crate) struct Sim {
+    |                   ^^^
+
+error: function `error` is never used
+   --> segment-log-core/src/storage/sim.rs:143:4
+    |
+143 | fn error(kind: io::ErrorKind) -> io::Error {
+    |    ^^^^^
+
+error: function `next` is never used
+   --> segment-log-core/src/storage/sim.rs:146:4
+    |
+146 | fn next(seed: &mut u64) -> u64 {
+    |    ^^^^
+
+error: multiple associated items are never used
+   --> segment-log-core/src/storage/sim.rs:154:19
+    |
+153 | impl Sim {
+    | -------- associated items in this implementation
+154 |     pub(crate) fn new(seed: u64) -> Self {
+    |                   ^^^
+...
+173 |     pub(crate) fn inject(&self, call: Call, fault: Fault) {
+    |                   ^^^^^^
+...
+176 |     pub(crate) fn hold(&self, call: Call) -> Hold {
+    |                   ^^^^
+...
+191 |     pub(crate) fn trace(&self) -> (u64, Vec<Event>) {
+    |                   ^^^^^
+...
+195 |     pub(crate) fn count(&self, path: &Path, purpose: Purpose, op: &Op) -> usize {
+    |                   ^^^^^
+...
+198 |     pub(crate) fn image(&self) -> Image {
+    |                   ^^^^^
+...
+201 |     pub(crate) fn crash(&self, mode: Crash, seed: u64) {
+    |                   ^^^^^
+...
+208 |     pub(crate) fn replay(seed: u64, trace: &[Event]) -> Self {
+    |                   ^^^^^^
+
+error: struct `Guard` is never constructed
+   --> segment-log-core/src/storage/sim.rs:239:8
+    |
+239 | struct Guard {
+    |        ^^^^^
+
+error: function `apply` is never used
+   --> segment-log-core/src/storage/sim.rs:313:4
+    |
+313 | fn apply(image: &mut Image, rng: &mut u64, call: &Call, fault: Option<Fault>) -> Outcome {
+    |    ^^^^^
+
+error: function `execute` is never used
+   --> segment-log-core/src/storage/sim.rs:341:4
+    |
+341 | fn execute(
+    |    ^^^^^^^
+
+error: function `crash_image` is never used
+   --> segment-log-core/src/storage/sim.rs:482:4
+    |
+482 | fn crash_image(image: &mut Image, mode: Crash, mut seed: u64) {
+    |    ^^^^^^^^^^^
+
+error: function `file_id` is never used
+   --> segment-log-core/src/storage/sim.rs:544:4
+    |
+544 | fn file_id(image: &Image, path: &Path) -> Option<u64> {
+    |    ^^^^^^^
+
+error: could not compile `segment-log-core` (lib) due to 24 previous errors
