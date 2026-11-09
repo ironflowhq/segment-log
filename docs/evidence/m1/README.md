@@ -24,6 +24,10 @@ Outstanding work is tracked in [issue #17](https://github.com/ironflowhq/segment
 | 7 | [#13](https://github.com/ironflowhq/segment-log/pull/13) | Five delegate scenarios reached 121 tests. Review added an admission-close observation and sixth scenario, reaching 122. The final [parent record](provenance/parent-decisions.tsv) preserves this distinction. |
 | 8 | [#15](https://github.com/ironflowhq/segment-log/pull/15) | Seven supplemental scenarios and a reproduced harness scheduling failure. [Final workspace summaries](validation/slice8-workspace-summary.log) show 125 core, three process and one real-storage test. [Thirty additional repetitions](validation/slice8-process30.log) used seeds 5001–5030. |
 
+Slice 9 adds the [threaded trace oracle and coverage audit](slice9.md), including
+saved replay commands, the preserved pressure-seed regression and local validation.
+Its scheduled Linux/macOS workflow is configured but has not run here.
+
 ## Reproduce the process-harness finding
 
 Run from the repository root with Python 3, `patch` and the pinned Rust toolchain:
@@ -63,7 +67,8 @@ and [macOS](https://github.com/ironflowhq/segment-log/actions/runs/42559576442/j
 at commit `4bf4844`. The [captured check metadata](validation/slice8-ci.json)
 identifies the head and completion times.
 
-The randomized all-group oracle and scheduled long runs remain slice 9. Linux
+The randomized oracle and scheduled-job configuration are recorded in
+[slice 9](slice9.md). Hosted execution of that new workflow is not claimed. Linux
 syscall verification, actual directory-sync evidence on both platforms and the
 Linux benchmark report remain slice 10. Historical missing initial red evidence
 remains disclosed for owner review. The owner closes the M1 gate.

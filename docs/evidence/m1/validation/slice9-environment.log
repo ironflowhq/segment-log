@@ -1,0 +1,18 @@
+$ git rev-parse HEAD
+3b2fb72ea15e41b3edd8d108bc0dd937a5d6fb5d
+$ rustc -Vv
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+binary: rustc
+commit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67
+commit-date: 2026-10-13
+host: aarch64-apple-darwin
+release: 1.99.1
+LLVM version: 23.1.1
+$ cargo -V
+cargo 1.99.1 (5f94df478 2026-08-27)
+$ sw_vers
+ProductName:		macOS
+ProductVersion:		27.0.1
+BuildVersion:		26A434
+$ uname -m
+arm64

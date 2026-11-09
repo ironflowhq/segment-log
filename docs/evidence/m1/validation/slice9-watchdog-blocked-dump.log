@@ -1,0 +1,6 @@
+Controlled experiment using actual Watchdog source, timeout reduced30s->20ms, failure callback parked forever.
+before: deadline failed to terminate process; supervisor killed it after3s
+seeded scenario watchdog blocked evidence dump
+
+after: SIGABRT observed with blocked dump; exit -6
+seeded scenario watchdog blocked evidence dump

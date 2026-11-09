@@ -1,0 +1,36 @@
+name: M1 scheduled trace oracle
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  m1-long-run:
+    name: M1 long run (${{ matrix.os }})
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      SEGMENT_LOG_TRACE_SEEDS: '100'
+      SEGMENT_LOG_TRACE_SEED: '10000'
+      SEGMENT_LOG_TRACE_ARTIFACT_DIR: ${{ github.workspace }}/.audit/trace-failures
+      SEGMENT_LOG_PROCESS_REPETITIONS: '30'
+      SEGMENT_LOG_PROCESS_SEED: '10000'
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - run: cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture
+      - run: |
+          mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"
+          TMPDIR="$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process" cargo test -p segment-log-core --test process_crash killed_writers_preserve_the_recorded_contract -- --nocapture
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: trace-failures-${{ matrix.os }}
+          path: .audit/trace-failures
+          include-hidden-files: true
+          if-no-files-found: ignore
