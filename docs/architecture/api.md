@@ -292,5 +292,6 @@ The charge is fixed until the request is answered. It does not decrease when dat
 - Lock: `std::fs::File::try_lock` (stable since Rust 1.89, an advisory lock).
 - Flush: `File::sync_data` for segments, and `sync_all` on an opened directory handle for directory entries. [ADR 0005](../decisions/0005-flush-calls-and-platforms.md) gives the mapping to system calls and what M1 must still verify.
 - All file I/O goes through a small storage trait, so that the tests can use simulated storage ([testing.md](testing.md)).
+- Reads on real storage: positioned reads on a shared handle (`std::os::unix::fs::FileExt::read_at`), so a reader never waits for a group flush. This limits the core to Unix targets, which are the supported platforms under [ADR 0005](../decisions/0005-flush-calls-and-platforms.md).
 - Log id: random bytes from the storage trait, as many as the `log_id` width in format.md. `std` has no public random source, and the simulated storage must make them deterministic from its seed.
 - CRC-32C: a software table is enough for M1. A faster version waits for a measurement.
