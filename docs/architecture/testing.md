@@ -44,10 +44,10 @@ Storage-model, conformance, codec and first engine scenarios are partial. The en
 | M1-UNKNOWN-OUTCOMES | R1, R10–R12 | `ORACLE-4`, `RETRY-UNKNOWN-1`–`RETRY-UNKNOWN-8`, `KEY-CONFLICT-CRASH`, `KEY-PARTIAL-CRASH` | Partial |
 | M1-ADMISSION | R5 | `OPT-DEFAULTS`, `ADM-PRECEDENCE`, `ADM-BUDGETS`, `ADM-SIZE`, `ADM-RESERVATION`, `ADM-CHARGE` | Implemented |
 | M1-POISON | R6; I10 | `ORACLE-7`, `POISON-LOOKUP` | Implemented |
-| M1-OPEN-BOUNDARIES | R14, R16–R17; I8 | `OPT-VALIDATION`, `OPEN-DIR`, `OPEN-LAYOUT`, `ORACLE-11` | Partial |
+| M1-OPEN-BOUNDARIES | R14, R16–R17; I8 | `OPT-VALIDATION`, `OPEN-DIR`, `OPEN-LAYOUT`, `ORACLE-11` | Implemented |
 | M1-REOPEN-HISTORY | R13, R18–R19, R22; I9 | `ORACLE-12`, `KEY-LIFETIME`, `HISTORY` | Partial |
 | M1-DROP | R4, R16; I8 | `DROP` | Implemented |
-| M1-PROCESS-CRASH | R4, R8, R14, R16 | `PROC-SIGKILL` | Planned |
+| M1-PROCESS-CRASH | R4, R8, R14, R16 | `PROC-SIGKILL` | Implemented |
 
 Passing these scenarios does not replace the completion artifacts below.
 
