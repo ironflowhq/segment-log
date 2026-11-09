@@ -16,7 +16,6 @@ args = parser.parse_args()
 assert args.records >= 64 and args.records % 64 == 0
 assert args.repetitions > 0
 n = args.records
-# Each pair changes one history dimension while holding the others fixed.
 cases = {
     "base": (n, 0, 1, n // 16, 32),
     "records_quarter": (n // 4, 0, 1, n // 64, 32),

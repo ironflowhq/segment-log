@@ -18,7 +18,6 @@ fn added(bytes: usize) {
     PEAK.fetch_max(live, Relaxed);
     let _ = ALLOCATED.try_with(|n| n.set(n.get() + bytes));
 }
-// Forward each allocation unchanged. Counters never allocate or dereference pointers.
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { System.alloc(layout) };
