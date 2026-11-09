@@ -1,0 +1,14 @@
+diff --git a/segment-log-core/src/engine.rs b/segment-log-core/src/engine.rs
+index c28eb44..5a7b2da 100644
+--- a/segment-log-core/src/engine.rs
++++ b/segment-log-core/src/engine.rs
+@@ -240,7 +240,8 @@ impl SegmentLog {
+         if max == 0 || from >= state.watermark {
+             return Ok(vec![]);
+         }
+-        let frames = state.frames.clone();
++        let first = state.frames.partition_point(|frame| frame.end <= from);
++        let frames = state.frames[first..].to_vec();
+         drop(state);
+         let mut records = Vec::new();
+         for frame in frames.into_iter().filter(|f| f.end > from) {
