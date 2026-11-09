@@ -165,3 +165,39 @@ pub(crate) fn decode(bytes: &[u8]) -> Result<Group<'_>, Error> {
         entries,
     })
 }
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Header {
+    pub log_id: [u8; 16],
+    pub base_offset: u64,
+    pub epoch: u64,
+}
+pub(crate) fn encode_header(header: &Header) -> [u8; 64] {
+    let mut bytes = [0; 64];
+    bytes[..8].copy_from_slice(b"SGLG\0\0\x40\0");
+    bytes[8..24].copy_from_slice(&header.log_id);
+    bytes[24..32].copy_from_slice(&header.base_offset.to_le_bytes());
+    bytes[32..40].copy_from_slice(&header.epoch.to_le_bytes());
+    let crc = crc32c(&bytes[..60]);
+    bytes[60..].copy_from_slice(&crc.to_le_bytes());
+    bytes
+}
+pub(crate) fn decode_header(bytes: &[u8]) -> Result<Header, Error> {
+    if bytes.len() != 64 {
+        return Err(Error::Length);
+    }
+    if bytes[..8] != *b"SGLG\0\0\x40\0" {
+        return Err(Error::Kind);
+    }
+    if bytes[40..60] != [0; 20] {
+        return Err(Error::Reserved);
+    }
+    if crc32c(&bytes[..60]) != u32::from_le_bytes(bytes[60..].try_into().unwrap()) {
+        return Err(Error::Crc);
+    }
+    Ok(Header {
+        log_id: bytes[8..24].try_into().unwrap(),
+        base_offset: u64::from_le_bytes(bytes[24..32].try_into().unwrap()),
+        epoch: u64::from_le_bytes(bytes[32..40].try_into().unwrap()),
+    })
+}
