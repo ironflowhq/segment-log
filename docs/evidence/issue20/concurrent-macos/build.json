@@ -1,0 +1,38 @@
+{
+  "production_source": "e409b1d88bdbbe7dbbb36ae7b08c54861e744a2a",
+  "binary_sha256": "0d3a46461684fa264e6c95da2b99b71fb3d62ee6c3cd540af806ab3958b22e3f",
+  "diagnostic_sources_sha256": {
+    "segment-log-core/examples/concurrent_probe.rs": "d66580eee7956f982cf6e83b560bbce551af9c06294718bcc574dd682842323d",
+    "scripts/m1-concurrent-probe.py": "700cf8df5de39944a2c7002265e17ab1188cad79302d5dcbe85b16c93df77104",
+    "scripts/m1-concurrent-summary.py": "44162ddd415d1041a3e9e0156695417a5a20b3aa0cc94a027b54366551665789"
+  },
+  "build_command": "cargo build --release -j 2 -p segment-log-core --example concurrent_probe",
+  "raw_archive_sha256": "74b00899b181e626d9baf3aa21fe2979398cc1b47d73ce841049f410b3b066cd",
+  "rust": {
+    "command": [
+      "rustc",
+      "-Vv"
+    ],
+    "status": 0,
+    "stdout": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: aarch64-apple-darwin\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+    "stderr": ""
+  },
+  "os": {
+    "command": [
+      "sw_vers"
+    ],
+    "status": 0,
+    "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434\n",
+    "stderr": ""
+  },
+  "filesystem": {
+    "command": [
+      "df",
+      "-h",
+      ".audit/concurrent-final"
+    ],
+    "status": 0,
+    "stdout": "Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on\n/dev/disk5s1   931Gi    38Gi   893Gi     5%    2.9M  9.4G    0%   /Volumes/p7\n",
+    "stderr": ""
+  }
+}
