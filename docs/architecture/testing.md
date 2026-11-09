@@ -15,7 +15,7 @@ The [PRD milestone gates](../prd.md#milestones) remain the source for completion
 | Group | Scenario cases | Gate evidence | Status |
 | --- | --- | --- | --- |
 | M0-READINESS | None | Green CI run linked in the [PRD](../prd.md#milestones) | Implemented |
-| M1 | [M1 groups below](#m1-acceptance-coverage) | [M1 completion gate](#m1-completion-gate) | Planned |
+| M1 | [M1 groups below](#m1-acceptance-coverage) | [M1 completion gate](#m1-completion-gate) | Partial |
 | M2-MODEL | `MODEL`, `REV-NO-OFFSET` | None beyond the tests | Planned |
 | M3-ROLL | `ORACLE-6`, M3 parts of `OPEN-LAYOUT`, `RECOVERY-FIXTURES`, `KEY-LIFETIME` and `HISTORY`; M1 scenarios rerun with a small `roll_bytes` | Linux syscall trace of the roll directory sync | Planned |
 | M4-SEAL-READ | `READER`, `ROLL-FOOTER`, M4 parts of `CODEC-GROUP`, `ADM-PRECEDENCE`, `RECOVERY-FIXTURES` and `HISTORY` | None beyond the tests | Planned |
@@ -28,12 +28,12 @@ Record an unresolved later-milestone decision as a dependency. Do not guess its 
 
 ### M1 acceptance coverage
 
-No acceptance test or completion evidence exists yet. A group lists only the M1 part of each requirement and case. Rolling, sealed-segment handling, footers, locators and read-only open keep their later gates. Seeded crash-oracle coverage starts in M1; the full model test remains M2.
+Storage-model, conformance and group-codec scenarios are partial. No completion evidence exists yet. A group lists only the M1 part of each requirement and case. Rolling, sealed-segment handling, footers, locators and read-only open keep their later gates. Seeded crash-oracle coverage starts in M1; the full model test remains M2.
 
 | Group | Requirements or invariants | Scenario cases | Status |
 | --- | --- | --- | --- |
-| M1-SIMULATOR | [ADR 0014](../decisions/0014-crash-testing-strategy.md) | `SIM-MODEL`, `SIM-CONFORMANCE` | Planned |
-| M1-CODEC | R7, R16–R17 | `CODEC-GROUP` | Planned |
+| M1-SIMULATOR | [ADR 0014](../decisions/0014-crash-testing-strategy.md) | `SIM-MODEL`, `SIM-CONFORMANCE` | Partial |
+| M1-CODEC | R7, R16–R17 | `CODEC-GROUP` | Partial |
 | M1-DURABILITY | R2–R4, R18–R19; I1–I3 | `ORACLE-1`, `ORACLE-8`, `ORACLE-9`, `GROUP-FORMATION`, `READ-BOUNDED` | Planned |
 | M1-ATOMICITY | R1, R3, R7–R8; I4–I6 | `ORACLE-2`, `ORACLE-3`, `ORACLE-10` | Planned |
 | M1-RECOVERY | R8, R14, R16–R17; I2–I6 | `ORACLE-1`–`ORACLE-5`, `RECOVERY-FIXTURES`, `OPEN-FAULTS` | Planned |
@@ -95,7 +95,7 @@ A test calls `crash(mode, seed)` at any step:
 
 A test can chain crashes, for example `Kill`, then a reopen, then `PowerLoss`.
 
-The storage can also fail on purpose: `sync_data`, `sync_all` or `sync_dir` returns an error, `write` writes only part of the buffer and then fails, or the disk is full (`ENOSPC`). A durable-key lookup can return a read error, unexpected EOF or a frame with a bad CRC or malformed contents. These lookup faults poison the writer, rather than treating the key as absent or conflicting. After a failed `sync_data`, the volatile bytes stay readable, but a later successful `sync_data` does not make them durable. Only a new write to those bytes does. This models how Linux can mark pages clean after a writeback error ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)). A call can also panic on purpose, so that a test can stop the writer thread without an answer.
+The storage can also fail on purpose: `sync_data`, `sync_all` or `sync_dir` returns an error, `write` writes only part of the buffer and then fails, or the disk is full (`ENOSPC`). A durable-key lookup can return a read error, unexpected EOF or a frame with a bad CRC or malformed contents. These lookup faults poison the writer, rather than treating the key as absent or conflicting. After a failed `sync_data` or `sync_all`, the volatile bytes stay readable, but a later successful file sync does not make them durable. Only a new write to those bytes does. This models how Linux can mark pages clean after a writeback error ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)). A call can also panic on purpose, so that a test can stop the writer thread without an answer.
 
 A test can hold a chosen call at its start and later release it with success or an injected error. The simulated storage reports when the held call has started. This lets a scenario stop the writer at a flush, a write or a key lookup without a sleep and without a hook in the writer. The storage also counts calls by file and purpose, for observations such as one data flush for each group.
 
@@ -105,7 +105,7 @@ The simulated storage records every call and its result, in order, as a trace. `
 
 The crash tests are only as good as the crash model ([ADR 0014](../decisions/0014-crash-testing-strategy.md)). Test the model itself, from M1:
 
-- `SIM-MODEL`. Each rule above has a direct test. Unsynced pages can be lost on `PowerLoss`, and each page is kept or lost on its own. A sector with unchanged contents never tears. Entries can be lost until `sync_dir`, and the log directory and its parent are separate. After a failed `sync_data`, a later successful `sync_data` without a new write leaves those bytes volatile. The same trace and seed always give the same crash state.
+- `SIM-MODEL`. Each rule above has a direct test. Unsynced pages can be lost on `PowerLoss`, and each page is kept or lost on its own. A sector with unchanged contents never tears. Entries can be lost until `sync_dir`, and the log directory and its parent are separate. After a failed `sync_data` or `sync_all`, a later successful `sync_data` without a new write leaves those bytes volatile. The same trace and seed always give the same crash state.
 - `SIM-CONFORMANCE`. Run the same sequence of calls, without a crash, against real storage in a temporary directory and against the simulated storage. Every read, length, listing and lock result matches. Cover create, append, write at a position, truncate, remove and a second lock on the same file from the same process.
 
 ## The oracle
@@ -181,7 +181,7 @@ Cases apply from M1 unless they name another milestone. Mixed bullets identify t
 - `ANSWER-TIMING`. Terminal answer timing, from M1. Buffer a valid new submit and process a `KeyConflict`, `PartialRetry`, `WrongRevision` and all-durable retry before flushing that group. Each result finalizes and releases its reservation without waiting for the flush. Then fail the group and verify that those results stay fixed. The rejected revision's `actual` can include the buffered submit, while `stream_head` still reports the durable head. A matched pending retry continues to wait and gets the group's failure result.
 - `RETRY-PENDING-FAIL`. Pending-retry failures and crashes, from M1. Inject a short write, `ENOSPC`, or flush failure into the original group. The original and its matched retry waiters get `Indeterminate`. A retry still queued when poisoning happens gets `Poisoned`. At crash points before and after the flush, reopen and retry the original keys under oracle checks 1–5. Each original keyed record appears exactly once.
 - `GROUP-FORMATION`. Group formation, from M1 ([overview](overview.md#the-write-path)). Each group with new records is one frame and one data flush. A submit is never split across groups (R3). A new submit that would pass the byte cap waits for the next group, and no later submit overtakes it. A group with only rejections and fully matched retries causes no frame write and no flush. Check the flushes through the storage call counts.
-- `READ-BOUNDED`. Bounded reads and stream heads, from M1. `read` returns records in log order from `from`, at most `max` of them, and never past the watermark, including while a group is held at its flush. `stream_head` returns `None` for a stream with no durable record and reports only the durable view below the watermark. Outcomes for `from` past the watermark and for `max` of zero wait until api.md defines them.
+- `READ-BOUNDED`. Bounded reads and stream heads, from M1. `read` returns records in log order from `from`, at most `max` of them, and never past the watermark, including while a group is held at its flush. `stream_head` returns `None` for a stream with no durable record and reports only the durable view below the watermark. Cover the empty boundary results defined in [api.md](api.md#target-signatures-and-defaults).
 - `DROP`. Writer-draining `Drop`, from M1 ([api.md](api.md#target-signatures-and-defaults)). Dropping the last handle commits the submits already queued. `Pending` handles that outlive the log handle get those answers. The lock is released, so a reopen in the same process succeeds and recovers those records. Drop on a poisoned writer, and after the writer thread stopped without answering, still returns and releases the lock. A write or flush failure during the drain gives the unfinished current group `Indeterminate` and queued requests `Poisoned`, under the poison rule.
 - `OPEN-FAULTS`. I/O faults during open, from M1. Inject a failure into the directory sync during creation, the parent directory sync, the tail rewrite and its `sync_all`, including `ENOSPC`. Open fails with `Io` and returns no handle. A later open with the fault disabled, then a `PowerLoss`, then another open satisfies oracle checks 1–5.
 - `REV-NO-OFFSET`. A rejected revision uses no offset, from M1: the next successful append gets the offset that the rejected one would have had.

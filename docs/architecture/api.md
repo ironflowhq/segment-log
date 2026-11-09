@@ -55,6 +55,7 @@ impl SegmentLog {
     pub fn watermark(&self) -> LogOffset;
 
     /// Records in log order from `from`, up to `max` records, never past the watermark.
+    /// Returns an empty vector if max is zero or from is at or past the watermark.
     pub fn read(&self, from: LogOffset, max: usize) -> Result<Vec<Record>, ReadError>;
 
     /// The latest durable revision and offset of one stream, from the tail map.
@@ -244,7 +245,7 @@ A mixed keyed and unkeyed submit is allowed as a new write. If it survives, an e
 - `queue_capacity` and `pending_byte_budget` must each be at least 1.
 - `group_byte_cap` must fit at least the smallest valid group: one record with a minimum-length stream id, no key and an empty payload. Its upper bound is the group-body limit in [format.md](format.md#limits). The [size formula](format.md#group-record-entry) defines the lower bound without a second copy of field widths.
 - `roll_bytes` must be nonzero and at most the segment roll size limit in [format.md](format.md#limits). M1 validates the option, but roll behavior starts in M3.
-- Zero `linger` is valid. It disables deliberate waiting for more work.
+- Zero `linger` is valid. It disables deliberate waiting for more work. The writer drains already queued submits until the queue is empty or the next new submit would exceed the group-body cap. It does not wait for another submit. Classification and deferral follow the [write path](overview.md#the-write-path). [ADR 0043](../decisions/0043-zero-linger-and-empty-read-boundaries.md) records this choice.
 
 A positive byte budget smaller than a request's charge is valid configuration. That request gets `TooLarge`; opening a log does not imply that every valid record shape fits its budget.
 

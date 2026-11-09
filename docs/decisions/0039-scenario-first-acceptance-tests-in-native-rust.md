@@ -46,6 +46,7 @@ We accept the discipline cost of in-crate tests in exchange for an unchanged pub
 
 ## Consequences
 
+- [ADR 0043](0043-zero-linger-and-empty-read-boundaries.md) settles the two boundary outcomes left open below. Their definitions are in api.md.
 - [ADR 0014](0014-crash-testing-strategy.md)'s rule to print each failing seed now also saves the trace needed to rebuild the crash state.
 - The [acceptance-test workflow](../acceptance-tests.md) and testing.md's case IDs must stay in step. A new required case gets an ID in testing.md in the same change.
 - Two outcomes that deterministic scenarios depend on are not yet defined: zero linger with queued submits, and `read` past the watermark or with `max` of zero. They must be settled in api.md first.
