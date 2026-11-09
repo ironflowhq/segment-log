@@ -1,0 +1,20 @@
+step	decision	evidence	result
+baseline	Use prepared base	git status clean; git log -1 5b6383b; cargo test --workspace	pass, zero tests
+shape	Private path storage plus RAII lock; borrowed byte decoder; independent directory entries	docs/architecture/testing.md; docs/architecture/format.md	No engine or public API
+workflow	Sequential implementation only	User forbids children; parent reviews before commit	No delegation or PR
+codec-red	CRC and group scenario	cargo test -p segment-log-core group_bytes_follow -- --nocapture	behavioral failure crc=0 expected 0xe3069283
+simulator-red	Unsynced deletion retains durable inode	cargo test -p segment-log-core storage::tests -- --nocapture	unsynced_removal_can_restore_the_durable_file failed any seed restoring bytes
+simulator-fix	Directory entries reference inode identities	Previous model removed bytes before directory durability	Retain unlinked inode until crash reachability selection
+workflow-gap	Initial storage model code preceded direct tests	Eight initial model tests passed first run	No behavioral reds claimed for those initial behaviors; parent review must assess workflow gap
+lock-red	Old simulated guard cannot unlock new boot	cargo test -p segment-log-core stale_lock_guards -- --nocapture	second lock unexpectedly succeeded; err() was None
+lock-fix	Tag guards with boot generation	Stale-guard regression	Release only guards from current simulated boot
+codec-test-correction	Overflow mutation must target base_offset	malformed_groups test initially changed bytes 16..24, spanning epoch/base	Corrected fixture to bytes 20..28; not an implementation red
+coverage-negative	Unknown citations must fail	Temporary source citation NONEXISTENT-CASE; cargo test -p segment-log-core cited_cases -- --nocapture	Failed with unknown case NONEXISTENT-CASE; fixture removed
+status	Mark M1 and slice groups Partial only	Cases cited SIM-MODEL, SIM-CONFORMANCE, CODEC-GROUP; missing per-behavior red evidence	No completion claim
+enospc-sync-red	Disk-full sync must invalidate writeback eligibility	cargo test -p segment-log-core disk_full_sync -- --nocapture	No seed could lose failed bytes after later successful sync
+sync-fix	Normalize error and disk-full sync failure handling	Direct ENOSPC regression	All failed data syncs clear byte eligibility; directory errors stop mutations
+final-checks	Verify final artifact	cargo fmt --all --check; cargo clippy --workspace --all-targets -- -D warnings; cargo test --workspace	All pass; 20 tests, zero ignored
+fuzz-cfg	Check private simulator build	RUSTFLAGS='--cfg fuzzing' cargo check -p segment-log-core	pass
+coverage	Read actual definitions and source citations	cargo test -p segment-log-core cited_cases -- --nocapture	Three cited cases; all other definitions printed uncited
+self-review	Inspect tracked diff, simulator replay/guards, trace codec and source flags	git diff --check; source inspection	No whitespace errors; server unchanged; std only; unsafe forbidden
+handback	Leave changes reviewable and uncommitted	branch slice0/storage-codec at base 5b6383b	No commit, push, PR, or merge

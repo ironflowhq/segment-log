@@ -1,0 +1,24 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 1 test
+
+thread 'segment-log-writer' (129542497) panicked at segment-log-core/src/engine.rs:348:66:
+revision exhausted
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread '<unnamed>' (129542496) panicked at segment-log-core/src/acceptance/counters.rs:87:21:
+Err(Indeterminate)
+SIM-MODEL, SIM-CONFORMANCE initial seed 43 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-26571-0.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 43 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-26571-1.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 43 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-26571-2.trace
+test acceptance::counters::first_input_failure_wins_over_stream_sort_order_and_offset_exhaustion ... FAILED
+
+failures:
+
+failures:
+    acceptance::counters::first_input_failure_wins_over_stream_sort_order_and_offset_exhaustion
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 49 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p segment-log-core --lib`

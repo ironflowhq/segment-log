@@ -1,0 +1,83 @@
+   Compiling segment-log-core v0.0.1 (/Volumes/p7/t3/worktrees/segment-log/t3-523a732b/segment-log-core)
+warning: field `base` is never read
+ --> segment-log-core/src/engine.rs:6:46
+  |
+6 | struct Frame { position: u64, length: usize, base: u64, end: u64 }
+  |        ----- field in this struct            ^^^^
+  |
+  = note: `Frame` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `segment-log-core` (lib test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.48s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 9 tests
+test acceptance::durability::creation_is_durable_and_exclusively_locked_before_returning ... ok
+test acceptance::durability::invalid_options_do_not_touch_storage ... FAILED
+test acceptance::durability::zero_linger_drains_queued_submits_up_to_the_cap ... FAILED
+test acceptance::durability::read_boundaries_return_empty ... FAILED
+test acceptance::durability::append_is_invisible_until_its_group_flush_succeeds ... ok
+test acceptance::durability::malformed_and_oversized_requests_are_refused_before_admission ... FAILED
+test acceptance::durability::failed_flush_hides_the_group_and_stops_the_writer ... ok
+test acceptance::durability::wrong_revision_does_not_consume_a_position ... FAILED
+test acceptance::durability::acknowledged_record_survives_each_crash_mode ... ok
+
+failures:
+
+---- acceptance::durability::invalid_options_do_not_touch_storage stdout ----
+
+thread '<unnamed>' (129492300) panicked at segment-log-core/src/acceptance/durability.rs:212:13:
+assertion failed: matches!(SegmentLog::with_storage(Path::new("/log"),options,Arc::new(sim.clone())),Err(OpenError::InvalidOptions(_)))
+SIM-MODEL, SIM-CONFORMANCE initial seed 9 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-2.trace
+
+---- acceptance::durability::zero_linger_drains_queued_submits_up_to_the_cap stdout ----
+
+thread '<unnamed>' (129492298) panicked at segment-log-core/src/acceptance/durability.rs:163:13:
+assertion `left == right` failed
+  left: 3
+ right: 2
+SIM-MODEL, SIM-CONFORMANCE initial seed 6 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-3.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 6 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-5.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 6 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-8.trace
+
+---- acceptance::durability::read_boundaries_return_empty stdout ----
+
+thread '<unnamed>' (129492299) panicked at segment-log-core/src/acceptance/durability.rs:138:9:
+assertion failed: log.read(0, 0).unwrap().is_empty()
+SIM-MODEL, SIM-CONFORMANCE initial seed 5 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-1.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 5 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-6.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 5 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-9.trace
+
+---- acceptance::durability::malformed_and_oversized_requests_are_refused_before_admission stdout ----
+
+thread '<unnamed>' (129492297) panicked at segment-log-core/src/acceptance/durability.rs:195:9:
+assertion failed: matches!(log.append(Submit {records:vec![]}),Err(AppendError::Invalid(_)))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'segment-log-writer' (129492309) panicked at segment-log-core/src/engine.rs:105:43:
+validated group: Count
+SIM-MODEL, SIM-CONFORMANCE initial seed 8 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-0.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 8 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-7.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 8 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-11.trace
+
+---- acceptance::durability::wrong_revision_does_not_consume_a_position stdout ----
+
+thread '<unnamed>' (129492294) panicked at segment-log-core/src/acceptance/durability.rs:177:9:
+assertion failed: matches!(log.append(wrong).unwrap().wait(),Err(CommitError::WrongRevision
+    {index:0,actual:None}))
+SIM-MODEL, SIM-CONFORMANCE initial seed 7 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-4.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 7 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-10.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 7 crash None trace /var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-failure-2937-12.trace
+
+
+failures:
+    acceptance::durability::invalid_options_do_not_touch_storage
+    acceptance::durability::malformed_and_oversized_requests_are_refused_before_admission
+    acceptance::durability::read_boundaries_return_empty
+    acceptance::durability::wrong_revision_does_not_consume_a_position
+    acceptance::durability::zero_linger_drains_queued_submits_up_to_the_cap
+
+test result: FAILED. 4 passed; 5 failed; 0 ignored; 0 measured; 30 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p segment-log-core --lib`

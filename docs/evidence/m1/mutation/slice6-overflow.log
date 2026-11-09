@@ -1,0 +1,21 @@
+   Compiling segment-log-core v0.0.1 (/private/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice6-mutation-vkjczvot/segment-log-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.59s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 1 test
+
+thread '<unnamed>' (129754732) panicked at segment-log-core/src/acceptance/admission.rs:224:9:
+assertion `left == right` failed
+  left: Some(80)
+ right: None
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test acceptance::admission::charge_arithmetic_refuses_unrepresentable_counts_and_totals ... FAILED
+
+failures:
+
+failures:
+    acceptance::admission::charge_arithmetic_refuses_unrepresentable_counts_and_totals
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 114 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p segment-log-core --lib`
