@@ -51,7 +51,6 @@ impl History {
     }
 }
 
-// Sixteen subdivisions per power of two, fixed memory regardless of operation count.
 #[derive(Clone)]
 struct Distribution {
     bins: [u64; 1024],
@@ -355,7 +354,6 @@ fn main() {
         "measurement,{elapsed},{committed},{cursor},{}",
         seed + committed
     );
-    // Drain outside the measured interval and verify every offset exactly once after reopen.
     let mut drained = cursor;
     while concurrent && drained < seed + committed {
         let count = GROUP.min(seed + committed - drained);

@@ -111,7 +111,6 @@ def main():
             while proc.poll() is None:
                 if time.monotonic() - started > a.timeout:
                     timed_out = True
-                    # Only this invocation's newly created process group is eligible.
                     os.killpg(proc.pid, signal.SIGKILL)
                     break
                 if child is None:
@@ -123,7 +122,6 @@ def main():
                 if sample and child is not None:
                     t = time.monotonic()
                     result = capture(['ps', '-p', str(child), '-o', 'pid=,rss=,%cpu=,time='])
-                    # Latest completed stage joins external samples to history growth.
                     progress = (dest / 'stdout.txt').read_text().splitlines()
                     marks = [line for line in progress if line.startswith(('phase,', 'stage,'))]
                     samples.append({'seconds': t - started, 'cost_seconds': time.monotonic() - t,
