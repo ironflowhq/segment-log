@@ -28,7 +28,7 @@ Record an unresolved later-milestone decision as a dependency. Do not guess its 
 
 ### M1 acceptance coverage
 
-Storage-model, conformance, codec and first engine scenarios are partial. The engine scenarios cover the flush visibility boundary, basic queued grouping, bounded reads, initial rejection checks and directed crash/fault variants. Counter scenarios cover append boundaries, first-failure ordering, refusal without mutations and epoch recovery including crash variants. Counter-free retries and their key-classification precedence await the retry slice. Retry lookup and deduplication are not implemented. No completion evidence exists yet. A group lists only the M1 part of each requirement and case. Rolling, sealed-segment handling, footers, locators and read-only open keep their later gates. Seeded crash-oracle coverage starts in M1; the full model test remains M2.
+Storage-model, conformance, codec and first engine scenarios are partial. The engine scenarios cover the flush visibility boundary, basic queued grouping, bounded reads, initial rejection checks and directed crash/fault variants. Counter scenarios cover append boundaries, first-failure ordering, refusal without mutations and epoch recovery including crash variants. Durable-key scenarios cover whole-log scope, conflicts, partial retries, regrouping, frame lookup faults, immediate answers and counter-free retries. Directed crash and reopen scenarios rebuild keys from the kept prefix and preserve full history. Pending-key classification and retry waiters remain for the next slice; the full randomized oracle is not covered by these directed cases. No completion evidence exists yet. A group lists only the M1 part of each requirement and case. Rolling, sealed-segment handling, footers, locators and read-only open keep their later gates. Seeded crash-oracle coverage starts in M1; the full model test remains M2.
 
 | Group | Requirements or invariants | Scenario cases | Status |
 | --- | --- | --- | --- |
@@ -40,12 +40,12 @@ Storage-model, conformance, codec and first engine scenarios are partial. The en
 | M1-COUNTERS | [ADR 0041](../decisions/0041-counter-exhaustion-refuses-without-poisoning.md) | `COUNTER-EXHAUSTION` | Partial |
 | M1-REVISIONS | R9, R11–R12 | `REV-EXPECTED`, `REV-NO-OFFSET` | Partial |
 | M1-RETRY-CLASSIFICATION | R1, R10, R12 | `KEY-REPEATED`, `KEY-SCOPE`, `KEY-CONFLICT`, `KEY-PARTIAL`, `RETRY-REGROUPED` | Partial |
-| M1-PENDING-RETRIES | R4, R10, R12; I1 | `RETRY-PENDING`, `RETRY-PENDING-FAIL`, `RETRY-REGROUPED-FAIL`, `ANSWER-TIMING` | Planned |
-| M1-UNKNOWN-OUTCOMES | R1, R10–R12 | `ORACLE-4`, `RETRY-UNKNOWN-1`–`RETRY-UNKNOWN-8`, `KEY-CONFLICT-CRASH`, `KEY-PARTIAL-CRASH` | Planned |
+| M1-PENDING-RETRIES | R4, R10, R12; I1 | `RETRY-PENDING`, `RETRY-PENDING-FAIL`, `RETRY-REGROUPED-FAIL`, `ANSWER-TIMING` | Partial |
+| M1-UNKNOWN-OUTCOMES | R1, R10–R12 | `ORACLE-4`, `RETRY-UNKNOWN-1`–`RETRY-UNKNOWN-8`, `KEY-CONFLICT-CRASH`, `KEY-PARTIAL-CRASH` | Partial |
 | M1-ADMISSION | R5 | `OPT-DEFAULTS`, `ADM-PRECEDENCE`, `ADM-BUDGETS`, `ADM-SIZE`, `ADM-RESERVATION`, `ADM-CHARGE` | Partial |
 | M1-POISON | R6; I10 | `ORACLE-7`, `POISON-LOOKUP` | Partial |
 | M1-OPEN-BOUNDARIES | R14, R16–R17; I8 | `OPT-VALIDATION`, `OPEN-DIR`, `OPEN-LAYOUT`, `ORACLE-11` | Partial |
-| M1-REOPEN-HISTORY | R13, R18–R19, R22; I9 | `ORACLE-12`, `KEY-LIFETIME`, `HISTORY` | Planned |
+| M1-REOPEN-HISTORY | R13, R18–R19, R22; I9 | `ORACLE-12`, `KEY-LIFETIME`, `HISTORY` | Partial |
 | M1-DROP | R4, R16; I8 | `DROP` | Planned |
 | M1-PROCESS-CRASH | R4, R8, R14, R16 | `PROC-SIGKILL` | Planned |
 

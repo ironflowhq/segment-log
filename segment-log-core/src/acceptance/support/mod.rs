@@ -1,7 +1,7 @@
 //! Counter fixtures under [ADR 0041](../../../../docs/decisions/0041-counter-exhaustion-refuses-without-poisoning.md).
 //!
 //! `SegmentLog::seed_counters` is a cfg(test) setup hook used only on an idle,
-//! empty log. It supplies synthetic watermark and head values because reaching
+//! log. It supplies synthetic watermark and head values because reaching
 //! u64 limits through real appends is impractical. These are not recovery histories.
 //! `fixtures::epoch_fixture` writes a legal header and optional legal first group
 //! with extreme epochs, optionally followed by an invalid tail.
