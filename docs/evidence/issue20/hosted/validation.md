@@ -22,14 +22,17 @@ The workspace run did not reach a complete test summary. It is not a pass.
 The isolated failure did not expose an assertion mismatch. The test uses
 `bounded`, which creates a 10-second deadline whose worker aborts the process.
 At isolation time, `uptime` reported load averages `221.59 134.61 65.26`, and
-`ps -Ao pid,%cpu,comm` showed many concurrent `yes` processes. This supports a
-resource-contention explanation, but no unloaded rerun established the cause.
+`ps -Ao pid,%cpu,comm` showed many concurrent `yes` processes.
+These observations were not preserved as raw captures and do not establish
+resource contention as the cause. The abort cause remains unresolved.
 The source correction changes a gate that is already true for tests, so the
 test configuration still includes exactly the same simulator code.
 
 No workload, watchdog, or other worker's processes were changed to obtain a
-pass. Full workspace validation remains unresolved and needs a rerun after the
-concurrent stress workload finishes. The targeted simulator tests show that the
+pass. The local aborts remain unresolved. Subsequent exact-head hosted CI passed the
+full workspace suite on both Linux and macOS at
+`03293670714624269d21b375a5a64cb23a1b7c01`, as recorded in
+[the API snapshot](pr21-ci.json). The targeted simulator tests show that the
 selected gate retains executable simulator coverage despite this limitation.
 
 Deslop review found only the one-line gate change in executable source. No

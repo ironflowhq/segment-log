@@ -81,7 +81,7 @@ All file I/O in `segment-log-core` goes through one small trait. It has two impl
 
 The trait needs only the calls the log makes: create, open, append, write at a position, read at a position, `sync_data`, `sync_all`, `sync_dir`, truncate, remove, list, lock, and random bytes. Keep it that small. The random bytes are for the log id, so that the simulated storage can derive them from its seed.
 
-The trait and both implementations stay private to the crate. `SegmentLog` holds its storage as a trait object, so the public type has no storage type parameter. `SegmentLog::open` passes real storage. A private constructor takes any storage, and the simulated tests use it. Both paths run the same writer and recovery code. The simulated storage is compiled only for tests and, from M5, for fuzzing (`cfg(any(test, fuzzing))`). It is never part of a release build. Keep the frame decoder and the recovery scan callable on plain bytes, so that the M5 fuzz targets can reuse them without a public testing API.
+The trait and both implementations stay private to the crate. `SegmentLog` holds its storage as a trait object, so the public type has no storage type parameter. `SegmentLog::open` passes real storage. A private constructor takes any storage, and the simulated tests use it. Both paths run the same writer and recovery code. The simulated storage currently compiles only for tests (`cfg(test)`). M5 will add an exercised fuzzing adapter and its build configuration. It is never part of a release build. Keep the frame decoder and the recovery scan callable on plain bytes, so that the M5 fuzz targets can reuse them without a public testing API.
 
 ## Crash model of the simulated storage
 

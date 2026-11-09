@@ -83,8 +83,11 @@ records both jobs as in progress:
 Each job requests 100 trace seeds starting at 10000, all three crash modes and
 nine variants per seed, followed by 30 process-crash repetitions starting at
 10000. This is the configured scope, not a completed result count. The run tests
-the merged baseline, not this PR. No sleep or polling loop was used. Final hosted
-results remain pending for the coordinator to collect.
+the merged baseline, not this PR. No sleep or polling loop was used.
+The [final API snapshot](hosted/manual-run-final.json) supersedes the initial
+pending snapshot. Both platform jobs completed successfully, including the trace
+and process-crash steps. Failure-artifact upload steps were skipped. This proves
+manual execution on the baseline, not scheduled execution or failure retention.
 
 ## Failure artifact audit and remaining proof
 
@@ -153,7 +156,10 @@ python3 -B -m unittest discover -s scripts -p 'test_m1_*.py'
 
 Results are recorded in the [validation summary](hosted/validation.md).
 The workspace suite and an isolated codec rerun aborted on the heavily loaded
-host. Full workspace validation remains unresolved. The targeted simulator suite
+host. The local abort cause remains unresolved. Exact-head hosted CI subsequently
+passed the full workspace suite on Linux and macOS, as recorded in the
+[CI snapshot](hosted/pr21-ci.json) for
+`03293670714624269d21b375a5a64cb23a1b7c01`. The targeted simulator suite
 passed all 23 tests. The strict compilation, formatting, Clippy, and Python checks
 passed. The normal small
 measurement scenario is part of the workspace suite; no million-record or
