@@ -61,11 +61,11 @@ For example: read `/proc/self/mountinfo` and refuse network filesystems.
 We will define the volume requirements as testable properties of the whole stack in [volume-requirements.md](../architecture/volume-requirements.md) (option A). That document is the only source for the requirements, their cases and their pass criteria. The storage contract in overview.md links to it.
 
 - **Classes.** V1–V10 are MUST: a failure blocks qualification under ADR 0032. V11, flush latency, is MEASURED: a miss is a recorded finding and stops the stack from claiming the affected PRD target, as ADR 0029 treats target misses.
-- **Testability rules.** Each case has a binary pass criterion and runs on the identified stack. Each detection case must fail against a known-bad control before its pass on the real stack counts. Evidence is `Tested`, or `Documented` only for layers that the deployment can neither configure nor test, and every `Documented` item is a recorded limitation. An unverified MUST requirement blocks qualification.
+- **Testability rules.** Each case has a binary pass criterion and runs on the identified stack. Each detection case must fail against a known-bad control that matches its failure event before its pass on the real stack counts. Evidence is `Tested`, or `Documented` only for layers that the deployment can neither configure nor test, and every `Documented` item is a recorded limitation. An unverified MUST requirement blocks qualification.
 - **Minimum failure domain.** Every deployment survives a process crash, a guest crash, a guest destroy, a host kernel crash and a host power loss without losing an acknowledged record. It declares whether it also survives host loss, device loss and zone loss. Which of those a product needs stays open as PRD open item 12.
-- **Exclusive attachment.** At most one kernel has the volume attached for writing, and no other kernel mounts it meanwhile (V5).
-- **Copies.** Copies of an open log are crash-consistent, and only one writable lineage exists for each log id (V8).
-- **Capacity.** Provisioned size covers the planned history, and an alert fires with enough free space for the deployment's response time (V9).
+- **Exclusive attachment.** At most one kernel has the volume attached for writing, no other kernel mounts it meanwhile, concurrent attach attempts have exactly one winner, and a paused former owner cannot write after ownership moves (V5).
+- **Copies.** Copies of an open log are crash-consistent. Each log id has one writable lineage, and a copy becomes writable only if it holds every acknowledged record, so a stale snapshot never rolls history back (V8).
+- **Capacity.** Capacity at every allocating layer, including sparse backing files and thin pools, covers the planned history, and an alert fires with enough free space for the deployment's response time (V9).
 - **Drift.** Before every open, the deployment compares the running stack with the record's machine-readable fingerprint and refuses to open on a mismatch (V10). The core does not run this check (option C is rejected).
 
 Option A beats B because only a test on the deployed stack shows that an ack is durable there. It beats C because the faults that lose acknowledged data are invisible from inside the guest process. We accept the cost of a power-cut rig for stacks we run ourselves, and of documented limitations for managed services, in exchange for evidence that applies to the deployed stack.
@@ -78,7 +78,7 @@ Option A beats B because only a test on the deployed stack shows that an ack is 
 - PRD open item 12 holds the choice of failure domain beyond the minimum.
 - A deployment on its own hosts needs a power-cut rig: a switched PDU or a BMC hard power-off, and an observer machine.
 - A deployment on a managed block service records `Documented` evidence and limitations for host power loss, host loss and device loss, and still tests the guest-side events.
-- The power-cut harness needs a test-only pause point in recovery to time the `VOL-POWER-CUT-RECOVERY` cut.
+- The power-cut harness needs test-only faults: a writer that acknowledges before it writes, and a recovery rewrite with different bytes. It also needs block-layer trace events streamed to the observer, to confirm that a recovery rewrite was in flight at the cut.
 - Every change to a layer of a qualified stack triggers the reruns in the requalification table.
 - The core's API, format and runtime dependencies do not change.
 
