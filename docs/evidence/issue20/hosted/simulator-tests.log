@@ -1,0 +1,33 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 23 tests
+
+thread '<unnamed>' (141431104) panicked at segment-log-core/src/storage/sim.rs:292:31:
+injected storage panic
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test storage::sim::tests::metadata_sync_errors_stop_further_writes ... ok
+test storage::sim::tests::held_calls_report_start_and_wait_for_release ... ok
+test storage::sim::tests::a_held_call_cannot_write_after_its_process_dies ... ok
+test storage::sim::tests::kill_keeps_volatile_data_without_making_it_durable ... ok
+test storage::sim::tests::injected_faults_have_observable_results_and_replay ... ok
+test storage::sim::tests::failed_full_file_sync_requires_a_rewrite ... ok
+test storage::sim::tests::disk_full_sync_errors_also_require_a_rewrite ... ok
+test storage::sim::tests::stale_lock_guards_cannot_release_a_new_boot_lock ... ok
+test storage::sim::tests::successful_sync_preserves_truncated_length_and_bytes ... ok
+test storage::sim::tests::parent_and_log_entries_need_separate_syncs ... ok
+test storage::sim::tests::repeated_power_loss_never_restores_an_entry_without_its_file ... ok
+test storage::sim::tests::tearing_an_append_preserves_the_durable_prefix_in_its_sector ... ok
+test storage::sim::tests::canceled_syncs_cannot_change_the_new_boot ... ok
+test storage::sim::tests::unsupported_fault_kinds_are_rejected_before_injection ... ok
+test storage::sim::tests::unsynced_removal_can_restore_the_durable_file ... ok
+test storage::sim::tests::failed_sync_requires_rewriting_each_byte ... ok
+test storage::sim::tests::trace_replay_reproduces_chained_crash_states ... ok
+test storage::sim::tests::writes_and_reads_can_be_held_and_released_successfully ... ok
+test storage::tests::replacing_a_locked_file_does_not_reuse_its_lock ... ok
+test storage::tests::real_and_simulated_operations_match_without_crashes ... ok
+test storage::sim::tests::torn_rewrites_preserve_identical_durable_sectors ... ok
+test storage::sim::tests::rewriting_one_page_does_not_flush_failed_bytes_in_another ... ok
+test storage::sim::tests::power_loss_selects_pages_independently ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 113 filtered out; finished in 0.69s
