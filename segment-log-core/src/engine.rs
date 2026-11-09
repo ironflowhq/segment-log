@@ -562,24 +562,27 @@ fn run(
 }
 
 fn charge(submit: &Submit) -> Option<usize> {
-    let base = REQUEST_BOOKKEEPING
-        .checked_add(
-            submit
-                .records
-                .capacity()
-                .checked_mul(std::mem::size_of::<NewRecord>())?,
-        )?
-        .checked_add(
-            submit
-                .records
-                .len()
-                .checked_mul(std::mem::size_of::<Position>())?,
-        )?;
+    let base = charge_base(submit.records.capacity(), submit.records.len())?;
     submit.records.iter().try_fold(base, |n, r| {
-        n.checked_add(r.stream.capacity())?
-            .checked_add(r.key.as_ref().map_or(0, Vec::capacity))?
-            .checked_add(r.payload.capacity())
+        charge_buffers(
+            n,
+            r.stream.capacity(),
+            r.key.as_ref().map_or(0, Vec::capacity),
+            r.payload.capacity(),
+        )
     })
+}
+
+fn charge_base(capacity: usize, count: usize) -> Option<usize> {
+    REQUEST_BOOKKEEPING
+        .checked_add(capacity.checked_mul(std::mem::size_of::<NewRecord>())?)?
+        .checked_add(count.checked_mul(std::mem::size_of::<Position>())?)
+}
+
+fn charge_buffers(base: usize, stream: usize, key: usize, payload: usize) -> Option<usize> {
+    base.checked_add(stream)?
+        .checked_add(key)?
+        .checked_add(payload)
 }
 
 fn poison(
@@ -601,5 +604,28 @@ fn poison(
     }
     for request in receiver {
         request.answer(Err(CommitError::Poisoned));
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod admission_support {
+    use super::*;
+    pub(crate) fn bookkeeping() -> usize {
+        std::mem::size_of::<RetryWaiter>() + std::mem::size_of::<Pending>()
+    }
+    pub(crate) fn used(log: &SegmentLog) -> usize {
+        log.used.load(std::sync::atomic::Ordering::Acquire)
+    }
+    pub(crate) fn finish(log: &mut SegmentLog, panicked: bool) {
+        if !panicked {
+            log.sender.take();
+        }
+        assert_eq!(log.writer.take().unwrap().join().is_err(), panicked);
+    }
+    pub(crate) fn base(capacity: usize, count: usize) -> Option<usize> {
+        charge_base(capacity, count)
+    }
+    pub(crate) fn buffers(base: usize, stream: usize, key: usize, payload: usize) -> Option<usize> {
+        charge_buffers(base, stream, key, payload)
     }
 }
