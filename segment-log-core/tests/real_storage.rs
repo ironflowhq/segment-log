@@ -1,3 +1,6 @@
+#[path = "../src/acceptance/support/deadline.rs"]
+mod deadline;
+
 use segment_log_core::*;
 use std::{sync::mpsc, time::Duration};
 
@@ -20,6 +23,7 @@ fn assert_record(log: &SegmentLog) {
 /// Cases: ORACLE-1, READ-BOUNDED, OPEN-DIR
 #[test]
 fn public_open_runs_the_same_engine_on_real_storage() {
+    let _deadline = deadline::Deadline::new(Duration::from_secs(10), || {});
     let (sender, receiver) = mpsc::channel();
     let worker = std::thread::spawn(move || {
         let result = std::panic::catch_unwind(|| {

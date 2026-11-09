@@ -773,3 +773,41 @@ fn durable_retries_must_still_fit_standalone_limits() {
         }
     });
 }
+
+/// Given a held original and a queued retry with independently calculated charges
+/// When both reservations coexist, finish, and a later smaller request finishes
+/// Then the high-water probe retains their exact sum while current use returns to zero
+/// Cases: ADM-RESERVATION, ADM-CHARGE
+#[test]
+fn peak_charges_remember_answered_requests() {
+    bounded(|| {
+        let sim = Sim::new(1010);
+        let log = open(&sim);
+        let bytes = expected_charge(&submit(b"s"));
+        let hold = sim.hold(flush());
+        let first = append(&log, b"s");
+        hold.wait();
+        let retry = append(&log, b"s");
+        assert_eq!(accounting::peak(&log), 2 * bytes);
+        hold.release(None);
+        let original = first.wait().unwrap();
+        let repeated = retry.wait().unwrap();
+        assert_eq!(original.records.len(), 1);
+        assert_eq!(repeated.records.len(), 1);
+        assert_eq!(
+            (original.records[0].offset, repeated.records[0].offset),
+            (0, 0)
+        );
+        assert_eq!(
+            (original.records[0].revision, repeated.records[0].revision),
+            (0, 0)
+        );
+        assert!(repeated.deduplicated);
+        assert_record(&log);
+        assert_eq!(accounting::used(&log), 0);
+        log.append(request(b"t")).unwrap().wait().unwrap();
+        assert_eq!(log.watermark(), 2);
+        assert_eq!(accounting::used(&log), 0);
+        assert_eq!(accounting::peak(&log), 2 * bytes);
+    });
+}

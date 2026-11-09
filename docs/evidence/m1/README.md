@@ -68,7 +68,9 @@ at commit `4bf4844`. The [captured check metadata](validation/slice8-ci.json)
 identifies the head and completion times.
 
 The randomized oracle and scheduled-job configuration are recorded in
-[slice 9](slice9.md). Hosted execution of that new workflow is not claimed. Linux
-syscall verification, actual directory-sync evidence on both platforms and the
-Linux benchmark report remain slice 10. Historical missing initial red evidence
-remains disclosed for owner review. The owner closes the M1 gate.
+[slice 9](slice9.md). Hosted execution of that new workflow is not claimed.
+Slice 10 submits [completion evidence](slice10.md), including actual Linux
+syscalls, Linux and macOS directory calls, and repeated Linux guest benchmarks.
+The record distinguishes target deviations, unavailable physical Linux NVMe
+results and missing physical-stack qualification. Historical missing initial
+reds remain disclosed. The owner still closes the M1 gate.

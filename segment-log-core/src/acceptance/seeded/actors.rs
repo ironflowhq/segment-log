@@ -1,38 +1,18 @@
 use super::*;
 
-pub(super) struct Watchdog {
-    cancel: mpsc::Sender<()>,
-    worker: Option<thread::JoinHandle<()>>,
+use super::super::support::deadline::Deadline;
+
+pub(super) fn watchdog(label: String) -> Deadline {
+    watchdog_with_failure(label, || {})
 }
-impl Watchdog {
-    pub(super) fn new(label: String) -> Self {
-        Self::with_failure(label, || {})
-    }
-    pub(super) fn with_failure(label: String, failure: impl FnOnce() + Send + 'static) -> Self {
-        let (cancel, rx) = mpsc::channel();
-        let worker = thread::spawn(move || {
-            if rx.recv_timeout(Duration::from_secs(30)).is_err() {
-                eprintln!("seeded scenario watchdog {label}");
-                let (saved, done) = mpsc::channel();
-                thread::spawn(move || {
-                    failure();
-                    let _ = saved.send(());
-                });
-                let _ = done.recv_timeout(Duration::from_secs(1));
-                std::process::abort();
-            }
-        });
-        Self {
-            cancel,
-            worker: Some(worker),
-        }
-    }
-}
-impl Drop for Watchdog {
-    fn drop(&mut self) {
-        let _ = self.cancel.send(());
-        self.worker.take().unwrap().join().unwrap();
-    }
+pub(super) fn watchdog_with_failure(
+    label: String,
+    failure: impl FnOnce() + Send + 'static,
+) -> Deadline {
+    Deadline::new(Duration::from_secs(30), move || {
+        eprintln!("seeded scenario watchdog {label}");
+        failure();
+    })
 }
 
 pub(super) enum Command {
