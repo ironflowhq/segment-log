@@ -139,6 +139,8 @@ M1 completion requires the [evidence gate](architecture/testing.md#m1-completion
 
 Each milestone ends with a "done when" check that someone can run. A later milestone does not start until the gate for the earlier one passes.
 
+Implementation follows the [acceptance-test workflow](acceptance-tests.md) from M1. Its scenarios add to each gate below and replace none of its evidence.
+
 M0 passed on 2026-11-08. [CI run 42447941878](https://github.com/ironflowhq/segment-log/actions/runs/42447941878) is green on Ubuntu and macOS at `eb5af03`.
 
 | # | Scope | Done when |

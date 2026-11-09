@@ -17,6 +17,7 @@ An embedded, append-only event log in Rust, for short-lived processes that need 
 - [Product requirements](docs/prd.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Byte layout v0](docs/architecture/format.md) · [API sketch](docs/architecture/api.md) · [Testing](docs/architecture/testing.md) · [Prior art](docs/architecture/prior-art.md)
+- [Implement a behavior with acceptance tests](docs/acceptance-tests.md)
 - [Glossary](docs/glossary.md)
 - [Decisions](docs/decisions/README.md)
 
