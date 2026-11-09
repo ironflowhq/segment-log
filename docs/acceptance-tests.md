@@ -61,7 +61,7 @@ These paths are planned. Nothing exists yet.
 
 | Path | Responsibility |
 | --- | --- |
-| `segment-log-core/src/storage/` | The private storage trait, real storage, and simulated storage under `cfg(any(test, fuzzing))` |
+| `segment-log-core/src/storage/` | The private storage trait, real storage, and simulated storage under `cfg(test)` |
 | `segment-log-core/src/acceptance/mod.rs` | In-crate scenarios, loaded through `#[cfg(test)] mod acceptance;` |
 | `segment-log-core/src/acceptance/support/` | Fixtures, held-call helpers, the trace oracle and the coverage check |
 | `segment-log-core/src/acceptance/<group>.rs` | One module per coverage group, such as `durability`, `recovery`, `revisions`, `retries`, `admission`, `poison`, `open` and `drop` |

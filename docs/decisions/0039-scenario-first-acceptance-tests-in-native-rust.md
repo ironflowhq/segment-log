@@ -40,7 +40,7 @@ Constraints that are already fixed: the core uses only `std` ([ADR 0012](0012-no
 
 We will use option A. Scenarios are ordinary Rust `#[test]` functions named for behavior, with the Given/When/Then example and the covered case IDs in the doc comment. Each behavior starts with a scenario that fails on its behavioral assertion. testing.md gives each required case a stable ID without a milestone, and a `std`-only coverage check maps tests to case IDs.
 
-`SegmentLog` holds its storage as a trait object. A private constructor takes simulated storage, which is compiled only under `cfg(any(test, fuzzing))`. Scenarios stop the writer by holding storage calls, not by adding hooks to the writer. Randomized crash tests record a storage trace, derive the crash state from the trace and a seed, and replay from a saved trace. M6 keeps its conformance cases as shared data run by the Go client.
+`SegmentLog` holds its storage as a trait object. A private constructor takes simulated storage, which is compiled only under `cfg(test)`. Scenarios stop the writer by holding storage calls, not by adding hooks to the writer. Randomized crash tests record a storage trace, derive the crash state from the trace and a seed, and replay from a saved trace. M6 keeps its conformance cases as shared data run by the Go client.
 
 We accept the discipline cost of in-crate tests in exchange for an unchanged public API and no new dependency.
 

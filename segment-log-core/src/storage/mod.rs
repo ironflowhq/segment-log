@@ -4,7 +4,7 @@ use std::{
 };
 pub(crate) mod real;
 
-#[cfg(any(test, fuzzing))]
+#[cfg(test)]
 pub(crate) mod sim;
 #[cfg(test)]
 mod tests;
