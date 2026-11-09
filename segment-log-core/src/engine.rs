@@ -12,11 +12,11 @@ use std::{
 };
 mod keys;
 mod recovery;
-use keys::{Classification, DurableKeys};
+use keys::{Classification, Keys};
 
 struct Writer {
     epoch: u64,
-    keys: DurableKeys,
+    keys: Keys,
     lookup: Vec<u8>,
 }
 
@@ -49,6 +49,12 @@ struct Request {
     reply: mpsc::Sender<Result<Committed, CommitError>>,
     reservation: Reservation,
 }
+struct RetryWaiter {
+    request: Request,
+    positions: Vec<Position>,
+}
+const REQUEST_BOOKKEEPING: usize =
+    std::mem::size_of::<RetryWaiter>() + std::mem::size_of::<Pending>();
 impl Request {
     fn answer(self, result: Result<Committed, CommitError>) {
         drop(self.reservation);
@@ -415,6 +421,7 @@ fn run(
         let started = std::time::Instant::now();
         let mut requests = Vec::new();
         let mut assigned = Vec::new();
+        let mut waiters = Vec::new();
         let mut size = 24;
         let mut next = Some(first);
         while let Some(request) = next.take() {
@@ -423,6 +430,7 @@ fn run(
                 &segment,
                 &request.submit,
                 &mut writer.lookup,
+                &requests,
             ) {
                 Classification::New => match revisions(&request.submit, &heads) {
                     Err(error) => {
@@ -441,6 +449,12 @@ fn run(
                         {
                             request.answer(Err(CommitError::Exhausted));
                         } else {
+                            writer.keys.stage(
+                                requests.len(),
+                                &request.submit,
+                                base + assigned.len() as u64,
+                                &revisions,
+                            );
                             size += added;
                             for (record, revision) in request.submit.records.iter().zip(&revisions)
                             {
@@ -451,18 +465,21 @@ fn run(
                         }
                     }
                 },
-                Classification::Retry(records) => {
+                Classification::DurableRetry(records) => {
                     request.answer(Ok(Committed {
                         records,
                         deduplicated: true,
                     }));
+                }
+                Classification::PendingRetry(positions) => {
+                    waiters.push(RetryWaiter { request, positions });
                 }
                 Classification::Rejected(error) => {
                     request.answer(Err(error));
                 }
                 Classification::LookupFailure => {
                     requests.push(request);
-                    poison(&poisoned, requests, deferred.take(), receiver);
+                    poison(&poisoned, requests, waiters, deferred.take(), receiver);
                     return;
                 }
             }
@@ -506,7 +523,7 @@ fn run(
         )
         .and_then(|_| call(storage.as_ref(), &segment, Purpose::Group, Op::SyncData));
         if result.is_err() {
-            poison(&poisoned, requests, deferred.take(), receiver);
+            poison(&poisoned, requests, waiters, deferred.take(), receiver);
             return;
         }
         let frame = Frame {
@@ -535,12 +552,17 @@ fn run(
                 deduplicated: false,
             }));
         }
+        for waiter in waiters {
+            waiter.request.answer(Ok(Committed {
+                records: waiter.positions,
+                deduplicated: true,
+            }));
+        }
     }
 }
 
 fn charge(submit: &Submit) -> Option<usize> {
-    let bookkeeping = std::mem::size_of::<Request>() + std::mem::size_of::<Pending>();
-    let base = bookkeeping
+    let base = REQUEST_BOOKKEEPING
         .checked_add(
             submit
                 .records
@@ -563,12 +585,16 @@ fn charge(submit: &Submit) -> Option<usize> {
 fn poison(
     poisoned: &std::sync::atomic::AtomicBool,
     requests: Vec<Request>,
+    waiters: Vec<RetryWaiter>,
     deferred: Option<Request>,
     receiver: mpsc::Receiver<Request>,
 ) {
     poisoned.store(true, std::sync::atomic::Ordering::Release);
     for request in requests {
         request.answer(Err(CommitError::Indeterminate));
+    }
+    for waiter in waiters {
+        waiter.request.answer(Err(CommitError::Indeterminate));
     }
     if let Some(request) = deferred {
         request.answer(Err(CommitError::Poisoned));

@@ -14,3 +14,7 @@ mod recovery_fixtures;
 mod open_faults;
 
 mod durable_keys;
+
+mod pending_keys;
+
+mod unknown_retries;
