@@ -42,6 +42,9 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Tail map** | The in-memory map from stream id to the stream's latest revision and log offset. A cache. |
 | **Sparse index** | A file that maps some log offsets to file positions in one segment. A cache. Not needed in M1. |
 | **Cache** | Any state that the log can rebuild by reading segments. A cache is never the only copy of a fact. |
+| **Volume** | Every layer that holds one log directory: the guest filesystem, the guest block device, the VMM, the host storage and the durable media. Its requirements are in [volume-requirements.md](architecture/volume-requirements.md). |
+| **Failure domain** | The failure events after which a volume still holds every acknowledged record. [ADR 0040](decisions/0040-volumes-meet-testable-minimum-requirements.md) sets the minimum, and each deployment declares the rest. |
+| **Qualification record** | A document in `docs/` that identifies one stack and gives the evidence and result for each volume requirement ([ADR 0032](decisions/0032-qualify-deployment-storage-before-m6.md), [ADR 0040](decisions/0040-volumes-meet-testable-minimum-requirements.md)). |
 
 ## Diagrams
 

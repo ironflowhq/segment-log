@@ -44,11 +44,9 @@ callers (threads, or a socket server in M6)
 
 ## Storage contract
 
-The durability invariants hold only if the storage under the log meets this contract. The library cannot check any of it. Each deployment must check it ([PRD open item 3](../prd.md#open-items)). [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) requires qualification of the actual stack before the M6 guest benchmark and production durability claims. M1 implements and tests the explicit conditional contract; its completion evidence does not certify the eventual guest stack.
+The durability invariants hold only if the volume under the log meets the MUST requirements in [volume-requirements.md](volume-requirements.md) ([ADR 0040](../decisions/0040-volumes-meet-testable-minimum-requirements.md)). That document is the only source for them, their pass criteria and how to verify them. They cover flush durability through every layer, atomic sector writes, the filesystem's response to metadata write errors, a local filesystem, one writing kernel, survival of the guest, a declared failure domain, consistent copies, capacity and drift.
 
-- The device honors the flush. When `fsync` returns success, the bytes survive a power loss ([ADR 0005](../decisions/0005-flush-calls-and-platforms.md)).
-- The device writes each sector atomically. After a power loss, a sector holds either its old or its new contents. Open relies on this when it rewrites bytes that are already durable ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)).
-- The filesystem stops accepting writes after a metadata write error, so a failed directory `fsync` is never followed by a successful one that wrote nothing ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)).
+The library cannot check them. Each deployment must check them ([PRD open item 3](../prd.md#open-items)). [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) requires qualification of the actual stack before the M6 guest benchmark and production durability claims. M1 implements and tests the explicit conditional contract; its completion evidence does not certify the eventual guest stack.
 
 ## Invariants
 

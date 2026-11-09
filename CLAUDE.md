@@ -11,6 +11,7 @@ Read these before you change code. Start with the PRD.
 - [docs/architecture/format.md](docs/architecture/format.md): byte layout v0. The only source for field widths.
 - [docs/architecture/api.md](docs/architecture/api.md): public API and defaults. The only source for signatures.
 - [docs/architecture/testing.md](docs/architecture/testing.md): crash model, oracle, benchmarks.
+- [docs/architecture/volume-requirements.md](docs/architecture/volume-requirements.md): requirements V1–V11 for the storage under the log, and how to test them.
 - [docs/acceptance-tests.md](docs/acceptance-tests.md): how to implement a behavior scenario-first, and where the tests go.
 - [docs/architecture/prior-art.md](docs/architecture/prior-art.md): Kafka, the crate survey, and the evidence limits.
 - [docs/glossary.md](docs/glossary.md): use each term with that meaning only.
