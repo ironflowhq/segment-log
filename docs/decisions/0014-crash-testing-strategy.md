@@ -42,6 +42,7 @@ We will test crashes with simulated storage, real-process `SIGKILL` tests and an
 
 ## Consequences
 
+- [ADR 0039](0039-scenario-first-acceptance-tests-in-native-rust.md) proposes how scenarios reach the simulated storage, and replay from a saved storage trace as well as the seed.
 - [ADR 0029](0029-m1-completion-requires-correctness-and-measurement-evidence.md) adds required platform I/O evidence and a reproducible Linux benchmark report to M1 completion. Correctness and durability failures block completion; provisional performance misses are reported findings.
 - Every new write-path feature needs crash cases in the simulation.
 - Every failing seed must be printed, so that the failure can be replayed.
