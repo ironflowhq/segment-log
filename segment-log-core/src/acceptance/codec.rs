@@ -19,7 +19,6 @@ fn group_bytes_follow_the_provisional_format() {
             }],
         };
         let bytes = codec::encode(&group).unwrap();
-        // CRC bytes were computed independently using the reflected polynomial division.
         let expected = [
             44, 0, 0, 0, 0x48, 0x3b, 0x11, 0xa2, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0,
             0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 2, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, b's', b'k', 0,
@@ -169,5 +168,54 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
             revision: 0,
         });
         assert_eq!(codec::encode(&g), Err(Error::Length));
+    });
+}
+
+/// Given the specified header fields and an independently checksummed byte fixture
+/// When a header is encoded and decoded
+/// Then every byte matches the fixture and malformed headers are rejected
+/// Cases: CODEC-GROUP
+#[test]
+fn header_bytes_and_validation_follow_the_format() {
+    bounded(|| {
+        let mut expected = [0; 64];
+        expected[..8].copy_from_slice(b"SGLG\0\0\x40\0");
+        expected[8..24].copy_from_slice(&[7; 16]);
+        expected[24] = 3;
+        expected[32] = 2;
+        fn crc(bytes: &[u8]) -> u32 {
+            let mut n = 0xffff_ffffu32;
+            for byte in bytes {
+                for bit in 0..8 {
+                    let low = (n ^ u32::from(byte >> bit)) & 1;
+                    n >>= 1;
+                    if low != 0 {
+                        n ^= 0x82f6_3b78;
+                    }
+                }
+            }
+            n ^ 0xffff_ffff
+        }
+        let sum = crc(&expected[..60]);
+        expected[60..].copy_from_slice(&sum.to_le_bytes());
+        let header = codec::Header {
+            log_id: [7; 16],
+            base_offset: 3,
+            epoch: 2,
+        };
+        assert_eq!(codec::encode_header(&header), expected);
+        assert_eq!(codec::decode_header(&expected), Ok(header));
+        for end in 0..64 {
+            assert!(codec::decode_header(&expected[..end]).is_err());
+        }
+        for pos in [0, 4, 6, 40, 59, 60] {
+            let mut bad = expected;
+            bad[pos] ^= 1;
+            if pos < 60 {
+                let sum = crc(&bad[..60]);
+                bad[60..].copy_from_slice(&sum.to_le_bytes());
+            }
+            assert!(codec::decode_header(&bad).is_err(), "byte {pos}");
+        }
     });
 }
