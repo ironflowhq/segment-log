@@ -1,6 +1,4 @@
-//! M3-ROLL scenarios: segment roll, recovery across segments, and crashes during a roll.
-//!
-//! Each scenario here sets its own roll size, because the file names it expects follow from it.
+//! The scenarios that roll set their own roll size, because the file names they expect follow from it.
 use super::support::{fixtures::*, raw};
 use crate::*;
 use std::{path::Path, sync::Arc};

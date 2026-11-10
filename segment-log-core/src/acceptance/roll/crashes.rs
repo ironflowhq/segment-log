@@ -11,7 +11,6 @@ fn on_s(payload: &[u8], revision: Option<u64>) -> NewRecord {
     record(b"s", None, payload, revision)
 }
 
-/// Two acknowledged groups: `a` in segment 0 and `b` in segment 1, which has reached the roll size.
 fn two_groups(sim: &Sim) -> SegmentLog {
     let log = open_rolling(sim, EVERY_GROUP);
     send(&log, vec![on_s(b"a", None)]).wait().unwrap();
@@ -20,7 +19,6 @@ fn two_groups(sim: &Sim) -> SegmentLog {
     log
 }
 
-/// The storage calls of the roll into segment 2, in order.
 fn roll_steps(sim: &Sim) -> [Call; 4] {
     let (log_id, _, _) = raw::header_fields(&raw::segments(sim)[0].1);
     let header = raw::with_log_id(raw::header(0, 2, 1), log_id);
@@ -32,7 +30,6 @@ fn roll_steps(sim: &Sim) -> [Call; 4] {
     ]
 }
 
-/// The write and the flush of the group `[c, d]`, the first one in segment 2.
 fn first_group_steps() -> [Call; 2] {
     let frame = raw::group(1, 2, &[b"c", b"d"]);
     [
@@ -52,7 +49,6 @@ fn payloads(log: &SegmentLog) -> Vec<Vec<u8>> {
         .collect()
 }
 
-/// Every segment file is a header and whole frames after a recovery.
 fn assert_whole_segments(sim: &Sim) {
     for (base, bytes) in raw::segments(sim) {
         assert_eq!(raw::header_fields(&bytes).1, base);

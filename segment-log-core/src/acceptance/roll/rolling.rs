@@ -2,7 +2,6 @@ use super::*;
 use crate::acceptance::support::{bounded, oracle};
 use crate::storage::{Call, Op, Purpose};
 
-/// The record count of each frame in a segment image, which must be a header and whole frames.
 fn frame_counts(segment: &[u8]) -> Vec<usize> {
     raw::frames(segment)
         .into_iter()
