@@ -13,7 +13,10 @@ requirements.
 
 The [completion record](completion.md) holds the gate evidence for the final M1
 tree. [Slice 10](slice10.md) is the earlier record, from before the issue 20 changes. This archive does not establish M1 completion.
-Outstanding work is tracked in [issue #17](https://github.com/ironflowhq/segment-log/issues/17).
+The completion record does, and the [PRD](../../prd.md#milestones) records the result.
+Issues 17 and 20 tracked the M1 work and are closed. Follow-up work is tracked in
+[issue 46](https://github.com/ironflowhq/segment-log/issues/46) (deployment storage), [issue 47](https://github.com/ironflowhq/segment-log/issues/47) (larger and longer workloads),
+[issue 48](https://github.com/ironflowhq/segment-log/issues/48) (memory peaks) and [issue 49](https://github.com/ironflowhq/segment-log/issues/49) (physical local-NVMe benchmark).
 
 | Slice | PR | Observed evidence and limits |
 | --- | --- | --- |
