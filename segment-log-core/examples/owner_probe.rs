@@ -126,7 +126,9 @@ unsafe impl GlobalAlloc for Owners {
         let new = if unsafe { arena.try_realloc_in_place(ptr, old, size) } {
             ptr
         } else {
-            let layout = unsafe { Layout::from_size_align_unchecked(size, old.align()) };
+            let Ok(layout) = Layout::from_size_align(size, old.align()) else {
+                return std::ptr::null_mut();
+            };
             let Some(new) = (unsafe { arena.allocate(layout) }).map(NonNull::as_ptr) else {
                 return std::ptr::null_mut();
             };
@@ -333,40 +335,25 @@ fn check(name: &str, expected: usize, observed: usize) {
     println!("check,{name},{expected},{observed}");
 }
 
-/// Counts a separate mapping of known size, so that the check leaves the arena untouched.
+#[derive(Clone)]
+#[repr(align(4096))]
+struct Page([u8; 4096]);
+
+/// Counts the pages of a known-size buffer outside the arena, so that the check leaves the arena
+/// untouched. glibc maps a buffer this large on its own and unmaps it when it is freed.
 fn check_page_counter() -> Result<(), String> {
-    // SAFETY: an anonymous private mapping with no address hint aliases nothing.
-    let base = unsafe {
-        libc::mmap(
-            std::ptr::null_mut(),
-            CALIBRATION_BYTES,
-            libc::PROT_READ | libc::PROT_WRITE,
-            libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
-            -1,
-            0,
-        )
-    };
-    if base == libc::MAP_FAILED {
-        return Err(format!("mmap: {}", std::io::Error::last_os_error()));
-    }
-    let pages = base.cast::<u8>();
-    for offset in (0..CALIBRATION_BYTES).step_by(4096) {
-        // SAFETY: the offset is inside the mapping, which nothing else uses.
-        unsafe { pages.add(offset).write_volatile(0xa5) };
-    }
+    let pages = black_box(vec![Page([0xa5; 4096]); CALIBRATION_BYTES / 4096]);
+    let base = pages.as_ptr() as usize;
     check(
         "pages_touched",
         CALIBRATION_BYTES,
-        resident_bytes(base as usize, CALIBRATION_BYTES)?,
+        resident_bytes(base, CALIBRATION_BYTES)?,
     );
-    if unsafe { libc::munmap(base, CALIBRATION_BYTES) } != 0 {
-        return Err(format!("munmap: {}", std::io::Error::last_os_error()));
+    if !pages.iter().all(|page| page.0.iter().all(|&b| b == 0xa5)) {
+        return Err("page check buffer mismatch".into());
     }
-    check(
-        "pages_unmapped",
-        0,
-        resident_bytes(base as usize, CALIBRATION_BYTES)?,
-    );
+    drop(pages);
+    check("pages_freed", 0, resident_bytes(base, CALIBRATION_BYTES)?);
     // The check's own reads are not part of the next phase.
     ENGINE.take();
     OTHER.take();
