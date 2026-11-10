@@ -2,7 +2,13 @@
 mod deadline;
 
 use segment_log_core::*;
-use std::{sync::Barrier, time::Duration};
+use std::{
+    sync::{
+        Barrier,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 
 fn append(log: &SegmentLog, start: u64, count: u64) {
     let committed = log
@@ -96,6 +102,61 @@ fn reads_boundaries_and_snapshot_during_appends() {
     drop(log);
     let log = SegmentLog::open(&dir, options()).unwrap();
     check(&log.read(0, usize::MAX).unwrap(), 0, 76);
+    drop(log);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+/// Given a log on real storage and four readers that reread chosen ranges without pause
+/// When a caller appends and flushes groups while the readers run
+/// Then every read returns its range in log order with each record's own contents,
+/// at most `max` records, and nothing past the watermark
+/// Cases: READ-BOUNDED
+#[test]
+fn free_running_readers_get_exact_ranges_while_groups_flush() {
+    let _deadline = deadline::Deadline::new(Duration::from_secs(60), || {});
+    let dir = std::env::temp_dir().join(format!(
+        "segment-log-concurrent-ranges-{}",
+        std::process::id()
+    ));
+    let log = SegmentLog::open(
+        &dir,
+        Options {
+            linger: Duration::ZERO,
+            ..Options::default()
+        },
+    )
+    .unwrap();
+    append(&log, 0, 8);
+    let stop = AtomicBool::new(false);
+    std::thread::scope(|scope| {
+        let readers: Vec<_> = (0..4u64)
+            .map(|reader| {
+                let (log, stop) = (&log, &stop);
+                scope.spawn(move || {
+                    let mut reads = 0u64;
+                    while !stop.load(Ordering::Relaxed) {
+                        let before = log.watermark();
+                        let from = (reads * 2654435761 + reader) % before;
+                        let records = log.read(from, 16).unwrap();
+                        assert!(records.len() as u64 >= (before - from).min(16));
+                        assert!(records.len() <= 16);
+                        assert!(from + records.len() as u64 <= log.watermark());
+                        check(&records, from, records.len());
+                        reads += 1;
+                    }
+                    reads
+                })
+            })
+            .collect();
+        for group in 1..64 {
+            append(&log, group * 8, 8);
+        }
+        stop.store(true, Ordering::Relaxed);
+        for reader in readers {
+            assert!(reader.join().unwrap() > 0);
+        }
+    });
+    check(&log.read(0, usize::MAX).unwrap(), 0, 512);
     drop(log);
     std::fs::remove_dir_all(dir).unwrap();
 }

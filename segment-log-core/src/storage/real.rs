@@ -3,26 +3,30 @@ use std::{
     collections::BTreeMap,
     fs::{self, File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
-    sync::Mutex,
+    os::unix::fs::FileExt,
+    sync::{Arc, Mutex},
 };
 #[derive(Default)]
 pub(crate) struct Real {
-    files: Mutex<BTreeMap<PathBuf, File>>,
+    files: Mutex<BTreeMap<PathBuf, Arc<File>>>,
 }
 impl Real {
-    fn with_file<T>(
-        &self,
-        path: &Path,
-        f: impl FnOnce(&mut File) -> io::Result<T>,
-    ) -> io::Result<T> {
-        let mut files = self.files.lock().unwrap();
-        if !files.contains_key(path) {
-            files.insert(
-                path.to_owned(),
-                OpenOptions::new().read(true).write(true).open(path)?,
-            );
-        }
-        f(files.get_mut(path).unwrap())
+    // The map lock covers only the handle lookup, so a read never waits for a flush.
+    // Reads are positioned and leave the file cursor alone. Only one thread at a time
+    // moves it: `open` during recovery, then the writer thread.
+    fn with_file<T>(&self, path: &Path, f: impl FnOnce(&File) -> io::Result<T>) -> io::Result<T> {
+        let file = {
+            let mut files = self.files.lock().unwrap();
+            match files.get(path) {
+                Some(file) => file.clone(),
+                None => {
+                    let file = Arc::new(OpenOptions::new().read(true).write(true).open(path)?);
+                    files.insert(path.to_owned(), file.clone());
+                    file
+                }
+            }
+        };
+        f(&file)
     }
 }
 struct Guard(File);
@@ -43,26 +47,25 @@ impl Storage for Real {
                     .write(true)
                     .create_new(true)
                     .open(&path)?;
-                self.files.lock().unwrap().insert(path, file);
+                self.files.lock().unwrap().insert(path, Arc::new(file));
             }
             Op::Open => {
                 return self.with_file(&path, |file| Ok(Value::Length(file.metadata()?.len())));
             }
-            Op::Append(bytes) => self.with_file(&path, |file| {
+            Op::Append(bytes) => self.with_file(&path, |mut file| {
                 file.seek(SeekFrom::End(0))?;
                 file.write_all(&bytes)
             })?,
-            Op::Write(pos, bytes) => self.with_file(&path, |file| {
+            Op::Write(pos, bytes) => self.with_file(&path, |mut file| {
                 file.seek(SeekFrom::Start(pos))?;
                 file.write_all(&bytes)
             })?,
             Op::Read(pos, len) => {
                 return self.with_file(&path, |file| {
-                    file.seek(SeekFrom::Start(pos))?;
                     let mut bytes = vec![0; len];
                     let mut used = 0;
                     while used < len {
-                        let n = file.read(&mut bytes[used..])?;
+                        let n = file.read_at(&mut bytes[used..], pos + used as u64)?;
                         if n == 0 {
                             break;
                         }

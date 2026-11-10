@@ -122,3 +122,58 @@ fn replacing_a_locked_file_does_not_reuse_its_lock() {
         assert_eq!(sim.image(), Sim::replay(seed, &trace).image());
     });
 }
+
+/// Given a real file whose every eight bytes hold their own position
+/// When four threads read chosen positions while another thread appends and flushes
+/// Then every read returns the bytes at its position, and the appended bytes stay in order
+#[test]
+fn real_reads_keep_their_positions_while_another_thread_appends() {
+    bounded(|| {
+        let root = std::env::temp_dir().join(format!(
+            "segment-log-positioned-reads-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let file = root.join("a");
+        let file = file.to_str().unwrap();
+        let block = |from: u64, words: u64| -> Vec<u8> {
+            (from..from + words)
+                .flat_map(|word| (word * 8).to_le_bytes())
+                .collect()
+        };
+        let real = Real::default();
+        call(&real, root.to_str().unwrap(), Op::CreateDir);
+        call(&real, file, Op::Create);
+        const SEEDED: u64 = 4096;
+        const ADDED: u64 = 256;
+        call(&real, file, Op::Append(block(0, SEEDED)));
+        std::thread::scope(|scope| {
+            for reader in 0..4u64 {
+                let real = &real;
+                let block = &block;
+                scope.spawn(move || {
+                    for round in 0..4000u64 {
+                        let word = (round * 2654435761 + reader * 977) % (SEEDED - 8);
+                        let Value::Bytes(bytes) = call(real, file, Op::Read(word * 8, 64)) else {
+                            panic!("bytes missing")
+                        };
+                        assert_eq!(bytes, block(word, 8), "reader {reader} word {word}");
+                    }
+                });
+            }
+            for round in 0..ADDED {
+                call(&real, file, Op::Append(block(SEEDED + round, 1)));
+                if round % 64 == 0 {
+                    call(&real, file, Op::SyncData);
+                }
+            }
+        });
+        let all = ((SEEDED + ADDED) * 8) as usize;
+        let Value::Bytes(bytes) = call(&real, file, Op::Read(0, all + 8)) else {
+            panic!("bytes missing")
+        };
+        assert_eq!(bytes.len(), all);
+        assert!(bytes == block(0, SEEDED + ADDED));
+        std::fs::remove_dir_all(root).unwrap();
+    });
+}
