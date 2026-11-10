@@ -162,7 +162,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
             end: group.base_offset + group.entries.len() as u64,
             epoch: group.epoch,
         };
-        keys.publish(&kept, &group);
+        keys.recover(&group);
         publish(&mut published, kept, &group);
         tail = (position, frame.unwrap());
         position += tail.1.len() as u64;

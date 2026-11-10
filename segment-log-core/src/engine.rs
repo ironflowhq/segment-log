@@ -453,6 +453,7 @@ fn run(
         let started = std::time::Instant::now();
         let mut requests = Vec::new();
         let mut assigned = Vec::new();
+        let mut origins = Vec::new();
         let mut waiters = Vec::new();
         let mut size = 24;
         let mut next = Some(first);
@@ -464,7 +465,12 @@ fn run(
                 &segment,
                 &request.submit,
                 &mut writer.lookup,
-                &requests,
+                &keys::Staged {
+                    base,
+                    requests: &requests,
+                    origins: &origins,
+                },
+                &published,
             ) {
                 Classification::New => match revisions(&request.submit, &heads, &published) {
                     Err(error) => {
@@ -484,10 +490,13 @@ fn run(
                             request.answer(Err(CommitError::Exhausted));
                         } else {
                             writer.keys.stage(
-                                requests.len(),
                                 &request.submit,
                                 base + assigned.len() as u64,
                                 &revisions,
+                            );
+                            origins.extend(
+                                (0..request.submit.records.len())
+                                    .map(|record| (requests.len(), record)),
                             );
                             size += added;
                             for (record, revision) in request.submit.records.iter().zip(&revisions)
@@ -583,7 +592,6 @@ fn run(
             end: base + assigned.len() as u64,
             epoch: writer.epoch,
         };
-        writer.keys.publish(&frame, &group);
         publish(&mut published.lock().unwrap(), frame, &group);
         #[cfg(test)]
         timeline.mark(4);
