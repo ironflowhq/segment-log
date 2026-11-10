@@ -74,7 +74,7 @@ These rules hold at every point. Code and tests must not break them. A change to
 4. The writer writes the group as one frame at the end of the active segment, then calls `fsync` once.
 5. If the `fsync` succeeds: the writer applies the pending changes to the tail map and the key map, moves the watermark, and acks each new submit and each matched retry waiting for this group. Retry waiters get original positions in request order with `deduplicated: true`. The writer records every answer of the group, then wakes only a few of its callers. Each woken caller wakes a few more before it returns ([ADR 0044](../decisions/0044-woken-callers-relay-group-acks.md)).
 6. If a write, `fsync`, or durable-key lookup read or frame validation fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). Every unfinished request in the current group, including the lookup request and matched retry waiters, gets `Indeterminate`. This includes a group not yet written. Each request still queued or deferred to the next group, and each later admitted request, gets `Poisoned`. Results already finalized under the [answer-ordering rules](api.md#admission-and-answer-ordering) stay fixed. No later write or flush is attempted on the failed handle.
-7. From M3, if the active segment is at or over the roll size, the writer rolls before it starts the next group. From M4, the writer also rolls before a group whose new streams would make the segment's footer pass the frame limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
+7. From M3, if the active segment is at or over the roll size, the writer [rolls](#roll) before the next group's first new submit joins that group. A group with no new records does not roll, so step 2 still holds for it. From M4, the writer also rolls before a group whose new streams would make the segment's footer pass the frame limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
 
 A fully matching retry in step 3.1 may select subsets, reorder records, combine original submits, or mix pending and durable matches. All-durable matches need no new `fsync`. Pending matches wait for their existing group's flush and watermark publication. Normal admission limits still apply. Retry success confirms durability, not that the records originally committed atomically together. New writes retain their all-or-nothing submit guarantee.
 
@@ -167,7 +167,9 @@ A roll happens only between groups, so no submit crosses a roll.
 
 Before M4, step 1 does nothing. Every segment except the newest counts as sealed.
 
-If any step of a roll fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). It never appends to a segment after writing that segment's footer.
+The writer rolls when the first new submit of a group has passed its checks, before it stages any record of that group. A submit that appends nothing never starts a roll. A segment with no record does not roll, because the new segment would take its name. A roll size that an empty segment has already reached therefore rolls after every group that wrote a frame.
+
+If any step of a roll fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). No group is in flight during a roll. The submit that started the roll and every queued submit get `Poisoned`, because the writer wrote none of their records. The writer never appends to a segment after writing that segment's footer.
 
 ## Seal
 

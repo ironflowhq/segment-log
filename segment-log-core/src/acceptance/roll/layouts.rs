@@ -137,8 +137,10 @@ fn a_missing_segment_or_a_mismatched_base_is_a_gap() {
 fn a_segment_from_another_log_fails_open_without_deletion() {
     bounded(|| {
         let first = sealed(0, 1, &[b"a", b"b"]);
-        let foreign =
-            |bytes: Vec<u8>| [raw::foreign(bytes[..64].to_vec()), bytes[64..].to_vec()].concat();
+        let foreign = |bytes: Vec<u8>| {
+            let header = raw::with_log_id(bytes[..64].to_vec(), [9; 16]);
+            [header, bytes[64..].to_vec()].concat()
+        };
         for segments in [
             vec![
                 (0, first.clone()),

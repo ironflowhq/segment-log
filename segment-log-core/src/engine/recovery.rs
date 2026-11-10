@@ -1,6 +1,7 @@
 use super::*;
 pub(super) struct Recovered {
     pub active: Active,
+    pub log_id: [u8; 16],
     pub lock: Box<dyn Lock>,
     pub published: Published,
     pub epoch: u64,
@@ -159,6 +160,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
             base: newest,
             length: scan.end,
         },
+        log_id,
         lock,
         published: kept.published,
         epoch,

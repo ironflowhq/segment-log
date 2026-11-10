@@ -15,6 +15,7 @@ pub(crate) enum Purpose {
     Group,
     Recovery,
     Lookup,
+    Roll,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Op {

@@ -66,12 +66,35 @@ pub(crate) fn bytes(sim: &Sim) -> Vec<u8> {
     };
     bytes
 }
-/// The same header with the id of another log.
-pub(crate) fn foreign(mut header: Vec<u8>) -> Vec<u8> {
-    header[8..24].fill(9);
+/// The same header under another log id. `header` fills the id with 7.
+pub(crate) fn with_log_id(mut header: Vec<u8>, log_id: [u8; 16]) -> Vec<u8> {
+    header[8..24].copy_from_slice(&log_id);
     let checksum = crc(&header[..60]);
     header[60..64].copy_from_slice(&checksum.to_le_bytes());
     header
+}
+/// The log id, base offset and epoch of a segment image whose header checksum matches.
+pub(crate) fn header_fields(segment: &[u8]) -> ([u8; 16], u64, u64) {
+    assert_eq!(
+        crc(&segment[..60]),
+        u32::from_le_bytes(segment[60..64].try_into().unwrap())
+    );
+    (
+        segment[8..24].try_into().unwrap(),
+        u64::from_le_bytes(segment[24..32].try_into().unwrap()),
+        u64::from_le_bytes(segment[32..40].try_into().unwrap()),
+    )
+}
+/// The frames of a segment image. Panics unless the image is a header followed by whole frames.
+pub(crate) fn frames(segment: &[u8]) -> Vec<&[u8]> {
+    let mut frames = vec![];
+    let mut at = 64;
+    while at < segment.len() {
+        let length = u32::from_le_bytes(segment[at..at + 4].try_into().unwrap()) as usize + 8;
+        frames.push(&segment[at..at + length]);
+        at += length;
+    }
+    frames
 }
 pub(crate) fn segment(base: u64) -> String {
     format!("/log/{base:020}.seg")

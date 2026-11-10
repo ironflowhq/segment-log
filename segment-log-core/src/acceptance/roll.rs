@@ -1,2 +1,53 @@
 //! M3-ROLL scenarios: segment roll, recovery across segments, and crashes during a roll.
+//!
+//! Each scenario here sets its own roll size, because the file names it expects follow from it.
+use super::support::{fixtures::*, raw};
+use crate::*;
+use std::{path::Path, sync::Arc};
+
+mod crashes;
 mod layouts;
+mod rolling;
+
+/// A roll size that every segment with a frame has reached, so each group starts a segment.
+const EVERY_GROUP: u64 = 65;
+
+fn open_rolling(sim: &Sim, roll_bytes: u64) -> SegmentLog {
+    SegmentLog::with_storage(
+        Path::new("/log"),
+        Options {
+            roll_bytes,
+            ..options()
+        },
+        Arc::new(sim.clone()),
+    )
+    .unwrap()
+}
+
+fn record(stream: &[u8], key: Option<&[u8]>, payload: &[u8], revision: Option<u64>) -> NewRecord {
+    NewRecord {
+        stream: stream.to_vec(),
+        key: key.map(<[u8]>::to_vec),
+        payload: payload.to_vec(),
+        expected: revision.map_or(ExpectedRevision::Empty, ExpectedRevision::At),
+    }
+}
+
+fn send(log: &SegmentLog, records: Vec<NewRecord>) -> Pending {
+    log.append(Submit { records }).unwrap()
+}
+
+fn positions(answer: &Committed) -> Vec<(u64, u64)> {
+    answer
+        .records
+        .iter()
+        .map(|position| (position.offset, position.revision))
+        .collect()
+}
+
+fn bases(sim: &Sim) -> Vec<u64> {
+    raw::segments(sim)
+        .into_iter()
+        .map(|(base, _)| base)
+        .collect()
+}

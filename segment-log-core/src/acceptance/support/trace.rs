@@ -50,6 +50,28 @@ fn read_kind(r: &mut impl Read) -> io::Result<io::ErrorKind> {
         .copied()
         .ok_or_else(invalid)
 }
+fn purpose(w: &mut impl Write, purpose: Purpose) -> io::Result<()> {
+    number(
+        w,
+        match purpose {
+            Purpose::Open => 0,
+            Purpose::Group => 1,
+            Purpose::Recovery => 2,
+            Purpose::Lookup => 3,
+            Purpose::Roll => 4,
+        },
+    )
+}
+fn read_purpose(r: &mut impl Read) -> io::Result<Purpose> {
+    Ok(match read_number(r)? {
+        0 => Purpose::Open,
+        1 => Purpose::Group,
+        2 => Purpose::Recovery,
+        3 => Purpose::Lookup,
+        4 => Purpose::Roll,
+        _ => return Err(invalid()),
+    })
+}
 fn op(w: &mut impl Write, op: &Op) -> io::Result<()> {
     let tag = match op {
         Op::CreateDir => 0,
@@ -194,15 +216,7 @@ pub(crate) fn save(file: &Path, seed: u64, trace: &[Event]) -> io::Result<()> {
             Event::Call(c, f, o) => {
                 number(&mut w, 0)?;
                 path(&mut w, &c.path)?;
-                number(
-                    &mut w,
-                    match c.purpose {
-                        Purpose::Open => 0,
-                        Purpose::Group => 1,
-                        Purpose::Recovery => 2,
-                        Purpose::Lookup => 3,
-                    },
-                )?;
+                purpose(&mut w, c.purpose)?;
                 op(&mut w, &c.op)?;
                 fault(&mut w, f)?;
                 outcome(&mut w, o)?;
@@ -210,15 +224,7 @@ pub(crate) fn save(file: &Path, seed: u64, trace: &[Event]) -> io::Result<()> {
             Event::Canceled(c) => {
                 number(&mut w, 4)?;
                 path(&mut w, &c.path)?;
-                number(
-                    &mut w,
-                    match c.purpose {
-                        Purpose::Open => 0,
-                        Purpose::Group => 1,
-                        Purpose::Recovery => 2,
-                        Purpose::Lookup => 3,
-                    },
-                )?;
+                purpose(&mut w, c.purpose)?;
                 op(&mut w, &c.op)?;
             }
             Event::Lock(p, b) => {
@@ -263,13 +269,7 @@ pub(crate) fn load(file: &Path) -> io::Result<(u64, Vec<Event>)> {
         trace.push(match read_number(&mut r)? {
             0 => {
                 let path = read_path(&mut r)?;
-                let purpose = match read_number(&mut r)? {
-                    0 => Purpose::Open,
-                    1 => Purpose::Group,
-                    2 => Purpose::Recovery,
-                    3 => Purpose::Lookup,
-                    _ => return Err(invalid()),
-                };
+                let purpose = read_purpose(&mut r)?;
                 let op = read_op(&mut r)?;
                 Event::Call(
                     Call { path, purpose, op },
@@ -279,13 +279,7 @@ pub(crate) fn load(file: &Path) -> io::Result<(u64, Vec<Event>)> {
             }
             4 => {
                 let path = read_path(&mut r)?;
-                let purpose = match read_number(&mut r)? {
-                    0 => Purpose::Open,
-                    1 => Purpose::Group,
-                    2 => Purpose::Recovery,
-                    3 => Purpose::Lookup,
-                    _ => return Err(invalid()),
-                };
+                let purpose = read_purpose(&mut r)?;
                 Event::Canceled(Call {
                     path,
                     purpose,

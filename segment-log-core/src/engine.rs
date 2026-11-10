@@ -22,12 +22,41 @@ struct Writer {
     keys: Keys,
     lookup: Vec<u8>,
     active: Active,
+    log_id: [u8; 16],
 }
 
 /// The segment that takes new frames. Only the writer thread appends to it.
 struct Active {
     base: u64,
     length: u64,
+}
+
+impl Writer {
+    /// Starts a new active segment at `next`, the next log offset, if the active one has
+    /// reached the roll size.
+    fn roll(
+        &mut self,
+        storage: &dyn Storage,
+        dir: &Path,
+        next: u64,
+        options: &Options,
+    ) -> io::Result<()> {
+        // A segment with no record cannot roll: its successor would take its name.
+        if self.active.length < options.roll_bytes || next == self.active.base {
+            return Ok(());
+        }
+        let header = codec::Header {
+            log_id: self.log_id,
+            base_offset: next,
+            epoch: self.epoch,
+        };
+        create_segment(storage, dir, Purpose::Roll, &header)?;
+        self.active = Active {
+            base: next,
+            length: codec::HEADER_LEN as u64,
+        };
+        Ok(())
+    }
 }
 
 fn segment_path(dir: &Path, base: u64) -> PathBuf {
@@ -151,6 +180,7 @@ impl SegmentLog {
                         keys: recovered.keys,
                         lookup: Vec::new(),
                         active: recovered.active,
+                        log_id: recovered.log_id,
                     },
                     writer_options,
                 );
@@ -474,7 +504,6 @@ fn run(
         #[cfg(test)]
         crate::pipeline::request(&first.submit, crate::pipeline::DEQUEUE);
         let base = published.lock().unwrap().watermark;
-        let segment = segment_path(&dir, writer.active.base);
         // Copying every durable head here would make each group cost grow with the stream count.
         let mut heads = BTreeMap::new();
         let mut requests = Vec::new();
@@ -517,6 +546,14 @@ fn run(
                         {
                             request.answer(Err(CommitError::Exhausted));
                         } else {
+                            // The roll waits for the group's first new submit, so that a group
+                            // that appends nothing writes and flushes nothing.
+                            if requests.is_empty()
+                                && writer.roll(storage.as_ref(), &dir, base, &options).is_err()
+                            {
+                                poison(&poisoned, requests, waiters, Some(request), receiver);
+                                return;
+                            }
                             writer.keys.stage(
                                 &request.submit,
                                 base + assigned.len() as u64,
@@ -608,6 +645,7 @@ fn run(
         };
         let bytes = codec::encode(&group).expect("validated group");
         let length = bytes.len();
+        let segment = segment_path(&dir, writer.active.base);
         #[cfg(test)]
         timeline.mark(1);
         let result = call(

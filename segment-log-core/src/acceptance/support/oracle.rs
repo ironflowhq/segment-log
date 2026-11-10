@@ -448,14 +448,18 @@ pub(crate) fn flush_contract(
         match e {
             Event::Canceled(_) => failed = true,
             Event::Call(c, fault, result)
-                if matches!(c.purpose, Purpose::Group | Purpose::Lookup) =>
+                if matches!(c.purpose, Purpose::Group | Purpose::Lookup | Purpose::Roll) =>
             {
-                if matches!(c.op, Op::Append(_) | Op::SyncData) {
+                if !matches!(c.op, Op::Read(..)) {
                     assert!(!failed, "failed writer performed more I/O");
                 }
-                match (&c.op, result) {
-                    (Op::Append(bytes), _) => attempted_end += frame_inputs(bytes).len(),
-                    (Op::SyncData, Outcome::Ok(Value::Unit)) => durable_end = attempted_end,
+                match (c.purpose, &c.op, result) {
+                    (Purpose::Group, Op::Append(bytes), _) => {
+                        attempted_end += frame_inputs(bytes).len()
+                    }
+                    (Purpose::Group, Op::SyncData, Outcome::Ok(Value::Unit)) => {
+                        durable_end = attempted_end
+                    }
                     _ => {}
                 }
                 if fault.is_some() {
