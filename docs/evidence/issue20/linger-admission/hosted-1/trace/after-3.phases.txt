@@ -1,0 +1,45 @@
+groups=3714 counted_groups=3714 min_count=1
+group phase, ms: median p10 p90 share_of_cycle
+  formation     0.645    0.550    0.713   61.4%
+  encode        0.024    0.013    0.040    2.3%
+  write         0.026    0.023    0.043    2.5%
+  flush         0.299    0.259    0.375   28.5%
+  publish       0.009    0.008    0.014    0.9%
+  delivery      0.033    0.029    0.060    3.2%
+  cycle         1.051    0.968    1.153  100.0%
+request interval, ms: mean p50 p99 share_of_latency
+  admission         0.001    0.001    0.004    0.1%
+  queue             0.164    0.023    2.066   14.3%
+  formation_wait    0.408    0.453    0.730   35.5%
+  encode            0.027    0.024    0.106    2.4%
+  write             0.031    0.026    0.067    2.7%
+  flush             0.336    0.300    1.011   29.2%
+  publish           0.012    0.009    0.048    1.0%
+  answer_wait       0.009    0.008    0.045    0.8%
+  answer_to_wake    0.161    0.147    0.580   14.0%
+  total             1.149    1.062    4.120  100.0%
+slowest 1% of requests (2000 at or above 4.120 ms), ms: mean of each interval, share of their latency
+  admission         0.014    0.2%
+  queue             3.280   52.6%
+  formation_wait    0.693   11.1%
+  encode            0.105    1.7%
+  write             0.056    0.9%
+  flush             1.447   23.2%
+  publish           0.043    0.7%
+  answer_wait       0.023    0.4%
+  answer_to_wake    0.581    9.3%
+  total             6.241  100.0%
+slowest 0.1% of requests (200 at or above 7.691 ms), ms: mean of each interval, share of their latency
+  admission         0.126    1.0%
+  queue             8.506   66.9%
+  formation_wait    2.676   21.0%
+  encode            0.079    0.6%
+  write             0.059    0.5%
+  flush             0.508    4.0%
+  publish           0.043    0.3%
+  answer_wait       0.024    0.2%
+  answer_to_wake    0.702    5.5%
+  total            12.723  100.0%
+latency, ms: p999 7.691 max 16.093
+admission to end of gathering, ms: mean p50 p90 p99 max
+  gather_wait       0.572    0.512    0.966    2.349   14.234

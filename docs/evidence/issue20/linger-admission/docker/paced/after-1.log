@@ -1,0 +1,51 @@
+
+running 1 test
+PACED interval_ns=20000000 offered_records_per_second=50000.000 latency_from=scheduled_send
+DIAGNOSTIC measured_storage=true phase_cpu=false
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=285208 p50=322625 p99=502083 p999=775500 max=1986375 sum=371262228
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=874916 records=0 segments=1 bytes=64
+APPEND records=1000000 elapsed_ns=20001808718 records_per_second=49995.479 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=293760 admission_call_sum_ns=2735081306
+METRIC append_ns count=1000000 min=291962 p50=1043089 p99=1732838 p999=7233009 max=11036759 sum=1060921735865
+METRIC group_submits count=18938 min=33 p50=53 p99=58 p999=115 max=380 sum=1000000
+METRIC group_frame_bytes count=18938 min=9800 p50=15720 p99=17200 p999=34072 max=112512 sum=296606016
+METRIC group_fdatasync_ns count=18938 min=196542 p50=285000 p99=591333 p999=1654958 max=7537834 sum=6400071044
+STORAGE kind=Group.Append count=18938 sum_ns=149071062
+STORAGE kind=Group.SyncData count=18938 sum_ns=6400071044
+STORAGE kind=Lookup.Other count=18938 sum_ns=56298530
+STORAGE kind=Open.Other count=7 sum_ns=231875
+STORAGE kind=Open.SyncData count=1 sum_ns=300084
+STORAGE kind=Open.SyncDir count=1 sum_ns=3958
+STORAGE kind=Recovery.Other count=2 sum_ns=1958
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=186917
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=3208
+END records=1000000 segments=1 bytes=296606080
+REOPEN ns=455542125 start_records=1000000 end_records=1000000 start_segments=1 end_segments=1 start_bytes=296606080 end_bytes=296606080 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 152 filtered out; finished in 22.04s
+
+	Command being timed: "/build/bin-linger --exact acceptance::evidence::measured_appends_survive_reopen --nocapture"
+	User time (seconds): 6.74
+	System time (seconds): 11.40
+	Percent of CPU this job got: 82%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:22.04
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 661060
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 148618
+	Voluntary context switches: 2457877
+	Involuntary context switches: 19817
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 1242531
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

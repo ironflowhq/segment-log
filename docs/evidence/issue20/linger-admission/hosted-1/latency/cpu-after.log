@@ -1,0 +1,29 @@
+
+running 1 test
+DIAGNOSTIC measured_storage=true phase_cpu=true
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=248241 p50=314194 p99=551957 p999=2298664 max=3127204 sum=332614075
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=946820 records=0 segments=1 bytes=64
+PHASE_CPU role=writer running_ns=3356897318 runnable_ns=533817392
+PHASE_CPU role=callers running_ns=10238923671 runnable_ns=202818467058
+APPEND records=1000000 elapsed_ns=4712953577 records_per_second=212181.169 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=544000 admission_call_sum_ns=408014905
+METRIC append_ns count=1000000 min=633057 p50=4541203 p99=7964730 p999=10597609 max=16212210 sum=4662127450049
+METRIC group_submits count=2022 min=1 p50=499 p99=861 p999=936 max=988 sum=1000000
+METRIC group_frame_bytes count=2022 min=328 p50=147736 p99=254888 p999=277088 max=292480 sum=296064704
+METRIC group_fdatasync_ns count=2022 min=211434 p50=451026 p99=1919431 p999=3200781 max=5459300 sum=1002044831
+STORAGE kind=Group.Append count=2022 sum_ns=207212618
+STORAGE kind=Group.SyncData count=2022 sum_ns=1002044831
+STORAGE kind=Lookup.Other count=2022 sum_ns=103143912
+STORAGE kind=Open.Other count=7 sum_ns=126736
+STORAGE kind=Open.SyncData count=1 sum_ns=324453
+STORAGE kind=Open.SyncDir count=1 sum_ns=8456
+STORAGE kind=Recovery.Other count=2 sum_ns=4307
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=214008
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=11280
+END records=1000000 segments=1 bytes=296064768
+REOPEN ns=860179183 start_records=1000000 end_records=1000000 start_segments=1 end_segments=1 start_bytes=296064768 end_bytes=296064768 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 152 filtered out; finished in 8.34s
+

@@ -1,0 +1,5 @@
+running 1 test
+test acceptance::durability::linger_runs_from_the_admission_of_a_groups_first_submit ... FAILED
+thread '<unnamed>' (147798470) panicked at segment-log-core/src/acceptance/durability.rs:153:9:
+the late group waited another linger after 1.001113292s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 150 filtered out; finished in 3.01s

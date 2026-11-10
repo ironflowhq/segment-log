@@ -1,0 +1,11 @@
+test acceptance::durability::read_boundaries_return_empty ... ok
+test acceptance::durability::append_is_invisible_until_its_group_flush_succeeds ... ok
+test acceptance::durability::zero_linger_drains_queued_submits_up_to_the_cap ... ok
+test acceptance::durability::a_group_formed_after_its_linger_ended_fails_and_recovers_whole ... FAILED
+test acceptance::durability::linger_runs_from_the_admission_of_a_groups_first_submit ... FAILED
+thread '<unnamed>' (147802306) panicked at segment-log-core/src/acceptance/durability.rs:185:13:
+thread '<unnamed>' (147802310) panicked at segment-log-core/src/acceptance/durability.rs:158:9:
+assertion `left == right` failed
+  left: 4
+ right: 2
+test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 146 filtered out; finished in 2.02s

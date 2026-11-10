@@ -1,0 +1,50 @@
+
+running 1 test
+PACED interval_ns=20000000 offered_records_per_second=50000.000 latency_from=scheduled_send
+DIAGNOSTIC measured_storage=true phase_cpu=false
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=386827 p50=935582 p99=1960212 p999=2041978 max=2057367 sum=1014121715
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=947988 records=0 segments=1 bytes=64
+APPEND records=1000000 elapsed_ns=20021673215 records_per_second=49945.876 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=528000 admission_call_sum_ns=3151978752
+METRIC append_ns count=1000000 min=548958 p50=1516385 p99=2341406 p999=14537649 max=24026808 sum=1547471775210
+METRIC group_submits count=12872 min=3 p50=77 p99=88 p999=140 max=486 sum=1000000
+METRIC group_frame_bytes count=12872 min=920 p50=22824 p99=26080 p999=41472 max=143888 sum=296411904
+STORAGE kind=Group.Append count=12872 sum_ns=349416051
+STORAGE kind=Group.SyncData count=12872 sum_ns=5071813979
+STORAGE kind=Lookup.Other count=12872 sum_ns=104587032
+STORAGE kind=Open.Other count=7 sum_ns=119325
+STORAGE kind=Open.SyncData count=1 sum_ns=433760
+STORAGE kind=Open.SyncDir count=1 sum_ns=4480
+STORAGE kind=Recovery.Other count=2 sum_ns=2457
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=250890
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=3547
+END records=1000000 segments=1 bytes=296411968
+REOPEN ns=920051050 start_records=1000000 end_records=1000000 start_segments=1 end_segments=1 start_bytes=296411968 end_bytes=296411968 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 148 filtered out; finished in 24.24s
+
+	Command being timed: "/tmp/tmp.Xf7mW68tD3/target-after/release/deps/segment_log_core-3d365a8d7243eacd --exact acceptance::evidence::measured_appends_survive_reopen --nocapture"
+	User time (seconds): 12.24
+	System time (seconds): 15.53
+	Percent of CPU this job got: 114%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:24.23
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 661036
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 189852
+	Voluntary context switches: 2395621
+	Involuntary context switches: 42572
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 1193768
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
