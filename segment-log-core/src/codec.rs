@@ -23,7 +23,9 @@ pub(crate) struct Group<'a> {
     pub entries: Vec<Entry<'a>>,
 }
 // Slicing-by-8: eight table lookups consume eight input bytes per step.
-const TABLES: [[u32; 256]; 8] = {
+// A `static`, not a `const`: an unoptimized build copies a `const` array at every use, which
+// here was the whole 8 KiB table for each lookup.
+static TABLES: [[u32; 256]; 8] = {
     let mut tables = [[0; 256]; 8];
     let mut index = 0;
     while index < 256 {
