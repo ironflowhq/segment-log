@@ -1,5 +1,3 @@
-//! Replays a script on a log over simulated storage and records what the public calls show.
-//! This is the only file of the model test that names the log, and it knows nothing of the model.
 use super::contract::*;
 use crate::acceptance::support::fixtures::{SEG, Sim};
 use crate::storage::{Call, Op, Purpose, sim::Hold};
@@ -15,11 +13,9 @@ use std::{
 
 const ANSWER_DEADLINE: Duration = Duration::from_secs(5);
 
-/// Takes `Options` so that a later milestone can rerun the same scripts under other settings.
 pub(super) fn drive(script: &Script, options: &Options) -> Trace {
-    // Zero linger fixes the members of each group. The margins keep every group far from the queue limit
-    // and the byte cap: 64 bytes for each record are more than its entry overhead in format.md.
-    // `append` panics below if the byte budget is ever short.
+    // Zero linger fixes each group's members. 64 bytes a record exceed its entry overhead in format.md,
+    // so no group reaches the byte cap.
     assert!(options.linger.is_zero());
     assert!(options.queue_capacity >= 64 * GROUP_SUBMITS);
     assert!(options.group_byte_cap >= 64 * (GROUP_BYTES + 64 * GROUP_RECORDS));
@@ -27,7 +23,7 @@ pub(super) fn drive(script: &Script, options: &Options) -> Trace {
         sim: Sim::new(2),
         options,
         streams: script.streams().clone(),
-        read_max: script.records() + 1,
+        read_max: script.max_records() + 1,
         steps: vec![],
         held: None,
         log: None,
@@ -42,14 +38,12 @@ enum Slot {
     Known(Outcome),
     Waiting(Pending),
 }
-/// One step after its flush started: what its callers and the readers saw at that moment.
 struct Group {
     slots: Vec<Slot>,
     view: View,
     flushed: usize,
 }
 impl Group {
-    /// `late` resolves the submits that had no answer while the flush was held.
     fn observed(
         self,
         late: impl FnOnce(Vec<(usize, Pending)>) -> Vec<(usize, Answer)>,
@@ -83,10 +77,8 @@ struct Driver<'a> {
     sim: Sim,
     options: &'a Options,
     streams: BTreeSet<Bytes>,
-    /// One more than the script can write, so that a record too many shows in a read.
     read_max: usize,
     steps: Vec<Observed>,
-    /// The newest step. Its flush has started and is held, and the queue is empty.
     held: Option<(Hold, Group)>,
     log: Option<SegmentLog>,
 }
@@ -113,8 +105,8 @@ impl Driver<'_> {
         self.log.as_ref().expect("every script starts with an open")
     }
 
-    /// The R12 protocol. The flush before is held while this group enters the queue, so the group's members are fixed.
-    /// This group's own flush is held next, so its members are classified and none of its records is durable.
+    /// The flush before is held while this group enters the queue, so its members are fixed. Its own flush
+    /// is held next, so every member is classified and none of its records is durable.
     fn group(&mut self, submits: &[Sub], closer: &Sub) {
         let number = self.steps.len() + usize::from(self.held.is_some());
         let flush = self.sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
@@ -137,7 +129,8 @@ impl Driver<'_> {
                 "step {number}: the group has a new record, but its flush did not start. Answers by submit: {probes:?}"
             );
         }
-        // Write path step 5 comes before the next group's step 2, so every answer of the group before is recorded.
+        // Write path step 5 comes before the next group's step 2, so every answer of the group before is
+        // recorded and one probe each is enough.
         if let Some(group) = before {
             let probe = |(index, pending): (usize, Pending)| {
                 let answer = pending.probe().unwrap_or_else(|| {
@@ -166,7 +159,7 @@ impl Driver<'_> {
         self.held = Some((flush, group));
     }
 
-    /// Lets the held group finish. No later flush marks the moment its answers exist, so this waits for them.
+    /// No later flush marks the moment the held group's answers exist, so this waits for them.
     fn release(&mut self) {
         let Some((hold, group)) = self.held.take() else {
             return;
@@ -271,7 +264,6 @@ fn to_submit(sub: &Sub) -> Submit {
     }
 }
 
-/// The one place where the log's answers become harness values. No script here can cause the other errors.
 fn to_answer(result: Result<Committed, CommitError>) -> Answer {
     match result {
         Ok(committed) => Ok(Done {
