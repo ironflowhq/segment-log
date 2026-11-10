@@ -217,8 +217,8 @@ fn resident_bytes(base: usize, len: usize) -> Result<usize, String> {
         file.read_exact_at(bytes, ((first + chunk) * 8) as u64)
             .map_err(|e| e.to_string())?;
         // Bit 63 is set for a present page, bit 62 for a swapped one.
-        for entry in bytes.chunks_exact(8) {
-            let entry = u64::from_le_bytes(entry.try_into().unwrap());
+        for entry in bytes.as_chunks::<8>().0 {
+            let entry = u64::from_le_bytes(*entry);
             if entry >> 62 & 1 == 1 {
                 return Err("a counted page is swapped".into());
             }
