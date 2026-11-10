@@ -133,7 +133,14 @@ impl Drop for Caller {
     }
 }
 
-fn snapshot(log: &SegmentLog, ledger: &Mutex<Ledger>, from: u64, max: usize) -> Observation {
+/// Returns `None` when a simulated crash overtook the read. The simulated storage cancels a call
+/// that a crash overtakes with `Interrupted`, so that read saw neither boot and observed nothing.
+fn snapshot(
+    log: &SegmentLog,
+    ledger: &Mutex<Ledger>,
+    from: u64,
+    max: usize,
+) -> Option<Observation> {
     let streams: std::collections::BTreeSet<_> = ledger
         .lock()
         .unwrap()
@@ -142,7 +149,12 @@ fn snapshot(log: &SegmentLog, ledger: &Mutex<Ledger>, from: u64, max: usize) -> 
         .flat_map(|r| r.inputs.iter().map(|r| r.stream.clone()))
         .collect();
     let before = log.watermark();
-    let records = log.read(from, max).unwrap();
+    let records = match log.read(from, max) {
+        Err(ReadError::Io(error)) if error.kind() == std::io::ErrorKind::Interrupted => {
+            return None;
+        }
+        result => result.unwrap(),
+    };
     let heads = streams
         .into_iter()
         .map(|s| {
@@ -151,14 +163,14 @@ fn snapshot(log: &SegmentLog, ledger: &Mutex<Ledger>, from: u64, max: usize) -> 
         })
         .collect();
     let after = log.watermark();
-    Observation {
+    Some(Observation {
         before,
         after,
         from,
         max,
         records,
         heads,
-    }
+    })
 }
 
 fn same(a: &Observation, b: &Observation) -> bool {
@@ -176,7 +188,7 @@ pub(super) fn observe(log: &Arc<SegmentLog>, ledger: &Arc<Mutex<Ledger>>, from: 
     let log = log.clone();
     let ledger = ledger.clone();
     thread::spawn(move || {
-        let read = snapshot(&log, &ledger, from, max);
+        let read = snapshot(&log, &ledger, from, max).expect("no crash runs during this read");
         ledger.lock().unwrap().reads.push(read);
     })
     .join()
@@ -185,7 +197,7 @@ pub(super) fn observe(log: &Arc<SegmentLog>, ledger: &Arc<Mutex<Ledger>>, from: 
 
 pub(super) struct Reader {
     stop: mpsc::Sender<()>,
-    worker: Option<thread::JoinHandle<()>>,
+    worker: Option<thread::JoinHandle<usize>>,
 }
 impl Reader {
     pub(super) fn start(log: &Arc<SegmentLog>, ledger: &Arc<Mutex<Ledger>>) -> Self {
@@ -195,23 +207,26 @@ impl Reader {
         let (ready, started) = mpsc::channel();
         let worker = thread::spawn(move || {
             let mut ready = Some(ready);
+            let mut canceled = 0;
             loop {
-                let read = snapshot(&log, &ledger, 0, 100);
-                {
-                    let mut ledger = ledger.lock().unwrap();
-                    if !ledger.reads.last().is_some_and(|last| same(last, &read)) {
-                        assert!(
-                            ledger.reads.len() < 4096,
-                            "bounded workload produced excessive reader states"
-                        );
-                        ledger.reads.push(read);
+                match snapshot(&log, &ledger, 0, 100) {
+                    None => canceled += 1,
+                    Some(read) => {
+                        let mut ledger = ledger.lock().unwrap();
+                        if !ledger.reads.last().is_some_and(|last| same(last, &read)) {
+                            assert!(
+                                ledger.reads.len() < 4096,
+                                "bounded workload produced excessive reader states"
+                            );
+                            ledger.reads.push(read);
+                        }
                     }
                 }
                 if let Some(ready) = ready.take() {
                     let _ = ready.send(());
                 }
                 match commands.try_recv() {
-                    Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return,
+                    Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return canceled,
                     Err(mpsc::TryRecvError::Empty) => thread::yield_now(),
                 }
             }
@@ -222,9 +237,10 @@ impl Reader {
             worker: Some(worker),
         }
     }
-    pub(super) fn finish(mut self) {
+    /// Stops the reader and returns how many of its reads a crash canceled.
+    pub(super) fn finish(mut self) -> usize {
         let _ = self.stop.send(());
-        self.worker.take().unwrap().join().unwrap();
+        self.worker.take().unwrap().join().unwrap()
     }
 }
 impl Drop for Reader {

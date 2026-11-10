@@ -1,5 +1,22 @@
 use super::*;
 
+/// A reader may lose a read only to a crash, and the trace holds every read that a crash canceled.
+fn assert_only_a_crash_canceled_reads(sim: &Sim, canceled: usize) {
+    let overtaken = sim
+        .trace()
+        .1
+        .iter()
+        .filter(|event| {
+            matches!(event, Event::Canceled(call)
+                if call.purpose == Purpose::Lookup && matches!(call.op, Op::Read(..)))
+        })
+        .count();
+    assert!(
+        canceled <= overtaken,
+        "the reader lost {canceled} reads, but a crash canceled {overtaken}"
+    );
+}
+
 pub(super) fn workload(sim: &Sim, shared: &Arc<Mutex<Ledger>>, variant: usize) {
     let seed = shared.lock().unwrap().seed;
     let mut rng = Rng(seed);
@@ -164,7 +181,7 @@ pub(super) fn workload(sim: &Sim, shared: &Arc<Mutex<Ledger>>, variant: usize) {
     }
     deferred.finish();
     queued.finish();
-    reader.finish();
+    assert_only_a_crash_canceled_reads(sim, reader.finish());
     if variant == 0 {
         observe(&log, shared, 1, 100);
     }
@@ -284,7 +301,7 @@ pub(super) fn pressure(sim: &Sim, shared: &Arc<Mutex<Ledger>>) {
     for c in callers {
         c.finish();
     }
-    reader.finish();
+    assert_only_a_crash_canceled_reads(sim, reader.finish());
     observe(&log, shared, 0, 100);
     drop(log);
     let l = shared.lock().unwrap();
