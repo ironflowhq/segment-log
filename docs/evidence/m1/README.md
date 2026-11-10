@@ -17,6 +17,7 @@ The completion record does, and the [PRD](../../prd.md#milestones) records the r
 Issues 17 and 20 tracked the M1 work and are closed. Follow-up work is tracked in
 [issue 46](https://github.com/ironflowhq/segment-log/issues/46) (deployment storage), [issue 47](https://github.com/ironflowhq/segment-log/issues/47) (larger and longer workloads),
 [issue 48](https://github.com/ironflowhq/segment-log/issues/48) (memory peaks) and [issue 49](https://github.com/ironflowhq/segment-log/issues/49) (physical local-NVMe benchmark).
+The [issue 48 record](../issue48/README.md) gives exact phase peaks and the bytes that the engine owns.
 
 | Slice | PR | Observed evidence and limits |
 | --- | --- | --- |

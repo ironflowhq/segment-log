@@ -1,0 +1,14 @@
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded scopeguard v1.2.0
+  Downloaded allocator-api2 v0.4.0
+  Downloaded lock_api v0.4.14
+  Downloaded talc v5.1.1
+  Downloaded libc v0.2.191
+   Compiling libc v0.2.191
+   Compiling scopeguard v1.2.0
+   Compiling allocator-api2 v0.4.0
+   Compiling segment-log-core v0.0.1 (/src/segment-log-core)
+   Compiling lock_api v0.4.14
+   Compiling talc v5.1.1
+    Finished `release` profile [optimized] target(s) in 1.42s
