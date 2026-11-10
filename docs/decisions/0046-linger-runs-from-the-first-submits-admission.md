@@ -1,7 +1,7 @@
 ---
 id: "0046"
 title: "A group's linger runs from the admission of its first submit"
-status: proposed
+status: accepted
 date: 2026-11-10
 deciders: [Altug Sahin]
 supersedes: null
