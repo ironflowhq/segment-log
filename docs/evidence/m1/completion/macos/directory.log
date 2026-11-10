@@ -1,0 +1,27 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running unittests src/lib.rs (.audit/completion-final2/build-macos/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 1 test
+PHASE provision
+PHASE create
+STORAGE Open.SyncData path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0/log/00000000000000000000.seg result=Ok(())
+STORAGE Open.SyncDir path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0/log result=Ok(())
+STORAGE Recovery.SyncAll path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0/log/00000000000000000000.seg result=Ok(())
+STORAGE Recovery.SyncDir path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0/log result=Ok(())
+STORAGE Recovery.SyncDir path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0 result=Ok(())
+PHASE commit-0
+STORAGE Group.SyncData path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0/log/00000000000000000000.seg result=Ok(())
+PHASE commit-1
+STORAGE Group.SyncData path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0/log/00000000000000000000.seg result=Ok(())
+PHASE retry
+PHASE drop
+PHASE recovery
+STORAGE Recovery.SyncAll path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0/log/00000000000000000000.seg result=Ok(())
+STORAGE Recovery.SyncDir path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0/log result=Ok(())
+STORAGE Recovery.SyncDir path=/Volumes/p7/t3/worktrees/segment-log/t3-856d0a84-3963e97d2d323507/.audit/completion-final2/data-macos/evidence-91959-0 result=Ok(())
+PHASE recovered-drop
+PHASE done
+test acceptance::evidence::real_storage_sync_phases ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 152 filtered out; finished in 0.02s
+

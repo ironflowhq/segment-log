@@ -1,0 +1,15 @@
+Tue Nov 10 05:42:42 UTC 2026
+seglog-m1gate 0.00%
+ironflow-test-seaweedfs 0.43%
+ %CPU COMM
+ 64.9 mds_stores
+ 11.2 mdworker_shared
+  4.7 com.apple.Virtualization.VirtualMachine
+  2.8 nats.test
+  1.4 Grok Bot Helper
+  0.9 com.apple.AppleUserHIDDrivers
+  0.9 claude
+  0.8 T3 Code (Nightly)
+  0.8 claude
+  0.8 rex
+  0.5 claude

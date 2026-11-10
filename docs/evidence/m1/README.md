@@ -9,7 +9,10 @@ byte hashes remain recorded for those files.
 
 The [acceptance workflow](../../acceptance-tests.md) and
 [completion gate](../../architecture/testing.md#m1-completion-gate) own the
-requirements. This archive does not establish M1 completion.
+requirements.
+
+The [completion record](completion.md) holds the gate evidence for the final M1
+tree. [Slice 10](slice10.md) is the earlier record, from before the issue 20 changes. This archive does not establish M1 completion.
 Outstanding work is tracked in [issue #17](https://github.com/ironflowhq/segment-log/issues/17).
 
 | Slice | PR | Observed evidence and limits |

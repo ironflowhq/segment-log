@@ -1,0 +1,24 @@
+provision: fdatasync=0 fsync=5 success
+8439  05:39:42.693547 fsync(3</mnt/segment-log/data/evidence-8438-0>) = 0 <0.000694>
+8439  05:39:42.694419 fsync(3</mnt/segment-log/data>) = 0 <0.000262>
+8439  05:39:42.694840 fsync(3</mnt/segment-log>) = 0 <0.000024>
+8439  05:39:42.695002 fsync(3</mnt>)    = 0 <0.000030>
+8439  05:39:42.695162 fsync(3</>)       = 0 <0.000019>
+create: fdatasync=1 fsync=4 success
+8439  05:39:42.696071 fdatasync(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000642>
+8439  05:39:42.697448 fsync(6</mnt/segment-log/data/evidence-8438-0/log>) = 0 <0.000224>
+8439  05:39:42.698604 fsync(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000377>
+8439  05:39:42.699718 fsync(6</mnt/segment-log/data/evidence-8438-0/log>) = 0 <0.000234>
+8439  05:39:42.700721 fsync(6</mnt/segment-log/data/evidence-8438-0>) = 0 <0.000380>
+commit-0: fdatasync=1 fsync=0 success
+8441  05:39:42.703652 fdatasync(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000389>
+commit-1: fdatasync=1 fsync=0 success
+8441  05:39:42.706097 fdatasync(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000349>
+retry: fdatasync=0 fsync=0 success
+drop: fdatasync=0 fsync=0 success
+recovery: fdatasync=0 fsync=3 success
+8439  05:39:42.709135 fsync(6</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000398>
+8439  05:39:42.710434 fsync(7</mnt/segment-log/data/evidence-8438-0/log>) = 0 <0.000301>
+8439  05:39:42.711682 fsync(7</mnt/segment-log/data/evidence-8438-0>) = 0 <0.000350>
+recovered-drop: fdatasync=0 fsync=0 success
+done: fdatasync=0 fsync=0 success

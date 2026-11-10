@@ -1,0 +1,27 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running unittests src/lib.rs (/Users/runner/work/_temp/m1-build/debug/deps/segment_log_core-e22f792fa730460e)
+
+running 1 test
+PHASE provision
+PHASE create
+STORAGE Open.SyncData path=/Users/runner/work/_temp/m1-data/evidence-5493-0/log/00000000000000000000.seg result=Ok(())
+STORAGE Open.SyncDir path=/Users/runner/work/_temp/m1-data/evidence-5493-0/log result=Ok(())
+STORAGE Recovery.SyncAll path=/Users/runner/work/_temp/m1-data/evidence-5493-0/log/00000000000000000000.seg result=Ok(())
+STORAGE Recovery.SyncDir path=/Users/runner/work/_temp/m1-data/evidence-5493-0/log result=Ok(())
+STORAGE Recovery.SyncDir path=/Users/runner/work/_temp/m1-data/evidence-5493-0 result=Ok(())
+PHASE commit-0
+STORAGE Group.SyncData path=/Users/runner/work/_temp/m1-data/evidence-5493-0/log/00000000000000000000.seg result=Ok(())
+PHASE commit-1
+STORAGE Group.SyncData path=/Users/runner/work/_temp/m1-data/evidence-5493-0/log/00000000000000000000.seg result=Ok(())
+PHASE retry
+PHASE drop
+PHASE recovery
+STORAGE Recovery.SyncAll path=/Users/runner/work/_temp/m1-data/evidence-5493-0/log/00000000000000000000.seg result=Ok(())
+STORAGE Recovery.SyncDir path=/Users/runner/work/_temp/m1-data/evidence-5493-0/log result=Ok(())
+STORAGE Recovery.SyncDir path=/Users/runner/work/_temp/m1-data/evidence-5493-0 result=Ok(())
+PHASE recovered-drop
+PHASE done
+test acceptance::evidence::real_storage_sync_phases ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 152 filtered out; finished in 0.04s
+
