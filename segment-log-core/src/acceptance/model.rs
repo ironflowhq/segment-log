@@ -1,12 +1,5 @@
-//! The model test of revisions and idempotency keys.
-//!
-//! A case is a list of groups. `cases::expect` resolves it with the model alone into a concrete
-//! script and the trace that the contract requires. `drive::drive` replays a script on a log over
-//! simulated storage and returns the trace that the public calls showed. The model and the log
-//! never run in turns, so a wrong model cannot steer the log.
-//!
-//! Every group ends with a closer, a new record on a stream of its own. A group with a new record
-//! must flush, so the driver waits for each group's flush with the blocking hold and never polls.
+//! A case resolves with the model alone into a script and the trace the contract requires. The log
+//! then runs the script. The model and the log never run in turns, so a wrong model cannot steer the log.
 mod cases;
 mod contract;
 mod drive;
@@ -41,14 +34,14 @@ fn config(seed: u64, cases: u32) -> Config {
         failure_persistence: Some(Box::new(FileFailurePersistence::SourceParallel(
             "proptest-regressions",
         ))),
-        // A group that never flushes costs a 5 s watchdog for each shrink step.
+        // A group that never flushes costs the 5 s hold watchdog for each shrink step.
         max_shrink_time: 60_000,
         max_shrink_iters: 4096,
         ..Config::default()
     }
 }
 
-/// The seed and the count replay a run. Seeds in `proptest-regressions/acceptance/model.txt` run first.
+/// Seeds in `proptest-regressions/acceptance/model.txt` run first.
 fn check(case_id: &str, default_cases: u32, property: fn(&Case) -> Result<(), TestCaseError>) {
     let seed = setting("SEGMENT_LOG_MODEL_SEED", SEED);
     let cases = u32::try_from(setting("SEGMENT_LOG_MODEL_CASES", default_cases.into()))
@@ -68,7 +61,6 @@ fn check(case_id: &str, default_cases: u32, property: fn(&Case) -> Result<(), Te
     }
 }
 
-/// Compares two traces. A failure names both by `what` and shows their first difference before the traces.
 fn equal(what: [&str; 2], a: &Trace, b: &Trace) -> Result<(), String> {
     let [first, second] = what;
     a.difference(b).map_or(Ok(()), |difference| {
@@ -85,7 +77,7 @@ fn log_agrees(case: &Case) -> Result<(), TestCaseError> {
 }
 
 fn rejections_erase(case: &Case) -> Result<(), TestCaseError> {
-    // The model only picks the inputs here. The log's own answers decide what is erased and what must stay equal.
+    // The model only picks the inputs. The log's own answers decide what is erased and what must stay equal.
     let script = expect(case).script;
     let full = drive(&script, &options());
     let erased = case.erase.choose(&full.rejected());
@@ -377,9 +369,6 @@ fn the_model_follows_the_contract_examples() {
     );
 }
 
-/// Given the model and the generators
-/// When their sources are read
-/// Then neither names an item of the crate under test
 #[test]
 fn the_model_imports_nothing_from_the_crate() {
     for source in [

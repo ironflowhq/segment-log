@@ -53,13 +53,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       SEGMENT_LOG_MODEL_CASES: '20000'
-      # Each run checks other cases than the run before it.
       SEGMENT_LOG_MODEL_SEED: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install
       - run: cargo test -p segment-log-core --lib acceptance::model::the_log_agrees_with_the_model_long_run -- --ignored --exact --nocapture
-      # A model failure must not hide the erasure result.
       - if: ${{ !cancelled() }}
         run: cargo test -p segment-log-core --lib acceptance::model::erasing_rejected_submits_changes_nothing_long_run -- --ignored --exact --nocapture
       # proptest adds the seed of a failed case to this directory.

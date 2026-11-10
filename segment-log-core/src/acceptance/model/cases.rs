@@ -1,5 +1,3 @@
-//! Generated cases. A case is plain data that names no model state, so each field keeps its meaning while it shrinks.
-//! `expect` resolves a case against the model alone. This file names nothing of the log under test.
 use super::contract::*;
 use proptest::{collection::vec, prelude::*};
 use std::collections::BTreeMap;
@@ -13,7 +11,6 @@ pub(super) struct Case {
     pub steps: Vec<StepSpec>,
     pub erase: Erase,
 }
-/// Which rejected submits the erasure property removes.
 #[derive(Clone, Debug)]
 pub(super) struct Erase {
     mask: Vec<bool>,
@@ -26,15 +23,11 @@ pub(super) enum StepSpec {
 }
 #[derive(Clone, Debug)]
 pub(super) enum SubmitSpec {
-    /// Records chosen one by one. No record gives the empty submit.
     Mixed(Vec<RecordSpec>),
-    /// Every record repeats an accepted keyed record, so the submit is a fully matching retry
-    /// that can take a subset, reorder and combine originals. A pick of a record already taken adds nothing.
     Retry {
         picks: Vec<u8>,
         expected: ExpectSpec,
     },
-    /// An earlier submit again, unchanged, as a caller replays it after an unknown outcome.
     Replay(u8),
 }
 #[derive(Clone, Debug)]
@@ -45,7 +38,6 @@ pub(super) enum RecordSpec {
         payload: u8,
         expected: ExpectSpec,
     },
-    /// Reuses the key of an offered record, whether the log accepted it or not.
     Echo {
         pick: u8,
         twist: Twist,
@@ -60,20 +52,16 @@ pub(super) enum Twist {
 }
 #[derive(Clone, Copy, Debug)]
 pub(super) enum ExpectSpec {
-    /// Passes the revision check when the records before it in the submit pass theirs.
     Right,
     Empty,
     At(u8),
-    /// One revision behind `Right`.
     Stale,
-    /// What `stream_head` reports. It is wrong when the stream has a pending record,
-    /// or an earlier record of the same submit.
+    /// What `stream_head` reports: wrong exactly when the stream has a pending record.
     DurableHead,
 }
 
 impl Erase {
-    /// A subset of `rejected` with at least one member when there is one.
-    /// The rejected submits that stay show whether an erased one had left something behind.
+    /// A subset, so a rejection that wrongly kept a key or revision still fails a kept submit after it.
     pub(super) fn choose(&self, rejected: &[(usize, usize)]) -> Vec<(usize, usize)> {
         let masked =
             |(i, at): (usize, &(usize, usize))| self.mask[i % self.mask.len()].then_some(*at);
@@ -91,7 +79,6 @@ pub(super) struct Expected {
     pub tally: BTreeMap<Shape, u32>,
 }
 
-/// Resolves the case into concrete submits and asks the model what a log must show for them.
 pub(super) fn expect(case: &Case) -> Expected {
     let mut model = Model::default();
     let mut script = Script::new();
@@ -99,7 +86,6 @@ pub(super) fn expect(case: &Case) -> Expected {
     let mut memory = Memory::default();
     let mut tally = BTreeMap::new();
     for step in &case.steps {
-        // This model picks the inputs, so it takes each step in the order of `predict`.
         model.flush();
         let closer = match step {
             StepSpec::Reopen => script.open(),
@@ -125,15 +111,12 @@ pub(super) fn expect(case: &Case) -> Expected {
     }
 }
 
-/// What a caller remembers of its own submits. The log may have rejected any of them.
 #[derive(Default)]
 struct Memory {
-    /// The first offer of each key.
     offered: Vec<NewRec>,
     sent: Vec<Sub>,
     fresh_keys: u32,
 }
-/// A record before the model resolves its expectation.
 struct Draft {
     stream: Bytes,
     key: Option<Bytes>,
@@ -141,7 +124,6 @@ struct Draft {
     expected: ExpectSpec,
 }
 
-/// Counts back from the newest item, so most picks land in the current group, where the records are pending.
 fn recent<T>(items: &[T], pick: u8) -> Option<&T> {
     let back = usize::from(pick) % items.len().max(1);
     items.iter().rev().nth(back)
@@ -156,7 +138,6 @@ fn other(pool: &[&str], now: &Bytes) -> Bytes {
 
 impl Memory {
     fn remember(&mut self, sub: &Sub, shape: Shape) {
-        // A replay of a submit that `append` refused is refused again, and it would teach nothing.
         if shape == Shape::Refused {
             return;
         }
@@ -172,7 +153,6 @@ impl Memory {
         self.fresh_keys += 1;
         bytes(&format!("k{}", self.fresh_keys))
     }
-    /// Stands in where a spec picks an earlier record and there is none yet.
     fn fresh(&mut self, pick: u8, expected: ExpectSpec) -> Draft {
         Draft {
             stream: name(&STREAMS, pick.into()),
@@ -305,7 +285,6 @@ fn record() -> impl Strategy<Value = RecordSpec> {
         1 => echo.prop_map(|(pick, twist, expected)| RecordSpec::Echo { pick, twist, expected }),
     ]
 }
-/// Mostly a recent item. Now and then any item, so that old records in earlier frames get picked too.
 fn pick() -> impl Strategy<Value = u8> {
     prop_oneof![
         4 => 0..10u8,

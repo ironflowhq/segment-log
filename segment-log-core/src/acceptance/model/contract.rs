@@ -1,5 +1,3 @@
-//! The contract of [api.md](../../../../docs/architecture/api.md) as plain data and one model.
-//! This file names nothing of the log under test, and a test checks that.
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
@@ -16,8 +14,7 @@ pub(super) fn bytes(text: &str) -> Bytes {
     Bytes(text.as_bytes().to_vec())
 }
 
-// The public types derive only `Debug`. The harness needs `Clone` and `PartialEq`,
-// so it owns these mirrors and converts at the driver.
+// Mirrors of the public types: this file must not import the crate under test.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Expect {
     Empty,
@@ -63,14 +60,12 @@ pub(super) struct Done {
 }
 pub(super) type Answer = Result<Done, Reject>;
 
-/// What the caller of one submit sees, and when. The "when" is the part of R12 that a caller can observe.
+/// The timing is the part of R12 a caller can observe: answered while the group's flush is held,
+/// or only after that flush.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum Outcome {
-    /// `append` returned `Invalid`. Nothing was queued.
     Refused,
-    /// The answer was there while the flush of the submit's own group was held.
     AtClassification(Answer),
-    /// No answer while that flush was held, and this answer after it.
     AfterFlush(Answer),
 }
 impl Outcome {
@@ -82,7 +77,6 @@ impl Outcome {
     }
 }
 
-/// The durable view through `watermark`, `read` and `stream_head`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct View {
     pub watermark: u64,
@@ -90,20 +84,16 @@ pub(super) struct View {
     pub heads: BTreeMap<Bytes, Option<Pos>>,
 }
 
-/// No generated or hand-built submit may use this stream.
 pub(super) const CLOSER: &str = "closer";
-// The driver checks the options against these, so `Full`, `TooLarge` and a group split at the byte cap stay impossible.
 pub(super) const GROUP_SUBMITS: usize = 16;
 pub(super) const GROUP_RECORDS: usize = 64;
 pub(super) const GROUP_BYTES: usize = 1024;
 
-/// One group. The closer is an unkeyed record on its own stream with the right expected revision.
-/// It always appends, so the group always flushes, and the driver can wait for that flush without a poll.
+/// Every group ends with a closer, a new record on its own stream. It always appends, so the group
+/// always flushes, and the driver waits for that flush with the blocking hold instead of a poll.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum Step {
-    /// Open or reopen the log, then send the closer alone to the idle writer.
     Open { closer: Sub },
-    /// Sent while the flush of the step before is held, so zero linger gathers all of it into one group.
     Group { submits: Vec<Sub>, closer: Sub },
 }
 impl Step {
@@ -120,12 +110,10 @@ impl Step {
     }
 }
 
-/// Starts with `Open`, and closer `n` expects the revision that closer `n - 1` got.
-/// The fields are private, so no caller can build a group that might not flush.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct Script {
     steps: Vec<Step>,
-    /// Every stream that a submit named. `without` keeps them, so both runs of an erasure read the same heads.
+    /// `without` keeps every stream, so both runs of an erasure read the same heads.
     streams: BTreeSet<Bytes>,
 }
 impl Script {
@@ -171,15 +159,13 @@ impl Script {
     pub(super) fn streams(&self) -> &BTreeSet<Bytes> {
         &self.streams
     }
-    /// No log that runs this script holds more records.
-    pub(super) fn records(&self) -> usize {
+    pub(super) fn max_records(&self) -> usize {
         let records = |sub: &Sub| sub.0.len();
         let step = |step: &Step| {
             step.submits().iter().map(records).sum::<usize>() + records(step.closer())
         };
         self.steps.iter().map(step).sum()
     }
-    /// The same script without the submits at `erased`, as (step, submit). Closers stay.
     pub(super) fn without(&self, erased: &[(usize, usize)]) -> Self {
         let step = |(n, step): (usize, &Step)| match step {
             Step::Open { .. } => step.clone(),
@@ -222,12 +208,10 @@ impl fmt::Display for Script {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct Observed {
-    /// One for each submit of the step, in admission order.
     pub outcomes: Vec<Outcome>,
     pub closer: Outcome,
-    /// Read while the step's flush is held, so it shows nothing of this group.
     pub held: View,
-    /// Group flushes that finished before this step's. It equals the step number while each step is one group with one flush.
+    /// Equals the step number while each step is one group with one flush.
     pub flushed: usize,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -237,7 +221,6 @@ pub(super) struct Trace {
     pub flushed: usize,
 }
 impl Trace {
-    /// Where the rejected submits are, as (step, submit).
     pub(super) fn rejected(&self) -> Vec<(usize, usize)> {
         let mut rejected = vec![];
         for (n, step) in self.steps.iter().enumerate() {
@@ -259,7 +242,6 @@ impl Trace {
             ..self.clone()
         }
     }
-    /// Every observation with its place, in the order a reader walks them.
     fn lines(&self) -> Vec<(String, String)> {
         fn view(lines: &mut Vec<(String, String)>, place: &str, view: &View, flushed: usize) {
             lines.push((format!("{place} finished flushes"), flushed.to_string()));
@@ -283,7 +265,6 @@ impl Trace {
         view(&mut lines, "end", &self.end, self.flushed);
         lines
     }
-    /// The first place where two traces differ, as this trace's line and then the other's.
     pub(super) fn difference(&self, other: &Self) -> Option<String> {
         if self == other {
             return None;
@@ -306,40 +287,30 @@ impl fmt::Display for Trace {
     }
 }
 
-/// The plain model. `records` holds every accepted record in offset order, so its length is the next offset.
-/// `records[..durable]` is the durable view, and the rest is the current group.
-/// Keys and stream heads are scans of this one list, so no second structure can fall out of step with it.
 #[derive(Default)]
 pub(super) struct Model {
     records: Vec<Rec>,
     durable: usize,
 }
 
-/// New records with their positions, not yet in the model. Only `classify` builds one,
-/// so a rejection cannot add a record: it has nothing to hand to `apply`.
+/// Only `classify` builds one, so a rejection has nothing to hand to `apply`.
 struct Staged(Vec<Rec>);
 
 enum Verdict {
-    /// `append` returns `Invalid`.
     Refused,
     Rejected(Reject),
-    /// A fully deduplicated retry. It `waits` when a match is not durable yet.
-    Retry {
-        positions: Vec<Pos>,
-        waits: bool,
-    },
+    Retry { positions: Vec<Pos>, waits: bool },
     Append(Staged),
 }
 
-/// Which records a fully deduplicated retry matched.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum Matches {
     Pending,
     Mixed,
     Durable,
 }
-/// A label for generator coverage. It is never compared with the log.
-/// `pending` is true when the verdict read a record of an earlier submit in the same group, which is the R12 case.
+/// Generator coverage only, never compared with the log. `pending` means the verdict read a record
+/// of an earlier submit in the same group, which is the R12 case.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum Shape {
     Refused,
@@ -375,7 +346,7 @@ pub(super) fn head<'a>(records: &'a [Rec], stream: &Bytes) -> Option<&'a Rec> {
 }
 
 impl Model {
-    /// The checks of api.md "Order of checks" and of write path step 3, in that order.
+    /// api.md "Order of checks" and write path step 3, in that order.
     fn classify(&self, sub: &Sub) -> Classified {
         let classified = |verdict, shape| Classified { verdict, shape };
         let pending = |r: &Rec| r.pos.offset >= self.durable as u64;
@@ -458,7 +429,6 @@ impl Model {
             deduplicated: false,
         }
     }
-    /// One submit, classified against the writer view at its admission.
     pub(super) fn submit(&mut self, sub: &Sub) -> (Outcome, Shape) {
         let Classified { verdict, shape } = self.classify(sub);
         let outcome = match verdict {
@@ -479,11 +449,9 @@ impl Model {
         };
         (outcome, shape)
     }
-    /// The group's flush succeeded: every accepted record is durable and published.
     pub(super) fn flush(&mut self) {
         self.durable = self.records.len();
     }
-    /// Every accepted record, the current group's included. This is the writer view.
     pub(super) fn written(&self) -> &[Rec] {
         &self.records
     }
@@ -500,7 +468,6 @@ impl Model {
     }
 }
 
-/// What the contract says a log shows when it runs `script`.
 pub(super) fn predict(script: &Script) -> Trace {
     let streams = script.streams();
     let mut model = Model::default();
