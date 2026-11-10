@@ -1,0 +1,21 @@
+pair=/private/tmp/claude-501/-Volumes-p7-t3-worktrees-segment-log-t3-856d0a84-3963e97d2d323507/2228b033-2868-40eb-afbc-594e70da6bcd/scratchpad/drill-copy-macos-latest/2589-10000-Kill-0
+process=/private/tmp/claude-501/-Volumes-p7-t3-worktrees-segment-log-t3-856d0a84-3963e97d2d323507/2228b033-2868-40eb-afbc-594e70da6bcd/scratchpad/drill-copy-macos-latest/process/segment-log-slice8-2621-SIGKILL-10000
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running unittests src/lib.rs (target/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 1 test
+test acceptance::seeded::saved_trace_replays_the_oracle ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 148 filtered out; finished in 0.08s
+
+false permanent size refusal: Request { inputs: [Input { stream: [115, 50], key: Some([107, 50, 58, 48]), payload: [2, 3, 0, 1, 6, 7, 4], expected: None, spare: 0 }, Input { stream: [115, 50], key: Some([107, 50, 58, 49]), payload: [3, 2, 1, 0, 7, 6, 5], expected: Some(0), spare: 0 }], original: true, answer: Refused("TooLarge"), watermark: 0 }
+assertion failed: log.watermark() >= ledger.watermark
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running tests/process_crash.rs (target/debug/deps/process_crash-333bc969f23db883)
+
+running 1 test
+test killed_writers_preserve_the_recorded_contract ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.03s
+
+drill replay: both plain replays passed and both planted records were rejected

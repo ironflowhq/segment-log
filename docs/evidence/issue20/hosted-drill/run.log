@@ -1,0 +1,988 @@
+M1 long run (macos-latest)	Set up job	﻿2026-11-10T04:17:39.7302440Z Current runner version: '2.338.2'
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7344870Z ##[group]Runner Image Provisioner
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7346610Z Hosted Compute Agent
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7347680Z Version: 20261028.624
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7348850Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7350170Z Build Date: 2026-10-28T21:51:42Z
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7351420Z Worker ID: {5bbb3c12-95a5-49c6-9fdc-fee4d4a83ec8}
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7352960Z Region: westus
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7353920Z Cloud: MacCloud
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7354880Z ##[endgroup]
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7360030Z ##[group]Operating System
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7360820Z macOS
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7361180Z 26.7.2
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7361500Z 25G332
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7361830Z ##[endgroup]
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7362180Z ##[group]Runner Image
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7362570Z Image: macos-26-arm64
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7363200Z Version: 20261102.0473.1
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7364430Z Included Software: https://github.com/actions/runner-images/blob/macos-26-arm64/20261102.0473/images/macos/macos-26-arm64-Readme.md
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7366090Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-26-arm64%2F20261102.0473
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7366850Z ##[endgroup]
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7367690Z ##[group]GITHUB_TOKEN Permissions
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7372470Z Contents: read
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7373620Z Metadata: read
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7374670Z ##[endgroup]
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7378790Z Secret source: Actions
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7380560Z Cache mode: write
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.7381870Z Prepare workflow directory
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.8219720Z Prepare all required actions
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.8285070Z Getting action download info
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:39.9853620Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:41.4528740Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+M1 long run (macos-latest)	Set up job	2026-11-10T04:17:42.2326890Z Complete job name: M1 long run (macos-latest)
+M1 long run (macos-latest)	Run actions/checkout@v7	﻿2026-11-10T04:17:42.4911490Z ##[group]Run actions/checkout@v7
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4917430Z with:
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4919070Z   repository: ironflowhq/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4936690Z   token: ***
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4938490Z   ssh-strict: true
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4939900Z   ssh-user: git
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4941390Z   persist-credentials: true
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4942940Z   clean: true
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4944390Z   sparse-checkout-cone-mode: true
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4946030Z   fetch-depth: 1
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4947600Z   fetch-tags: false
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4949310Z   show-progress: true
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4949980Z   lfs: false
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4950600Z   submodules: false
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4954640Z   set-safe-directory: true
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4956620Z   allow-unsafe-pr-checkout: false
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4960690Z env:
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4962060Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4963790Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4966390Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /Users/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4969450Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4971390Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4973110Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4974740Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4976300Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9070040Z Syncing repository: ironflowhq/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9075340Z ##[group]Getting Git version info
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9076030Z Working directory is '/Users/runner/work/segment-log/segment-log'
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9081370Z [command]/opt/homebrew/bin/git version
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9473850Z git version 2.56.0
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9487230Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9498060Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/a1e90538-de67-41e4-98b2-3f1338491e2c/.gitconfig'
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9507720Z Temporarily overriding HOME='/Users/runner/work/_temp/a1e90538-de67-41e4-98b2-3f1338491e2c' before making global git config changes
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9516220Z Adding repository directory to the temporary git global config as a safe directory
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9619810Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/segment-log/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9726530Z Deleting the contents of '/Users/runner/work/segment-log/segment-log'
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9741460Z ##[group]Determining repository object format
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9760820Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9762870Z ##[group]Initializing the repository
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9765770Z [command]/opt/homebrew/bin/git init /Users/runner/work/segment-log/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1087910Z hint: Using 'master' as the name for the initial branch. This default branch name
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1090070Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1092190Z hint: to use in all of your new repositories, which will suppress this warning,
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1093480Z hint: call:
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1094450Z hint:
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1095470Z hint: 	git config --global init.defaultBranch <name>
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1096630Z hint:
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1097510Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1099230Z hint: 'development'. The just-created branch can be renamed via this command:
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1100300Z hint:
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1101350Z hint: 	git branch -m <name>
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1101940Z hint:
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1103670Z hint: Disable this message with "git config set advice.defaultBranchName false"
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1212190Z Initialized empty Git repository in /Users/runner/work/segment-log/segment-log/.git/
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1227160Z [command]/opt/homebrew/bin/git remote add origin https://github.com/ironflowhq/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1420400Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1422240Z ##[group]Disabling automatic garbage collection
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1425760Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1561130Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1562340Z ##[group]Setting up auth
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1563600Z Removing SSH command configuration
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1566040Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1701730Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.3780410Z Removing HTTP extra header
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.3782880Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.3883500Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.6681730Z Removing includeIf entries pointing to credentials config files
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.6682400Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.6989640Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8315810Z [command]/opt/homebrew/bin/git config --file /Users/runner/work/_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8421400Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/segment-log/segment-log/.git.path /Users/runner/work/_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8491700Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/segment-log/segment-log/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8567580Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8605050Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8612630Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8613170Z ##[group]Fetching the repository
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8615080Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7d8c483b3c27bdc88e621e397aa460aa39114bd2:refs/remotes/origin/t3/m1-failed-artifact-drill
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0384720Z From https://github.com/ironflowhq/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0406350Z  * [new ref]         7d8c483b3c27bdc88e621e397aa460aa39114bd2 -> origin/t3/m1-failed-artifact-drill
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0620110Z [command]/opt/homebrew/bin/git branch --list --remote origin/t3/m1-failed-artifact-drill
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0644040Z   origin/t3/m1-failed-artifact-drill
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0647980Z [command]/opt/homebrew/bin/git rev-parse refs/remotes/origin/t3/m1-failed-artifact-drill
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0648530Z 7d8c483b3c27bdc88e621e397aa460aa39114bd2
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0649540Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0649960Z ##[group]Determining the checkout info
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0650410Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0650690Z [command]/opt/homebrew/bin/git sparse-checkout disable
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.1164350Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.1236890Z ##[group]Checking out the ref
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.1240420Z [command]/opt/homebrew/bin/git checkout --progress --force -B t3/m1-failed-artifact-drill refs/remotes/origin/t3/m1-failed-artifact-drill
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.6704120Z Switched to a new branch 't3/m1-failed-artifact-drill'
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.6711230Z branch 't3/m1-failed-artifact-drill' set up to track 'origin/t3/m1-failed-artifact-drill'.
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.6725080Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.6824130Z [command]/opt/homebrew/bin/git log -1 --format=%H
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.6921560Z 7d8c483b3c27bdc88e621e397aa460aa39114bd2
+M1 long run (macos-latest)	Run rustup toolchain install	﻿2026-11-10T04:17:48.9716530Z ##[group]Run rustup toolchain install
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9717200Z ^[[36;1mrustup toolchain install^[[0m
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9906110Z shell: /bin/bash -e {0}
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9906450Z env:
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9907100Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9907860Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9910190Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /Users/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9915330Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9916070Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9916360Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9919100Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:48.9919760Z ##[endgroup]
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:49.3848000Z info: syncing channel updates for 1.99.1-aarch64-apple-darwin
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:49.5377450Z info: latest update on 2026-10-15 for version 1.99.1 (58cf8f9c3 2026-10-13)
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:49.5388670Z info: downloading 5 components
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:57.6174200Z info: the active toolchain `1.99.1-aarch64-apple-darwin` has been installed
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:57.6176930Z info: it's active because: overridden by '/Users/runner/work/segment-log/segment-log/rust-toolchain.toml'
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:57.6177470Z info: self-update is disabled for this build of rustup
+M1 long run (macos-latest)	Run rustup toolchain install	2026-11-10T04:17:57.6178010Z info: any updates to rustup will need to be fetched with your system package manager
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	﻿2026-11-10T04:17:57.6603860Z ##[group]Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6605310Z ^[[36;1mcargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture^[[0m
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6685600Z shell: /bin/bash -e {0}
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6685820Z env:
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6686050Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6686320Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6686800Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /Users/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6687410Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6687820Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6688090Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6688440Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:57.6688670Z ##[endgroup]
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:58.4992970Z    Compiling segment-log-core v0.0.1 (/Users/runner/work/segment-log/segment-log/segment-log-core)
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.5896450Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 11.65s
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.5903030Z      Running unittests src/lib.rs (target/debug/deps/segment_log_core-e22f792fa730460e)
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.5948810Z 
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.5949260Z running 1 test
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6313850Z 
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6326010Z thread 'acceptance::seeded::threaded_seeded_traces_long_run' (11743) panicked at segment-log-core/src/acceptance/support/oracle.rs:390:17:
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6327720Z false permanent size refusal: Request { inputs: [Input { stream: [115, 50], key: Some([107, 50, 58, 48]), payload: [2, 3, 0, 1, 6, 7, 4], expected: None, spare: 0 }, Input { stream: [115, 50], key: Some([107, 50, 58, 49]), payload: [3, 2, 1, 0, 7, 6, 5], expected: Some(0), spare: 0 }], original: true, answer: Refused("TooLarge"), watermark: 0 }
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6329510Z note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6331160Z SIM-MODEL, SIM-CONFORMANCE initial seed 10000 crash Some(Crash(Kill, 10000)) trace /var/folders/h5/t85nd63d71x27_8gl5gw3l_w0000gn/T/segment-log-failure-2589-0.trace
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6333630Z cases=ORACLE-1..5,7..12 seed=10000 mode=Kill variant=0 artifacts=/Users/runner/work/segment-log/segment-log/.audit/trace-failures/2589-10000-Kill-0
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6336200Z SIM-MODEL, SIM-CONFORMANCE initial seed 10000 crash Some(Crash(Kill, 10000)) trace /var/folders/h5/t85nd63d71x27_8gl5gw3l_w0000gn/T/segment-log-failure-2589-1.trace
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6337390Z test acceptance::seeded::threaded_seeded_traces_long_run ... FAILED
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6337680Z 
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6337860Z failures:
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6338020Z 
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6338180Z failures:
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6338600Z     acceptance::seeded::threaded_seeded_traces_long_run
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6338870Z 
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6339170Z test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 148 filtered out; finished in 0.04s
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6339620Z 
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6345690Z error: test failed, to rerun pass `-p segment-log-core --lib`
+M1 long run (macos-latest)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:18:09.6410430Z ##[error]Process completed with exit code 101.
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	﻿2026-11-10T04:18:09.6619730Z ##[group]Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6620450Z ^[[36;1mmkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"^[[0m
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6621360Z ^[[36;1mTMPDIR="$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process" cargo test -p segment-log-core --test process_crash killed_writers_preserve_the_recorded_contract -- --nocapture^[[0m
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6676280Z shell: /bin/bash -e {0}
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6676610Z env:
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6676950Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6677340Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6677810Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /Users/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6678390Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6678700Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6679220Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6679520Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.6679840Z ##[endgroup]
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:09.8098940Z    Compiling segment-log-core v0.0.1 (/Users/runner/work/segment-log/segment-log/segment-log-core)
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.7446410Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 1.94s
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.7448650Z      Running tests/process_crash.rs (target/debug/deps/process_crash-a23be9fc52e81eec)
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.7493220Z 
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.7549570Z seed=10000 mode=SIGKILL transcript=/Users/runner/work/segment-log/segment-log/.audit/trace-failures/process/segment-log-slice8-2621-SIGKILL-10000/protocol.txt
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.7550600Z running 1 test
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8196580Z 
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8198020Z thread 'killed_writers_preserve_the_recorded_contract' (11923) panicked at segment-log-core/tests/process_crash.rs:645:5:
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8199550Z assertion failed: log.watermark() >= ledger.watermark
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8200560Z note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8202390Z test killed_writers_preserve_the_recorded_contract ... FAILED
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8203380Z 
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8203690Z failures:
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8204080Z 
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8204280Z failures:
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8205050Z     killed_writers_preserve_the_recorded_contract
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8205870Z 
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8206570Z test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.07s
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8207170Z 
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8207730Z error: test failed, to rerun pass `-p segment-log-core --test process_crash`
+M1 long run (macos-latest)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:18:11.8220620Z ##[error]Process completed with exit code 101.
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	﻿2026-11-10T04:18:11.8402870Z ##[group]Run actions/upload-artifact@v4
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8403240Z with:
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8403550Z   name: trace-failures-macos-latest
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8403840Z   path: .audit/trace-failures
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8404040Z   include-hidden-files: true
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8404210Z   if-no-files-found: ignore
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8404530Z   compression-level: 6
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8404770Z   overwrite: false
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8405090Z env:
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8405350Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8405690Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8406170Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /Users/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8406610Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8406960Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8407230Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8407530Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:11.8407780Z ##[endgroup]
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.0284170Z (node:2623) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.0285090Z (Use `node --trace-deprecation ...` to show where the warning was created)
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.0337240Z With the provided path, there will be 5 files uploaded
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.0340290Z Artifact name is valid!
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.0340790Z Root directory input is valid!
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.2461880Z Beginning upload of artifact content to blob storage
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.2755240Z (node:2623) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.3099100Z Uploaded bytes 10648
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.3234870Z Finished uploading artifact content to blob storage!
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.3236570Z SHA256 digest of uploaded artifact zip is 3f1dabd4aad3301d08567808f1a09e0dc63844e4a31a11f90422b6c97f9e05f3
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.3237650Z Finalizing artifact upload
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.6469390Z Artifact trace-failures-macos-latest.zip successfully finalized. Artifact ID 13734723212
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.6471130Z Artifact trace-failures-macos-latest has been successfully uploaded! Final size is 10648 bytes. Artifact ID is 13734723212
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.6486660Z Artifact download URL: https://github.com/ironflowhq/segment-log/actions/runs/42754924923/artifacts/13734723212
+M1 long run (macos-latest)	Post Run actions/checkout@v7	﻿2026-11-10T04:18:12.6743060Z Post job cleanup.
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7710880Z [command]/opt/homebrew/bin/git version
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7818130Z git version 2.56.0
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7841590Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/65ec084d-9126-4c6e-9c58-9f6540f42f9d/.gitconfig'
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7853220Z Temporarily overriding HOME='/Users/runner/work/_temp/65ec084d-9126-4c6e-9c58-9f6540f42f9d' before making global git config changes
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7854830Z Adding repository directory to the temporary git global config as a safe directory
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7856750Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/segment-log/segment-log
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7947630Z Removing SSH command configuration
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7957070Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.8043980Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.9172440Z Removing HTTP extra header
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.9176090Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.9260920Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0234010Z Removing includeIf entries pointing to credentials config files
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0234660Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0274310Z includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git.path
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0274970Z includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git/worktrees/*.path
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0275400Z includeif.gitdir:/github/workspace/.git.path
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0275810Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0282150Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git.path
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0361310Z /Users/runner/work/_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0410910Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git.path \/Users\/runner\/work\/_temp\/git\-credentials\-64078a9c\-e292\-4b7f\-88fc\-733d9cafc07a\.config
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0453880Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git/worktrees/*.path
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0515430Z /Users/runner/work/_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0521040Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git/worktrees/*.path \/Users\/runner\/work\/_temp\/git\-credentials\-64078a9c\-e292\-4b7f\-88fc\-733d9cafc07a\.config
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0583910Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0642350Z /github/runner_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0647680Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-64078a9c\-e292\-4b7f\-88fc\-733d9cafc07a\.config
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0711870Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0767720Z /github/runner_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0772030Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-64078a9c\-e292\-4b7f\-88fc\-733d9cafc07a\.config
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.0833920Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:13.1655510Z Removing credentials config '/Users/runner/work/_temp/git-credentials-64078a9c-e292-4b7f-88fc-733d9cafc07a.config'
+M1 long run (macos-latest)	Complete job	﻿2026-11-10T04:18:13.1773630Z Cleaning up orphan processes
+M1 long run (macos-latest)	Complete job	2026-11-10T04:18:13.9293060Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+M1 long run (ubuntu-24.04)	Set up job	﻿2026-11-10T04:17:39.1173654Z Current runner version: '2.338.2'
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1194014Z ##[group]Runner Image Provisioner
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1194613Z Hosted Compute Agent
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1195044Z Version: 20261028.624
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1195447Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1196037Z Build Date: 2026-10-28T21:51:42Z
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1196526Z Worker ID: {1e9cd02c-37c0-4cef-a455-54f373fcb617}
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1196960Z Region: southcentralus
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1197316Z Cloud: Azure
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1197736Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1198818Z ##[group]Operating System
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1199275Z Ubuntu
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1199602Z 24.04.5
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1199914Z LTS
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1200283Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1200626Z ##[group]Runner Image
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1201041Z Image: ubuntu-24.04
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1201408Z Version: 20261101.360.1
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1202034Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261101.360/images/ubuntu/Ubuntu2404-Readme.md
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1203132Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261101.360
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1204034Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1204753Z ##[group]GITHUB_TOKEN Permissions
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1206370Z Contents: read
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1206785Z Metadata: read
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1207155Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1208680Z Secret source: Actions
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1209237Z Cache mode: write
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1209895Z Prepare workflow directory
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1590686Z Prepare all required actions
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.1637140Z Getting action download info
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.4062417Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.5165463Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.7562450Z Complete job name: M1 long run (ubuntu-24.04)
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	﻿2026-11-10T04:17:39.8046655Z ##[group]Run actions/checkout@v7
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8047143Z with:
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8047400Z   repository: ironflowhq/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8049615Z   token: ***
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8049861Z   ssh-strict: true
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8050109Z   ssh-user: git
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8050365Z   persist-credentials: true
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8050640Z   clean: true
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8050896Z   sparse-checkout-cone-mode: true
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8051186Z   fetch-depth: 1
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8051430Z   fetch-tags: false
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8051686Z   show-progress: true
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8051940Z   lfs: false
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8052173Z   submodules: false
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8052429Z   set-safe-directory: true
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8052721Z   allow-unsafe-pr-checkout: false
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8053077Z env:
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8053313Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8053601Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8054060Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /home/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8054595Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8054910Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8055205Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8055493Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8055871Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0435061Z Syncing repository: ironflowhq/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0437169Z ##[group]Getting Git version info
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0437904Z Working directory is '/home/runner/work/segment-log/segment-log'
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0438780Z [command]/usr/bin/git version
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0536233Z git version 2.56.0
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0549245Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0557857Z Temporarily overriding HOME='/home/runner/work/_temp/f4581046-a22d-4a84-9343-f2bd5c98d1ae' before making global git config changes
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0559383Z Adding repository directory to the temporary git global config as a safe directory
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0562915Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/segment-log/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0621521Z Deleting the contents of '/home/runner/work/segment-log/segment-log'
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0622975Z ##[group]Determining repository object format
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0626682Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0627929Z ##[group]Initializing the repository
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0628754Z [command]/usr/bin/git init /home/runner/work/segment-log/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0747430Z hint: Using 'master' as the name for the initial branch. This default branch name
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0749115Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0750312Z hint: to use in all of your new repositories, which will suppress this warning,
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0751246Z hint: call:
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0752051Z hint:
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0752676Z hint: 	git config --global init.defaultBranch <name>
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0753262Z hint:
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0753813Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0754762Z hint: 'development'. The just-created branch can be renamed via this command:
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0755448Z hint:
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0755972Z hint: 	git branch -m <name>
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0756400Z hint:
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0756996Z hint: Disable this message with "git config set advice.defaultBranchName false"
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0758003Z Initialized empty Git repository in /home/runner/work/segment-log/segment-log/.git/
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0766797Z [command]/usr/bin/git remote add origin https://github.com/ironflowhq/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0824375Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0825036Z ##[group]Disabling automatic garbage collection
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0828461Z [command]/usr/bin/git config --local gc.auto 0
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0871473Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0872562Z ##[group]Setting up auth
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0872951Z Removing SSH command configuration
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0876526Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0924522Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1310649Z Removing HTTP extra header
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1316301Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1356402Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1556347Z Removing includeIf entries pointing to credentials config files
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1560897Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1607094Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1831030Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1882513Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/segment-log/segment-log/.git.path /home/runner/work/_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1926469Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/segment-log/segment-log/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.1973343Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.2021651Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.2063040Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.2063834Z ##[group]Fetching the repository
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.2070130Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7d8c483b3c27bdc88e621e397aa460aa39114bd2:refs/remotes/origin/t3/m1-failed-artifact-drill
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8868238Z From https://github.com/ironflowhq/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8870209Z  * [new ref]         7d8c483b3c27bdc88e621e397aa460aa39114bd2 -> origin/t3/m1-failed-artifact-drill
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8875714Z [command]/usr/bin/git branch --list --remote origin/t3/m1-failed-artifact-drill
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8911016Z   origin/t3/m1-failed-artifact-drill
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8917791Z [command]/usr/bin/git rev-parse refs/remotes/origin/t3/m1-failed-artifact-drill
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8949338Z 7d8c483b3c27bdc88e621e397aa460aa39114bd2
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8953249Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8954638Z ##[group]Determining the checkout info
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8956429Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8957702Z [command]/usr/bin/git sparse-checkout disable
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.9011863Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.9047723Z ##[group]Checking out the ref
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.9049921Z [command]/usr/bin/git checkout --progress --force -B t3/m1-failed-artifact-drill refs/remotes/origin/t3/m1-failed-artifact-drill
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.9571902Z Switched to a new branch 't3/m1-failed-artifact-drill'
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.9575609Z branch 't3/m1-failed-artifact-drill' set up to track 'origin/t3/m1-failed-artifact-drill'.
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.9584074Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.9635039Z [command]/usr/bin/git log -1 --format=%H
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.9668861Z 7d8c483b3c27bdc88e621e397aa460aa39114bd2
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	﻿2026-11-10T04:17:40.9876130Z ##[group]Run rustup toolchain install
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9877123Z ^[[36;1mrustup toolchain install^[[0m
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9897644Z shell: /usr/bin/bash -e {0}
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9898392Z env:
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9898998Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9899740Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9900961Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /home/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9902299Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9903113Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9903886Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9904623Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:40.9905343Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:41.0397259Z info: syncing channel updates for 1.99.1-x86_64-unknown-linux-gnu
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:41.2695425Z info: latest update on 2026-10-15 for version 1.99.1 (58cf8f9c3 2026-10-13)
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:41.2699998Z info: downloading 5 components
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:48.3757610Z info: the active toolchain `1.99.1-x86_64-unknown-linux-gnu` has been installed
+M1 long run (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:17:48.3758245Z info: it's active because: overridden by '/home/runner/work/segment-log/segment-log/rust-toolchain.toml'
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	﻿2026-11-10T04:17:48.3896454Z ##[group]Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3897033Z ^[[36;1mcargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture^[[0m
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3913980Z shell: /usr/bin/bash -e {0}
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3914128Z env:
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3914245Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3914387Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3914633Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /home/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3914892Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3915046Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3915192Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3915334Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.3915648Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:48.4504505Z    Compiling segment-log-core v0.0.1 (/home/runner/work/segment-log/segment-log/segment-log-core)
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4683475Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 4.04s
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4685382Z      Running unittests src/lib.rs (target/debug/deps/segment_log_core-d8eef091428967c3)
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4701067Z 
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4701383Z running 1 test
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4862099Z 
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4869085Z thread 'acceptance::seeded::threaded_seeded_traces_long_run' (2224) panicked at segment-log-core/src/acceptance/support/oracle.rs:390:17:
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4870232Z false permanent size refusal: Request { inputs: [Input { stream: [115, 50], key: Some([107, 50, 58, 48]), payload: [2, 3, 0, 1, 6, 7, 4], expected: None, spare: 0 }, Input { stream: [115, 50], key: Some([107, 50, 58, 49]), payload: [3, 2, 1, 0, 7, 6, 5], expected: Some(0), spare: 0 }], original: true, answer: Refused("TooLarge"), watermark: 0 }
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4870917Z note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4871568Z SIM-MODEL, SIM-CONFORMANCE initial seed 10000 crash Some(Crash(Kill, 10000)) trace /tmp/segment-log-failure-2223-0.trace
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4872032Z cases=ORACLE-1..5,7..12 seed=10000 mode=Kill variant=0 artifacts=/home/runner/work/segment-log/segment-log/.audit/trace-failures/2223-10000-Kill-0
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4872496Z SIM-MODEL, SIM-CONFORMANCE initial seed 10000 crash Some(Crash(Kill, 10000)) trace /tmp/segment-log-failure-2223-1.trace
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4872889Z test acceptance::seeded::threaded_seeded_traces_long_run ... FAILED
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4873065Z 
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4873126Z failures:
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4873188Z 
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4873237Z failures:
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4873404Z     acceptance::seeded::threaded_seeded_traces_long_run
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4873573Z 
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4873721Z test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 148 filtered out; finished in 0.02s
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4873922Z 
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4876162Z error: test failed, to rerun pass `-p segment-log-core --lib`
+M1 long run (ubuntu-24.04)	Run cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture	2026-11-10T04:17:52.4900367Z ##[error]Process completed with exit code 101.
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	﻿2026-11-10T04:17:52.4941164Z ##[group]Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4941454Z ^[[36;1mmkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"^[[0m
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4941858Z ^[[36;1mTMPDIR="$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process" cargo test -p segment-log-core --test process_crash killed_writers_preserve_the_recorded_contract -- --nocapture^[[0m
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4958188Z shell: /usr/bin/bash -e {0}
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4958338Z env:
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4958455Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4958598Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4958835Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /home/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4959092Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4959255Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4959397Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4959534Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.4959670Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:52.5284902Z    Compiling segment-log-core v0.0.1 (/home/runner/work/segment-log/segment-log/segment-log-core)
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5442929Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 1.02s
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5443799Z      Running tests/process_crash.rs (target/debug/deps/process_crash-035238018b1ae162)
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5454236Z 
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5454458Z running 1 test
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5457514Z seed=10000 mode=SIGKILL transcript=/home/runner/work/segment-log/segment-log/.audit/trace-failures/process/segment-log-slice8-2305-SIGKILL-10000/protocol.txt
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5557306Z 
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5557730Z thread 'killed_writers_preserve_the_recorded_contract' (2306) panicked at segment-log-core/tests/process_crash.rs:645:5:
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5558539Z assertion failed: log.watermark() >= ledger.watermark
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5558822Z note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5562432Z test killed_writers_preserve_the_recorded_contract ... FAILED
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5562698Z 
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5562769Z failures:
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5562864Z 
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5562931Z failures:
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5563117Z     killed_writers_preserve_the_recorded_contract
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5563291Z 
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5563507Z test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.01s
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5563698Z 
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5563951Z error: test failed, to rerun pass `-p segment-log-core --test process_crash`
+M1 long run (ubuntu-24.04)	Run mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"	2026-11-10T04:17:53.5578368Z ##[error]Process completed with exit code 101.
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	﻿2026-11-10T04:17:53.5623417Z ##[group]Run actions/upload-artifact@v4
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5623585Z with:
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5623707Z   name: trace-failures-ubuntu-24.04
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5623875Z   path: .audit/trace-failures
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5624016Z   include-hidden-files: true
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5624149Z   if-no-files-found: ignore
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5624279Z   compression-level: 6
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5624396Z   overwrite: false
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5624500Z env:
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5624614Z   SEGMENT_LOG_TRACE_SEEDS: 100
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5624748Z   SEGMENT_LOG_TRACE_SEED: 10000
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5624975Z   SEGMENT_LOG_TRACE_ARTIFACT_DIR: /home/runner/work/segment-log/segment-log/.audit/trace-failures
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5625217Z   SEGMENT_LOG_PROCESS_REPETITIONS: 30
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5625364Z   SEGMENT_LOG_PROCESS_SEED: 10000
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5625500Z   SEGMENT_LOG_TRACE_DRILL: 1
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5625630Z   SEGMENT_LOG_PROCESS_DRILL: 1
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.5626079Z ##[endgroup]
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.6721166Z (node:2319) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.6721731Z (Use `node --trace-deprecation ...` to show where the warning was created)
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.6770094Z With the provided path, there will be 5 files uploaded
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.6773703Z Artifact name is valid!
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.6774043Z Root directory input is valid!
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.9489383Z Beginning upload of artifact content to blob storage
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:53.9739636Z (node:2319) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.1252102Z Uploaded bytes 10634
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.1692520Z Finished uploading artifact content to blob storage!
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.1693133Z SHA256 digest of uploaded artifact zip is cdf5e76f28e37cf1f142c8f7829c3edc706e8c1cd469fc1226b842a3f6877f0b
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.1694486Z Finalizing artifact upload
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.5230738Z Artifact trace-failures-ubuntu-24.04.zip successfully finalized. Artifact ID 13734733210
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.5231429Z Artifact trace-failures-ubuntu-24.04 has been successfully uploaded! Final size is 10634 bytes. Artifact ID is 13734733210
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.5237103Z Artifact download URL: https://github.com/ironflowhq/segment-log/actions/runs/42754924923/artifacts/13734733210
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	﻿2026-11-10T04:17:54.5460705Z Post job cleanup.
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6059099Z [command]/usr/bin/git version
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6106707Z git version 2.56.0
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6132791Z Temporarily overriding HOME='/home/runner/work/_temp/2d84c437-5eb3-422b-b788-4a61dabd8576' before making global git config changes
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6133531Z Adding repository directory to the temporary git global config as a safe directory
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6137117Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/segment-log/segment-log
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6174874Z Removing SSH command configuration
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6181601Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6221587Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6437792Z Removing HTTP extra header
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6442324Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6487270Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6710030Z Removing includeIf entries pointing to credentials config files
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6716363Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6755489Z includeif.gitdir:/home/runner/work/segment-log/segment-log/.git.path
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6756144Z includeif.gitdir:/home/runner/work/segment-log/segment-log/.git/worktrees/*.path
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6756503Z includeif.gitdir:/github/workspace/.git.path
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6756702Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6763354Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/segment-log/segment-log/.git.path
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6796172Z /home/runner/work/_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6803993Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/segment-log/segment-log/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-b167d92b\-aa0d\-4fd7\-a51e\-be5f54fb0226\.config
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6849103Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/segment-log/segment-log/.git/worktrees/*.path
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6881009Z /home/runner/work/_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6920180Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/segment-log/segment-log/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-b167d92b\-aa0d\-4fd7\-a51e\-be5f54fb0226\.config
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6971690Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.7003661Z /github/runner_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.7010535Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-b167d92b\-aa0d\-4fd7\-a51e\-be5f54fb0226\.config
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.7052346Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.7084410Z /github/runner_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.7090958Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-b167d92b\-aa0d\-4fd7\-a51e\-be5f54fb0226\.config
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.7132073Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.7327279Z Removing credentials config '/home/runner/work/_temp/git-credentials-b167d92b-aa0d-4fd7-a51e-be5f54fb0226.config'
+M1 long run (ubuntu-24.04)	Complete job	﻿2026-11-10T04:17:54.7460181Z Cleaning up orphan processes
+M1 long run (ubuntu-24.04)	Complete job	2026-11-10T04:17:54.7781381Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Drill replay (ubuntu-24.04)	Set up job	﻿2026-11-10T04:18:19.4918820Z Current runner version: '2.338.2'
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4941774Z ##[group]Runner Image Provisioner
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4942514Z Hosted Compute Agent
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4943134Z Version: 20261028.624
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4943676Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4944272Z Build Date: 2026-10-28T21:51:42Z
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4944945Z Worker ID: {779af1df-dc60-4ee0-ae74-1e94a1e8661a}
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4945547Z Region: westus3
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4946133Z Cloud: Azure
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4946614Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4947932Z ##[group]Operating System
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4948591Z Ubuntu
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4949066Z 24.04.5
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4949583Z LTS
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4950049Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4950540Z ##[group]Runner Image
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4951092Z Image: ubuntu-24.04
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4951589Z Version: 20261101.360.1
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4952560Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261101.360/images/ubuntu/Ubuntu2404-Readme.md
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4953999Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261101.360
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4954830Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4955817Z ##[group]GITHUB_TOKEN Permissions
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4957605Z Contents: read
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4958143Z Metadata: read
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4958976Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4960984Z Secret source: Actions
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4961909Z Cache mode: write
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.4962647Z Prepare workflow directory
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.5269878Z Prepare all required actions
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.5308208Z Getting action download info
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.8173327Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.9155767Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:20.6034342Z Complete job name: Drill replay (ubuntu-24.04)
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	﻿2026-11-10T04:18:20.6696596Z ##[group]Run actions/checkout@v7
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6697450Z with:
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6697815Z   repository: ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6700786Z   token: ***
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6701145Z   ssh-strict: true
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6701502Z   ssh-user: git
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6701861Z   persist-credentials: true
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6702250Z   clean: true
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6702607Z   sparse-checkout-cone-mode: true
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6703021Z   fetch-depth: 1
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6703366Z   fetch-tags: false
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6703723Z   show-progress: true
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6704092Z   lfs: false
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6704427Z   submodules: false
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6704788Z   set-safe-directory: true
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6705193Z   allow-unsafe-pr-checkout: false
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6705754Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8603183Z Syncing repository: ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8604817Z ##[group]Getting Git version info
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8605433Z Working directory is '/home/runner/work/segment-log/segment-log'
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8606357Z [command]/usr/bin/git version
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8671267Z git version 2.56.0
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8688199Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8696281Z Temporarily overriding HOME='/home/runner/work/_temp/0cd51690-81d7-494b-95fc-1c8c147f37fa' before making global git config changes
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8698338Z Adding repository directory to the temporary git global config as a safe directory
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8701221Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/segment-log/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8742228Z Deleting the contents of '/home/runner/work/segment-log/segment-log'
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8745053Z ##[group]Determining repository object format
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8746286Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8747252Z ##[group]Initializing the repository
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8749436Z [command]/usr/bin/git init /home/runner/work/segment-log/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8832190Z hint: Using 'master' as the name for the initial branch. This default branch name
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8834221Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8835473Z hint: to use in all of your new repositories, which will suppress this warning,
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8836379Z hint: call:
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8836860Z hint:
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8837586Z hint: 	git config --global init.defaultBranch <name>
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8838350Z hint:
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8839082Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8840239Z hint: 'development'. The just-created branch can be renamed via this command:
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8841150Z hint:
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8841654Z hint: 	git branch -m <name>
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8842229Z hint:
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8842994Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8844286Z Initialized empty Git repository in /home/runner/work/segment-log/segment-log/.git/
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8848746Z [command]/usr/bin/git remote add origin https://github.com/ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8889591Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8890297Z ##[group]Disabling automatic garbage collection
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8893232Z [command]/usr/bin/git config --local gc.auto 0
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8923293Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8924163Z ##[group]Setting up auth
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8924754Z Removing SSH command configuration
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8929438Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8964515Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9273113Z Removing HTTP extra header
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9279469Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9317735Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9525107Z Removing includeIf entries pointing to credentials config files
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9536329Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9573652Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9780080Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9820815Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/segment-log/segment-log/.git.path /home/runner/work/_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9857418Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/segment-log/segment-log/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9896577Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9933985Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9970569Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9971482Z ##[group]Fetching the repository
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9976895Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7d8c483b3c27bdc88e621e397aa460aa39114bd2:refs/remotes/origin/t3/m1-failed-artifact-drill
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8452450Z From https://github.com/ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8454780Z  * [new ref]         7d8c483b3c27bdc88e621e397aa460aa39114bd2 -> origin/t3/m1-failed-artifact-drill
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8460952Z [command]/usr/bin/git branch --list --remote origin/t3/m1-failed-artifact-drill
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8493320Z   origin/t3/m1-failed-artifact-drill
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8499777Z [command]/usr/bin/git rev-parse refs/remotes/origin/t3/m1-failed-artifact-drill
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8530044Z 7d8c483b3c27bdc88e621e397aa460aa39114bd2
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8534040Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8535312Z ##[group]Determining the checkout info
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8536810Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8537963Z [command]/usr/bin/git sparse-checkout disable
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8591617Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8628760Z ##[group]Checking out the ref
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8631689Z [command]/usr/bin/git checkout --progress --force -B t3/m1-failed-artifact-drill refs/remotes/origin/t3/m1-failed-artifact-drill
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.9210260Z Switched to a new branch 't3/m1-failed-artifact-drill'
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.9213077Z branch 't3/m1-failed-artifact-drill' set up to track 'origin/t3/m1-failed-artifact-drill'.
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.9221143Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.9269015Z [command]/usr/bin/git log -1 --format=%H
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.9302195Z 7d8c483b3c27bdc88e621e397aa460aa39114bd2
+Drill replay (ubuntu-24.04)	Run rustup toolchain install	﻿2026-11-10T04:18:21.9530603Z ##[group]Run rustup toolchain install
+Drill replay (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:18:21.9531704Z ^[[36;1mrustup toolchain install^[[0m
+Drill replay (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:18:21.9553577Z shell: /usr/bin/bash -e {0}
+Drill replay (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:18:21.9554480Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:18:21.9899272Z info: syncing channel updates for 1.99.1-x86_64-unknown-linux-gnu
+Drill replay (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:18:22.1604042Z info: latest update on 2026-10-15 for version 1.99.1 (58cf8f9c3 2026-10-13)
+Drill replay (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:18:22.1606274Z info: downloading 5 components
+Drill replay (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:18:29.7947988Z info: the active toolchain `1.99.1-x86_64-unknown-linux-gnu` has been installed
+Drill replay (ubuntu-24.04)	Run rustup toolchain install	2026-11-10T04:18:29.7949032Z info: it's active because: overridden by '/home/runner/work/segment-log/segment-log/rust-toolchain.toml'
+Drill replay (ubuntu-24.04)	The planted record failed the long run	﻿2026-11-10T04:18:29.8177002Z ##[group]Run test "failure" = failure
+Drill replay (ubuntu-24.04)	The planted record failed the long run	2026-11-10T04:18:29.8177528Z ^[[36;1mtest "failure" = failure^[[0m
+Drill replay (ubuntu-24.04)	The planted record failed the long run	2026-11-10T04:18:29.8195916Z shell: /usr/bin/bash -e {0}
+Drill replay (ubuntu-24.04)	The planted record failed the long run	2026-11-10T04:18:29.8196200Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	﻿2026-11-10T04:18:29.8357790Z ##[group]Run actions/download-artifact@v4
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8358132Z with:
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8358359Z   name: trace-failures-ubuntu-24.04
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8358627Z   path: .audit/drill
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8358858Z   merge-multiple: false
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8359096Z   repository: ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8359343Z   run-id: 42754924923
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8359560Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.9584326Z Downloading single artifact
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.9714545Z (node:2169) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.9715288Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:30.1998288Z Preparing to download the following artifacts:
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:30.1999315Z - trace-failures-ubuntu-24.04 (ID: 13734733210, Size: 10634, Expected Digest: sha256:cdf5e76f28e37cf1f142c8f7829c3edc706e8c1cd469fc1226b842a3f6877f0b)
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:30.4129972Z Redirecting to blob download url: https://productionresultssa4.blob.core.windows.net/actions-results/a757048c-73ff-466a-81fd-db1393c2a716/workflow-job-run-82445f6d-429d-5e3a-a618-2b8c75cf4d36/artifacts/b49f8b7b2fbc879757dc6bd74b431532fae3140b3fa194eedd91c5a864dd1a46.zip
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:30.4131201Z Starting download of artifact to: /home/runner/work/segment-log/segment-log/.audit/drill
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:30.6348916Z (node:2169) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:30.6476294Z SHA256 digest of downloaded artifact is cdf5e76f28e37cf1f142c8f7829c3edc706e8c1cd469fc1226b842a3f6877f0b
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:30.6477404Z Artifact download completed successfully.
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:30.6477687Z Total of 1 artifact(s) downloaded
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:30.6480832Z Download artifact has finished successfully
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	﻿2026-11-10T04:18:30.6601023Z ##[group]Run scripts/m1-drill-replay.sh .audit/drill
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:30.6601367Z ^[[36;1mscripts/m1-drill-replay.sh .audit/drill^[[0m
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:30.6618840Z shell: /usr/bin/bash -e {0}
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:30.6619080Z ##[endgroup]
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:30.6720960Z pair=/home/runner/work/segment-log/segment-log/.audit/drill/2223-10000-Kill-0
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:30.6721724Z process=/home/runner/work/segment-log/segment-log/.audit/drill/process/segment-log-slice8-2305-SIGKILL-10000
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:30.7250327Z    Compiling segment-log-core v0.0.1 (/home/runner/work/segment-log/segment-log/segment-log-core)
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:35.2572764Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 4.55s
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:35.2576277Z      Running unittests src/lib.rs (target/debug/deps/segment_log_core-d8eef091428967c3)
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:35.2586590Z 
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:35.2586758Z running 1 test
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:35.3045898Z test acceptance::seeded::saved_trace_replays_the_oracle ... ok
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:35.3046201Z 
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:35.3046514Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 148 filtered out; finished in 0.05s
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:35.3046814Z 
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:35.3499268Z false permanent size refusal: Request { inputs: [Input { stream: [115, 50], key: Some([107, 50, 58, 48]), payload: [2, 3, 0, 1, 6, 7, 4], expected: None, spare: 0 }, Input { stream: [115, 50], key: Some([107, 50, 58, 49]), payload: [3, 2, 1, 0, 7, 6, 5], expected: Some(0), spare: 0 }], original: true, answer: Refused("TooLarge"), watermark: 0 }
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4324248Z assertion failed: log.watermark() >= ledger.watermark
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4652301Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4653192Z      Running tests/process_crash.rs (target/debug/deps/process_crash-035238018b1ae162)
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4662641Z 
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4677539Z running 1 test
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4741336Z test killed_writers_preserve_the_recorded_contract ... ok
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4741704Z 
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4742048Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.01s
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4742507Z 
+Drill replay (ubuntu-24.04)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:36.4751929Z drill replay: both plain replays passed and both planted records were rejected
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	﻿2026-11-10T04:18:36.4876931Z Post job cleanup.
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5597319Z [command]/usr/bin/git version
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5646817Z git version 2.56.0
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5678754Z Temporarily overriding HOME='/home/runner/work/_temp/4546f16f-7b65-4d75-ab3e-99be25de3ad4' before making global git config changes
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5679692Z Adding repository directory to the temporary git global config as a safe directory
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5683255Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/segment-log/segment-log
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5714299Z Removing SSH command configuration
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5719844Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5753230Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5972938Z Removing HTTP extra header
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.5977791Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6014137Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6239185Z Removing includeIf entries pointing to credentials config files
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6245711Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6282555Z includeif.gitdir:/home/runner/work/segment-log/segment-log/.git.path
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6283741Z includeif.gitdir:/home/runner/work/segment-log/segment-log/.git/worktrees/*.path
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6284716Z includeif.gitdir:/github/workspace/.git.path
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6285426Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6290843Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/segment-log/segment-log/.git.path
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6322728Z /home/runner/work/_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6333299Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/segment-log/segment-log/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-1c0c997f\-fc43\-4c39\-b431\-b926a8baf6e7\.config
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6383012Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/segment-log/segment-log/.git/worktrees/*.path
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6416977Z /home/runner/work/_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6434777Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/segment-log/segment-log/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-1c0c997f\-fc43\-4c39\-b431\-b926a8baf6e7\.config
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6474621Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6503951Z /github/runner_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6510733Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-1c0c997f\-fc43\-4c39\-b431\-b926a8baf6e7\.config
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6547919Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6576390Z /github/runner_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6583055Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-1c0c997f\-fc43\-4c39\-b431\-b926a8baf6e7\.config
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6622692Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Drill replay (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:18:36.6826873Z Removing credentials config '/home/runner/work/_temp/git-credentials-1c0c997f-fc43-4c39-b431-b926a8baf6e7.config'
+Drill replay (ubuntu-24.04)	Complete job	﻿2026-11-10T04:18:36.6971267Z Cleaning up orphan processes
+Drill replay (ubuntu-24.04)	Complete job	2026-11-10T04:18:36.7281159Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/download-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Drill replay (macos-latest)	Set up job	﻿2026-11-10T04:18:20.2293670Z Current runner version: '2.338.2'
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2320530Z ##[group]Runner Image Provisioner
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2321240Z Hosted Compute Agent
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2321680Z Version: 20261028.624
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2322130Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2322740Z Build Date: 2026-10-28T21:51:42Z
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2323410Z Worker ID: {140e7fff-d141-4aed-829b-7b6ab43aa453}
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2324060Z Region: westus
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2324730Z Cloud: MacCloud
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2325150Z ##[endgroup]
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2326690Z ##[group]Operating System
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2328890Z macOS
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2329380Z 26.7.2
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2329710Z 25G332
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2330810Z ##[endgroup]
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2331180Z ##[group]Runner Image
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2331600Z Image: macos-26-arm64
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2332050Z Version: 20261102.0473.1
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2332900Z Included Software: https://github.com/actions/runner-images/blob/macos-26-arm64/20261102.0473/images/macos/macos-26-arm64-Readme.md
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2334280Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-26-arm64%2F20261102.0473
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2334990Z ##[endgroup]
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2335930Z ##[group]GITHUB_TOKEN Permissions
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2337980Z Contents: read
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2338440Z Metadata: read
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2338870Z ##[endgroup]
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2340730Z Secret source: Actions
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2341420Z Cache mode: write
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2341930Z Prepare workflow directory
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2624090Z Prepare all required actions
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.2659800Z Getting action download info
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.6668710Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.9983290Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+Drill replay (macos-latest)	Set up job	2026-11-10T04:18:21.5310690Z Complete job name: Drill replay (macos-latest)
+Drill replay (macos-latest)	Run actions/checkout@v7	﻿2026-11-10T04:18:21.6065460Z ##[group]Run actions/checkout@v7
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6066090Z with:
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6066440Z   repository: ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6069470Z   token: ***
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6069790Z   ssh-strict: true
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6070120Z   ssh-user: git
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6070450Z   persist-credentials: true
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6070810Z   clean: true
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6071140Z   sparse-checkout-cone-mode: true
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6071520Z   fetch-depth: 1
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6071880Z   fetch-tags: false
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6072210Z   show-progress: true
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6072550Z   lfs: false
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6072860Z   submodules: false
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6073220Z   set-safe-directory: true
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6073610Z   allow-unsafe-pr-checkout: false
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6074290Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1188870Z Syncing repository: ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1190510Z ##[group]Getting Git version info
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1191160Z Working directory is '/Users/runner/work/segment-log/segment-log'
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1192190Z [command]/opt/homebrew/bin/git version
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1733940Z git version 2.56.0
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1751300Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1758250Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/706193a4-e2ee-4cf8-9ac7-0f41be03ced1/.gitconfig'
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1764850Z Temporarily overriding HOME='/Users/runner/work/_temp/706193a4-e2ee-4cf8-9ac7-0f41be03ced1' before making global git config changes
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1765950Z Adding repository directory to the temporary git global config as a safe directory
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1768750Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/segment-log/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1901860Z Deleting the contents of '/Users/runner/work/segment-log/segment-log'
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1905530Z ##[group]Determining repository object format
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1906470Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1907730Z ##[group]Initializing the repository
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1910330Z [command]/opt/homebrew/bin/git init /Users/runner/work/segment-log/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2132470Z hint: Using 'master' as the name for the initial branch. This default branch name
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2133530Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2134380Z hint: to use in all of your new repositories, which will suppress this warning,
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2135120Z hint: call:
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2135550Z hint:
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2136030Z hint: 	git config --global init.defaultBranch <name>
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2137180Z hint:
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2137670Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2138610Z hint: 'development'. The just-created branch can be renamed via this command:
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2139250Z hint:
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2154850Z hint: 	git branch -m <name>
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2155260Z hint:
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2155830Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2156660Z Initialized empty Git repository in /Users/runner/work/segment-log/segment-log/.git/
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2158600Z [command]/opt/homebrew/bin/git remote add origin https://github.com/ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2238820Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2239520Z ##[group]Disabling automatic garbage collection
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2241720Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2318860Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2319490Z ##[group]Setting up auth
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2319890Z Removing SSH command configuration
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2323060Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2396950Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.3851480Z Removing HTTP extra header
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.3857730Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.3937180Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.4845520Z Removing includeIf entries pointing to credentials config files
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.4851050Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.4917450Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.5767080Z [command]/opt/homebrew/bin/git config --file /Users/runner/work/_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.5894690Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/segment-log/segment-log/.git.path /Users/runner/work/_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.5947970Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/segment-log/segment-log/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.6018070Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.6082920Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.6146180Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.6147130Z ##[group]Fetching the repository
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.6151820Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7d8c483b3c27bdc88e621e397aa460aa39114bd2:refs/remotes/origin/t3/m1-failed-artifact-drill
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3079960Z From https://github.com/ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3081250Z  * [new ref]         7d8c483b3c27bdc88e621e397aa460aa39114bd2 -> origin/t3/m1-failed-artifact-drill
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3086400Z [command]/opt/homebrew/bin/git branch --list --remote origin/t3/m1-failed-artifact-drill
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3158990Z   origin/t3/m1-failed-artifact-drill
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3165980Z [command]/opt/homebrew/bin/git rev-parse refs/remotes/origin/t3/m1-failed-artifact-drill
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3218790Z 7d8c483b3c27bdc88e621e397aa460aa39114bd2
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3222020Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3222950Z ##[group]Determining the checkout info
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3224010Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3226630Z [command]/opt/homebrew/bin/git sparse-checkout disable
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3313600Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3376670Z ##[group]Checking out the ref
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3378630Z [command]/opt/homebrew/bin/git checkout --progress --force -B t3/m1-failed-artifact-drill refs/remotes/origin/t3/m1-failed-artifact-drill
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.4691580Z Switched to a new branch 't3/m1-failed-artifact-drill'
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.4758300Z branch 't3/m1-failed-artifact-drill' set up to track 'origin/t3/m1-failed-artifact-drill'.
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.4819770Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.4973910Z [command]/opt/homebrew/bin/git log -1 --format=%H
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.4982900Z 7d8c483b3c27bdc88e621e397aa460aa39114bd2
+Drill replay (macos-latest)	Run rustup toolchain install	﻿2026-11-10T04:18:23.5181720Z ##[group]Run rustup toolchain install
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:23.5182540Z ^[[36;1mrustup toolchain install^[[0m
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:23.5221590Z shell: /bin/bash -e {0}
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:23.5222380Z ##[endgroup]
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:23.6303470Z info: syncing channel updates for 1.99.1-aarch64-apple-darwin
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:23.7714430Z info: latest update on 2026-10-15 for version 1.99.1 (58cf8f9c3 2026-10-13)
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:23.7718330Z info: downloading 5 components
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:30.4062220Z info: the active toolchain `1.99.1-aarch64-apple-darwin` has been installed
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:30.4063880Z info: it's active because: overridden by '/Users/runner/work/segment-log/segment-log/rust-toolchain.toml'
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:30.4064490Z info: self-update is disabled for this build of rustup
+Drill replay (macos-latest)	Run rustup toolchain install	2026-11-10T04:18:30.4065010Z info: any updates to rustup will need to be fetched with your system package manager
+Drill replay (macos-latest)	The planted record failed the long run	﻿2026-11-10T04:18:30.4332610Z ##[group]Run test "failure" = failure
+Drill replay (macos-latest)	The planted record failed the long run	2026-11-10T04:18:30.4333120Z ^[[36;1mtest "failure" = failure^[[0m
+Drill replay (macos-latest)	The planted record failed the long run	2026-11-10T04:18:30.4384480Z shell: /bin/bash -e {0}
+Drill replay (macos-latest)	The planted record failed the long run	2026-11-10T04:18:30.4384790Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/download-artifact@v4	﻿2026-11-10T04:18:30.5497820Z ##[group]Run actions/download-artifact@v4
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5499320Z with:
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5500430Z   name: trace-failures-macos-latest
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5501990Z   path: .audit/drill
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5502740Z   merge-multiple: false
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5503660Z   repository: ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5504660Z   run-id: 42754924923
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5505430Z ##[endgroup]
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.8701840Z Downloading single artifact
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.8909210Z (node:2046) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.8917320Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:31.1510770Z Preparing to download the following artifacts:
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:31.1511480Z - trace-failures-macos-latest (ID: 13734723212, Size: 10648, Expected Digest: sha256:3f1dabd4aad3301d08567808f1a09e0dc63844e4a31a11f90422b6c97f9e05f3)
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:31.3977950Z Redirecting to blob download url: https://productionresultssa4.blob.core.windows.net/actions-results/a757048c-73ff-466a-81fd-db1393c2a716/workflow-job-run-90bf7e2b-d85b-5fcc-8b19-6a335d444fea/artifacts/2b1677c137807b6e3c927d5a507c4cd3ab4292f96df52c7f70d63dc5ff9c68f4.zip
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:31.3986670Z Starting download of artifact to: /Users/runner/work/segment-log/segment-log/.audit/drill
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:31.6801390Z (node:2046) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:31.6886190Z SHA256 digest of downloaded artifact is 3f1dabd4aad3301d08567808f1a09e0dc63844e4a31a11f90422b6c97f9e05f3
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:31.6886820Z Artifact download completed successfully.
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:31.6887170Z Total of 1 artifact(s) downloaded
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:31.6890570Z Download artifact has finished successfully
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	﻿2026-11-10T04:18:31.6971010Z ##[group]Run scripts/m1-drill-replay.sh .audit/drill
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:31.6971420Z ^[[36;1mscripts/m1-drill-replay.sh .audit/drill^[[0m
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:31.7002540Z shell: /bin/bash -e {0}
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:31.7002750Z ##[endgroup]
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:31.7519630Z pair=/Users/runner/work/segment-log/segment-log/.audit/drill/2589-10000-Kill-0
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:32.1123860Z    Compiling segment-log-core v0.0.1 (/Users/runner/work/segment-log/segment-log/segment-log-core)
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:32.1178070Z process=/Users/runner/work/segment-log/segment-log/.audit/drill/process/segment-log-slice8-2621-SIGKILL-10000
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:39.2878340Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 7.47s
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:39.2880890Z      Running unittests src/lib.rs (target/debug/deps/segment_log_core-e22f792fa730460e)
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:39.2926560Z 
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:39.2927240Z running 1 test
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:39.3515480Z test acceptance::seeded::saved_trace_replays_the_oracle ... ok
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:39.3515830Z 
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:39.3516330Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 148 filtered out; finished in 0.06s
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:39.3516690Z 
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:39.4366550Z false permanent size refusal: Request { inputs: [Input { stream: [115, 50], key: Some([107, 50, 58, 48]), payload: [2, 3, 0, 1, 6, 7, 4], expected: None, spare: 0 }, Input { stream: [115, 50], key: Some([107, 50, 58, 49]), payload: [3, 2, 1, 0, 7, 6, 5], expected: Some(0), spare: 0 }], original: true, answer: Refused("TooLarge"), watermark: 0 }
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.6720820Z assertion failed: log.watermark() >= ledger.watermark
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.7246190Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.7247390Z      Running tests/process_crash.rs (target/debug/deps/process_crash-a23be9fc52e81eec)
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.7275880Z 
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.7276270Z running 1 test
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.7401400Z test killed_writers_preserve_the_recorded_contract ... ok
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.7401720Z 
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.7401960Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.01s
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.7402340Z 
+Drill replay (macos-latest)	Run scripts/m1-drill-replay.sh .audit/drill	2026-11-10T04:18:40.7409750Z drill replay: both plain replays passed and both planted records were rejected
+Drill replay (macos-latest)	Post Run actions/checkout@v7	﻿2026-11-10T04:18:40.7658820Z Post job cleanup.
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:40.8826300Z [command]/opt/homebrew/bin/git version
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:40.8920660Z git version 2.56.0
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:40.8939190Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/0dee4bc5-ec4c-4512-a853-1e6dcf47d260/.gitconfig'
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:40.8947690Z Temporarily overriding HOME='/Users/runner/work/_temp/0dee4bc5-ec4c-4512-a853-1e6dcf47d260' before making global git config changes
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:40.8948510Z Adding repository directory to the temporary git global config as a safe directory
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:40.8952190Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/segment-log/segment-log
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:40.9024240Z Removing SSH command configuration
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:40.9029490Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:40.9107080Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.0058700Z Removing HTTP extra header
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.0062990Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.0152070Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1038290Z Removing includeIf entries pointing to credentials config files
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1042790Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1103780Z includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git.path
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1104530Z includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git/worktrees/*.path
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1105120Z includeif.gitdir:/github/workspace/.git.path
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1105640Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1110450Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git.path
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1172940Z /Users/runner/work/_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1182190Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git.path \/Users\/runner\/work\/_temp\/git\-credentials\-432b2897\-5003\-441c\-9868\-6b3879840a88\.config
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1251240Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git/worktrees/*.path
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1317600Z /Users/runner/work/_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1329710Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/segment-log/segment-log/.git/worktrees/*.path \/Users\/runner\/work\/_temp\/git\-credentials\-432b2897\-5003\-441c\-9868\-6b3879840a88\.config
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1468730Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1492330Z /github/runner_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1499300Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-432b2897\-5003\-441c\-9868\-6b3879840a88\.config
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1572180Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1634390Z /github/runner_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1642720Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-432b2897\-5003\-441c\-9868\-6b3879840a88\.config
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.1714760Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Drill replay (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:41.2591920Z Removing credentials config '/Users/runner/work/_temp/git-credentials-432b2897-5003-441c-9868-6b3879840a88.config'
+Drill replay (macos-latest)	Complete job	﻿2026-11-10T04:18:41.2719470Z Cleaning up orphan processes
+Drill replay (macos-latest)	Complete job	2026-11-10T04:18:41.7228600Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/download-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
