@@ -30,6 +30,9 @@ class GroupPhasesTest(unittest.TestCase):
         self.assertEqual(group["cycle"], [20])
         self.assertEqual(sum(group[name][0] for name in phases.GROUP_PHASES), 14 - 4)
         self.assertEqual(request["answer_to_wake"], [3, 1, 3])
+        self.assertEqual(request[phases.GATHER], [5, 4, 5])
+        self.assertEqual(request[phases.GATHER],
+                         [q + f for q, f in zip(request["queue"], request["formation_wait"])])
         for index in range(3):
             self.assertEqual(sum(request[name][index] for name in phases.REQUEST_PHASES),
                              request["total"][index])

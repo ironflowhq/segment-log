@@ -40,4 +40,21 @@ after="$(build after "$head")"
 python3 "$scripts/m1-latency-summary.py" "$out/latency" before after > "$out/latency/summary.md"
 SEGMENT_LOG_BENCH_INTERVAL_US=20000 "$scripts/m1-compare-latency.sh" "$before" "$after" "$out/paced"
 python3 "$scripts/../docs/evidence/issue20/paced-benchmark/paced/summarize.py" "$out/paced" before after > "$out/paced/summary.md"
+grep -H "^METRIC group_fdatasync_ns" "$out"/paced/before-?.log "$out"/paced/after-?.log > "$out/paced/group-flushes.txt" || true
+# Three alternating traced repetitions of the paced variant split each request's latency into
+# phases. Tracing changes the workload, so these runs enter no latency table.
+mkdir -p "$out/trace"
+test=acceptance::evidence::measured_appends_survive_reopen
+for repetition in 1 2 3; do
+    for side in before after; do
+        binary="$before"
+        [ "$side" = after ] && binary="$after"
+        SEGMENT_LOG_BENCH_CALLERS=1000 SEGMENT_LOG_BENCH_ROUNDS=200 SEGMENT_LOG_DEVICE_ROUNDS=200 \
+            SEGMENT_LOG_BENCH_INTERVAL_US=20000 SEGMENT_LOG_PIPELINE_OUT="$work/trace.tsv" \
+            "$binary" --exact "$test" --nocapture > "$out/trace/$side-$repetition.log" 2>&1
+        python3 "$scripts/m1-group-phases.py" "$work/trace.tsv" > "$out/trace/$side-$repetition.phases.txt"
+        rm -f "$work/trace.tsv" "$work/trace.groups.tsv"
+    done
+done
 cat "$out/latency/summary.md" "$out/paced/summary.md"
+grep -H "gather_wait" "$out"/trace/*.phases.txt

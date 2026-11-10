@@ -27,6 +27,9 @@ def parse(path):
     assert run["reopen"]["correctness_errors"] == "0", path
     if any(line.startswith("PACED ") for line in text.splitlines()):
         run["paced"] = fields("PACED ")
+    # Captures from before this line existed have only the device measurement.
+    if any(line.startswith("METRIC group_fdatasync_ns ") for line in text.splitlines()):
+        run["group_flush"] = fields("METRIC group_fdatasync_ns ")
     return run
 
 
@@ -36,6 +39,17 @@ def ms(run, group, name):
 
 def bound(run):
     return (int(run["config"]["linger_ns"]) + 2 * int(run["device"]["p99"])) / 1e6
+
+
+def group_bound(run):
+    """The bound with the p99 of this run's own group flushes in place of the device measurement."""
+    if "group_flush" not in run:
+        return None
+    return (int(run["config"]["linger_ns"]) + 2 * int(run["group_flush"]["p99"])) / 1e6
+
+
+def cell(value):
+    return "n/a" if value is None else f"{value:.3f}"
 
 
 def mean(run):
@@ -104,6 +118,20 @@ def main(root):
     spread("Paced bound ms", [bound(run) for run in paced])
     within = sum(ms(run, "latency", "p99") <= bound(run) for run in paced)
     print(f"\nPaced runs with p99 within the bound of the same run: {within} of {len(paced)}.")
+
+    # The device measurement syncs 256 KiB appends. A paced group is far smaller, so the same
+    # formula with the flushes that the run really made is a second, usually tighter, reading.
+    print("\n## Paced p99 beside the bound from the run's own group flushes\n")
+    table(["Run", "Group flush p50 ms", "Group flush p99 ms", "Bound from group flushes ms",
+           "p99 minus that bound ms"],
+          [[n, cell(ms(run, "group_flush", "p50") if "group_flush" in run else None),
+            cell(ms(run, "group_flush", "p99") if "group_flush" in run else None),
+            cell(group_bound(run)),
+            "n/a" if group_bound(run) is None else f"{ms(run, 'latency', 'p99') - group_bound(run):+.3f}"]
+           for n, run in enumerate(paced, 1)])
+    if all("group_flush" in run for run in paced):
+        within = sum(ms(run, "latency", "p99") <= group_bound(run) for run in paced)
+        print(f"\nPaced runs with p99 within the bound from their own group flushes: {within} of {len(paced)}.")
 
 
 if __name__ == "__main__":

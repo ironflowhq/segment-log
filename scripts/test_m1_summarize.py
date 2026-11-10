@@ -19,7 +19,7 @@ summarize = load("m1-summarize")
 quiet = load("m1-quiet")
 
 
-def log(records_per_second, p99, device_p99, paced=False, errors=0):
+def log(records_per_second, p99, device_p99, paced=False, errors=0, group_flush_p99=None):
     lines = [
         "CONFIG callers=1000 rounds=1000 payload=256 linger_ns=1000000 group_byte_cap=1048576",
         f"METRIC device_fdatasync_ns count=1000 min=1 p50=300000 p99={device_p99} p999=1 max=1 sum=1",
@@ -31,6 +31,9 @@ def log(records_per_second, p99, device_p99, paced=False, errors=0):
         "REOPEN ns=500000000 start_records=1000000 end_records=1000000 end_bytes=296000000 correctness_errors=0",
         "test result: ok. 1 passed; 0 failed",
     ]
+    if group_flush_p99 is not None:
+        lines.append(f"METRIC group_fdatasync_ns count=20000 min=1 p50=350000 p99={group_flush_p99} "
+                     "p999=1 max=1 sum=1")
     if paced:
         lines.insert(0, "PACED interval_ns=20000000 offered_records_per_second=50000.000 latency_from=scheduled_send")
     return "\n".join(lines) + "\n"
@@ -58,6 +61,26 @@ class Summarize(unittest.TestCase):
         self.assertIn("| 1.900 | +0.600 |", text)
         self.assertIn("within the bound of the same run: 3 of 5", text)
         self.assertIn("| 1 | 1.300 | 2.500 | 20000 | 400 |", text)
+
+    def test_the_group_flush_bound_uses_the_flushes_of_the_same_run(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.write(root)
+            for n, flush in enumerate((400_000, 400_000, 500_000, 400_000, 400_000), 1):
+                (root / f"paced-{n}.log").write_text(
+                    log("50000.000", 1_900_000, 450_000, paced=True, group_flush_p99=flush))
+            text = self.capture(root)
+        self.assertIn("| 1 | 0.350 | 0.400 | 1.800 | +0.100 |", text)
+        self.assertIn("| 3 | 0.350 | 0.500 | 2.000 | -0.100 |", text)
+        self.assertIn("within the bound from their own group flushes: 1 of 5", text)
+
+    def test_a_capture_without_group_flush_times_shows_no_such_bound(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.write(root)
+            text = self.capture(root)
+        self.assertIn("| 1 | n/a | n/a | n/a | n/a |", text)
+        self.assertNotIn("their own group flushes:", text)
 
     def test_default_runs_alone_give_no_paced_table(self):
         with tempfile.TemporaryDirectory() as d:
