@@ -417,6 +417,40 @@ fn a_drill_failure_retains_a_pair_that_replays_the_rejection() {
     std::fs::remove_file(path.with_extension("ledger")).unwrap();
 }
 
+/// Given an independent reader and one durable record
+/// When a simulated crash overtakes a read that the reader has started
+/// Then the reader keeps running and reports one canceled read
+/// And every state that it recorded holds only the durable record
+/// Cases: SIM-MODEL, ORACLE-8
+#[test]
+fn a_reader_outlives_a_read_that_a_crash_cancels() {
+    let _watchdog = watchdog("reader across a crash".into());
+    let sim = Sim::new(921);
+    let ledger = Arc::new(Mutex::new(Ledger {
+        seed: 921,
+        mode: Crash::PowerLoss,
+        options: options(),
+        requests: vec![],
+        reads: vec![],
+    }));
+    let log = Arc::new(open(&sim, &options()));
+    Caller::start(&log, &ledger, literal(0, 1, 3, 0), true).finish();
+    let bytes = super::support::raw::bytes(&sim);
+    let length = u32::from_le_bytes(bytes[64..68].try_into().unwrap()) as usize + 8;
+    let reader = Reader::start(&log, &ledger);
+    let read = sim.hold(Call::new(SEG, Purpose::Lookup, Op::Read(64, length)));
+    read.wait();
+    sim.crash(Crash::PowerLoss, 921);
+    read.release(None);
+    assert_eq!(reader.finish(), 1);
+    let ledger = ledger.lock().unwrap();
+    assert!(!ledger.reads.is_empty());
+    for read in &ledger.reads {
+        assert_eq!(read.records.len(), 1);
+        assert_eq!((read.before, read.after), (1, 1));
+    }
+}
+
 /// Given the reduced pressure trace from seed 1000 with a small group cap
 /// When recovery finishes and the oracle checks durable-offset non-reuse
 /// Then its fresh verification submit fits the saved cap without changing options
