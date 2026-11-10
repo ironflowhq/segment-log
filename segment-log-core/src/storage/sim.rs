@@ -193,7 +193,7 @@ impl Sim {
         (s.initial_seed, s.trace.clone())
     }
     pub(crate) fn count(&self, path: &Path, purpose: Purpose, op: &Op) -> usize {
-        self.state.lock().unwrap().trace.iter().filter(|e| matches!(e, Event::Call(c, _, _) if c.path == path && c.purpose == purpose && std::mem::discriminant(&c.op) == std::mem::discriminant(op))).count()
+        self.state.lock().unwrap().trace.iter().filter(|e| matches!(e, Event::Call(c, _, _) if (c.path == path || segment_pattern(path, &c.path)) && c.purpose == purpose && std::mem::discriminant(&c.op) == std::mem::discriminant(op))).count()
     }
     pub(crate) fn image(&self) -> Image {
         self.state.lock().unwrap().image.clone()
@@ -256,7 +256,7 @@ impl Storage for Sim {
     fn call(&self, call: Call) -> io::Result<Value> {
         let (held, boot) = {
             let mut s = self.state.lock().unwrap();
-            let held = if s.held.as_ref().is_some_and(|h| h.call == call) {
+            let held = if s.held.as_ref().is_some_and(|h| h.call.matches(&call)) {
                 s.held.take()
             } else {
                 None
@@ -278,7 +278,7 @@ impl Storage for Sim {
             let fault = release.unwrap_or_else(|| {
                 s.faults
                     .iter()
-                    .position(|(c, _)| c == &call)
+                    .position(|(c, _)| c.matches(&call))
                     .map(|i| s.faults.remove(i).1)
             });
             let State { image, rng, .. } = &mut *s;
@@ -584,5 +584,19 @@ impl Drop for Sim {
                 path.display()
             ),
         }
+    }
+}
+/// Whether `pattern` is `<dir>/*.seg` and `path` is a segment file in `<dir>`. A scenario names the
+/// next group's flush this way, so it holds wherever a roll has left the active segment.
+fn segment_pattern(pattern: &Path, path: &Path) -> bool {
+    pattern.file_name() == Some("*.seg".as_ref())
+        && path.parent() == pattern.parent()
+        && path.extension() == Some("seg".as_ref())
+}
+impl Call {
+    pub(crate) fn matches(&self, call: &Call) -> bool {
+        self.purpose == call.purpose
+            && self.op == call.op
+            && (self.path == call.path || segment_pattern(&self.path, &call.path))
     }
 }

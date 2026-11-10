@@ -14,7 +14,7 @@ fn failed_flush_hides_the_group_and_stops_the_writer() {
     bounded(|| {
         let sim = Sim::new(2);
         let log = open(&sim);
-        let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let pending = append(&log, b"s");
         hold.wait();
         let queued = append(&log, b"next");
@@ -31,10 +31,13 @@ fn failed_flush_hides_the_group_and_stops_the_writer() {
         assert!(log.stream_head(b"s").is_none());
         drop(log);
         assert_eq!(
-            sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+            sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
             1
         );
-        assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 1);
+        assert_eq!(
+            sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+            1
+        );
         sim.crash(storage::sim::Crash::Kill, 3);
         let reopened = open(&sim);
         assert_record(&reopened);
@@ -58,7 +61,7 @@ fn failed_writes_never_ack_and_recovery_keeps_only_complete_frames() {
             let sim = Sim::new(11);
             let log = open(&sim);
             sim.inject(
-                Call::new(SEG, Purpose::Group, Op::Append(first_frame())),
+                Call::new(ANY_SEG, Purpose::Group, Op::Append(first_frame())),
                 fault,
             );
             assert!(matches!(
@@ -73,9 +76,12 @@ fn failed_writes_never_ack_and_recovery_keeps_only_complete_frames() {
                 Err(AppendError::Poisoned)
             ));
             drop(log);
-            assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 0);
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+                0
+            );
+            assert_eq!(
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                 1
             );
             sim.crash(storage::sim::Crash::Kill, 12);
@@ -118,7 +124,7 @@ fn positions(answer: Committed, expected: &[(u64, u64)], deduplicated: bool) {
     );
 }
 fn flush() -> Call {
-    Call::new(SEG, Purpose::Group, Op::SyncData)
+    Call::new(ANY_SEG, Purpose::Group, Op::SyncData)
 }
 
 fn frame(base: u64, records: &[NewRecord]) -> Vec<u8> {
@@ -209,7 +215,7 @@ fn poisoned_groups_recover_durably_before_unknown_keys_are_retried() {
                     let next = sim.hold(if at_flush {
                         flush()
                     } else {
-                        Call::new(SEG, Purpose::Group, Op::Append(group.clone()))
+                        Call::new(ANY_SEG, Purpose::Group, Op::Append(group.clone()))
                     });
                     held.release(None);
                     positions(boot.wait().unwrap(), &[(0, 0)], false);
@@ -265,11 +271,11 @@ fn poisoned_groups_recover_durably_before_unknown_keys_are_retried() {
                     assert!(log.stream_head(b"a").is_none());
                     drop(log);
                     assert_eq!(
-                        sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                         2
                     );
                     assert_eq!(
-                        sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData),
+                        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
                         if at_flush { 2 } else { 1 }
                     );
                     history.extend([
@@ -426,10 +432,13 @@ fn short_valid_lookup_aborts_buffered_originals_and_waiters() {
             assert!(log.stream_head(b"a").is_none());
             drop(log);
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                 1
             );
-            assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 1);
+            assert_eq!(
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+                1
+            );
             sim.call(Call::new(SEG, Purpose::Open, Op::Write(64, original_frame)))
                 .unwrap();
             let history = [
@@ -522,10 +531,13 @@ fn lookup_failure_without_new_records_poisons_both_kinds_of_queued_work() {
             assert!(log.stream_head(b"a").is_none());
             drop(log);
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                 1
             );
-            assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 1);
+            assert_eq!(
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+                1
+            );
             if fault_index >= 3 {
                 sim.call(Call::new(SEG, Purpose::Open, Op::Write(64, original_frame)))
                     .unwrap();

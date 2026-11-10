@@ -43,15 +43,15 @@ fn positions(result: Committed, expected: &[(u64, u64)], retry: bool) {
     );
 }
 fn flush() -> Call {
-    Call::new(SEG, Purpose::Group, Op::SyncData)
+    Call::new(ANY_SEG, Purpose::Group, Op::SyncData)
 }
 fn calls(sim: &Sim, writes: usize, flushes: usize) {
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
         writes
     );
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
         flushes
     );
 }
@@ -251,7 +251,7 @@ fn failed_groups_drain_matched_waiters_and_poison_queued_retries() {
                 let next = sim.hold(if at_flush {
                     flush()
                 } else {
-                    Call::new(SEG, Purpose::Group, Op::Append(pending_frame()))
+                    Call::new(ANY_SEG, Purpose::Group, Op::Append(pending_frame()))
                 });
                 held.release(None);
                 bootstrap.wait().unwrap();
@@ -493,7 +493,7 @@ fn pending_rejections_and_originals_survive_only_as_a_valid_prefix() {
                         vec![record(b"fresh", Some(b"fresh"), b"never"), b(), boot()],
                     );
                     let next = sim.hold(if point == 0 {
-                        Call::new(SEG, Purpose::Group, Op::Append(pending_frame()))
+                        Call::new(ANY_SEG, Purpose::Group, Op::Append(pending_frame()))
                     } else {
                         flush()
                     });
@@ -597,7 +597,7 @@ fn failed_pending_groups_recover_originals_without_retry_records() {
                 let next = sim.hold(if at_flush {
                     flush()
                 } else {
-                    Call::new(SEG, Purpose::Group, Op::Append(pending_frame()))
+                    Call::new(ANY_SEG, Purpose::Group, Op::Append(pending_frame()))
                 });
                 held.release(None);
                 bootstrap.wait().unwrap();

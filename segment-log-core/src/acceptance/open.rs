@@ -135,7 +135,7 @@ fn inclusive_option_boundaries_open_without_budget_sized_allocation() {
                         result.unwrap().wait().unwrap();
                         assert_records(&log.read(0, 1).unwrap(), &[stored(b"s", None, b"", 0, 0)]);
                         assert_eq!(
-                            sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                            sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                             1
                         );
                     }

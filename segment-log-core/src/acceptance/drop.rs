@@ -37,11 +37,11 @@ fn positions(answer: Committed, offsets: &[u64], retry: bool) {
     );
 }
 fn flush() -> Call {
-    Call::new(SEG, Purpose::Group, Op::SyncData)
+    Call::new(ANY_SEG, Purpose::Group, Op::SyncData)
 }
 fn group_write(base: u64, streams: &[u8]) -> Call {
     Call::new(
-        SEG,
+        ANY_SEG,
         Purpose::Group,
         Op::Append(
             crate::codec::encode(&crate::codec::Group {
@@ -127,11 +127,11 @@ fn drop_holds_the_lock_until_its_drain_finishes() {
                 positions(regrouped.wait().unwrap(), &[2, 0], true);
             }
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                 1
             );
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
                 usize::from(!failed || at_flush)
             );
             let recovered = try_open(&sim).unwrap();
@@ -148,7 +148,10 @@ fn drop_holds_the_lock_until_its_drain_finishes() {
             assert_records(&recovered.read(0, 10).unwrap(), &expected);
             if !expected.is_empty() {
                 positions(send(&recovered, b"ca").wait().unwrap(), &[2, 0], true);
-                assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 1);
+                assert_eq!(
+                    sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+                    1
+                );
             }
         }
     });
@@ -227,11 +230,11 @@ fn failure_after_drop_closes_admission_poisons_deferred_and_queued_work() {
             done_rx.recv_timeout(Duration::from_secs(5)).unwrap();
             dropper.join().unwrap();
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                 2
             );
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
                 1 + usize::from(at_flush)
             );
             let recovered = try_open(&sim).unwrap();
@@ -278,10 +281,13 @@ fn dropping_an_already_failed_writer_releases_the_lock() {
                 matches!(answer, Err(e) if if panic { matches!(e, CommitError::Indeterminate) } else { matches!(e, CommitError::Poisoned) })
             );
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                 2
             );
-            assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 2);
+            assert_eq!(
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+                2
+            );
             let recovered = try_open(&sim).unwrap();
             assert_records(
                 &recovered.read(0, 10).unwrap(),

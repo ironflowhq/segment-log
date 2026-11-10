@@ -44,7 +44,7 @@ fn append_is_invisible_until_its_group_flush_succeeds() {
     bounded(|| {
         let sim = Sim::new(1);
         let log = open(&sim);
-        let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let pending = append(&log, b"s");
         hold.wait();
         assert!(pending.probe().is_none());
@@ -60,7 +60,10 @@ fn append_is_invisible_until_its_group_flush_succeeds() {
             (0, 0)
         );
         assert_record(&log);
-        assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 1);
+        assert_eq!(
+            sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+            1
+        );
     });
 }
 
@@ -100,7 +103,7 @@ fn zero_linger_drains_queued_submits_up_to_the_cap() {
                 Arc::new(sim.clone()),
             )
             .unwrap();
-            let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+            let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
             let first = append(&log, b"s");
             hold.wait();
             let mut a = submit(b"a");
@@ -115,7 +118,7 @@ fn zero_linger_drains_queued_submits_up_to_the_cap() {
             third.wait().unwrap();
             assert_eq!(log.watermark(), 3);
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
                 flushes
             );
             let records = log.read(1, 1).unwrap();
@@ -136,7 +139,7 @@ fn linger_runs_from_the_admission_of_a_groups_first_submit() {
         let linger = Duration::from_secs(1);
         let sim = Sim::new(46);
         let log = lingering(&sim, linger);
-        let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let alone = Instant::now();
         let first = append(&log, b"s");
         hold.wait();
@@ -155,7 +158,10 @@ fn linger_runs_from_the_admission_of_a_groups_first_submit() {
             "the late group waited another linger after {:?}",
             released.elapsed()
         );
-        assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 2);
+        assert_eq!(
+            sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+            2
+        );
         assert_eq!(log.watermark(), 4);
     });
 }
@@ -172,7 +178,7 @@ fn a_group_formed_after_its_linger_ended_fails_and_recovers_whole() {
         let linger = Duration::from_millis(20);
         let sim = Sim::new(47);
         let log = lingering(&sim, linger);
-        let flush = Call::new(SEG, Purpose::Group, Op::SyncData);
+        let flush = Call::new(ANY_SEG, Purpose::Group, Op::SyncData);
         let hold = sim.hold(flush.clone());
         let first = append(&log, b"s");
         hold.wait();
@@ -189,7 +195,7 @@ fn a_group_formed_after_its_linger_ended_fails_and_recovers_whole() {
             Err(AppendError::Poisoned)
         ));
         assert_eq!(log.watermark(), 1);
-        let segment = Path::new(SEG);
+        let segment = Path::new(ANY_SEG);
         assert_eq!(sim.count(segment, Purpose::Group, &Op::Append(vec![])), 2);
         assert_eq!(sim.count(segment, Purpose::Group, &Op::SyncData), 2);
         let (seed, trace) = sim.trace();
@@ -197,7 +203,7 @@ fn a_group_formed_after_its_linger_ended_fails_and_recovers_whole() {
         // The first record is acknowledged, so every replay keeps its flush.
         let acknowledged = trace
             .iter()
-            .position(|event| matches!(event, Event::Call(call, None, _) if *call == flush))
+            .position(|event| matches!(event, Event::Call(call, None, _) if flush.matches(call)))
             .unwrap()
             + 1;
         for end in acknowledged..=trace.len() {
@@ -239,7 +245,7 @@ fn a_group_takes_only_submits_admitted_before_its_gathering_ended() {
         let frame = super::support::raw::bytes(&sim);
         let length = u32::from_le_bytes(frame[64..68].try_into().unwrap()) as usize + 8;
         let lookup = Call::new(SEG, Purpose::Lookup, Op::Read(64, length));
-        let flush = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let flush = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let held = unkeyed(&log, &[b"x"]);
         flush.wait();
         let mut queued = unkeyed(&log, &[b"a"]);
@@ -265,6 +271,9 @@ fn a_group_takes_only_submits_admitted_before_its_gathering_ended() {
             .collect();
         assert_eq!(streams, [b"x", b"a", b"b", b"z"]);
         // One flush each for s, x, the pair a and b, and z.
-        assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 4);
+        assert_eq!(
+            sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+            4
+        );
     });
 }

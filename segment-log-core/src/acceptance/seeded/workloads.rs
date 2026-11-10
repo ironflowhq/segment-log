@@ -122,7 +122,7 @@ pub(super) fn workload(sim: &Sim, shared: &Arc<Mutex<Ledger>>, variant: usize) {
         )
     } else if matches!(variant, 1 | 4 | 5) {
         Call::new(
-            SEG,
+            ANY_SEG,
             Purpose::Group,
             Op::Append(frame(2, &all, &predicted[..2])),
         )

@@ -43,11 +43,11 @@ fn positions(result: Committed, expected: &[(u64, u64)], retry: bool) {
 }
 fn calls(sim: &Sim, count: usize) {
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
         count
     );
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
         count
     );
 }
@@ -310,7 +310,7 @@ fn terminal_answers_do_not_wait_for_a_new_flush() {
     bounded(|| {
         let sim = Sim::new(407);
         let log = open(&sim);
-        let bootstrap_hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let bootstrap_hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let bootstrap = send(&log, vec![original()]);
         bootstrap_hold.wait();
         let new = send(&log, vec![record(b"new", None, b"")]);
@@ -318,7 +318,7 @@ fn terminal_answers_do_not_wait_for_a_new_flush() {
         let partial = send(&log, vec![original(), record(b"fresh", None, b"")]);
         let wrong = send(&log, vec![record(b"new", None, b"")]);
         let retry = send(&log, vec![original()]);
-        let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         bootstrap_hold.release(None);
         bootstrap.wait().unwrap();
         hold.wait();
@@ -367,7 +367,7 @@ fn lookup_failure_aborts_buffered_work_but_preserves_finalized_answers() {
             let log = open(&sim);
             send(&log, vec![original()]).wait().unwrap();
             let bootstrap_position = raw::bytes(&sim).len();
-            let held_flush = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+            let held_flush = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
             let bootstrap = send(&log, vec![record(b"b", Some(b"b"), b"bootstrap")]);
             held_flush.wait();
             let len = raw::bytes(&sim).len() - bootstrap_position;
@@ -455,7 +455,7 @@ fn retry_bytes_do_not_fill_groups_or_overtake_deferred_new_work() {
             std::sync::Arc::new(sim.clone()),
         )
         .unwrap();
-        let held = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let held = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let bootstrap = send(&log, vec![original()]);
         held.wait();
         let first = send(&log, vec![record(b"a", None, b"12345678")]);
@@ -463,7 +463,7 @@ fn retry_bytes_do_not_fill_groups_or_overtake_deferred_new_work() {
         let conflict = send(&log, vec![record(b"x", Some(b"k"), b"original")]);
         let deferred = send(&log, vec![record(b"b", None, b"12345678")]);
         let behind = send(&log, vec![original()]);
-        let next_flush = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let next_flush = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         held.release(None);
         bootstrap.wait().unwrap();
         next_flush.wait();
@@ -505,7 +505,7 @@ fn terminal_classification_releases_capacity_before_wait() {
             )
             .unwrap();
             send(&log, vec![original()]).wait().unwrap();
-            let held = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+            let held = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
             let bootstrap = send(&log, vec![record(b"b", None, b"")]);
             held.wait();
             let new = send(&log, vec![record(b"new", None, b"")]);
@@ -526,7 +526,7 @@ fn terminal_classification_releases_capacity_before_wait() {
                 Submit { records: vec![r] }
             };
             assert!(matches!(log.append(large(2500)), Err(AppendError::Full)));
-            let next_flush = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+            let next_flush = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
             held.release(None);
             bootstrap.wait().unwrap();
             next_flush.wait();
@@ -697,7 +697,7 @@ fn unknown_keyed_outcomes_resolve_from_the_recovered_prefix() {
             for seed in [1, 2, 3, 4] {
                 let sim = Sim::new(414);
                 let log = open(&sim);
-                let held = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+                let held = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
                 let pending = send(&log, vec![original()]);
                 held.wait();
                 assert!(pending.probe().is_none());
@@ -751,7 +751,7 @@ fn recovery_does_not_index_keys_from_a_discarded_frame() {
         })
         .unwrap();
         sim.inject(
-            Call::new(SEG, Purpose::Group, Op::Append(bytes)),
+            Call::new(ANY_SEG, Purpose::Group, Op::Append(bytes)),
             Fault::Partial(12),
         );
         assert!(matches!(
@@ -866,7 +866,7 @@ fn malformed_lookup_also_aborts_the_unwritten_group() {
         let log = open(&sim);
         send(&log, vec![original()]).wait().unwrap();
         let lookup_call = lookup(&sim);
-        let held = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let held = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let bootstrap = send(&log, vec![record(b"b", None, b"")]);
         held.wait();
         let new = send(&log, vec![record(b"new", None, b"")]);
@@ -911,14 +911,14 @@ fn a_failed_group_poisons_deferred_work_without_overtaking() {
             std::sync::Arc::new(sim.clone()),
         )
         .unwrap();
-        let held = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let held = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let bootstrap = send(&log, vec![original()]);
         held.wait();
         let new = send(&log, vec![record(b"a", None, b"12345678")]);
         let retry = send(&log, vec![original()]);
         let deferred = send(&log, vec![record(b"b", None, b"12345678")]);
         let queued = send(&log, vec![original()]);
-        let next_flush = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let next_flush = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         held.release(None);
         bootstrap.wait().unwrap();
         next_flush.wait();
@@ -1047,13 +1047,13 @@ fn keys_resolve_to_their_own_frames_across_groups_and_crashes() {
                 if end == trace.len() {
                     assert_eq!(kept, 15);
                 }
-                let writes = replay.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![]));
+                let writes = replay.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![]));
                 for offset in 0..kept {
                     retry(&recovered, &[offset]);
                 }
                 retry(&recovered, &[kept - 1, 0, 5]);
                 assert_eq!(
-                    replay.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                    replay.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                     writes
                 );
                 if kept == 11 {

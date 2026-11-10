@@ -1,5 +1,5 @@
 use super::support::{
-    fixtures::{SEG, Sim, options},
+    fixtures::{ANY_SEG, SEG, Sim, options},
     oracle::{self, Answer, Input, Observation, Request},
     trace,
 };
@@ -40,7 +40,7 @@ fn open(sim: &Sim, o: &Options) -> SegmentLog {
     SegmentLog::with_storage(Path::new("/log"), opts(o), Arc::new(sim.clone())).unwrap()
 }
 fn flush() -> Call {
-    Call::new(SEG, Purpose::Group, Op::SyncData)
+    Call::new(ANY_SEG, Purpose::Group, Op::SyncData)
 }
 fn literal(id: u64, count: usize, size: usize, keying: u64) -> Vec<Input> {
     (0..count)

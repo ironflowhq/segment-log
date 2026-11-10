@@ -54,7 +54,7 @@ fn pending_bytes_remain_charged_until_the_answer() {
             s.records[0].payload = Vec::with_capacity(2500);
             s
         };
-        let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let pending = log.append(make()).unwrap();
         hold.wait();
         assert!(matches!(log.append(make()), Err(AppendError::Full)));
@@ -75,7 +75,7 @@ fn configured(sim: &Sim, opts: Options) -> SegmentLog {
     SegmentLog::with_storage(Path::new("/log"), opts, Arc::new(sim.clone())).unwrap()
 }
 fn flush() -> Call {
-    Call::new(SEG, Purpose::Group, Op::SyncData)
+    Call::new(ANY_SEG, Purpose::Group, Op::SyncData)
 }
 fn record(stream: &[u8], key: Option<&[u8]>, payload: &[u8]) -> NewRecord {
     NewRecord {
@@ -188,7 +188,7 @@ fn each_retained_capacity_and_result_slot_is_charged() {
                     assert_eq!(accounting::used(&log), 0);
                     assert_eq!(log.watermark(), 0);
                     assert_eq!(
-                        sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                         0
                     );
                 } else {
@@ -356,7 +356,7 @@ fn structural_size_state_and_capacity_failures_have_defined_precedence() {
             assert_eq!(log.watermark(), 0);
             assert!(log.stream_head(b"s").is_none());
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                 1
             );
         }
@@ -743,7 +743,7 @@ fn durable_retries_must_still_fit_standalone_limits() {
             let log = open(&sim);
             log.append(make()).unwrap().wait().unwrap();
             drop(log);
-            let writes = sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![]));
+            let writes = sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![]));
             let log = configured(
                 &sim,
                 Options {
@@ -763,7 +763,7 @@ fn durable_retries_must_still_fit_standalone_limits() {
             assert!(matches!(log.append(make()), Err(AppendError::TooLarge)));
             assert_eq!(accounting::used(&log), 0);
             assert_eq!(
-                sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                 writes
             );
             assert_records(

@@ -260,6 +260,43 @@ fn held_calls_report_start_and_wait_for_release() {
         );
     });
 }
+/// Given a held flush, an injected fault and a count, each named on `/log/*.seg`
+/// When the same calls run on two segment files, a file of another kind and another directory
+/// Then the hold and the fault each take the first segment call, and the count covers both
+/// And the calls outside the log's segment files match none of them
+/// Cases: SIM-MODEL
+#[test]
+fn a_segment_pattern_matches_every_segment_file_of_its_directory() {
+    bounded(|| {
+        let s = setup();
+        for path in [
+            "/log/00000000000000000000.seg",
+            "/log/00000000000000000001.seg",
+        ] {
+            call(&s, path, Op::Create);
+        }
+        let pattern = |op| Call::new("/log/*.seg", Purpose::Group, op);
+        s.inject(pattern(Op::Append(vec![1])), Fault::NoSpace);
+        let hold = s.hold(pattern(Op::SyncData));
+        let worker = s.clone();
+        let thread = std::thread::spawn(move || {
+            let group = |path: &str, op| worker.call(Call::new(path, Purpose::Group, op));
+            assert!(group("/log/a", Op::SyncData).is_ok());
+            assert!(group("/log/a", Op::Append(vec![1])).is_ok());
+            assert!(group("/log/00000000000000000001.seg", Op::SyncData).is_err());
+            assert!(group("/log/00000000000000000001.seg", Op::Append(vec![1])).is_err());
+            assert!(group("/log/00000000000000000000.seg", Op::Append(vec![1])).is_ok());
+            assert!(group("/log/00000000000000000000.seg", Op::SyncData).is_ok());
+        });
+        hold.wait();
+        hold.release(Some(Fault::NoSpace));
+        thread.join().unwrap();
+        let count = |path: &str| s.count(Path::new(path), Purpose::Group, &Op::SyncData);
+        assert_eq!(count("/log/*.seg"), 2);
+        assert_eq!(count("/other/*.seg"), 0);
+        assert_eq!(count("/log/a"), 1);
+    });
+}
 /// Given identical seeded storage traces
 /// When the same crash seed is replayed including chained crashes
 /// Then the complete crash states are identical
