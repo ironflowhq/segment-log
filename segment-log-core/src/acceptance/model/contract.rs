@@ -73,6 +73,15 @@ pub(super) enum Outcome {
     /// No answer while that flush was held, and this answer after it.
     AfterFlush(Answer),
 }
+impl Outcome {
+    pub(super) fn rejected(&self) -> bool {
+        matches!(
+            self,
+            Self::Refused | Self::AtClassification(Err(_)) | Self::AfterFlush(Err(_))
+        )
+    }
+}
+
 /// The durable view through `watermark`, `read` and `stream_head`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct View {
@@ -116,7 +125,7 @@ impl Step {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct Script {
     steps: Vec<Step>,
-    /// Every stream that a submit named. The durable view reads the head of each.
+    /// Every stream that a submit named. `without` keeps them, so both runs of an erasure read the same heads.
     streams: BTreeSet<Bytes>,
 }
 impl Script {
@@ -170,6 +179,29 @@ impl Script {
         };
         self.steps.iter().map(step).sum()
     }
+    /// The same script without the submits at `erased`, as (step, submit). Closers stay.
+    pub(super) fn without(&self, erased: &[(usize, usize)]) -> Self {
+        let step = |(n, step): (usize, &Step)| match step {
+            Step::Open { .. } => step.clone(),
+            Step::Group { submits, closer } => Step::Group {
+                submits: kept(submits, n, erased),
+                closer: closer.clone(),
+            },
+        };
+        Self {
+            steps: self.steps.iter().enumerate().map(step).collect(),
+            streams: self.streams.clone(),
+        }
+    }
+}
+fn kept<T: Clone>(items: &[T], step: usize, erased: &[(usize, usize)]) -> Vec<T> {
+    let keep = |(i, _): &(usize, &T)| !erased.contains(&(step, *i));
+    items
+        .iter()
+        .enumerate()
+        .filter(keep)
+        .map(|(_, item)| item.clone())
+        .collect()
 }
 impl fmt::Display for Script {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -205,6 +237,28 @@ pub(super) struct Trace {
     pub flushed: usize,
 }
 impl Trace {
+    /// Where the rejected submits are, as (step, submit).
+    pub(super) fn rejected(&self) -> Vec<(usize, usize)> {
+        let mut rejected = vec![];
+        for (n, step) in self.steps.iter().enumerate() {
+            for (i, outcome) in step.outcomes.iter().enumerate() {
+                if outcome.rejected() {
+                    rejected.push((n, i));
+                }
+            }
+        }
+        rejected
+    }
+    pub(super) fn without(&self, erased: &[(usize, usize)]) -> Self {
+        let step = |(n, step): (usize, &Observed)| Observed {
+            outcomes: kept(&step.outcomes, n, erased),
+            ..step.clone()
+        };
+        Self {
+            steps: self.steps.iter().enumerate().map(step).collect(),
+            ..self.clone()
+        }
+    }
     /// Every observation with its place, in the order a reader walks them.
     fn lines(&self) -> Vec<(String, String)> {
         fn view(lines: &mut Vec<(String, String)>, place: &str, view: &View, flushed: usize) {

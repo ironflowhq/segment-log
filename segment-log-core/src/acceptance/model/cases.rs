@@ -11,6 +11,13 @@ const PAYLOADS: [&str; 3] = ["", "p", "pp"];
 #[derive(Clone, Debug)]
 pub(super) struct Case {
     pub steps: Vec<StepSpec>,
+    pub erase: Erase,
+}
+/// Which rejected submits the erasure property removes.
+#[derive(Clone, Debug)]
+pub(super) struct Erase {
+    mask: Vec<bool>,
+    fallback: u8,
 }
 #[derive(Clone, Debug)]
 pub(super) enum StepSpec {
@@ -62,6 +69,20 @@ pub(super) enum ExpectSpec {
     /// What `stream_head` reports. It is wrong when the stream has a pending record,
     /// or an earlier record of the same submit.
     DurableHead,
+}
+
+impl Erase {
+    /// A subset of `rejected` with at least one member when there is one.
+    /// The rejected submits that stay show whether an erased one had left something behind.
+    pub(super) fn choose(&self, rejected: &[(usize, usize)]) -> Vec<(usize, usize)> {
+        let masked =
+            |(i, at): (usize, &(usize, usize))| self.mask[i % self.mask.len()].then_some(*at);
+        let chosen: Vec<_> = rejected.iter().enumerate().filter_map(masked).collect();
+        if chosen.is_empty() && !rejected.is_empty() {
+            return vec![rejected[usize::from(self.fallback) % rejected.len()]];
+        }
+        chosen
+    }
 }
 
 pub(super) struct Expected {
@@ -250,7 +271,9 @@ fn expectation(spec: ExpectSpec, model: &Model, stream: &Bytes, earlier: &[NewRe
 }
 
 pub(super) fn case() -> impl Strategy<Value = Case> {
-    vec(step(), 1..=12).prop_map(|steps| Case { steps })
+    let erase = (vec(any::<bool>(), 1..=8), any::<u8>());
+    let erase = erase.prop_map(|(mask, fallback)| Erase { mask, fallback });
+    (vec(step(), 1..=12), erase).prop_map(|(steps, erase)| Case { steps, erase })
 }
 fn step() -> impl Strategy<Value = StepSpec> {
     prop_oneof![
