@@ -1,0 +1,12 @@
+threads=1000 reps=200 (medians)
+serial unpark                waker_us=  3468.8 mean_wake_us=  1759.3 last_wake_us=  3482.0
+relay tree fanout=2          waker_us=    24.2 mean_wake_us=   900.3 last_wake_us=  1794.5
+relay tree fanout=4          waker_us=    45.9 mean_wake_us=  1025.8 last_wake_us=  2104.8
+relay tree fanout=8          waker_us=    77.5 mean_wake_us=   579.3 last_wake_us=  1321.5
+relay tree fanout=16         waker_us=   224.5 mean_wake_us=   519.9 last_wake_us=  1507.5
+relay tree fanout=32         waker_us=   518.5 mean_wake_us=   677.4 last_wake_us=  1707.1
+condvar notify_all x1        waker_us=  3470.2 mean_wake_us=  1797.9 last_wake_us=  3483.0
+condvar notify_all x8        waker_us=  3287.4 mean_wake_us=  1652.4 last_wake_us=  3301.0
+condvar notify_all x32       waker_us=  3377.4 mean_wake_us=  1717.3 last_wake_us=  3393.8
+condvar notify_all x128      waker_us=  3418.8 mean_wake_us=  1730.2 last_wake_us=  3432.3
+serial unpark (again)        waker_us=  3490.3 mean_wake_us=  1780.3 last_wake_us=  3506.3
