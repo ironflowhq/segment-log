@@ -208,7 +208,7 @@ Cases apply from M1 unless they name another milestone. Mixed bullets identify t
 - `ROLL-FOOTER`. Early roll for footer size, from M4. The writer rolls when a group's new streams would make the footer pass the frame limit. Ordinary size-based roll starts in M3.
 - `READER`. `LogReader`, from M4, on storage that refuses every write, and with two readers open at once. On an unsealed log, it fails with `NotSealed`.
 
-`proptest` is a suitable dev-dependency for deterministic, single-threaded properties, such as codec round trips, charge arithmetic and the M2 model driven one submit at a time. Commit its regression files. Use the seeded trace harness above, not `proptest` shrinking, for runs with several threads.
+`proptest` is a suitable dev-dependency for deterministic, single-threaded properties, such as codec round trips, charge arithmetic and the M2 model driven from one caller thread behind held group flushes. Commit its regression files. Use the seeded trace harness above, not `proptest` shrinking, for runs with several threads.
 
 ## Fuzzing (M5)
 
