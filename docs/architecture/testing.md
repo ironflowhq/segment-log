@@ -232,6 +232,8 @@ The benchmark measures the [PRD targets](../prd.md#footprint-and-performance-tar
 
 The default workload is a closed loop: each caller submits again as soon as it is answered, so the offered load follows the log's own speed. Setting `SEGMENT_LOG_BENCH_INTERVAL_US` selects the paced variant. Each caller then submits once per interval, and the callers are spread evenly over the interval. Paced latency starts at the scheduled send, so a late caller still counts its delay. Report the paced variant by name, with its interval and offered rate. It does not replace the default run.
 
+The default run measures the throughput target. The paced run at the throughput target's rate measures the latency target ([ADR 0045](../decisions/0045-latency-target-is-measured-at-a-paced-rate.md)). Report the default run's latency as well, beside the number of callers divided by its throughput. Report every paced run, including a run with a device stall.
+
 An M1 segment grows for the duration of the run. Record its actual size and scan cost instead of assuming that the later roll setting limits it. Benchmark code creates no sparse index in M1. The segment roll and sparse-index position bounds become relevant with their later features.
 
 A benchmark on macOS is for development only. The targets are for Linux.
