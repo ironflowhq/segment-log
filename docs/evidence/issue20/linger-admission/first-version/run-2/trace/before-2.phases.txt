@@ -1,0 +1,45 @@
+groups=2440 counted_groups=2440 min_count=1
+group phase, ms: median p10 p90 share_of_cycle
+  formation     1.018    1.002    1.040   62.2%
+  encode        0.040    0.030    0.057    2.5%
+  write         0.031    0.024    0.045    1.9%
+  flush         0.450    0.408    0.504   27.5%
+  publish       0.017    0.013    0.029    1.1%
+  delivery      0.060    0.047    0.081    3.7%
+  cycle         1.635    1.579    1.701  100.0%
+request interval, ms: mean p50 p99 share_of_latency
+  admission         0.002    0.001    0.005    0.1%
+  queue             0.151    0.020    0.655    9.4%
+  formation_wait    0.679    0.782    1.032   42.1%
+  encode            0.042    0.040    0.079    2.6%
+  write             0.034    0.031    0.064    2.1%
+  flush             0.455    0.450    0.575   28.2%
+  publish           0.020    0.017    0.045    1.2%
+  answer_wait       0.025    0.023    0.067    1.5%
+  answer_to_wake    0.206    0.197    0.429   12.8%
+  total             1.613    1.583    2.423  100.0%
+slowest 1% of requests (2000 at or above 2.423 ms), ms: mean of each interval, share of their latency
+  admission         0.002    0.1%
+  queue             0.611   22.0%
+  formation_wait    0.936   33.7%
+  encode            0.059    2.1%
+  write             0.059    2.1%
+  flush             0.551   19.8%
+  publish           0.025    0.9%
+  answer_wait       0.072    2.6%
+  answer_to_wake    0.466   16.8%
+  total             2.780  100.0%
+slowest 0.1% of requests (200 at or above 3.523 ms), ms: mean of each interval, share of their latency
+  admission         0.002    0.1%
+  queue             0.965   23.9%
+  formation_wait    0.957   23.7%
+  encode            0.098    2.4%
+  write             0.047    1.2%
+  flush             0.809   20.0%
+  publish           0.033    0.8%
+  answer_wait       0.189    4.7%
+  answer_to_wake    0.937   23.2%
+  total             4.037  100.0%
+latency, ms: p999 3.523 max 5.151
+admission to end of gathering, ms: mean p50 p90 p99 max
+  gather_wait       0.830    0.799    1.492    1.669    3.321

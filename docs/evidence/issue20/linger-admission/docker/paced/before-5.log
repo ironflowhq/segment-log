@@ -1,0 +1,51 @@
+
+running 1 test
+PACED interval_ns=20000000 offered_records_per_second=50000.000 latency_from=scheduled_send
+DIAGNOSTIC measured_storage=true phase_cpu=false
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=295167 p50=319000 p99=437000 p999=695416 max=1954250 sum=324718850
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=863625 records=0 segments=1 bytes=64
+APPEND records=1000000 elapsed_ns=20001728551 records_per_second=49995.679 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=90288 admission_call_sum_ns=3311466164
+METRIC append_ns count=1000000 min=340801 p50=1235209 p99=2008255 p999=2405003 max=3847416 sum=1235424916657
+METRIC group_submits count=14294 min=40 p50=69 p99=82 p999=97 max=135 sum=1000000
+METRIC group_frame_bytes count=14294 min=11872 p50=20456 p99=24304 p999=28744 max=39992 sum=296457408
+METRIC group_fdatasync_ns count=14294 min=227625 p50=286625 p99=487459 p999=778083 max=1514292 sum=4339344412
+STORAGE kind=Group.Append count=14294 sum_ns=133393593
+STORAGE kind=Group.SyncData count=14294 sum_ns=4339344412
+STORAGE kind=Lookup.Other count=14294 sum_ns=56947717
+STORAGE kind=Open.Other count=7 sum_ns=232874
+STORAGE kind=Open.SyncData count=1 sum_ns=350458
+STORAGE kind=Open.SyncDir count=1 sum_ns=5875
+STORAGE kind=Recovery.Other count=2 sum_ns=1875
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=206459
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=5459
+END records=1000000 segments=1 bytes=296457472
+REOPEN ns=450974333 start_records=1000000 end_records=1000000 start_segments=1 end_segments=1 start_bytes=296457472 end_bytes=296457472 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 149 filtered out; finished in 22.00s
+
+	Command being timed: "/build/bin-tooling --exact acceptance::evidence::measured_appends_survive_reopen --nocapture"
+	User time (seconds): 7.56
+	System time (seconds): 11.14
+	Percent of CPU this job got: 84%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:22.00
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 659992
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 148105
+	Voluntary context switches: 2501661
+	Involuntary context switches: 20852
+	Swaps: 0
+	File system inputs: 8
+	File system outputs: 1205235
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

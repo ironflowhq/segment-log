@@ -1,0 +1,10 @@
+/home/runner/work/_temp/m1-compare/paced/before-1.log:METRIC group_fdatasync_ns count=11888 min=331422 p50=484805 p99=726882 p999=6133405 max=7782214 sum=6041029614
+/home/runner/work/_temp/m1-compare/paced/before-2.log:METRIC group_fdatasync_ns count=11520 min=332998 p50=538624 p99=763378 p999=2998134 max=13173106 sum=6349636966
+/home/runner/work/_temp/m1-compare/paced/before-3.log:METRIC group_fdatasync_ns count=11727 min=370619 p50=518325 p99=750447 p999=2451987 max=15877996 sum=6267304593
+/home/runner/work/_temp/m1-compare/paced/before-4.log:METRIC group_fdatasync_ns count=11220 min=360038 p50=536977 p99=1000218 p999=7460068 max=104378801 sum=6710065102
+/home/runner/work/_temp/m1-compare/paced/before-5.log:METRIC group_fdatasync_ns count=11338 min=371081 p50=553986 p99=836800 p999=3157493 max=99930648 sum=6561474143
+/home/runner/work/_temp/m1-compare/paced/after-1.log:METRIC group_fdatasync_ns count=19057 min=305922 p50=441452 p99=576208 p999=2562316 max=6272059 sum=8584135812
+/home/runner/work/_temp/m1-compare/paced/after-2.log:METRIC group_fdatasync_ns count=18559 min=329809 p50=452139 p99=754193 p999=6463676 max=9808741 sum=9006683834
+/home/runner/work/_temp/m1-compare/paced/after-3.log:METRIC group_fdatasync_ns count=18944 min=327866 p50=439276 p99=573641 p999=3367356 max=8074684 sum=8594981025
+/home/runner/work/_temp/m1-compare/paced/after-4.log:METRIC group_fdatasync_ns count=18863 min=323756 p50=440773 p99=634011 p999=5242222 max=22423969 sum=8679827523
+/home/runner/work/_temp/m1-compare/paced/after-5.log:METRIC group_fdatasync_ns count=18935 min=321937 p50=433692 p99=612307 p999=3319948 max=10809229 sum=8515467879
