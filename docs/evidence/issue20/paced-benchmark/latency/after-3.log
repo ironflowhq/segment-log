@@ -1,0 +1,49 @@
+
+running 1 test
+DIAGNOSTIC measured_storage=true phase_cpu=false
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=288750 p50=313708 p99=1540500 p999=3854625 max=10330875 sum=381430583
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=1994125 records=0 segments=1 bytes=64
+APPEND records=1000000 elapsed_ns=7467340545 records_per_second=133916.485 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=480000 admission_call_sum_ns=645663508
+METRIC append_ns count=1000000 min=1613958 p50=6144000 p99=27620916 p999=51602833 max=63862667 sum=7449413051965
+METRIC group_submits count=1152 min=5 p50=996 p99=1000 p999=1000 max=1000 sum=1000000
+METRIC group_frame_bytes count=1152 min=1512 p50=294848 p99=296032 p999=296032 max=296032 sum=296036864
+STORAGE kind=Group.Append count=1152 sum_ns=57653091
+STORAGE kind=Group.SyncData count=1152 sum_ns=1123163006
+STORAGE kind=Lookup.Other count=1152 sum_ns=22473626
+STORAGE kind=Open.Other count=7 sum_ns=345292
+STORAGE kind=Open.SyncData count=1 sum_ns=908416
+STORAGE kind=Open.SyncDir count=1 sum_ns=12417
+STORAGE kind=Recovery.Other count=2 sum_ns=4708
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=600792
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=15500
+END records=1000000 segments=1 bytes=296036928
+REOPEN ns=916464750 start_records=1000000 end_records=1000000 start_segments=1 end_segments=1 start_bytes=296036928 end_bytes=296036928 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 138 filtered out; finished in 11.08s
+
+	Command being timed: "/build/bin-paced --exact acceptance::evidence::measured_appends_survive_reopen --nocapture"
+	User time (seconds): 9.27
+	System time (seconds): 5.43
+	Percent of CPU this job got: 132%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:11.08
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 825120
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 225821
+	Voluntary context switches: 1020914
+	Involuntary context switches: 1078
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 1099419
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

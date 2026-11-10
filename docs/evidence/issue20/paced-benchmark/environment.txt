@@ -1,0 +1,37 @@
+Mon Nov  9 23:07:13 UTC 2026
+Linux 71f219f928f2 7.0.14-linuxkit #1 SMP PREEMPT Fri Oct 30 13:45:20 UTC 2026 aarch64 GNU/Linux
+10
+Architecture:                            aarch64
+CPU op-mode(s):                          64-bit
+Byte Order:                              Little Endian
+CPU(s):                                  10
+On-line CPU(s) list:                     0-9
+Vendor ID:                               Apple
+Model name:                              -
+Model:                                   0
+Thread(s) per core:                      1
+Core(s) per cluster:                     10
+Socket(s):                               -
+Cluster(s):                              1
+Stepping:                                0x0
+BogoMIPS:                                48.00
+Flags:                                   fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 asimddp sha512 asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp flagm2 frint i8mm bf16 bti afp rpres
+Vulnerability Gather data sampling:      Not affected
+Vulnerability Ghostwrite:                Not affected
+Vulnerability Indirect target selection: Not affected
+Vulnerability Itlb multihit:             Not affected
+Vulnerability L1tf:                      Not affected
+               total        used        free      shared  buff/cache   available
+Mem:      8319438848  1470017536  5926903808   107212800  1196486656  6849421312
+Filesystem     Type    1K-blocks    Used Available Use% Mounted on
+overlay        overlay 474095688 4439756 445499724   1% /
+TARGET SOURCE  FSTYPE  OPTIONS
+/      overlay overlay rw,relatime,lowerdir=/var/lib/desktop-containerd/daemon/io.containerd.snapshotter.v1.overlayfs/snapshots/36160/fs:/var/lib/desktop-containerd/daemon/io.containerd.snapshotter.v1.overlayfs/snapshots/36030/fs:/var/lib/desktop-containerd/daemon/io.containerd.snapshotter.v1.overlayfs/snapshots/36029/fs:/var/lib/desktop-containerd/daemon/io.containerd.snapshotter.v1.overlayfs/snapshots/36028/fs:/var/lib/desktop-containerd/daemon/io.containerd.snapshotter.v1.overlayfs/snapshots/36027/fs:/var/lib/desktop-containerd/daemon/io.containerd.snapshotter.v1.overlayfs/snapshots/36026/fs,upperdir=/var/lib/desktop-containerd/daemon/io.containerd.snapshotter.v1.overlayfs/snapshots/36161/fs,workdir=/var/lib/desktop-containerd/daemon/io.containerd.snapshotter.v1.overlayfs/snapshots/36161/work,nouserxattr
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+binary: rustc
+commit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67
+commit-date: 2026-10-13
+host: aarch64-unknown-linux-gnu
+release: 1.99.1
+LLVM version: 23.1.1
+cargo 1.99.1 (5f94df478 2026-08-27)
