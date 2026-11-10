@@ -13,4 +13,6 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }
 # The owner probe gives the engine its own allocator arena.
 [dev-dependencies]
 libc = "0.2"
+# An exact version, because a saved regression seed gives the same case only under the same generator.
+proptest = { version = "=1.12.0", default-features = false, features = ["std"] }
 talc = { version = "=5.1.1", default-features = false }
