@@ -1,4 +1,4 @@
-name: M1 scheduled trace oracle
+name: Scheduled long runs
 on:
   schedule:
     - cron: '23 4 * * *'

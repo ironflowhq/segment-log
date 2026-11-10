@@ -192,7 +192,7 @@ binary so a stuck local writer cannot outlive the test.
 ## Choose test techniques
 
 - Start each behavior with directed scenarios. Randomized and model tests broaden a covered contract; they do not replace its directed examples.
-- Use `proptest` for deterministic, single-threaded properties, such as codec round trips, charge arithmetic and the M2 model driven one submit at a time. Commit its regression files.
+- Use `proptest` for deterministic, single-threaded properties, such as codec round trips, charge arithmetic and the M2 model driven from one caller thread behind held group flushes. Commit its regression files.
 - Use the seeded trace harness above for crash runs with several threads.
 - Do not add loom or shuttle. They replace the synchronization types inside the core, which needs an ADR under [ADR 0012](decisions/0012-no-log-crate-dependency.md).
 - `cargo-nextest` is optional. It gives per-test timeouts that end the process, which helps when a watchdog leaves a hung writer thread.
