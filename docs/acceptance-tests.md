@@ -57,7 +57,7 @@ Keep `cargo test --workspace` fast enough to run on every pull request on both p
 
 ## Place the code
 
-These paths are planned. Nothing exists yet.
+Paths marked with a later milestone do not exist yet.
 
 | Path | Responsibility |
 | --- | --- |
@@ -65,6 +65,8 @@ These paths are planned. Nothing exists yet.
 | `segment-log-core/src/acceptance/mod.rs` | In-crate scenarios, loaded through `#[cfg(test)] mod acceptance;` |
 | `segment-log-core/src/acceptance/support/` | Fixtures, held-call helpers, the trace oracle and the coverage check |
 | `segment-log-core/src/acceptance/<group>.rs` | One module per coverage group, such as `durability`, `recovery`, `revisions`, `retries`, `admission`, `poison`, `open` and `drop` |
+| `segment-log-core/src/acceptance/model/` | The parts of the `model` module: the contract model, the case generators, and the driver. Only the driver names the log |
+| `segment-log-core/proptest-regressions/` | The seeds of failed `proptest` cases. Commit them |
 | `segment-log-core/tests/real_storage.rs` | Public API scenarios against real storage in temporary directories |
 | `segment-log-core/tests/process_crash.rs` | The [real-process harness](#real-process-harness) for `SIGKILL` and locking |
 | `fuzz/` (M5) | `cargo fuzz` targets, built with a nightly toolchain |
@@ -110,10 +112,28 @@ select the start and count. The named `m1-long-run` scheduled job runs the ignor
 variant on Linux and macOS. `SEGMENT_LOG_TRACE_REPLAY` loads paired storage and
 caller/reader artifacts without reproducing the original schedule.
 
+The model properties in `acceptance/model.rs` use one caller thread, so a seed
+replays a run exactly. The ordinary workspace run checks 256 cases of each property.
+`SEGMENT_LOG_MODEL_SEED` and `SEGMENT_LOG_MODEL_CASES` select the seed and the count.
+A failure prints its case IDs, both values, the shrunk case, its script, and both
+traces. `proptest` saves the failed case's seed in
+`segment-log-core/proptest-regressions/acceptance/model.txt`, and every later run
+checks the saved seeds first. Commit that file. To replay a run, pass the printed
+values:
+
+```sh
+SEGMENT_LOG_MODEL_SEED=2000 SEGMENT_LOG_MODEL_CASES=256 cargo test -p segment-log-core --lib acceptance::model
+```
+
+The named `m2-long-run` scheduled job runs the two ignored variants on Linux and
+macOS. It takes its seed from the run number, and it uploads the regression file
+when a variant fails.
+
 ### Drill the failure path
 
 A passing long run never shows that a failure leaves usable artifacts. Dispatch the
-`m1-long-run` workflow with its `drill` input to check that path on both platforms:
+`long-run.yml` workflow with its `drill` input to check that path for the `m1-long-run`
+job on both platforms. A drill skips the `m2-long-run` job:
 
 ```sh
 gh workflow run long-run.yml -f drill=true
@@ -173,7 +193,7 @@ binary so a stuck local writer cannot outlive the test.
 ## Choose test techniques
 
 - Start each behavior with directed scenarios. Randomized and model tests broaden a covered contract; they do not replace its directed examples.
-- Use `proptest` for deterministic, single-threaded properties, such as codec round trips, charge arithmetic and the M2 model driven one submit at a time. Commit its regression files.
+- Use `proptest` for deterministic, single-threaded properties, such as codec round trips, charge arithmetic and the M2 model driven from one caller thread behind held group flushes. Commit its regression files.
 - Use the seeded trace harness above for crash runs with several threads.
 - Do not add loom or shuttle. They replace the synchronization types inside the core, which needs an ADR under [ADR 0012](decisions/0012-no-log-crate-dependency.md).
 - `cargo-nextest` is optional. It gives per-test timeouts that end the process, which helps when a watchdog leaves a hung writer thread.

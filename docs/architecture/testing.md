@@ -16,7 +16,7 @@ The [PRD milestone gates](../prd.md#milestones) remain the source for completion
 | --- | --- | --- | --- |
 | M0-READINESS | None | Green CI run linked in the [PRD](../prd.md#milestones) | Implemented |
 | M1 | [M1 groups below](#m1-acceptance-coverage) | [M1 completion gate](#m1-completion-gate), [completion record](../evidence/m1/completion.md) | Implemented |
-| M2-MODEL | `MODEL`, `REV-NO-OFFSET` | None beyond the tests | Planned |
+| M2-MODEL | `MODEL`, `REV-NO-OFFSET` | None beyond the tests | Implemented |
 | M3-ROLL | `ORACLE-6`, M3 parts of `OPEN-LAYOUT`, `RECOVERY-FIXTURES`, `KEY-LIFETIME` and `HISTORY`; M1 scenarios rerun with a small `roll_bytes` | Linux syscall trace of the roll directory sync | Planned |
 | M4-SEAL-READ | `READER`, `ROLL-FOOTER`, M4 parts of `CODEC-GROUP`, `ADM-PRECEDENCE`, `RECOVERY-FIXTURES` and `HISTORY` | None beyond the tests | Planned |
 | M4-LOOKUP-OPEN | `ORACLE-13`, M4 parts of `ORACLE-12` and `KEY-LIFETIME` | Open-time target result; lookup reads, rebuild cost and key-cache memory under the [M4 design](../prd.md#open-items) | Planned |
@@ -208,7 +208,7 @@ Cases apply from M1 unless they name another milestone. Mixed bullets identify t
 - `ROLL-FOOTER`. Early roll for footer size, from M4. The writer rolls when a group's new streams would make the footer pass the frame limit. Ordinary size-based roll starts in M3.
 - `READER`. `LogReader`, from M4, on storage that refuses every write, and with two readers open at once. On an unsealed log, it fails with `NotSealed`.
 
-`proptest` is a suitable dev-dependency for deterministic, single-threaded properties, such as codec round trips, charge arithmetic and the M2 model driven one submit at a time. Commit its regression files. Use the seeded trace harness above, not `proptest` shrinking, for runs with several threads.
+`proptest` is a suitable dev-dependency for deterministic, single-threaded properties, such as codec round trips, charge arithmetic and the M2 model driven from one caller thread behind held group flushes. Commit its regression files. Use the seeded trace harness above, not `proptest` shrinking, for runs with several threads.
 
 ## Fuzzing (M5)
 
