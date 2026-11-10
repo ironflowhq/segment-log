@@ -1,0 +1,6 @@
+ProductName:		macOS
+ProductVersion:		27.0.1
+BuildVersion:		26A434
+Apple M4
+10
+25769803776

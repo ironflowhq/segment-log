@@ -1,0 +1,5 @@
+CONTAINER ID   NAME                          CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O        PIDS
+325d7fb9a98e   seglog-m1-peaks               0.00%     3.668MiB / 7.748GiB   0.05%     7.1MB / 21.2kB    270kB / 8.23MB   1
+6a5700880611   ironflow-test-3983-postgres   8.69%     186.9MiB / 7.748GiB   2.36%     3.28MB / 2.95MB   0B / 8.19kB      15
+d8cfa956b6bd   seglog-m1gate                 0.00%     569.2MiB / 7.748GiB   7.17%     18.3MB / 43.3kB   591MB / 7.1GB    1
+eff62625f16d   ironflow-test-seaweedfs       0.12%     105.3MiB / 7.748GiB   1.33%     26.6kB / 21.8kB   0B / 0B          15

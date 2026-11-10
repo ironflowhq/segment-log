@@ -1,0 +1,39 @@
+Checks on this branch's sources. The Rust sources are those of origin/main 86f8da8f9450db26731c9e72d0dc13c22fe3802a.
+
+== macOS 27.0.1, arm64, host
+$ cargo fmt --all --check
+exit 0
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+$ cargo test --workspace
+     Running unittests src/lib.rs
+test result: ok. 147 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 7.95s
+     Running tests/process_crash.rs
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+     Running tests/read_ranges.rs
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+     Running tests/real_storage.rs
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+     Running unittests src/main.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+exit 0
+$ python3 -B -m unittest discover -s scripts -p 'test_m1_*.py'
+Ran 27 tests in 0.240s
+OK
+exit 0
+
+Two earlier runs of cargo test --workspace on this host did not pass and are not counted.
+Both stopped in the segment-log-core unit tests with exit status 101. The first run's output was not kept.
+The second ended with SIGABRT from the scenario deadline in segment-log-core/src/acceptance/support/deadline.rs
+after 144 of 147 tests had passed. The host's load average was 93 to 99 then, from other sessions' work.
+The three tests that had not finished in the second run:
+  acceptance::recovery::failed_data_flush_recovery_makes_the_readable_submit_durable
+  acceptance::recovery::identical_rewrites_of_durable_groups_never_tear
+  acceptance::seeded::threaded_seeded_traces_preserve_the_contract
+The third run, above, passed with a load average of 76. No Rust source differs from origin/main.
+
+== Linux 7.0.14-linuxkit, aarch64, rust:1.99.1-bookworm container (run.sh, before the matrix)
+$ python3 -B -m unittest discover -s scripts -p 'test_m1_*.py'
+Ran 27 tests in 0.125s
+OK
