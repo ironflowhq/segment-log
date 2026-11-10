@@ -1,0 +1,54 @@
+name: M1 evidence capture
+# Captures the M1 completion evidence on hosted runners: the checks, the Linux syscall trace,
+# both directory-sync results and the Linux benchmark. Dispatch it, or put the `m1-evidence`
+# label on a pull request to capture that pull request's head.
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+permissions:
+  contents: read
+jobs:
+  linux:
+    name: Linux capture
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'm1-evidence' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: rustup toolchain install
+      # The benchmark data goes to the runner's local disk under /mnt, not to the workspace.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          bash scripts/m1-evidence-guest.sh
+        env:
+          M1_OUT: ${{ runner.temp }}/m1-evidence
+          CARGO_TARGET_DIR: ${{ runner.temp }}/m1-build
+          SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: m1-evidence-linux
+          path: ${{ runner.temp }}/m1-evidence
+  macos:
+    name: macOS capture
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'm1-evidence' }}
+    timeout-minutes: 30
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: rustup toolchain install
+      - run: scripts/m1-evidence-macos.sh "$RUNNER_TEMP/m1-evidence"
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/m1-build
+          SEGMENT_LOG_EVIDENCE_DIR: ${{ runner.temp }}/m1-data
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: m1-evidence-macos
+          path: ${{ runner.temp }}/m1-evidence

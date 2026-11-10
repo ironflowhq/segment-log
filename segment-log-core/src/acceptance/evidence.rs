@@ -369,12 +369,16 @@ fn measured_appends_survive_reopen() {
     if measured {
         distribution("group_submits", groups.iter().map(|g| g.0).collect());
         distribution("group_frame_bytes", groups.iter().map(|g| g.1).collect());
+        // The device measurement above syncs one fixed append size. This is the same call on the
+        // groups that this run really wrote, so a report can compare the latency with both.
+        distribution("group_fdatasync_ns", storage.group_flush_ns());
         storage.report();
         if let Some(out) = std::env::var_os("SEGMENT_LOG_GROUPS_OUT") {
             let mut file = fs::File::create(out).unwrap();
-            writeln!(file, "group\tsubmits\tframe_bytes").unwrap();
-            for (index, (submits, bytes)) in groups.iter().enumerate() {
-                writeln!(file, "{index}\t{submits}\t{bytes}").unwrap();
+            let flushes = storage.group_flush_ns();
+            writeln!(file, "group\tsubmits\tframe_bytes\tfdatasync_ns").unwrap();
+            for (index, ((submits, bytes), flush)) in groups.iter().zip(&flushes).enumerate() {
+                writeln!(file, "{index}\t{submits}\t{bytes}\t{flush}").unwrap();
             }
         }
     }

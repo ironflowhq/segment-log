@@ -13,6 +13,9 @@ import statistics
 GROUP_PHASES = ["formation", "encode", "write", "flush", "publish", "delivery"]
 REQUEST_PHASES = ["admission", "queue", "formation_wait", "encode", "write", "flush", "publish",
                   "answer_wait", "answer_to_wake"]
+# The wait from a request's admission until its group stops gathering: queue plus formation_wait.
+# A group's linger bounds this wait for the group's first request (ADR 0046).
+GATHER = "gather_wait"
 
 
 def rows(path):
@@ -31,7 +34,7 @@ def summarize(path, min_count):
     groups = rows(path.with_suffix(".groups.tsv"))
     by_id = {group["group"]: group for group in groups}
     first_dequeue = {}
-    requests = {name: [] for name in REQUEST_PHASES + ["total"]}
+    requests = {name: [] for name in REQUEST_PHASES + [GATHER, "total"]}
     for request in rows(path):
         group = by_id[request["group"]]
         first_dequeue[request["group"]] = min(first_dequeue.get(request["group"], request["dequeue"]),
@@ -39,6 +42,7 @@ def summarize(path, min_count):
         requests["admission"].append(request["enqueue"] - request["start"])
         requests["queue"].append(request["dequeue"] - request["enqueue"])
         requests["formation_wait"].append(group["formed"] - request["dequeue"])
+        requests[GATHER].append(group["formed"] - request["enqueue"])
         requests["encode"].append(group["encoded"] - group["formed"])
         requests["write"].append(group["written"] - group["encoded"])
         requests["flush"].append(group["flushed"] - group["written"])
@@ -63,6 +67,19 @@ def summarize(path, min_count):
     return len(groups), phases, requests
 
 
+def slowest(requests, fraction):
+    """Returns the latency at `fraction` and, for the requests at or above it, each interval's mean.
+
+    A percentile says how slow the tail is. This says where those requests spent the time.
+    """
+    totals = requests["total"]
+    threshold = quantile(totals, fraction)
+    chosen = [index for index, total in enumerate(totals) if total >= threshold]
+    means = {name: sum(requests[name][index] for index in chosen) / len(chosen)
+             for name in REQUEST_PHASES + ["total"]}
+    return threshold, len(chosen), means
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("requests", type=pathlib.Path)
@@ -83,6 +100,18 @@ def main():
         values = requests[name]
         print(f"  {name:<14} {sum(values) / len(values) / 1e6:8.3f} {quantile(values, 0.5) / 1e6:8.3f} "
               f"{quantile(values, 0.99) / 1e6:8.3f} {100 * sum(values) / latency:6.1f}%")
+    for label, fraction in [("1%", 0.99), ("0.1%", 0.999)]:
+        threshold, count, means = slowest(requests, fraction)
+        print(f"slowest {label} of requests ({count} at or above {threshold / 1e6:.3f} ms), "
+              "ms: mean of each interval, share of their latency")
+        for name in REQUEST_PHASES + ["total"]:
+            print(f"  {name:<14} {means[name] / 1e6:8.3f} {100 * means[name] / means['total']:6.1f}%")
+    totals = requests["total"]
+    print(f"latency, ms: p999 {quantile(totals, 0.999) / 1e6:.3f} max {max(totals) / 1e6:.3f}")
+    values = requests[GATHER]
+    print("admission to end of gathering, ms: mean p50 p90 p99 max")
+    print(f"  {GATHER:<14} {sum(values) / len(values) / 1e6:8.3f} {quantile(values, 0.5) / 1e6:8.3f} "
+          f"{quantile(values, 0.9) / 1e6:8.3f} {quantile(values, 0.99) / 1e6:8.3f} {max(values) / 1e6:8.3f}")
 
 
 if __name__ == "__main__":
