@@ -1,3 +1,3 @@
-CONTAINER ID   NAME                      CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O         PIDS
-23fabc514443   seglog-m1-exact           0.00%     7.133MiB / 7.748GiB   0.09%     8.33MB / 35.7kB   2.15MB / 8.32MB   1
-eff62625f16d   ironflow-test-seaweedfs   2.34%     170.8MiB / 7.748GiB   2.15%     48.5kB / 40.9kB   55.6MB / 0B       15
+CONTAINER ID   NAME                      CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O     PIDS
+93caec0287ca   seglog-m1-exact           0.00%     6.852MiB / 7.748GiB   0.09%     8.33MB / 38.2kB   0B / 8.32MB   1
+eff62625f16d   ironflow-test-seaweedfs   2.23%     171.1MiB / 7.748GiB   2.16%     48.5kB / 40.9kB   55.6MB / 0B   15

@@ -1,6 +1,6 @@
 image=rust:1.99.1-bookworm@sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c
-Tue Nov 10 18:06:32 UTC 2026
-Linux 23fabc514443 7.0.14-linuxkit #1 SMP PREEMPT Fri Oct 30 13:45:20 UTC 2026 aarch64 GNU/Linux
+Tue Nov 10 18:18:42 UTC 2026
+Linux 93caec0287ca 7.0.14-linuxkit #1 SMP PREEMPT Fri Oct 30 13:45:20 UTC 2026 aarch64 GNU/Linux
 10
 page size 4096
 transparent huge pages [always] madvise never
@@ -18,7 +18,7 @@ release: 1.99.1
 LLVM version: 23.1.1
 cargo 1.99.1 (5f94df478 2026-08-27)
                total        used        free      shared  buff/cache   available
-Mem:      8319438848   851144704  4953931776      786432  2723389440  7468294144
+Mem:      8319438848   906743808  4895256576      786432  2726469632  7412695040
 Swap:     1073737728           0  1073737728
 name: rss_stat
 ID: 467
@@ -35,8 +35,8 @@ format:
 
 print fmt: "mm_id=%u curr=%d type=%s size=%ldB", REC->mm_id, REC->curr, __print_symbolic(REC->member, { 0, "MM_FILEPAGES" }, { 1, "MM_ANONPAGES" }, { 2, "MM_SWAPENTS" }, { 3, "MM_SHMEMPAGES" }), REC->size
 Filesystem             Type      1K-blocks      Used Available Use% Mounted on
-overlay                overlay   474095688   6299968 443639512   2% /
-overlay                overlay   474095688   6299968 443639512   2% /
+overlay                overlay   474095688   6299984 443639496   2% /
+overlay                overlay   474095688   6299984 443639496   2% /
 /run/host_mark/Volumes fakeowner 482797652 281197652 201600000  59% /out
 Architecture:                            aarch64
 CPU op-mode(s):                          64-bit
