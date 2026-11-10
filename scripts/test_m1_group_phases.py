@@ -37,6 +37,20 @@ class GroupPhasesTest(unittest.TestCase):
             self.assertEqual(sum(request[name][index] for name in phases.REQUEST_PHASES),
                              request["total"][index])
 
+    def test_the_slowest_requests_report_where_their_time_went(self):
+        requests = ["0\t0\t1\t2\t3\t4\t5\t6\t12\t15\t4\t1\t1", "1\t0\t2\t3\t4\t6\t7\t8\t13\t14\t5\t1\t2",
+                    "0\t1\t20\t21\t22\t24\t25\t26\t33\t36\t23\t3\t3"]
+        groups = ["1\t2\t8\t9\t10\t11\t12\t14", "3\t1\t27\t29\t30\t32\t33\t34"]
+        _, _, request = self.summarize(requests, groups)
+        self.assertEqual(request["total"], [14, 12, 16])
+        threshold, count, means = phases.slowest(request, 0.99)
+        self.assertEqual((threshold, count), (16, 1))
+        self.assertEqual(means["answer_to_wake"], 3)
+        self.assertEqual(sum(means[name] for name in phases.REQUEST_PHASES), means["total"])
+        threshold, count, means = phases.slowest(request, 0.5)
+        self.assertEqual((threshold, count), (14, 2))
+        self.assertEqual(means["total"], 15)
+
     def test_small_groups_do_not_count_or_bridge_a_cycle(self):
         requests = ["0\t0\t1\t2\t3\t4\t5\t6\t12\t15\t4\t1\t1", "1\t0\t2\t3\t4\t6\t7\t8\t13\t14\t5\t1\t2",
                     "0\t1\t20\t21\t22\t24\t25\t26\t33\t36\t23\t3\t3"]

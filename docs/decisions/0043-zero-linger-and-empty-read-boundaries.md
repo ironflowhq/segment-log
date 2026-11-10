@@ -45,6 +45,7 @@ Use options A and C. The [API](../architecture/api.md#option-validation) defines
 
 ## Consequences
 
+- [ADR 0046](0046-linger-runs-from-the-first-submits-admission.md) amends this decision: the queued submits of a zero-linger group are those admitted before the writer started to take them. A submit that arrives during the drain starts the next group.
 - Deterministic group tests can queue work behind a held flush without relying on a sleep.
 - `GROUP-FORMATION` and `READ-BOUNDED` no longer depend on unresolved outcomes.
 - No format change, new error variant or default change is needed.

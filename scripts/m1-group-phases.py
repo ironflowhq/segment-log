@@ -67,6 +67,19 @@ def summarize(path, min_count):
     return len(groups), phases, requests
 
 
+def slowest(requests, fraction):
+    """Returns the latency at `fraction` and, for the requests at or above it, each interval's mean.
+
+    A percentile says how slow the tail is. This says where those requests spent the time.
+    """
+    totals = requests["total"]
+    threshold = quantile(totals, fraction)
+    chosen = [index for index, total in enumerate(totals) if total >= threshold]
+    means = {name: sum(requests[name][index] for index in chosen) / len(chosen)
+             for name in REQUEST_PHASES + ["total"]}
+    return threshold, len(chosen), means
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("requests", type=pathlib.Path)
@@ -87,6 +100,14 @@ def main():
         values = requests[name]
         print(f"  {name:<14} {sum(values) / len(values) / 1e6:8.3f} {quantile(values, 0.5) / 1e6:8.3f} "
               f"{quantile(values, 0.99) / 1e6:8.3f} {100 * sum(values) / latency:6.1f}%")
+    for label, fraction in [("1%", 0.99), ("0.1%", 0.999)]:
+        threshold, count, means = slowest(requests, fraction)
+        print(f"slowest {label} of requests ({count} at or above {threshold / 1e6:.3f} ms), "
+              "ms: mean of each interval, share of their latency")
+        for name in REQUEST_PHASES + ["total"]:
+            print(f"  {name:<14} {means[name] / 1e6:8.3f} {100 * means[name] / means['total']:6.1f}%")
+    totals = requests["total"]
+    print(f"latency, ms: p999 {quantile(totals, 0.999) / 1e6:.3f} max {max(totals) / 1e6:.3f}")
     values = requests[GATHER]
     print("admission to end of gathering, ms: mean p50 p90 p99 max")
     print(f"  {GATHER:<14} {sum(values) / len(values) / 1e6:8.3f} {quantile(values, 0.5) / 1e6:8.3f} "

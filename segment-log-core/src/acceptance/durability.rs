@@ -223,3 +223,48 @@ fn a_group_formed_after_its_linger_ended_fails_and_recovers_whole() {
         }
     });
 }
+
+/// Given zero linger, a durable keyed record, and a held flush with a new submit, a retry of that
+/// key and another new submit queued behind it
+/// When the flush is released, the writer stops at the retry's key lookup, and a late submit arrives
+/// Then the group that was being gathered holds only the two submits that were already queued
+/// And the late submit gets a later flush of its own
+/// Cases: GROUP-FORMATION
+#[test]
+fn a_group_takes_only_submits_admitted_before_its_gathering_ended() {
+    bounded(|| {
+        let sim = Sim::new(48);
+        let log = open(&sim);
+        append(&log, b"s").wait().unwrap();
+        let frame = super::support::raw::bytes(&sim);
+        let length = u32::from_le_bytes(frame[64..68].try_into().unwrap()) as usize + 8;
+        let lookup = Call::new(SEG, Purpose::Lookup, Op::Read(64, length));
+        let flush = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let held = unkeyed(&log, &[b"x"]);
+        flush.wait();
+        let mut queued = unkeyed(&log, &[b"a"]);
+        let retry = append(&log, b"s");
+        queued.extend(unkeyed(&log, &[b"b"]));
+        // The flush hold was taken when the flush started, so a second hold can wait behind it.
+        let lookup = sim.hold(lookup);
+        flush.release(None);
+        lookup.wait();
+        let late = unkeyed(&log, &[b"z"]);
+        lookup.release(None);
+        let retry = retry.wait().unwrap();
+        assert!(retry.deduplicated);
+        assert_eq!(retry.records[0].offset, 0);
+        for pending in held.into_iter().chain(queued).chain(late) {
+            pending.wait().unwrap();
+        }
+        let streams: Vec<_> = log
+            .read(1, 10)
+            .unwrap()
+            .into_iter()
+            .map(|r| r.stream)
+            .collect();
+        assert_eq!(streams, [b"x", b"a", b"b", b"z"]);
+        // One flush each for s, x, the pair a and b, and z.
+        assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 4);
+    });
+}

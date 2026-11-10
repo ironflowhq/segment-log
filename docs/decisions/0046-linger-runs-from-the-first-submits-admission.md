@@ -41,7 +41,7 @@ The [linger record](../evidence/issue20/linger-admission/README.md) holds the me
 ### Option B - the linger runs from the admission of the group's first submit
 
 - **For:** the time a submit spent queued behind the previous flush counts toward its linger. The worst wait before a group is written is the linger, or the rest of the previous flush if that is longer. This is the wait that ADR 0002 accepted, and it leaves one flush of the bound for processor work.
-- **Against:** at a moderate load the writer closes a group after each linger, not after each linger plus a flush, so it flushes more often. `append` reads the clock once for each admitted request, and each request holds one more value.
+- **Against:** at a moderate load the writer closes a group after each linger, not after each linger plus a flush, so it flushes more often. `append` reads the clock once for each admitted request, and each request holds one more value. The writer needs a rule for what to take once the linger has ended.
 
 ### Option C - shorten the default linger
 
@@ -59,7 +59,9 @@ We will count a group's linger from the admission of its first submit (option B)
 
 - `append` records the time when it queues a request.
 - The linger of a group ends one linger after the admission of the first new submit that joins it. Until then the writer waits for more submits, as before.
-- After the linger has ended, the writer takes only submits that are already queued, up to the byte cap. This is the zero-linger rule of ADR 0043. A flush that outlasts the linger therefore does not split its backlog into groups of one.
+- When the writer first sees that the linger has ended, it notes the time. The group takes the queued submits that were admitted before that time, up to the byte cap. A submit admitted later starts the next group.
+- A flush that outlasts the linger therefore gives one group for its whole backlog, not groups of one. A steady stream of arrivals cannot keep one group gathering.
+- A zero linger has always ended, so the same rule applies to it. This makes the "already queued" of ADR 0043 exact.
 - A submit that arrives alone still waits its whole linger for company.
 - Rejections and retries that match only durable records are answered when they are classified, as before. They do not start a linger.
 
@@ -68,6 +70,7 @@ This option gives each submit the wait that ADR 0002 already promised, without a
 ## Consequences
 
 - This decision amends ADR 0002: the linger is a bound on the wait of a group's first submit, not a pause that the writer adds after each flush.
+- This decision amends ADR 0043: a zero linger takes the submits admitted before the writer started to take them, not every submit that arrives while it does.
 - The worst wait before a group is written falls by up to one flush. The linger record gives the measured change at the paced rate.
 - While submits keep arriving, the writer starts at most one group for each linger. With the default linger that is up to 1,000 flushes each second. Before, the limit was one group for each linger plus flush. The storage under the log must sustain that flush rate at the planned density ([V11](../architecture/volume-requirements.md#v11-flush-latency-allows-the-throughput-target)).
 - When the device is slower than the linger, every group is ready as soon as the previous flush returns. Group size then follows the flush time, as it did before under a full queue.
@@ -76,7 +79,7 @@ This option gives each submit the wait that ADR 0002 already promised, without a
 
 ## Enforcement
 
-Two scenarios in `segment-log-core/src/acceptance/durability.rs`. `linger_runs_from_the_admission_of_a_groups_first_submit` holds a flush for longer than the linger and fails if the next group waits another linger or splits its queued submits. `a_group_formed_after_its_linger_ended_fails_and_recovers_whole` fails that group's flush and replays each of its storage boundaries through every crash mode.
+Three scenarios in `segment-log-core/src/acceptance/durability.rs`. `linger_runs_from_the_admission_of_a_groups_first_submit` holds a flush for longer than the linger and fails if the next group waits another linger or splits its queued submits. `a_group_takes_only_submits_admitted_before_its_gathering_ended` admits a submit while the writer takes the queued ones and fails if it joins their group. `a_group_formed_after_its_linger_ended_fails_and_recovers_whole` fails such a group's flush and replays each of its storage boundaries through every crash mode.
 
 Nothing in CI measures the latency. The M1 benchmark reports it.
 
