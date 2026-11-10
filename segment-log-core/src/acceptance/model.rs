@@ -84,6 +84,26 @@ fn log_agrees(case: &Case) -> Result<(), TestCaseError> {
     equal(["the model", "the log"], &expected.trace, &observed).map_err(TestCaseError::fail)
 }
 
+fn rejections_erase(case: &Case) -> Result<(), TestCaseError> {
+    // The model only picks the inputs here. The log's own answers decide what is erased and what must stay equal.
+    let script = expect(case).script;
+    let full = drive(&script, &options());
+    let erased = case.erase.choose(&full.rejected());
+    if erased.is_empty() {
+        return Ok(());
+    }
+    let kept = drive(&script.without(&erased), &options());
+    let what = format!(
+        "the full run less the answers to the erased submits {erased:?}, as (step, submit)"
+    );
+    equal(
+        [&what, "the run without those submits"],
+        &full.without(&erased),
+        &kept,
+    )
+    .map_err(TestCaseError::fail)
+}
+
 /// Given random groups of submits, each queued behind a held flush, and random reopens
 /// When the same submits go to the model and to a log on simulated storage
 /// Then every answer, its timing against its group's flush, and every durable view are equal
@@ -96,6 +116,16 @@ fn the_log_agrees_with_the_model() {
     check("MODEL", 256, log_agrees);
 }
 
+/// Given a random run, and the same run without some of the submits that the log rejected
+/// When both run on fresh logs
+/// Then every other submit gets the same answer at the same time, and every durable view is equal
+///
+/// Cases: REV-NO-OFFSET
+#[test]
+fn erasing_rejected_submits_changes_nothing() {
+    check("REV-NO-OFFSET", 256, rejections_erase);
+}
+
 /// Given the model property with a larger case budget
 /// When the scheduled Linux and macOS job runs the ignored test
 /// Then a failure leaves its seed in the uploaded regression file
@@ -105,6 +135,17 @@ fn the_log_agrees_with_the_model() {
 #[ignore = "long run"]
 fn the_log_agrees_with_the_model_long_run() {
     check("MODEL", 20_000, log_agrees);
+}
+
+/// Given the erasure property with a larger case budget
+/// When the scheduled Linux and macOS job runs the ignored test
+/// Then a failure leaves its seed in the uploaded regression file
+///
+/// Cases: REV-NO-OFFSET
+#[test]
+#[ignore = "long run"]
+fn erasing_rejected_submits_changes_nothing_long_run() {
+    check("REV-NO-OFFSET", 20_000, rejections_erase);
 }
 
 /// Given 2,000 generated cases at a fixed seed, resolved by the model alone
@@ -431,4 +472,60 @@ fn pending_records_decide_the_later_submits_of_their_group() {
 
     let log = drive(&script, &options());
     equal(["the model", "the log"], &model, &log).unwrap_or_else(|message| panic!("{message}"));
+}
+
+/// Given a group with a wrong revision, a partial retry, a key conflict and a repeated key between valid appends
+/// When the same group runs on a fresh log without those four submits
+/// Then each valid append gets the offset and the revision that it got beside them
+///
+/// Cases: REV-NO-OFFSET
+#[test]
+fn rejected_submits_leave_the_next_offsets_unchanged() {
+    let mut script = Script::new();
+    script.group(vec![
+        sub([record("s", None, "a", At(3))]),
+        sub([record("s", Some("k1"), "b", Empty)]),
+        sub([
+            record("s", Some("k1"), "b", Empty),
+            record("s", None, "c", At(0)),
+        ]),
+        sub([record("s", Some("k1"), "x", At(0))]),
+        sub([
+            record("s", Some("k2"), "d", At(0)),
+            record("s", Some("k2"), "d", At(1)),
+        ]),
+        sub([record("s", Some("k2"), "d", At(0))]),
+    ]);
+
+    let full = drive(&script, &options());
+    assert_eq!(
+        full.steps[1].outcomes,
+        [
+            rejected(Reject::WrongRevision {
+                index: 0,
+                actual: None
+            }),
+            appended(&[(1, 0)]),
+            rejected(Reject::PartialRetry),
+            rejected(Reject::KeyConflict { index: 0 }),
+            Outcome::Refused,
+            appended(&[(2, 1)]),
+        ]
+    );
+    let erased = full.rejected();
+    assert_eq!(erased, [(1, 0), (1, 2), (1, 3), (1, 4)]);
+    let kept = drive(&script.without(&erased), &options());
+    assert_eq!(
+        kept.steps[1].outcomes,
+        [appended(&[(1, 0)]), appended(&[(2, 1)])]
+    );
+    equal(
+        [
+            "the full run less the rejected answers",
+            "the run without them",
+        ],
+        &full.without(&erased),
+        &kept,
+    )
+    .unwrap_or_else(|message| panic!("{message}"));
 }
