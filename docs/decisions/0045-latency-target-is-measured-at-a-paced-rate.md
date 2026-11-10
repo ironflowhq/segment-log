@@ -1,9 +1,9 @@
 ---
 id: "0045"
 title: "The latency target is measured at the throughput target's rate"
-status: proposed
+status: accepted
 date: 2026-11-09
-deciders: []
+deciders: [Altug Sahin]
 supersedes: null
 superseded_by: null
 tags: [performance, testing, targets]
@@ -30,7 +30,7 @@ These facts are fixed:
 - `append` and `wait` block one caller thread for each request. The core has no client that sends without waiting. The M6 transport may add one.
 - The benchmark has a paced variant since issue 20: each caller submits once in an interval, and latency runs from the scheduled send.
 
-The owner asked for this record in the issue 20 discussion on 2026-11-09. It is a proposal until the owner accepts it.
+The owner asked for this record and accepted it in the issue 20 discussion on 2026-11-09.
 
 ## Options & trade-offs
 
