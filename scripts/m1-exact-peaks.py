@@ -55,7 +55,7 @@ OWNER_COLUMNS = ("engine_live_bytes", "engine_peak_bytes", "engine_bytes_caller_
                  "other_live_bytes", "other_peak_bytes", "arena_resident_bytes", "writer_stack_resident_bytes")
 CALIBRATION_BYTES = 1 << 20
 # Each known-size check that owner_probe prints, and the value it must observe exactly.
-OWNER_CHECKS = {"pages_touched": CALIBRATION_BYTES, "pages_unmapped": 0, "engine_buffer": CALIBRATION_BYTES,
+OWNER_CHECKS = {"pages_touched": CALIBRATION_BYTES, "pages_freed": 0, "engine_buffer": CALIBRATION_BYTES,
                 "engine_release": 0, "other_buffer": CALIBRATION_BYTES, "other_release": 0}
 
 
