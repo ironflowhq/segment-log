@@ -16,7 +16,8 @@ $sudo apt-get update
 $sudo apt-get install -y --no-install-recommends strace sysstat time python3
 {
     date -u
-    git rev-parse HEAD 2>&1 || true
+    # A container cannot read a worktree's git directory. Its wrapper writes source.txt instead.
+    git rev-parse HEAD 2>/dev/null || echo "source commit: see source.txt"
     rustc -Vv
     cargo -V
     strace -V

@@ -13,7 +13,8 @@ trap '"$docker" rm -f "$name" >/dev/null 2>&1 || true' EXIT HUP INT TERM
 load() {
     date -u
     "$docker" stats --no-stream --format '{{.Name}} {{.CPUPerc}}'
-    ps -Ao pcpu,comm -r | head -12
+    # Names only: a full path would put the host's directories into the record.
+    ps -Ao pcpu,comm -r | head -12 | awk '{n = split($NF, part, "/"); print $1, part[n]}'
 }
 load > "$out/host-load-before.txt"
 "$docker" version > "$out/docker-version.txt"
