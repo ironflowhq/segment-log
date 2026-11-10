@@ -81,7 +81,7 @@ The suite lives in the crate for two reasons: it can pass simulated storage thro
 
 Stop the writer at a boundary by holding a storage call. Hold the call, wait until the simulated storage reports that the call has started, assert, then release it with success or an injected error. A held call covers the flush, write and key-lookup boundaries without a hook in the writer. Hold a call only after `open` returns, so that the syncs done during creation and recovery pass.
 
-`Pending::wait` blocks, so the suite adds a non-blocking check on `Pending` that is compiled only for tests. The check is deterministic. Once the writer has started the held flush, an answer sent too early is already waiting in the reply channel, so "no answer yet" is a reliable result.
+`Pending::wait` blocks, so the suite adds a non-blocking check on `Pending` that is compiled only for tests. The check is deterministic. Once the writer has started the held flush, an answer sent too early is already stored in the request's reply slot, so "no answer yet" is a reliable result. A second test-only check reports whether a caller is parked in `wait`. A scenario uses it to establish that state before it releases a flush, because the [ack relay](decisions/0044-woken-callers-relay-group-acks.md) treats parked callers differently.
 
 Add a probe inside the writer only for a boundary that no storage call reaches, such as the moment after dequeue. List each such probe in the support module, compile it only for tests, and keep it free of behavior.
 

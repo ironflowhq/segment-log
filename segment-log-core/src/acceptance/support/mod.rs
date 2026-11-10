@@ -24,6 +24,10 @@
 //! total, including temporary reservations before failed queue insertion. It is
 //! exact after callers join, without sampling or changing admission decisions.
 //! One relaxed atomic fetch_max per reservation exists only under cfg(test).
+//!
+//! `Pending::parked` is a cfg(test) observation of whether a caller is parked in
+//! `wait`. No storage call marks that moment, and the ack relay takes a different
+//! path for a parked caller, so delivery scenarios wait for it under their watchdog.
 mod coverage;
 pub(crate) mod deadline;
 mod deadline_tests;

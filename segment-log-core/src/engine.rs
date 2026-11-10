@@ -12,7 +12,9 @@ use std::{
 };
 mod keys;
 mod recovery;
+mod reply;
 use keys::{Classification, Keys};
+pub use reply::Pending;
 
 struct Writer {
     epoch: u64,
@@ -46,37 +48,29 @@ impl Drop for Reservation {
 }
 struct Request {
     submit: Submit,
-    reply: mpsc::Sender<Result<Committed, CommitError>>,
+    reply: reply::Reply,
     reservation: Reservation,
 }
 struct RetryWaiter {
     request: Request,
     positions: Vec<Position>,
 }
-const REQUEST_BOOKKEEPING: usize =
-    std::mem::size_of::<RetryWaiter>() + std::mem::size_of::<Pending>();
+const REQUEST_BOOKKEEPING: usize = std::mem::size_of::<RetryWaiter>()
+    + std::mem::size_of::<Pending>()
+    + std::mem::size_of::<reply::Slot>();
 impl Request {
     fn answer(self, result: Result<Committed, CommitError>) {
         #[cfg(test)]
         crate::pipeline::request(&self.submit, crate::pipeline::SEND);
         drop(self.reservation);
-        let _ = self.reply.send(result);
+        self.reply.send(result);
     }
-}
-pub struct Pending {
-    reply: mpsc::Receiver<Result<Committed, CommitError>>,
-}
-impl Pending {
-    pub fn wait(self) -> Result<Committed, CommitError> {
-        self.reply.recv().unwrap_or(Err(CommitError::Indeterminate))
-    }
-    #[cfg(test)]
-    pub(crate) fn probe(&self) -> Option<Result<Committed, CommitError>> {
-        match self.reply.try_recv() {
-            Ok(result) => Some(result),
-            Err(mpsc::TryRecvError::Empty) => None,
-            Err(mpsc::TryRecvError::Disconnected) => Some(Err(CommitError::Indeterminate)),
-        }
+    /// Answers without waking the caller. The group's relay wakes it.
+    fn store(self, result: Result<Committed, CommitError>) -> Arc<reply::Slot> {
+        #[cfg(test)]
+        crate::pipeline::request(&self.submit, crate::pipeline::SEND);
+        drop(self.reservation);
+        self.reply.store(result)
     }
 }
 pub struct SegmentLog {
@@ -214,7 +208,7 @@ impl SegmentLog {
             bytes,
             used: self.used.clone(),
         };
-        let (reply, receiver) = mpsc::channel();
+        let (reply, pending) = reply::pair();
         #[cfg(test)]
         crate::pipeline::request(&submit, crate::pipeline::ENQUEUE);
         match self.sender.as_ref().unwrap().try_send(Request {
@@ -222,7 +216,7 @@ impl SegmentLog {
             reply,
             reservation,
         }) {
-            Ok(()) => Ok(Pending { reply: receiver }),
+            Ok(()) => Ok(pending),
             Err(mpsc::TrySendError::Full(_)) => Err(AppendError::Full),
             Err(mpsc::TrySendError::Disconnected(_)) => Err(AppendError::Poisoned),
         }
@@ -589,6 +583,7 @@ fn run(
         #[cfg(test)]
         timeline.mark(4);
         let mut index = 0;
+        let mut slots = Vec::with_capacity(requests.len() + waiters.len());
         for request in requests {
             #[cfg(test)]
             crate::pipeline::group_id(&request.submit, base);
@@ -602,19 +597,20 @@ fn run(
                     p
                 })
                 .collect();
-            request.answer(Ok(Committed {
+            slots.push(request.store(Ok(Committed {
                 records,
                 deduplicated: false,
-            }));
+            })));
         }
-        #[cfg(test)]
-        timeline.finish();
         for waiter in waiters {
-            waiter.request.answer(Ok(Committed {
+            slots.push(waiter.request.store(Ok(Committed {
                 records: waiter.positions,
                 deduplicated: true,
-            }));
+            })));
         }
+        reply::Relay::start(slots);
+        #[cfg(test)]
+        timeline.finish();
     }
 }
 
@@ -668,7 +664,9 @@ fn poison(
 pub(crate) mod admission_support {
     use super::*;
     pub(crate) fn bookkeeping() -> usize {
-        std::mem::size_of::<RetryWaiter>() + std::mem::size_of::<Pending>()
+        std::mem::size_of::<RetryWaiter>()
+            + std::mem::size_of::<Pending>()
+            + std::mem::size_of::<reply::Slot>()
     }
     pub(crate) fn peak(log: &SegmentLog) -> usize {
         log.peak.load(std::sync::atomic::Ordering::Relaxed)
