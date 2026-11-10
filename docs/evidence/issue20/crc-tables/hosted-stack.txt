@@ -1,0 +1,17 @@
+pid=2653
+146
+Thread 5 (Thread 0x7fa242df66c0 (LWP 2744) "acceptance::cod"):
+#0  __memcpy_avx_unaligned_erms () at ../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:590
+#1  0x00005620b3b562ff in segment_log_core::codec::crc_update (crc=1395447920, bytes=...) at segment-log-core/src/codec.rs:60
+#2  0x00005620b3b588a5 in segment_log_core::codec::frame_crc (bytes=...) at segment-log-core/src/codec.rs:122
+#3  0x00005620b3b582f5 in segment_log_core::codec::encode (group=0x7fa242df5780) at segment-log-core/src/codec.rs:116
+#4  0x00005620b3b4c448 in segment_log_core::acceptance::codec::binary_groups_round_trip_and_encoding_enforces_limits::{closure#0} () at segment-log-core/src/acceptance/codec.rs:163
+#5  0x00005620b3956976 in core::panic::unwind_safe::{impl#23}::call_once<(), segment_log_core::acceptance::codec::binary_groups_round_trip_and_encoding_enforces_limits::{closure_env#0}> (self=...) at /rustc/58cf8f9c35b355199727627
+#6  0x00005620b3ac642e in std::panicking::catch_unwind::do_call<core::panic::unwind_safe::AssertUnwindSafe<segment_log_core::acceptance::codec::binary_groups_round_trip_and_encoding_enforces_limits::{closure_env#0}>, ()> (data=0x7
+#8  0x00005620b39f21cc in std::panicking::catch_unwind<(), core::panic::unwind_safe::AssertUnwindSafe<segment_log_core::acceptance::codec::binary_groups_round_trip_and_encoding_enforces_limits::{closure_env#0}>> (f=...) at /rustc/
+#9  std::panic::catch_unwind<core::panic::unwind_safe::AssertUnwindSafe<segment_log_core::acceptance::codec::binary_groups_round_trip_and_encoding_enforces_limits::{closure_env#0}>, ()> (f=...) at /rustc/58cf8f9c35b355199727627d07
+#0  __memcpy_avx_unaligned_erms () at ../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:570
+#1  0x00005620b3b56235 in segment_log_core::codec::crc_update (crc=3352842594, bytes=...) at segment-log-core/src/codec.rs:58
+#2  0x00005620b3b588a5 in segment_log_core::codec::frame_crc (bytes=...) at segment-log-core/src/codec.rs:122
+/home/runner/work/_temp/cb742800-8b7b-49b7-a58e-b2707f7a6eb4.sh: line 3:  2653 Aborted                 (core dumped) "$BIN" > out.log 2>&1
+test acceptance::support::deadline_tests::deadlines_do_not_wait_for_diagnostic_locks ... ok
