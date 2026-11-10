@@ -247,10 +247,12 @@ fn a_torn_newest_segment_no_longer_than_a_header_is_deleted() {
 /// Given a frame whose epoch is lower than the epoch of the last frame in the segment before it
 /// When that frame opens the newest segment
 /// Then it ends the log, and recovery cuts it and keeps every record before it
+/// And the next append survives a reopen and a power loss, because the writer epoch is above every
+/// epoch in the files and not only above the newest segment's
 /// When that frame opens a segment that has a successor
 /// Then open fails with `Corrupt` at that frame and changes no file
 ///
-/// Cases: RECOVERY-FIXTURES
+/// Cases: RECOVERY-FIXTURES, ORACLE-1
 #[test]
 fn a_lower_epoch_than_the_segment_before_ends_the_log() {
     bounded(|| {
@@ -264,7 +266,21 @@ fn a_lower_epoch_than_the_segment_before_ends_the_log() {
             raw::segments(&sim),
             [(0, first.clone()), (2, raw::header(0, 2, 1))]
         );
+        let position = next(&log, 1, b"c");
+        assert_eq!((position.offset, position.revision), (2, 2));
         drop(log);
+        for crash in [None, Some(Crash::PowerLoss)] {
+            if let Some(mode) = crash {
+                sim.crash(mode, 6);
+            }
+            let payloads: Vec<_> = open(&sim)
+                .read(0, 100)
+                .unwrap()
+                .into_iter()
+                .map(|record| record.payload)
+                .collect();
+            assert_eq!(payloads, [b"a", b"b", b"c"], "after {crash:?}");
+        }
 
         let sim = Sim::new(306);
         raw::install_segments(&sim, &[(0, first), (2, stale), (3, raw::header(0, 3, 3))]);

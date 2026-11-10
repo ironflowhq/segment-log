@@ -103,6 +103,7 @@ fn each_roll_starts_a_segment_named_by_the_next_offset() {
 /// When three groups commit
 /// Then the second group sits wholly in the first segment, which passes the roll size
 /// And the third group starts the next segment
+/// And a segment exactly at the roll size rolls before the next group
 /// And a roll size of 1 byte does not roll a segment that has no record
 ///
 /// Cases: GROUP-FORMATION, OPT-VALIDATION
@@ -134,6 +135,17 @@ fn a_group_never_crosses_a_roll() {
         assert_eq!(frame_counts(&segments[0].1), [1, 2]);
         assert_eq!(frame_counts(&segments[1].1), [1]);
         assert_eq!(log.read(0, 100).unwrap().len(), 4);
+
+        let sim = Sim::new(311);
+        let log = open_rolling(&sim, 64 + one);
+        send(&log, vec![record(b"s", None, b"x", None)])
+            .wait()
+            .unwrap();
+        assert_eq!(raw::segments(&sim)[0].1.len() as u64, 64 + one);
+        send(&log, vec![record(b"s", None, b"y", Some(0))])
+            .wait()
+            .unwrap();
+        assert_eq!(bases(&sim), [0, 1]);
 
         let sim = Sim::new(311);
         let log = open_rolling(&sim, 1);
