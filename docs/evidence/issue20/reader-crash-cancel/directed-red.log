@@ -1,0 +1,7 @@
+running 1 test
+test acceptance::seeded::a_reader_outlives_a_read_that_a_crash_cancels ... FAILED
+thread '<unnamed>' (148838602) panicked at segment-log-core/src/acceptance/seeded/actors.rs:145:39:
+called `Result::unwrap()` on an `Err` value: Io(Kind(Interrupted))
+thread 'acceptance::seeded::a_reader_outlives_a_read_that_a_crash_cancels' (148838598) panicked at segment-log-core/src/acceptance/seeded/actors.rs:228:44:
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 148 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p segment-log-core --lib`

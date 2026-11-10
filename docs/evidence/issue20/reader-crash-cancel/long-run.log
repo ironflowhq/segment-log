@@ -1,0 +1,25 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running unittests src/lib.rs (/build/linger-final-check/debug/deps/segment_log_core-c4e73a073993ef08)
+
+running 1 test
+
+thread '<unnamed>' (157784) panicked at segment-log-core/src/acceptance/seeded/actors.rs:145:39:
+called `Result::unwrap()` on an `Err` value: Io(Kind(Interrupted))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'acceptance::seeded::threaded_seeded_traces_long_run' (133741) panicked at segment-log-core/src/acceptance/seeded/actors.rs:227:44:
+called `Result::unwrap()` on an `Err` value: Any { .. }
+SIM-MODEL, SIM-CONFORMANCE initial seed 10030 crash Some(Crash(PowerLossTorn, 10030)) trace /tmp/segment-log-failure-133740-0.trace
+SIM-MODEL, SIM-CONFORMANCE initial seed 10030 crash Some(Crash(PowerLossTorn, 10030)) trace /tmp/segment-log-failure-133740-1.trace
+cases=ORACLE-1..5,7..12 seed=10030 mode=PowerLossTorn variant=1 artifacts=/tmp/segment-log-traces/133740-10030-PowerLossTorn-1
+SIM-MODEL, SIM-CONFORMANCE initial seed 10030 crash Some(Crash(PowerLossTorn, 10030)) trace /tmp/segment-log-failure-133740-2.trace
+test acceptance::seeded::threaded_seeded_traces_long_run ... FAILED
+
+failures:
+
+failures:
+    acceptance::seeded::threaded_seeded_traces_long_run
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 151 filtered out; finished in 56.07s
+
+error: test failed, to rerun pass `-p segment-log-core --lib`
