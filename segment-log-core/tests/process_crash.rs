@@ -153,10 +153,11 @@ fn snapshot(root: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
     out
 }
 
-/// Given a live public handle and then an unsupported two-segment layout
+/// Given a live public handle and then a second segment longer than a header with a bad header
 /// When another handle opens, Drop runs, open fails, or the owner unwinds
 /// Then the live writer excludes competitors and every completed owner releases the OS lock
-/// Cases: ORACLE-11, OPEN-LAYOUT
+/// And the failed open changes no file
+/// Cases: ORACLE-11, OPEN-LAYOUT, RECOVERY-FIXTURES
 #[test]
 fn public_locks_release_after_drop_failed_open_and_unwind() {
     let s = Scenario::new("locks", 0);
@@ -167,12 +168,16 @@ fn public_locks_release_after_drop_failed_open_and_unwind() {
     ));
     drop(log);
     let extra = s.log().join("00000000000000000001.seg");
-    fs::write(&extra, b"incomplete").unwrap();
+    fs::write(&extra, [0xff; 65]).unwrap();
     let before = snapshot(&s.root);
     for _ in 0..2 {
-        assert!(
-            matches!(SegmentLog::open(s.log(), options()), Err(OpenError::Io(e)) if e.kind() == std::io::ErrorKind::Unsupported)
-        );
+        assert!(matches!(
+            SegmentLog::open(s.log(), options()),
+            Err(OpenError::Corrupt {
+                segment: 1,
+                position: 0
+            })
+        ));
         assert_eq!(snapshot(&s.root), before);
     }
     fs::remove_file(extra).unwrap();

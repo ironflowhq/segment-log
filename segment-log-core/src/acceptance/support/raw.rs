@@ -66,3 +66,56 @@ pub(crate) fn bytes(sim: &Sim) -> Vec<u8> {
     };
     bytes
 }
+/// The same header with the id of another log.
+pub(crate) fn foreign(mut header: Vec<u8>) -> Vec<u8> {
+    header[8..24].fill(9);
+    let checksum = crc(&header[..60]);
+    header[60..64].copy_from_slice(&checksum.to_le_bytes());
+    header
+}
+pub(crate) fn segment(base: u64) -> String {
+    format!("/log/{base:020}.seg")
+}
+/// Replaces the segment files of the log with `segments`, each named by its base offset.
+pub(crate) fn install_segments(sim: &Sim, segments: &[(u64, Vec<u8>)]) {
+    drop(open(sim));
+    for (base, _) in self::segments(sim) {
+        sim.call(Call::new(segment(base), Purpose::Open, Op::Remove))
+            .unwrap();
+    }
+    for (base, bytes) in segments {
+        let path = segment(*base);
+        sim.call(Call::new(&path, Purpose::Open, Op::Create))
+            .unwrap();
+        sim.call(Call::new(&path, Purpose::Open, Op::Write(0, bytes.clone())))
+            .unwrap();
+        sim.call(Call::new(&path, Purpose::Open, Op::SyncAll))
+            .unwrap();
+    }
+    sim.call(Call::new("/log", Purpose::Open, Op::SyncDir))
+        .unwrap();
+}
+/// Every segment file of the log with its bytes, oldest first.
+pub(crate) fn segments(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
+    let Value::Names(names) = sim
+        .call(Call::new("/log", Purpose::Open, Op::List))
+        .unwrap()
+    else {
+        panic!("list names")
+    };
+    let mut bases: Vec<u64> = names
+        .iter()
+        .filter_map(|name| name.to_str()?.strip_suffix(".seg")?.parse().ok())
+        .collect();
+    bases.sort_unstable();
+    bases
+        .into_iter()
+        .map(|base| {
+            let read = Call::new(segment(base), Purpose::Open, Op::Read(0, usize::MAX));
+            let Value::Bytes(bytes) = sim.call(read).unwrap() else {
+                panic!("read bytes")
+            };
+            (base, bytes)
+        })
+        .collect()
+}

@@ -329,6 +329,22 @@ fn read_bytes(
         _ => Err(io::Error::other("storage did not return bytes")),
     }
 }
+/// Creates a segment that holds only its header. Returns after the file and its directory
+/// entry are durable, so that a frame is never appended to a segment that a crash can remove.
+fn create_segment(
+    storage: &dyn Storage,
+    dir: &Path,
+    purpose: Purpose,
+    header: &codec::Header,
+) -> io::Result<()> {
+    let path = segment_path(dir, header.base_offset);
+    call(storage, &path, purpose, Op::Create)?;
+    let bytes = codec::encode_header(header).to_vec();
+    call(storage, &path, purpose, Op::Write(0, bytes))?;
+    call(storage, &path, purpose, Op::SyncData)?;
+    call(storage, dir, purpose, Op::SyncDir)?;
+    Ok(())
+}
 fn publish(published: &mut Published, frame: Frame, group: &codec::Group<'_>) {
     for (i, entry) in group.entries.iter().enumerate() {
         published.heads.insert(
