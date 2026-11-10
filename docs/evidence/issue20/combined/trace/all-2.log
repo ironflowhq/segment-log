@@ -1,0 +1,28 @@
+
+running 1 test
+CLOCK samples=10000 min_ns=0 p50_ns=41 p99_ns=42 max_ns=84
+DIAGNOSTIC measured_storage=true phase_cpu=false
+CONFIG callers=1000 rounds=200 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=200 min=281792 p50=314250 p99=477792 p999=619833 max=619833 sum=64447487
+DEVICE start_bytes=0 end_bytes=52428800 append_bytes=262144 failures=0
+OPEN initial_ns=1191167 records=0 segments=1 bytes=64
+APPEND records=200000 elapsed_ns=512900167 records_per_second=389939.432 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=528000 admission_call_sum_ns=2949428585
+METRIC append_ns count=200000 min=843500 p50=2200167 p99=4411833 p999=6294000 max=6755125 sum=490119029504
+METRIC group_submits count=263 min=2 p50=851 p99=1000 p999=1000 max=1000 sum=200000
+METRIC group_frame_bytes count=263 min=624 p50=251928 p99=296032 p999=296032 max=296032 sum=59208416
+STORAGE kind=Group.Append count=263 sum_ns=9802929
+STORAGE kind=Group.SyncData count=263 sum_ns=100290206
+STORAGE kind=Lookup.Other count=263 sum_ns=10023926
+STORAGE kind=Open.Other count=7 sum_ns=236083
+STORAGE kind=Open.SyncData count=1 sum_ns=670875
+STORAGE kind=Open.SyncDir count=1 sum_ns=4417
+STORAGE kind=Recovery.Other count=2 sum_ns=1876
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=212459
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=4334
+END records=200000 segments=1 bytes=59208480
+PIPELINE requests=200000 raw=/data/ex/trace.tsv
+REOPEN ns=81345417 start_records=200000 end_records=200000 start_segments=1 end_segments=1 start_bytes=59208480 end_bytes=59208480 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 147 filtered out; finished in 0.99s
+

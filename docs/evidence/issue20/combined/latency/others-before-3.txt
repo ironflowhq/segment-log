@@ -1,0 +1,2 @@
+others_cpu_percent_before=4.9 quiet=2 tries=3
+others_cpu_percent_after=43.8
