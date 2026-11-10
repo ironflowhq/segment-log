@@ -1,9 +1,9 @@
 ---
 id: "0047"
 title: "The writer epoch counts every segment, not only the newest"
-status: proposed
+status: accepted
 date: 2026-11-10
-deciders: []
+deciders: [Altug Sahin]
 supersedes: null
 superseded_by: null
 tags: [concurrency, recovery]
