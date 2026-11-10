@@ -17,7 +17,7 @@ The [PRD milestone gates](../prd.md#milestones) remain the source for completion
 | M0-READINESS | None | Green CI run linked in the [PRD](../prd.md#milestones) | Implemented |
 | M1 | [M1 groups below](#m1-acceptance-coverage) | [M1 completion gate](#m1-completion-gate), [completion record](../evidence/m1/completion.md) | Implemented |
 | M2-MODEL | `MODEL`, `REV-NO-OFFSET` | None beyond the tests | Implemented |
-| M3-ROLL | `ORACLE-6`, M3 parts of `OPEN-LAYOUT`, `RECOVERY-FIXTURES`, `KEY-LIFETIME` and `HISTORY`; M1 scenarios rerun with a small `roll_bytes` | Linux syscall trace of the roll directory sync (not yet recorded) | Implemented |
+| M3-ROLL | `ORACLE-6`, M3 parts of `OPEN-LAYOUT`, `RECOVERY-FIXTURES`, `KEY-LIFETIME` and `HISTORY`; M1 scenarios rerun with a small `roll_bytes` | Linux syscall trace of the roll directory sync, captured by the [`m3-evidence` workflow](../../.github/workflows/m3-evidence.yml) and checked by `scripts/m3-verify-roll-syscalls.py` ([completion record](../evidence/m3/completion.md)) | Implemented |
 | M4-SEAL-READ | `READER`, `ROLL-FOOTER`, M4 parts of `CODEC-GROUP`, `ADM-PRECEDENCE`, `RECOVERY-FIXTURES` and `HISTORY` | None beyond the tests | Planned |
 | M4-LOOKUP-OPEN | `ORACLE-13`, M4 parts of `ORACLE-12` and `KEY-LIFETIME` | Open-time target result; lookup reads, rebuild cost and key-cache memory under the [M4 design](../prd.md#open-items) | Planned |
 | M5-FORMAT-FUZZ | `FUZZ-DECODER`, `FUZZ-RECOVERY` | Accepted format ADR; one-hour fuzz run in CI | Planned |
@@ -69,7 +69,7 @@ All of the following evidence is required:
 
 Correctness or durability failures block completion. Missing evidence, omitted applicable measurements or an unreproducible report also block completion. Missed provisional M1 performance targets are explicit findings in the report, not completion blockers. The completion record links the test results, syscall and directory-sync evidence, and benchmark report. This gate defines the required evidence. The [completion record](../evidence/m1/completion.md) holds it for the tree that passed.
 
-Roll-specific syscall verification belongs to M3. Footer-based open-time and seal targets wait for M4, and server footprint and socket measurements wait for M6. An M1 report marks these later-feature metrics as not applicable. Existing later-milestone gates remain unchanged.
+Roll-specific syscall verification belongs to M3. The verifier requires the new segment's creation, header write and `fdatasync`, then the log directory `fsync`, before the roll's first group frame is written, and no write to the old segment. Footer-based open-time and seal targets wait for M4, and server footprint and socket measurements wait for M6. An M1 report marks these later-feature metrics as not applicable. Existing later-milestone gates remain unchanged.
 
 Waiting cursors remain above the core under [ADR 0035](../decisions/0035-waiting-cursors-belong-above-the-core.md). M1 verifies watermark and bounded-read durability, plus per-submit `Pending::wait` outcomes. It adds no native watermark-wait API or waiting-cursor implementation to this gate. Any future wrapper is tested at its consumer boundary.
 
