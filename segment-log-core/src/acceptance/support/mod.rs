@@ -32,19 +32,16 @@ mod coverage;
 pub(crate) mod deadline;
 mod deadline_tests;
 
-/// A scenario that needs two seconds of processor time took ten seconds on a host that other
-/// work saturated, so a shorter limit fails scenarios that are not hung. The limit must stay
-/// below the sixty-second lingers that some scenarios use to show that an answer does not wait.
-const WATCHDOG: std::time::Duration = std::time::Duration::from_secs(30);
-
 pub(crate) fn bounded(f: impl FnOnce() + Send + 'static) {
-    let _deadline = deadline::Deadline::new(WATCHDOG, || {});
+    let _deadline = deadline::Deadline::new(std::time::Duration::from_secs(10), || {});
     let (tx, rx) = std::sync::mpsc::channel();
     let worker = std::thread::spawn(move || {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
         let _ = tx.send(result);
     });
-    let result = rx.recv_timeout(WATCHDOG).expect("scenario watchdog");
+    let result = rx
+        .recv_timeout(std::time::Duration::from_secs(10))
+        .expect("scenario watchdog");
     worker.join().unwrap();
     if let Err(panic) = result {
         std::panic::resume_unwind(panic);
