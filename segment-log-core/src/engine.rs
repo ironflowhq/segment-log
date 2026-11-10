@@ -9,6 +9,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex, mpsc},
     thread::{self, JoinHandle},
+    time::Instant,
 };
 mod keys;
 mod recovery;
@@ -50,6 +51,8 @@ struct Request {
     submit: Submit,
     reply: reply::Reply,
     reservation: Reservation,
+    /// When `append` queued the request. A group's linger runs from this instant of its first submit.
+    admitted: Instant,
 }
 struct RetryWaiter {
     request: Request,
@@ -215,6 +218,7 @@ impl SegmentLog {
             submit,
             reply,
             reservation,
+            admitted: Instant::now(),
         }) {
             Ok(()) => Ok(pending),
             Err(mpsc::TrySendError::Full(_)) => Err(AppendError::Full),
@@ -450,12 +454,13 @@ fn run(
             .last()
             .map_or(64, |f| f.position + f.length as u64);
         drop(snapshot);
-        let started = std::time::Instant::now();
         let mut requests = Vec::new();
         let mut assigned = Vec::new();
         let mut origins = Vec::new();
         let mut waiters = Vec::new();
         let mut size = 24;
+        // When the writer first saw this group's linger over.
+        let mut gathered = None;
         let mut next = Some(first);
         while let Some(request) = next.take() {
             #[cfg(test)]
@@ -528,14 +533,28 @@ fn run(
                     return;
                 }
             }
-            next = if requests.is_empty() || options.linger.is_zero() {
-                receiver.try_recv().ok()
-            } else {
-                let remaining = options.linger.saturating_sub(started.elapsed());
-                if remaining.is_zero() {
-                    None
-                } else {
-                    receiver.recv_timeout(remaining).ok()
+            next = match requests.first() {
+                // No new submit has joined yet, so no linger runs.
+                None => receiver.try_recv().ok(),
+                Some(first) => {
+                    // The linger runs from the admission of the group's first submit, so the time
+                    // that submit spent queued behind the previous flush counts (ADR 0046).
+                    let remaining = options.linger.saturating_sub(first.admitted.elapsed());
+                    if remaining.is_zero() {
+                        // The group takes the submits admitted before the writer first saw the
+                        // linger over. Without that limit, steady arrivals keep one group
+                        // gathering until the byte cap.
+                        let limit = *gathered.get_or_insert_with(Instant::now);
+                        match receiver.try_recv().ok() {
+                            Some(late) if late.admitted > limit => {
+                                deferred = Some(late);
+                                None
+                            }
+                            queued => queued,
+                        }
+                    } else {
+                        receiver.recv_timeout(remaining).ok()
+                    }
                 }
             };
             #[cfg(test)]
