@@ -222,15 +222,21 @@ pub(super) struct Trace {
 }
 impl Trace {
     pub(super) fn rejected(&self) -> Vec<(usize, usize)> {
-        let mut rejected = vec![];
+        self.places(Outcome::rejected)
+    }
+    pub(super) fn refused(&self) -> Vec<(usize, usize)> {
+        self.places(|outcome| *outcome == Outcome::Refused)
+    }
+    fn places(&self, select: impl Fn(&Outcome) -> bool) -> Vec<(usize, usize)> {
+        let mut places = vec![];
         for (n, step) in self.steps.iter().enumerate() {
             for (i, outcome) in step.outcomes.iter().enumerate() {
-                if outcome.rejected() {
-                    rejected.push((n, i));
+                if select(outcome) {
+                    places.push((n, i));
                 }
             }
         }
-        rejected
+        places
     }
     pub(super) fn without(&self, erased: &[(usize, usize)]) -> Self {
         let step = |(n, step): (usize, &Observed)| Observed {

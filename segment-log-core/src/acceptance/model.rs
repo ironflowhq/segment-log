@@ -4,6 +4,7 @@ mod cases;
 mod contract;
 mod drive;
 
+use super::support::deadline::Deadline;
 use super::support::fixtures::options;
 use cases::{Case, expect};
 use contract::{
@@ -17,9 +18,14 @@ use proptest::{
         Config, FileFailurePersistence, RngAlgorithm, RngSeed, TestCaseError, TestError, TestRunner,
     },
 };
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    io::{self, Write},
+    time::Duration,
+};
 
 const SEED: u64 = 2000;
+const CASE_DEADLINE: Duration = Duration::from_secs(60);
 
 fn setting(name: &str, default: u64) -> u64 {
     std::env::var(name).map_or(default, |v| v.parse().expect("numeric model setting"))
@@ -42,12 +48,32 @@ fn config(seed: u64, cases: u32) -> Config {
 }
 
 /// Seeds in `proptest-regressions/acceptance/model.txt` run first.
-fn check(case_id: &str, default_cases: u32, property: fn(&Case) -> Result<(), TestCaseError>) {
+fn check(
+    case_id: &'static str,
+    default_cases: u32,
+    property: fn(&Case) -> Result<(), TestCaseError>,
+) {
     let seed = setting("SEGMENT_LOG_MODEL_SEED", SEED);
     let cases = u32::try_from(setting("SEGMENT_LOG_MODEL_CASES", default_cases.into()))
         .expect("case count fits u32");
     let mut runner = TestRunner::new(config(seed, cases));
-    match runner.run(&cases::case(), |case| property(&case)) {
+    let run = |case: Case| {
+        // Every hold and answer wait has its own deadline, but dropping the log joins the writer without one.
+        // The deadline aborts, which ends shrinking, so it prints the replay values before it does.
+        // It writes to stderr directly: the test's captured output is lost in the abort.
+        let hung = case.clone();
+        let _deadline = Deadline::new(CASE_DEADLINE, move || {
+            let report = format!(
+                "cases={case_id} seed={seed} count={cases}\na case ran longer than {CASE_DEADLINE:?}\n\
+                 case: {hung:#?}\nscript:\n{}\nreplay: SEGMENT_LOG_MODEL_SEED={seed} \
+                 SEGMENT_LOG_MODEL_CASES={cases} cargo test -p segment-log-core --lib acceptance::model\n",
+                expect(&hung).script
+            );
+            let _ = io::stderr().write_all(report.as_bytes());
+        });
+        property(&case)
+    };
+    match runner.run(&cases::case(), run) {
         Ok(()) => {}
         Err(TestError::Abort(reason)) => {
             panic!("cases={case_id} seed={seed} count={cases}\n{reason}")
@@ -71,16 +97,16 @@ fn equal(what: [&str; 2], a: &Trace, b: &Trace) -> Result<(), String> {
 }
 
 fn log_agrees(case: &Case) -> Result<(), TestCaseError> {
-    let expected = expect(case);
-    let observed = drive(&expected.script, &options());
-    equal(["the model", "the log"], &expected.trace, &observed).map_err(TestCaseError::fail)
+    let script = expect(case).script;
+    let observed = drive(&script, &options());
+    equal(["the model", "the log"], &predict(&script), &observed).map_err(TestCaseError::fail)
 }
 
 fn rejections_erase(case: &Case) -> Result<(), TestCaseError> {
     // The model only picks the inputs. The log's own answers decide what is erased and what must stay equal.
     let script = expect(case).script;
     let full = drive(&script, &options());
-    let erased = case.erase.choose(&full.rejected());
+    let erased = case.erase.choose(&full.rejected(), &full.refused());
     if erased.is_empty() {
         return Ok(());
     }
@@ -375,7 +401,9 @@ fn the_model_imports_nothing_from_the_crate() {
         include_str!("model/contract.rs"),
         include_str!("model/cases.rs"),
     ] {
-        assert!(!source.contains("crate::") && !source.contains("super::super"));
+        for path in ["crate::", "super::super", "super::drive", "drive::"] {
+            assert!(!source.contains(path), "the model names {path}");
+        }
     }
 }
 

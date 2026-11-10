@@ -57,7 +57,7 @@ Keep `cargo test --workspace` fast enough to run on every pull request on both p
 
 ## Place the code
 
-These paths are planned. Nothing exists yet.
+Paths marked with a later milestone do not exist yet.
 
 | Path | Responsibility |
 | --- | --- |
@@ -132,7 +132,8 @@ when a variant fails.
 ### Drill the failure path
 
 A passing long run never shows that a failure leaves usable artifacts. Dispatch the
-`m1-long-run` workflow with its `drill` input to check that path on both platforms:
+`long-run.yml` workflow with its `drill` input to check that path for the `m1-long-run`
+job on both platforms. A drill skips the `m2-long-run` job:
 
 ```sh
 gh workflow run long-run.yml -f drill=true

@@ -13,12 +13,14 @@ use std::{
 
 const ANSWER_DEADLINE: Duration = Duration::from_secs(5);
 
+/// Takes `Options` so that a later milestone can rerun the same scripts under other settings.
 pub(super) fn drive(script: &Script, options: &Options) -> Trace {
-    // Zero linger fixes each group's members. 64 bytes a record exceed its entry overhead in format.md,
-    // so no group reaches the byte cap.
+    // Zero linger fixes each group's members. At most two groups are outstanding: the held one and the
+    // one queued behind it. 64 bytes a record exceed its entry overhead in format.md, so no group reaches
+    // the byte cap. A short byte budget makes `append` return `Full`, and the driver panics on that.
     assert!(options.linger.is_zero());
-    assert!(options.queue_capacity >= 64 * GROUP_SUBMITS);
-    assert!(options.group_byte_cap >= 64 * (GROUP_BYTES + 64 * GROUP_RECORDS));
+    assert!(options.queue_capacity >= 2 * GROUP_SUBMITS);
+    assert!(options.group_byte_cap >= GROUP_BYTES + 64 * GROUP_RECORDS);
     let mut driver = Driver {
         sim: Sim::new(2),
         options,

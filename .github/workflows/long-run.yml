@@ -45,6 +45,7 @@ jobs:
           if-no-files-found: ignore
   m2-long-run:
     name: M2 long run (${{ matrix.os }})
+    if: ${{ !inputs.drill }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
