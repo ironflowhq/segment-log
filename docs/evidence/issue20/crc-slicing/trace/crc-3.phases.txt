@@ -1,0 +1,20 @@
+groups=202 counted_groups=198 min_count=900
+group phase, ms: median p10 p90 share_of_cycle
+  formation     1.198    1.113    1.260   22.1%
+  encode        0.206    0.171    0.253    3.8%
+  write         0.044    0.039    0.054    0.8%
+  flush         0.399    0.383    0.426    7.3%
+  publish       0.313    0.261    0.356    5.8%
+  delivery      3.220    3.133    3.458   59.3%
+  cycle         5.427    5.312    5.697  100.0%
+request interval, ms: mean p50 p99 share_of_latency
+  admission         0.001    0.001    0.004    0.0%
+  queue             2.082    2.073    3.558   38.1%
+  formation_wait    0.767    0.772    1.210   14.0%
+  encode            0.215    0.205    0.473    3.9%
+  write             0.045    0.044    0.074    0.8%
+  flush             0.406    0.399    0.628    7.4%
+  publish           0.311    0.314    0.369    5.7%
+  answer_wait       1.630    1.623    3.331   29.8%
+  answer_to_wake    0.010    0.008    0.039    0.2%
+  total             5.468    5.441    6.484  100.0%

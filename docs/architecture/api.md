@@ -293,4 +293,4 @@ The charge is fixed until the request is answered. It does not decrease when dat
 - Flush: `File::sync_data` for segments, and `sync_all` on an opened directory handle for directory entries. [ADR 0005](../decisions/0005-flush-calls-and-platforms.md) gives the mapping to system calls and what M1 must still verify.
 - All file I/O goes through a small storage trait, so that the tests can use simulated storage ([testing.md](testing.md)).
 - Log id: random bytes from the storage trait, as many as the `log_id` width in format.md. `std` has no public random source, and the simulated storage must make them deterministic from its seed.
-- CRC-32C: a software table is enough for M1. A faster version waits for a measurement.
+- CRC-32C: software tables that take eight input bytes per step are enough for M1. A version on processor instructions needs `unsafe` or a dependency, so it waits for an ADR and a measurement.
