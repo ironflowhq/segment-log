@@ -24,4 +24,6 @@ mod drop;
 
 mod seeded;
 
+mod model;
+
 mod evidence;
