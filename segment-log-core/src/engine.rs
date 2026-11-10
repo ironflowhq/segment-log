@@ -9,7 +9,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex, mpsc},
     thread::{self, JoinHandle},
-    time::{Duration, Instant},
+    time::Instant,
 };
 mod keys;
 mod recovery;
@@ -459,6 +459,8 @@ fn run(
         let mut origins = Vec::new();
         let mut waiters = Vec::new();
         let mut size = 24;
+        // When the writer first saw this group's linger over.
+        let mut gathered = None;
         let mut next = Some(first);
         while let Some(request) = next.take() {
             #[cfg(test)]
@@ -531,16 +533,29 @@ fn run(
                     return;
                 }
             }
-            // The linger of a group runs from the admission of its first submit, so the time that
-            // submit spent queued behind the previous flush counts (ADR 0046). Once it has ended,
-            // the writer takes only what is already queued, as with a zero linger.
-            let remaining = requests.first().map_or(Duration::ZERO, |first| {
-                options.linger.saturating_sub(first.admitted.elapsed())
-            });
-            next = if remaining.is_zero() {
-                receiver.try_recv().ok()
-            } else {
-                receiver.recv_timeout(remaining).ok()
+            next = match requests.first() {
+                // No new submit has joined yet, so no linger runs.
+                None => receiver.try_recv().ok(),
+                Some(first) => {
+                    // The linger runs from the admission of the group's first submit, so the time
+                    // that submit spent queued behind the previous flush counts (ADR 0046).
+                    let remaining = options.linger.saturating_sub(first.admitted.elapsed());
+                    if remaining.is_zero() {
+                        // The group takes the submits admitted before the writer first saw the
+                        // linger over. Without that limit, steady arrivals keep one group
+                        // gathering until the byte cap.
+                        let limit = *gathered.get_or_insert_with(Instant::now);
+                        match receiver.try_recv().ok() {
+                            Some(late) if late.admitted > limit => {
+                                deferred = Some(late);
+                                None
+                            }
+                            queued => queued,
+                        }
+                    } else {
+                        receiver.recv_timeout(remaining).ok()
+                    }
+                }
             };
             #[cfg(test)]
             if let Some(request) = &next {
