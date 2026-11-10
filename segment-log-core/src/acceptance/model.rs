@@ -463,27 +463,39 @@ fn pending_records_decide_the_later_submits_of_their_group() {
     equal(["the model", "the log"], &model, &log).unwrap_or_else(|message| panic!("{message}"));
 }
 
-/// Given a group with a wrong revision, a partial retry, a key conflict and a repeated key between valid appends
-/// When the same group runs on a fresh log without those four submits
-/// Then each valid append gets the offset and the revision that it got beside them
+/// Given a group with a wrong revision after a good record on the same stream, a partial retry and a key
+/// conflict, each with a fresh key, and a repeated key, between valid appends
+/// When later appends use that stream and those fresh keys, and the group runs again without the four rejections
+/// Then each valid append gets the same offset and revision in both runs
 ///
 /// Cases: REV-NO-OFFSET
 #[test]
 fn rejected_submits_leave_the_next_offsets_unchanged() {
     let mut script = Script::new();
     script.group(vec![
-        sub([record("s", None, "a", At(3))]),
-        sub([record("s", Some("k1"), "b", Empty)]),
         sub([
-            record("s", Some("k1"), "b", Empty),
-            record("s", None, "c", At(0)),
+            record("s", Some("k5"), "a", Empty),
+            record("s", None, "b", At(3)),
         ]),
-        sub([record("s", Some("k1"), "x", At(0))]),
+        sub([record("s", Some("k1"), "c", Empty)]),
         sub([
-            record("s", Some("k2"), "d", At(0)),
-            record("s", Some("k2"), "d", At(1)),
+            record("s", Some("k1"), "c", Empty),
+            record("s", Some("k3"), "d", At(0)),
         ]),
-        sub([record("s", Some("k2"), "d", At(0))]),
+        sub([
+            record("s", Some("k4"), "e", At(0)),
+            record("s", Some("k1"), "x", At(0)),
+        ]),
+        sub([
+            record("s", Some("k2"), "f", At(0)),
+            record("s", Some("k2"), "f", At(1)),
+        ]),
+        sub([record("s", Some("k2"), "f", At(0))]),
+        sub([
+            record("s", Some("k3"), "d", At(1)),
+            record("s", Some("k4"), "e", At(2)),
+            record("s", Some("k5"), "a", At(3)),
+        ]),
     ]);
 
     let full = drive(&script, &options());
@@ -491,14 +503,15 @@ fn rejected_submits_leave_the_next_offsets_unchanged() {
         full.steps[1].outcomes,
         [
             rejected(Reject::WrongRevision {
-                index: 0,
-                actual: None
+                index: 1,
+                actual: Some(0)
             }),
             appended(&[(1, 0)]),
             rejected(Reject::PartialRetry),
-            rejected(Reject::KeyConflict { index: 0 }),
+            rejected(Reject::KeyConflict { index: 1 }),
             Outcome::Refused,
             appended(&[(2, 1)]),
+            appended(&[(3, 2), (4, 3), (5, 4)]),
         ]
     );
     let erased = full.rejected();
@@ -506,7 +519,11 @@ fn rejected_submits_leave_the_next_offsets_unchanged() {
     let kept = drive(&script.without(&erased), &options());
     assert_eq!(
         kept.steps[1].outcomes,
-        [appended(&[(1, 0)]), appended(&[(2, 1)])]
+        [
+            appended(&[(1, 0)]),
+            appended(&[(2, 1)]),
+            appended(&[(3, 2), (4, 3), (5, 4)])
+        ]
     );
     equal(
         [
