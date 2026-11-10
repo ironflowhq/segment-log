@@ -1,0 +1,38 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running unittests src/lib.rs (.audit/completion-final2/build-macos/debug/deps/segment_log_core-dceb39e153868e61)
+
+running 1 test
+uncited case FUZZ-DECODER
+uncited case FUZZ-RECOVERY
+uncited case HANDOFF
+uncited case MODEL
+uncited case ORACLE-13
+uncited case ORACLE-6
+uncited case PROC-LAZYFS
+uncited case READER
+uncited case ROLL-FOOTER
+uncited case TRANSPORT-CONFORMANCE
+uncited case TRANSPORT-RESTART
+uncited case TRANSPORT-UNKNOWN
+test acceptance::support::coverage::cited_cases_are_defined_and_uncited_cases_are_reported ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 152 filtered out; finished in 0.01s
+
+     Running tests/process_crash.rs (.audit/completion-final2/build-macos/debug/deps/process_crash-333bc969f23db883)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/read_ranges.rs (.audit/completion-final2/build-macos/debug/deps/read_ranges-d94a7b0fc1e88d61)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/real_storage.rs (.audit/completion-final2/build-macos/debug/deps/real_storage-32c1aab34f540ff1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+

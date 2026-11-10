@@ -1,0 +1,68 @@
+Tue Nov 10 05:39:07 UTC 2026
+fda412be697d7f65941cd27074d78cf51c9e6963
+ProductName:		macOS
+ProductVersion:		26.7.2
+BuildVersion:		25G332
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+binary: rustc
+commit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67
+commit-date: 2026-10-13
+host: aarch64-apple-darwin
+release: 1.99.1
+LLVM version: 23.1.1
+hw.model: VirtualMac2,1
+hw.memsize: 7516192768
+hw.physicalcpu: 3
+hw.logicalcpu: 3
+machdep.cpu.brand_string: Apple M1 (Virtual)
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk2s5   320Gi   202Gi    97Gi    68%    1.9M  1.0G    0%   /System/Volumes/Data
+   Device Identifier:         disk2s5
+   Device Node:               /dev/disk2s5
+   Whole:                     No
+   Part of Whole:             disk2
+
+   Volume Name:               Data
+   Mounted:                   Yes
+   Mount Point:               /System/Volumes/Data
+
+   Partition Type:            41504653-0000-11AA-AA11-00306543ECAC
+   File System Personality:   APFS
+   Type (Bundle):             apfs
+   Name (User Visible):       APFS
+   Owners:                    Enabled
+
+   OS Can Be Installed:       Yes
+   Booter Disk:               disk2s2
+   Recovery Disk:             disk2s3
+   Media Type:                
+   Protocol:                  
+   SMART Status:              Not Supported
+
+   Disk Size:                 343.1 GB (343073095680 Bytes) (exactly 670064640 512-Byte-Units)
+   Device Block Size:         4096 Bytes
+
+   Volume Used Space:         217.4 GB (217392545792 Bytes) (exactly 424594816 512-Byte-Units)
+   Container Total Space:     343.1 GB (343073095680 Bytes) (exactly 670064640 512-Byte-Units)
+   Container Free Space:      104.0 GB (104010588160 Bytes) (exactly 203145680 512-Byte-Units)
+   Allocation Block Size:     4096 Bytes
+
+   Media OS Use Only:         No
+   Media Read-Only:           No
+   Volume Read-Only:          No
+
+   Device Location:           Internal
+   Removable Media:           Fixed
+
+   Solid State:               Yes
+
+   This disk is an APFS Volume.  APFS Information:
+   APFS Container:            disk2
+   APFS Physical Store:       disk0s2
+   APFS Volume Group:         16581DB1-276B-4CFD-A135-3E5D5F431944
+   Encrypted:                 No
+   FileVault:                 No
+   Sealed:                    No
+   Locked:                    No
+
+ 5:39  up 6 mins, 1 user, load averages: 4.54 17.14 11.84

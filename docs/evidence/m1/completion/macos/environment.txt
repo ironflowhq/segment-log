@@ -1,0 +1,66 @@
+Tue Nov 10 05:38:59 UTC 2026
+fda412be697d7f65941cd27074d78cf51c9e6963
+ProductName:		macOS
+ProductVersion:		27.0.1
+BuildVersion:		26A434
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+binary: rustc
+commit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67
+commit-date: 2026-10-13
+host: aarch64-apple-darwin
+release: 1.99.1
+LLVM version: 23.1.1
+hw.model: Mac16,10
+hw.memsize: 25769803776
+hw.physicalcpu: 10
+hw.logicalcpu: 10
+machdep.cpu.brand_string: Apple M4
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk5s1   931Gi    39Gi   892Gi     5%    3.0M  9.4G    0%   /Volumes/p7
+   Device Identifier:         disk5s1
+   Device Node:               /dev/disk5s1
+   Whole:                     No
+   Part of Whole:             disk5
+
+   Volume Name:               p7
+   Mounted:                   Yes
+   Mount Point:               /Volumes/p7
+
+   Partition Type:            41504653-0000-11AA-AA11-00306543ECAC
+   File System Personality:   APFS
+   Type (Bundle):             apfs
+   Name (User Visible):       APFS
+   Owners:                    Disabled
+
+   OS Can Be Installed:       Yes
+   Media Type:                Generic
+   Protocol:                  PCI-Express
+   SMART Status:              Verified
+
+   Disk Size:                 1.0 TB (1000188088320 Bytes) (exactly 1953492360 512-Byte-Units)
+   Device Block Size:         4096 Bytes
+
+   Volume Used Space:         42.3 GB (42329174016 Bytes) (exactly 82674168 512-Byte-Units)
+   Container Total Space:     1.0 TB (1000188088320 Bytes) (exactly 1953492360 512-Byte-Units)
+   Container Free Space:      957.7 GB (957651750912 Bytes) (exactly 1870413576 512-Byte-Units)
+   Allocation Block Size:     4096 Bytes
+
+   Media OS Use Only:         No
+   Media Read-Only:           No
+   Volume Read-Only:          No
+
+   Device Location:           External
+   Removable Media:           Fixed
+
+   Solid State:               Yes
+   Hardware AES Support:      No
+
+   This disk is an APFS Volume.  APFS Information:
+   APFS Container:            disk5
+   APFS Physical Store:       disk4s2
+   Encrypted:                 No
+   FileVault:                 No
+   Sealed:                    No
+   Locked:                    No
+
+ 0:38  up 40 days,  3:29, 4 users, load averages: 3.81 13.09 18.35

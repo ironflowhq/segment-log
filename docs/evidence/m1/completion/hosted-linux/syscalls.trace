@@ -1,0 +1,144 @@
+8438  05:39:42.664863 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\nrunning 1 test\n", 16) = 16 <0.000066>
+8439  05:39:42.693064 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "PHASE provision\n", 16) = 16 <0.000040>
+8439  05:39:42.693547 fsync(3</mnt/segment-log/data/evidence-8438-0>) = 0 <0.000694>
+8439  05:39:42.694419 fsync(3</mnt/segment-log/data>) = 0 <0.000262>
+8439  05:39:42.694840 fsync(3</mnt/segment-log>) = 0 <0.000024>
+8439  05:39:42.695002 fsync(3</mnt>)    = 0 <0.000030>
+8439  05:39:42.695162 fsync(3</>)       = 0 <0.000019>
+8439  05:39:42.695254 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "PHASE create\n", 13) = 13 <0.000025>
+8439  05:39:42.695988 write(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>, "SGLG\0\0@\0\223kZ\34\230\270\232)\352\2145\250@\242)\304\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\325@\34\214", 64) = 64 <0.000031>
+8439  05:39:42.696071 fdatasync(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000642>
+8439  05:39:42.696755 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000025>
+8439  05:39:42.696823 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Open.SyncData", 13) = 13 <0.000021>
+8439  05:39:42.696884 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000021>
+8439  05:39:42.696945 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg", 66) = 66 <0.000020>
+8439  05:39:42.697004 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000020>
+8439  05:39:42.697064 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000021>
+8439  05:39:42.697124 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000021>
+8439  05:39:42.697191 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000021>
+8439  05:39:42.697250 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000021>
+8439  05:39:42.697309 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000021>
+8439  05:39:42.697448 fsync(6</mnt/segment-log/data/evidence-8438-0/log>) = 0 <0.000224>
+8439  05:39:42.697756 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000026>
+8439  05:39:42.697827 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Open.SyncDir", 12) = 12 <0.000022>
+8439  05:39:42.697888 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000021>
+8439  05:39:42.697948 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0/log", 41) = 41 <0.000021>
+8439  05:39:42.698007 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000022>
+8439  05:39:42.698070 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000021>
+8439  05:39:42.698130 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000022>
+8439  05:39:42.698200 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000021>
+8439  05:39:42.698259 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000021>
+8439  05:39:42.698319 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000021>
+8439  05:39:42.698536 write(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>, "SGLG\0\0@\0\223kZ\34\230\270\232)\352\2145\250@\242)\304\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\325@\34\214", 64) = 64 <0.000024>
+8439  05:39:42.698604 fsync(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000377>
+8439  05:39:42.699020 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000025>
+8439  05:39:42.699089 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Recovery.SyncAll", 16) = 16 <0.000021>
+8439  05:39:42.699157 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000023>
+8439  05:39:42.699221 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg", 66) = 66 <0.000021>
+8439  05:39:42.699281 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000021>
+8439  05:39:42.699341 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000048>
+8439  05:39:42.699432 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000022>
+8439  05:39:42.699495 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000021>
+8439  05:39:42.699555 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000021>
+8439  05:39:42.699615 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000021>
+8439  05:39:42.699718 fsync(6</mnt/segment-log/data/evidence-8438-0/log>) = 0 <0.000234>
+8439  05:39:42.700028 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000024>
+8439  05:39:42.700096 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000022>
+8439  05:39:42.700157 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000024>
+8439  05:39:42.700220 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0/log", 41) = 41 <0.000023>
+8439  05:39:42.700282 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000021>
+8439  05:39:42.700342 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000050>
+8439  05:39:42.700435 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000021>
+8439  05:39:42.700497 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000021>
+8439  05:39:42.700557 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000022>
+8439  05:39:42.700618 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000021>
+8439  05:39:42.700721 fsync(6</mnt/segment-log/data/evidence-8438-0>) = 0 <0.000380>
+8439  05:39:42.701189 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000024>
+8439  05:39:42.701257 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000021>
+8439  05:39:42.701317 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000021>
+8439  05:39:42.701399 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0", 37) = 37 <0.000024>
+8439  05:39:42.701464 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000021>
+8439  05:39:42.701524 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000021>
+8439  05:39:42.701584 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000022>
+8439  05:39:42.701647 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000022>
+8439  05:39:42.701711 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000021>
+8439  05:39:42.701771 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000021>
+8439  05:39:42.702307 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "PHASE commit-0\n", 15) = 15 <0.000052>
+8441  05:39:42.703568 write(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>, "@\1\0\0#\304\320\37\1\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000027>
+8441  05:39:42.703652 fdatasync(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000389>
+8441  05:39:42.704086 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000025>
+8441  05:39:42.704155 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Group.SyncData", 14) = 14 <0.000021>
+8441  05:39:42.704215 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000021>
+8441  05:39:42.704278 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg", 66) = 66 <0.000021>
+8441  05:39:42.704340 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000046>
+8441  05:39:42.704427 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000022>
+8441  05:39:42.704491 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000021>
+8441  05:39:42.704551 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000021>
+8441  05:39:42.704610 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000022>
+8441  05:39:42.704672 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000021>
+8439  05:39:42.704812 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "PHASE commit-1\n", 15) = 15 <0.000031>
+8441  05:39:42.706025 write(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>, "@\1\0\0\333\261\345u\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000025>
+8441  05:39:42.706097 fdatasync(5</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000349>
+8441  05:39:42.706490 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000034>
+8441  05:39:42.706566 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Group.SyncData", 14) = 14 <0.000021>
+8441  05:39:42.706626 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000021>
+8441  05:39:42.706688 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg", 66) = 66 <0.000022>
+8441  05:39:42.706751 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000021>
+8441  05:39:42.706813 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000022>
+8441  05:39:42.706874 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000021>
+8441  05:39:42.706935 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000021>
+8441  05:39:42.706995 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000021>
+8441  05:39:42.707055 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000021>
+8439  05:39:42.707207 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "PHASE retry\n", 12) = 12 <0.000029>
+8439  05:39:42.707502 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "PHASE drop\n", 11) = 11 <0.000030>
+8441  05:39:42.708010 +++ exited with 0 +++
+8439  05:39:42.708148 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "PHASE recovery\n", 15) = 15 <0.000032>
+8439  05:39:42.709065 write(6</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>, "@\1\0\0\333\261\345u\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000025>
+8439  05:39:42.709135 fsync(6</mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg>) = 0 <0.000398>
+8439  05:39:42.709590 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000029>
+8439  05:39:42.709667 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Recovery.SyncAll", 16) = 16 <0.000029>
+8439  05:39:42.709742 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000030>
+8439  05:39:42.709820 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0/log/00000000000000000000.seg", 66) = 66 <0.000030>
+8439  05:39:42.709896 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000031>
+8439  05:39:42.709975 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000029>
+8439  05:39:42.710051 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000029>
+8439  05:39:42.710128 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000028>
+8439  05:39:42.710205 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000028>
+8439  05:39:42.710279 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000029>
+8439  05:39:42.710434 fsync(7</mnt/segment-log/data/evidence-8438-0/log>) = 0 <0.000301>
+8439  05:39:42.710839 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000035>
+8439  05:39:42.710926 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000030>
+8439  05:39:42.711005 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000028>
+8439  05:39:42.711080 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0/log", 41) = 41 <0.000030>
+8439  05:39:42.711157 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000028>
+8439  05:39:42.711231 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000028>
+8439  05:39:42.711305 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000028>
+8439  05:39:42.711400 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000029>
+8439  05:39:42.711479 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000030>
+8439  05:39:42.711555 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000029>
+8439  05:39:42.711682 fsync(7</mnt/segment-log/data/evidence-8438-0>) = 0 <0.000350>
+8439  05:39:42.712131 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "STORAGE ", 8) = 8 <0.000032>
+8439  05:39:42.712256 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000030>
+8439  05:39:42.712332 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " path=", 6) = 6 <0.000066>
+8439  05:39:42.712448 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "/mnt/segment-log/data/evidence-8438-0", 37) = 37 <0.000023>
+8439  05:39:42.712518 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, " result=", 8) = 8 <0.000021>
+8439  05:39:42.712580 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "Ok", 2) = 2 <0.000021>
+8439  05:39:42.712641 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "(", 1) = 1 <0.000021>
+8439  05:39:42.712701 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "()", 2) = 2 <0.000020>
+8439  05:39:42.712759 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, ")", 1) = 1 <0.000022>
+8439  05:39:42.712820 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000021>
+8439  05:39:42.713432 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "PHASE recovered-drop\n", 21) = 21 <0.000037>
+8442  05:39:42.713887 +++ exited with 0 +++
+8439  05:39:42.714023 write(2</home/runner/work/_temp/m1-evidence/sync-phases.log>, "PHASE done\n", 11) = 11 <0.000029>
+8440  05:39:42.715653 +++ exited with 0 +++
+8439  05:39:42.716036 +++ exited with 0 +++
+8438  05:39:42.716049 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, "test acceptance::evidence::real_storage_sync_phases ... ", 56) = 56 <0.000025>
+8438  05:39:42.716120 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, "ok", 2) = 2 <0.000021>
+8438  05:39:42.716190 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000043>
+8438  05:39:42.716276 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n", 1) = 1 <0.000021>
+8438  05:39:42.716336 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, "test result: ", 13) = 13 <0.000052>
+8438  05:39:42.716431 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, "ok", 2) = 2 <0.000022>
+8438  05:39:42.716497 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, ". 1 passed; 0 failed; 0 ignored; 0 measured; 152 filtered out", 61) = 61 <0.000022>
+8438  05:39:42.716560 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, "; finished in 0.05s", 19) = 19 <0.000021>
+8438  05:39:42.716620 write(1</home/runner/work/_temp/m1-evidence/sync-phases.log>, "\n\n", 2) = 2 <0.000021>
+8438  05:39:42.716964 +++ exited with 0 +++

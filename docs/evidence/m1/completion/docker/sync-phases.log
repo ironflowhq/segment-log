@@ -1,0 +1,25 @@
+
+running 1 test
+PHASE provision
+PHASE create
+STORAGE Open.SyncData path=/data/evidence-6876-0/log/00000000000000000000.seg result=Ok(())
+STORAGE Open.SyncDir path=/data/evidence-6876-0/log result=Ok(())
+STORAGE Recovery.SyncAll path=/data/evidence-6876-0/log/00000000000000000000.seg result=Ok(())
+STORAGE Recovery.SyncDir path=/data/evidence-6876-0/log result=Ok(())
+STORAGE Recovery.SyncDir path=/data/evidence-6876-0 result=Ok(())
+PHASE commit-0
+STORAGE Group.SyncData path=/data/evidence-6876-0/log/00000000000000000000.seg result=Ok(())
+PHASE commit-1
+STORAGE Group.SyncData path=/data/evidence-6876-0/log/00000000000000000000.seg result=Ok(())
+PHASE retry
+PHASE drop
+PHASE recovery
+STORAGE Recovery.SyncAll path=/data/evidence-6876-0/log/00000000000000000000.seg result=Ok(())
+STORAGE Recovery.SyncDir path=/data/evidence-6876-0/log result=Ok(())
+STORAGE Recovery.SyncDir path=/data/evidence-6876-0 result=Ok(())
+PHASE recovered-drop
+PHASE done
+test acceptance::evidence::real_storage_sync_phases ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 152 filtered out; finished in 0.02s
+

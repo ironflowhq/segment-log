@@ -1,0 +1,38 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running tests/process_crash.rs (target/debug/deps/process_crash-333bc969f23db883)
+
+running 1 test
+seed=10000 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10000/protocol.txt
+seed=10001 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10001/protocol.txt
+seed=10002 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10002/protocol.txt
+seed=10003 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10003/protocol.txt
+seed=10004 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10004/protocol.txt
+seed=10005 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10005/protocol.txt
+seed=10006 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10006/protocol.txt
+seed=10007 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10007/protocol.txt
+seed=10008 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10008/protocol.txt
+seed=10009 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10009/protocol.txt
+seed=10010 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10010/protocol.txt
+seed=10011 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10011/protocol.txt
+seed=10012 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10012/protocol.txt
+seed=10013 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10013/protocol.txt
+seed=10014 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10014/protocol.txt
+seed=10015 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10015/protocol.txt
+seed=10016 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10016/protocol.txt
+seed=10017 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10017/protocol.txt
+seed=10018 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10018/protocol.txt
+seed=10019 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10019/protocol.txt
+seed=10020 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10020/protocol.txt
+seed=10021 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10021/protocol.txt
+seed=10022 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10022/protocol.txt
+seed=10023 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10023/protocol.txt
+seed=10024 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10024/protocol.txt
+seed=10025 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10025/protocol.txt
+seed=10026 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10026/protocol.txt
+seed=10027 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10027/protocol.txt
+seed=10028 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10028/protocol.txt
+seed=10029 mode=SIGKILL transcript=/var/folders/rs/bp5wcl4j1cxcxwvv07l6_zrw0000gn/T/segment-log-slice8-92209-SIGKILL-10029/protocol.txt
+test killed_writers_preserve_the_recorded_contract ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 3.21s
+

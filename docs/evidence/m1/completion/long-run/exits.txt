@@ -1,0 +1,6 @@
+macos exit=0
+macos long trace exit=0
+macos long process exit=0
+docker exit=0
+docker long trace exit=0
+docker long process exit=0
