@@ -9,6 +9,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex, mpsc},
     thread::{self, JoinHandle},
+    time::{Duration, Instant},
 };
 mod keys;
 mod recovery;
@@ -50,6 +51,8 @@ struct Request {
     submit: Submit,
     reply: reply::Reply,
     reservation: Reservation,
+    /// When `append` queued the request. A group's linger runs from this instant of its first submit.
+    admitted: Instant,
 }
 struct RetryWaiter {
     request: Request,
@@ -215,6 +218,7 @@ impl SegmentLog {
             submit,
             reply,
             reservation,
+            admitted: Instant::now(),
         }) {
             Ok(()) => Ok(pending),
             Err(mpsc::TrySendError::Full(_)) => Err(AppendError::Full),
@@ -450,7 +454,6 @@ fn run(
             .last()
             .map_or(64, |f| f.position + f.length as u64);
         drop(snapshot);
-        let started = std::time::Instant::now();
         let mut requests = Vec::new();
         let mut assigned = Vec::new();
         let mut origins = Vec::new();
@@ -528,15 +531,16 @@ fn run(
                     return;
                 }
             }
-            next = if requests.is_empty() || options.linger.is_zero() {
+            // The linger of a group runs from the admission of its first submit, so the time that
+            // submit spent queued behind the previous flush counts (ADR 0046). Once it has ended,
+            // the writer takes only what is already queued, as with a zero linger.
+            let remaining = requests.first().map_or(Duration::ZERO, |first| {
+                options.linger.saturating_sub(first.admitted.elapsed())
+            });
+            next = if remaining.is_zero() {
                 receiver.try_recv().ok()
             } else {
-                let remaining = options.linger.saturating_sub(started.elapsed());
-                if remaining.is_zero() {
-                    None
-                } else {
-                    receiver.recv_timeout(remaining).ok()
-                }
+                receiver.recv_timeout(remaining).ok()
             };
             #[cfg(test)]
             if let Some(request) = &next {
