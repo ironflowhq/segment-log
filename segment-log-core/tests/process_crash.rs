@@ -2,6 +2,8 @@
 
 #[path = "../src/acceptance/support/deadline.rs"]
 mod deadline;
+#[path = "../src/acceptance/support/roll_size.rs"]
+mod roll_size;
 
 use segment_log_core::*;
 use std::{
@@ -23,6 +25,7 @@ const LIMIT: Duration = Duration::from_secs(20);
 fn options() -> Options {
     Options {
         linger: Duration::ZERO,
+        roll_bytes: roll_size::roll_bytes(Options::default().roll_bytes),
         ..Options::default()
     }
 }
@@ -554,10 +557,23 @@ fn predict(records: &[NewRecord], history: &mut Vec<Record>) -> Answer {
     }
 }
 
-// The pipe cannot observe writer order across callers. Read the pre-recovery file
+// The pipe cannot observe writer order across callers. Read the pre-recovery files
 // independently to constrain that order; expected records still come from requests.
 fn written_keys(dir: &Path) -> Vec<Vec<Vec<u8>>> {
-    let bytes = fs::read(dir.join("00000000000000000000.seg")).unwrap();
+    let mut segments: Vec<_> = fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|e| e == "seg"))
+        .collect();
+    segments.sort();
+    let mut frames = vec![];
+    for segment in segments {
+        frames.extend(segment_keys(&fs::read(segment).unwrap()));
+    }
+    frames
+}
+
+fn segment_keys(bytes: &[u8]) -> Vec<Vec<Vec<u8>>> {
     let mut frames = vec![];
     let mut at = 64;
     while at + 8 <= bytes.len() {

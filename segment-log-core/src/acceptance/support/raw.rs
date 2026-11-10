@@ -142,10 +142,10 @@ pub(crate) fn segments(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
         })
         .collect()
 }
-/// The path, position and length of the last frame in the newest segment.
-pub(crate) fn last_frame(sim: &Sim) -> (String, u64, usize) {
+/// The path, position and bytes of the last frame in the newest segment.
+pub(crate) fn last_frame(sim: &Sim) -> (String, u64, Vec<u8>) {
     let (base, bytes) = segments(sim).pop().expect("a segment");
-    let last = frames(&bytes).pop().expect("a frame");
+    let last = frames(&bytes).pop().expect("a frame").to_vec();
     let position = bytes.len() - last.len();
-    (segment(base), position as u64, last.len())
+    (segment(base), position as u64, last)
 }

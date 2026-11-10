@@ -366,11 +366,10 @@ fn lookup_failure_aborts_buffered_work_but_preserves_finalized_answers() {
             let sim = Sim::new(408);
             let log = open(&sim);
             send(&log, vec![original()]).wait().unwrap();
-            let bootstrap_position = raw::bytes(&sim).len();
             let held_flush = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
             let bootstrap = send(&log, vec![record(b"b", Some(b"b"), b"bootstrap")]);
             held_flush.wait();
-            let len = raw::bytes(&sim).len() - bootstrap_position;
+            let (segment, position, frame) = raw::last_frame(&sim);
             let new1 = send(&log, vec![record(b"new1", None, b"a")]);
             let new2 = send(&log, vec![record(b"new2", None, b"b")]);
             let conflict = send(&log, vec![record(b"s", Some(b"k"), b"different")]);
@@ -379,9 +378,9 @@ fn lookup_failure_aborts_buffered_work_but_preserves_finalized_answers() {
             let retry = send(&log, vec![original()]);
             let failing = send(&log, vec![record(b"b", Some(b"b"), b"bootstrap")]);
             let held_lookup = sim.hold(Call::new(
-                SEG,
+                segment,
                 Purpose::Lookup,
-                Op::Read(bootstrap_position as u64, len),
+                Op::Read(position, frame.len()),
             ));
             held_flush.release(None);
             bootstrap.wait().unwrap();

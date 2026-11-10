@@ -7,6 +7,7 @@ pub(crate) const ANY_SEG: &str = "/log/*.seg";
 pub(crate) fn options() -> Options {
     Options {
         linger: Duration::ZERO,
+        roll_bytes: super::roll_size::roll_bytes(Options::default().roll_bytes),
         ..Options::default()
     }
 }

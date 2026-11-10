@@ -375,11 +375,10 @@ fn lookup_failure_drains_pending_waiters_before_any_group_write() {
             let sim = Sim::new(505);
             let log = open(&sim);
             send(&log, vec![boot()]).wait().unwrap();
-            let position = raw::bytes(&sim).len();
             let held = sim.hold(flush());
             let bootstrap = send(&log, vec![record(b"lookup", Some(b"lookup"), b"target")]);
             held.wait();
-            let length = raw::bytes(&sim).len() - position;
+            let (segment, position, frame) = raw::last_frame(&sim);
             let first = send(&log, vec![a(), b()]);
             let second = send(&log, vec![c()]);
             let exact = send(&log, vec![a(), b()]);
@@ -392,11 +391,8 @@ fn lookup_failure_drains_pending_waiters_before_any_group_write() {
                 &log,
                 vec![c(), boot(), record(b"lookup", Some(b"lookup"), b"target")],
             );
-            let next = sim.hold(Call::new(
-                SEG,
-                Purpose::Lookup,
-                Op::Read(position as u64, length),
-            ));
+            let lookup = Call::new(&segment, Purpose::Lookup, Op::Read(position, frame.len()));
+            let next = sim.hold(lookup);
             held.release(None);
             bootstrap.wait().unwrap();
             next.wait();
@@ -409,14 +405,14 @@ fn lookup_failure_drains_pending_waiters_before_any_group_write() {
             );
             if fault.is_none() {
                 use crate::storage::Storage;
-                let mut bytes = raw::bytes(&sim)[position..position + length].to_vec();
+                let mut bytes = frame;
                 bytes[9] = 1;
                 let input = [&bytes[..4], &bytes[8..]].concat();
                 bytes[4..8].copy_from_slice(&raw::crc(&input).to_le_bytes());
                 sim.call(Call::new(
-                    SEG,
+                    &segment,
                     Purpose::Open,
-                    Op::Write(position as u64, bytes),
+                    Op::Write(position, bytes),
                 ))
                 .unwrap();
             }

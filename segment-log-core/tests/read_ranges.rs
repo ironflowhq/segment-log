@@ -1,5 +1,7 @@
 #[path = "../src/acceptance/support/deadline.rs"]
 mod deadline;
+#[path = "../src/acceptance/support/roll_size.rs"]
+mod roll_size;
 
 use segment_log_core::*;
 use std::{
@@ -69,6 +71,7 @@ fn reads_boundaries_and_snapshot_during_appends() {
     let dir = std::env::temp_dir().join(format!("segment-log-read-ranges-{}", std::process::id()));
     let options = || Options {
         linger: Duration::ZERO,
+        roll_bytes: roll_size::roll_bytes(Options::default().roll_bytes),
         ..Options::default()
     };
     let log = SegmentLog::open(&dir, options()).unwrap();
@@ -122,6 +125,7 @@ fn free_running_readers_get_exact_ranges_while_groups_flush() {
         &dir,
         Options {
             linger: Duration::ZERO,
+            roll_bytes: roll_size::roll_bytes(Options::default().roll_bytes),
             ..Options::default()
         },
     )
