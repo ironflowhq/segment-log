@@ -1,0 +1,28 @@
+diff --git a/segment-log-core/src/engine.rs b/segment-log-core/src/engine.rs
+index be87983..2ca6254 100644
+--- a/segment-log-core/src/engine.rs
++++ b/segment-log-core/src/engine.rs
+@@ -321,13 +321,16 @@ fn read_bytes(
+ }
+ fn publish(published: &mut Published, frame: Frame, group: &codec::Group<'_>) {
+     for (i, entry) in group.entries.iter().enumerate() {
+-        published.heads.insert(
+-            entry.stream.to_vec(),
+-            StreamHead {
+-                revision: entry.revision,
+-                offset: group.base_offset + i as u64,
+-            },
+-        );
++        let head = StreamHead {
++            revision: entry.revision,
++            offset: group.base_offset + i as u64,
++        };
++        match published.heads.get_mut(entry.stream) {
++            Some(existing) => *existing = head,
++            None => {
++                published.heads.insert(entry.stream.to_vec(), head);
++            }
++        }
+     }
+     published.watermark = frame.end;
+     published.frames.push(frame);
