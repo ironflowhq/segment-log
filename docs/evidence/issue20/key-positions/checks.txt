@@ -1,0 +1,63 @@
+Checks on this branch's sources (segment-log-core tree 5ea762220ea8).
+
+== macOS 27.0.1, aarch64, host
+$ cargo fmt --all --check
+exit 0
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+$ cargo test --workspace
+     Running unittests src/lib.rs
+test result: ok. 138 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 1.16s
+     Running tests/process_crash.rs
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+     Running tests/read_ranges.rs
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+     Running tests/real_storage.rs
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+     Running unittests src/main.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+exit 0
+$ SEGMENT_LOG_TRACE_SEEDS=100 SEGMENT_LOG_TRACE_SEED=10000 cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture
+trace seeds=10000..=10099 scenarios=2700 (9 workloads x 3 crash modes per seed)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 138 filtered out; finished in 28.51s
+exit 0
+$ SEGMENT_LOG_PROCESS_REPETITIONS=30 SEGMENT_LOG_PROCESS_SEED=10000 cargo test -p segment-log-core --test process_crash killed_writers_preserve_the_recorded_contract -- --nocapture
+repetitions=30 first=seed=10000 last=seed=10029
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 1.91s
+exit 0
+$ python3 -B -m unittest discover -s scripts -p 'test_m1_*.py'
+Ran 9 tests in 0.071s
+OK
+exit 0
+
+== Linux 7.0.14-linuxkit, aarch64, rust:1.99.1-bookworm container
+$ cargo fmt --all --check
+exit 0
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+$ cargo test --workspace
+     Running unittests src/lib.rs
+test result: ok. 138 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 1.45s
+     Running tests/process_crash.rs
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+     Running tests/read_ranges.rs
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+     Running tests/real_storage.rs
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/main.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+exit 0
+$ SEGMENT_LOG_TRACE_SEEDS=100 SEGMENT_LOG_TRACE_SEED=10000 cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture
+trace seeds=10000..=10099 scenarios=2700 (9 workloads x 3 crash modes per seed)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 138 filtered out; finished in 42.41s
+exit 0
+$ SEGMENT_LOG_PROCESS_REPETITIONS=30 SEGMENT_LOG_PROCESS_SEED=10000 cargo test -p segment-log-core --test process_crash killed_writers_preserve_the_recorded_contract -- --nocapture
+repetitions=30 first=seed=10000 last=seed=10029
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.32s
+exit 0
+$ python3 -B -m unittest discover -s scripts -p 'test_m1_*.py'
+Ran 9 tests in 0.033s
+OK
+exit 0
