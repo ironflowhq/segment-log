@@ -1,6 +1,6 @@
 use super::*;
 pub(super) struct Recovered {
-    pub segment: PathBuf,
+    pub active: Active,
     pub lock: Box<dyn Lock>,
     pub published: Published,
     pub epoch: u64,
@@ -156,6 +156,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         epoch = group.epoch;
         let bytes = frame.as_ref().unwrap();
         let kept = Frame {
+            segment: header.base_offset,
             position,
             length: bytes.len(),
             base: group.base_offset,
@@ -189,7 +190,10 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         .unwrap_or(Path::new("."));
     call(storage, parent, Purpose::Recovery, Op::SyncDir)?;
     Ok(Recovered {
-        segment,
+        active: Active {
+            base: header.base_offset,
+            length: position,
+        },
         lock,
         published,
         epoch,
