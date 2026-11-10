@@ -1,0 +1,1 @@
+driver=overlayfs cpus=10 memory=8319438848 kernel=7.0.14-linuxkit os=Docker Desktop arch=aarch64
