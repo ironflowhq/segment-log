@@ -1,8 +1,10 @@
 # M1 completion record
 
-This record supplies the evidence that the [M1 completion gate](../../architecture/testing.md#m1-completion-gate) requires, for the tree that this pull request leaves on `main`. It replaces [slice 10](slice10.md) as the completion record. Slice 10 measured the tree before the issue 20 changes, and its benchmark had no paced run.
+This record supplies the evidence that the [M1 completion gate](../../architecture/testing.md#m1-completion-gate) requires, for the tree that [pull request 40](https://github.com/ironflowhq/segment-log/pull/40) left on `main`. It replaces [slice 10](slice10.md) as the completion record. Slice 10 measured the tree before the issue 20 changes, and its benchmark had no paced run.
 
-The owner decides the gate in [issue 17](https://github.com/ironflowhq/segment-log/issues/17). The [PRD](../../prd.md#milestones) records that decision.
+The owner decided the gate on 10 November 2026 and closed [issue 17](https://github.com/ironflowhq/segment-log/issues/17). The [PRD](../../prd.md#milestones) records that decision.
+
+The captures are as they were at that decision. Each note added later names its date.
 
 ## Result
 
@@ -30,7 +32,9 @@ The performance targets are diagnostics in M1 ([ADR 0029](../../decisions/0029-m
 | `.github` tree | `bdbd2732b26869c0fca235a22627ba3eb98e09c8` |
 | Toolchain | Rust 1.99.1 (`58cf8f9c3`, LLVM 23.1.1), from `rust-toolchain.toml` |
 
-A later commit in this pull request must leave the `segment-log-core` tree unchanged for this record to describe it. Compare with `git rev-parse HEAD:segment-log-core`.
+A later commit must leave the `segment-log-core` tree unchanged for this record to describe it. Compare with `git rev-parse HEAD:segment-log-core`.
+
+After the merge, 10 November 2026: the pull requests were squash-merged, so the measured commit is not on `main`. It is an ancestor of `refs/pull/40/head` and can be fetched from there. The squash commits of pull requests 40 and 43, `c459c26` and `2fa9cff`, have the `segment-log-core` tree above. So does `856af11`, the commit of pull request 39, which adds only two scripts and their record.
 
 All four captures ran on 10 November 2026:
 
@@ -63,7 +67,7 @@ The ignored test is the long run. It ran separately with the hosted settings, 10
 
 [completion/long-run/](completion/long-run/) holds the four logs. The tests cover the simulated `Kill`, `PowerLoss` and `PowerLossTorn` crashes, real-process `SIGKILL`, I/O faults, recovery, the writer lock, expected revisions, retries and admission limits. [testing.md](../../architecture/testing.md#m1-acceptance-coverage) lists every case, and each group there is `Implemented`.
 
-Hosted CI passed on Linux and macOS for the head of each pull request in this stack: #36, #37, #38, #40, #41 and #42.
+Hosted CI passed on Linux and macOS for the head of each pull request in this stack: #36, #37, #38, #40, #41 and #42. After the merge it also passed for each of the eight squash commits on `main`, from `31bae72` to `856af11`.
 
 ### Hosted long runs
 
@@ -72,8 +76,11 @@ Hosted CI passed on Linux and macOS for the head of each pull request in this st
 | [42654692594](https://github.com/ironflowhq/segment-log/actions/runs/42654692594) | Manual, 9 November | Passed on Linux and macOS |
 | [42754928006](https://github.com/ironflowhq/segment-log/actions/runs/42754928006) | Manual, 10 November, after the workflow change | Passed on Linux and macOS |
 | [42754924923](https://github.com/ironflowhq/segment-log/actions/runs/42754924923) | Manual drill, 10 November | Both platforms failed as planted, uploaded, and replayed ([record](../issue20/hosted-drill/README.md)) |
+| [42818173749](https://github.com/ironflowhq/segment-log/actions/runs/42818173749) | Scheduled, 10 November at 12:43 UTC | Passed on Linux and macOS |
 
-No scheduled run exists yet. The first was due on 10 November 2026 at 04:23 UTC. More than one hour later the repository showed no run with the `schedule` event. GitHub does not promise when a scheduled workflow starts. This gate does not require a scheduled run, and the point stays open in issue 20.
+The first scheduled run was due on 10 November 2026 at 04:23 UTC. When this record was captured, more than one hour later, the repository showed no run with the `schedule` event. GitHub does not promise when a scheduled workflow starts. The run started at 12:43 UTC, eight hours and twenty minutes after its slot, and passed on both platforms. [completion/scheduled-run.json](completion/scheduled-run.json) is its API record.
+
+The scheduled run used `86f8da8`, the `main` before this stack. So it ran the workflow without the drill input, and the engine before the linger change. It shows that the schedule fires and that the long run passes on hosted runners. It does not test the measured tree; the two manual runs and the local long runs above do. This gate does not require a scheduled run.
 
 ## 2. One `fdatasync` for each new group
 
@@ -217,10 +224,10 @@ Every run validated all its records against the literal inputs and the callers' 
 - **No physical local NVMe.** The targets name it, and no host here has it. [The pull request](https://github.com/ironflowhq/segment-log/pull/40) lists ways to get that measurement.
 - **Deployment storage is not qualified.** That is a requirement before M6 ([ADR 0032](../../decisions/0032-qualify-deployment-storage-before-m6.md)), not part of this gate.
 - **The paced p99 depends on rare slow flushes.** See the tables above.
-- **ADR 0046 is proposed.** The measured tree counts a group's linger from its first submit's admission. If the owner rejects that decision, capture this record again without it.
-- **Exact peak memory for each phase is a lower bound on this guest.** See the [Linux phase record](https://github.com/ironflowhq/segment-log/pull/39).
+- **ADR 0046 is accepted.** The measured tree counts a group's linger from its first submit's admission. The owner accepted that decision on 10 November 2026, so this record needs no second capture.
+- **Exact peak memory for each phase is a lower bound on this guest.** See the [Linux phase record](../issue20/linux-phase-peaks/README.md).
 - **Workloads beyond these stay unmeasured:** more than 1,000 callers, more than 1,000,000 records, and long soaks, which need roll (M3).
-- **The scheduled long run has not started yet.**
+- **The scheduled long run has not yet run the merged tree.** Its first run passed on the `main` before this stack. The next slot is 11 November 2026 at 04:23 UTC.
 - **Missing original red evidence stays missing.** Some early behavior was implemented before its scenario ([evidence archive](README.md)). Later tests do not repair that history.
 
 ## Reproduce
