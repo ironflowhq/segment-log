@@ -62,12 +62,22 @@ pub(super) enum ExpectSpec {
 
 impl Erase {
     /// A subset, so a rejection that wrongly kept a key or revision still fails a kept submit after it.
-    pub(super) fn choose(&self, rejected: &[(usize, usize)]) -> Vec<(usize, usize)> {
+    /// It holds a writer rejection when the run has one: a refused submit never reached the writer.
+    pub(super) fn choose(
+        &self,
+        rejected: &[(usize, usize)],
+        refused: &[(usize, usize)],
+    ) -> Vec<(usize, usize)> {
         let masked =
             |(i, at): (usize, &(usize, usize))| self.mask[i % self.mask.len()].then_some(*at);
-        let chosen: Vec<_> = rejected.iter().enumerate().filter_map(masked).collect();
-        if chosen.is_empty() && !rejected.is_empty() {
-            return vec![rejected[usize::from(self.fallback) % rejected.len()]];
+        let mut chosen: Vec<_> = rejected.iter().enumerate().filter_map(masked).collect();
+        let writer: Vec<_> = rejected.iter().filter(|at| !refused.contains(at)).collect();
+        let fallback = |len: usize| usize::from(self.fallback) % len;
+        if !writer.is_empty() && chosen.iter().all(|at| refused.contains(at)) {
+            chosen.push(*writer[fallback(writer.len())]);
+            chosen.sort();
+        } else if chosen.is_empty() && !rejected.is_empty() {
+            chosen.push(rejected[fallback(rejected.len())]);
         }
         chosen
     }
@@ -75,7 +85,6 @@ impl Erase {
 
 pub(super) struct Expected {
     pub script: Script,
-    pub trace: Trace,
     pub tally: BTreeMap<Shape, u32>,
 }
 
@@ -103,12 +112,7 @@ pub(super) fn expect(case: &Case) -> Expected {
         };
         model.submit(closer);
     }
-    let trace = predict(&script);
-    Expected {
-        script,
-        trace,
-        tally,
-    }
+    Expected { script, tally }
 }
 
 #[derive(Default)]
@@ -241,7 +245,9 @@ fn expectation(spec: ExpectSpec, model: &Model, stream: &Bytes, earlier: &[NewRe
     let at = |next: u64| next.checked_sub(1).map_or(Expect::Empty, Expect::At);
     match spec {
         ExpectSpec::Right => at(next),
-        ExpectSpec::Stale => at(next.saturating_sub(1)),
+        // A stream with no records has no revision to be behind, and `At(0)` is wrong there too.
+        ExpectSpec::Stale if next == 0 => Expect::At(0),
+        ExpectSpec::Stale => at(next - 1),
         ExpectSpec::DurableHead => {
             head(model.durable(), stream).map_or(Expect::Empty, |r| Expect::At(r.pos.revision))
         }
