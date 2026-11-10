@@ -216,3 +216,10 @@ M6 adds Go-client scenarios for the cases in [M6 transport order and conformance
 ## Evidence
 
 Acceptance scenarios give correctness evidence. Each milestone also needs its own completion artifacts. M1 needs the syscall, directory-sync and Linux benchmark artifacts in the [completion gate](architecture/testing.md#m1-completion-gate). Later gates keep their own measurement, fuzzing, transport and deployment evidence. Keep missing evidence separate from a measured performance miss, under the milestone's pass criteria.
+
+Two workflows capture M1 evidence on hosted runners, so that a capture needs no local Linux host:
+
+- `m1-evidence` runs `scripts/m1-evidence-guest.sh` on Linux and `scripts/m1-evidence-macos.sh` on macOS, and uploads each output directory. It covers the checks, the syscall trace, both directory-sync results, and the default and paced benchmark runs.
+- `m1-compare` runs `scripts/m1-compare-refs.sh`, which builds two commits and measures them in alternating pairs, closed loop and paced.
+
+Dispatch either workflow, or put the `m1-evidence` or `m1-compare` label on a pull request. A labeled pull request captures its head, and `m1-compare` measures its base against its head. A hosted runner is a shared virtual machine: record it as the measurement's conditions, as [testing.md](architecture/testing.md#benchmarks-m1-for-the-core-m6-for-the-server) requires, and do not read a target pass from it.

@@ -5,10 +5,12 @@ out="${1:-$PWD/.audit/slice10/macos}"
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
 trap 'printf "exit=%s\n" "$?" > "$out/exit-status.txt"' EXIT
-export CARGO_TARGET_DIR="$out/build"
-export SEGMENT_LOG_EVIDENCE_DIR="$out/data"
+# A hosted capture uploads the output directory, so it keeps the build and the data elsewhere.
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$out/build}"
+export SEGMENT_LOG_EVIDENCE_DIR="${SEGMENT_LOG_EVIDENCE_DIR:-$out/data}"
 {
     date -u
+    git rev-parse HEAD
     sw_vers
     rustc -Vv
     sysctl hw.model hw.memsize hw.physicalcpu hw.logicalcpu machdep.cpu.brand_string

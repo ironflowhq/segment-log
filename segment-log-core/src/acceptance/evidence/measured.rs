@@ -4,6 +4,7 @@ use super::*;
 struct Metrics {
     groups: Vec<(u64, u64)>,
     flushes: usize,
+    flush_ns: Vec<u64>,
     directories: Vec<PathBuf>,
     timings: std::collections::BTreeMap<String, (u64, u64)>,
 }
@@ -25,6 +26,10 @@ impl Measured {
     }
     pub(super) fn group_flushes(&self) -> usize {
         self.metrics.lock().unwrap().flushes
+    }
+    /// How long each successful group flush took, in the order of the groups.
+    pub(super) fn group_flush_ns(&self) -> Vec<u64> {
+        self.metrics.lock().unwrap().flush_ns.clone()
     }
     pub(super) fn assert_directories(&self, path: &Path, log: usize, parent: usize) {
         let metrics = self.metrics.lock().unwrap();
@@ -85,6 +90,7 @@ impl Storage for Measured {
             }
             if kind == "Group.SyncData" {
                 metrics.flushes += 1;
+                metrics.flush_ns.push(ns);
             }
             if name == "SyncDir" {
                 metrics.directories.push(path);

@@ -1,0 +1,44 @@
+name: M1 latency comparison
+# Measures the append benchmark of two commits on one hosted Linux runner, in alternating pairs.
+# Dispatch it with a base, or put the `m1-compare` label on a pull request to compare its base
+# with its head.
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Commit or ref to measure as "before"
+        required: true
+      head:
+        description: Commit or ref to measure as "after" (default is the dispatched ref)
+        required: false
+  pull_request:
+    types: [labeled]
+permissions:
+  contents: read
+jobs:
+  compare:
+    name: Compare base and head
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'm1-compare' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends time
+      # The benchmark data goes to the runner's local disk under /mnt, not to the workspace.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          scripts/m1-compare-refs.sh "$BASE" "$HEAD" "$RUNNER_TEMP/m1-compare"
+        env:
+          BASE: ${{ inputs.base || github.event.pull_request.base.sha }}
+          HEAD: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
+          SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: m1-compare
+          path: ${{ runner.temp }}/m1-compare
