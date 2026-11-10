@@ -796,6 +796,35 @@ fn setting(name: &str, default: u64) -> u64 {
         s.parse().expect("numeric process test setting")
     })
 }
+/// Whether the oracle gets a known-bad ledger. A hosted drill sets it to prove that a failed
+/// repetition keeps a directory that can be fetched and checked again.
+fn drill() -> bool {
+    match std::env::var("SEGMENT_LOG_PROCESS_DRILL").as_deref() {
+        Err(std::env::VarError::NotPresent) | Ok("0") => false,
+        Ok("1") => true,
+        other => panic!("invalid SEGMENT_LOG_PROCESS_DRILL: {other:?}"),
+    }
+}
+/// Checks a ledger against a log. The drill first claims a watermark that no child reported.
+fn check(dir: &Path, mut ledger: Ledger) {
+    if drill() {
+        ledger.watermark = u64::MAX;
+    }
+    oracle(dir, &ledger);
+}
+/// Rebuilds the ledger of a kept repetition from its transcript and checks its log again.
+/// The first check already recovered that log, and its retries may have appended to it.
+fn replay(root: &Path) {
+    let mut ledger = Ledger::default();
+    let transcript = fs::read_to_string(root.join("protocol.txt")).unwrap();
+    // A kill can cut the last line. The pipe reader never forwarded such a line either.
+    for line in transcript.split_inclusive('\n') {
+        if line.ends_with('\n') {
+            ledger.line(line);
+        }
+    }
+    check(&root.join("log"), ledger);
+}
 fn mix(mut seed: u64) -> u64 {
     seed = seed.wrapping_add(0x9e3779b97f4a7c15);
     seed = (seed ^ (seed >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
@@ -815,6 +844,10 @@ fn killed_writers_preserve_the_recorded_contract() {
     if let Ok(mode) = std::env::var("SEGMENT_LOG_PROCESS_CHILD") {
         assert_eq!(mode, "workload");
         child_workload(std::env::var_os("SEGMENT_LOG_PROCESS_DIR").unwrap().into());
+        return;
+    }
+    if let Some(root) = std::env::var_os("SEGMENT_LOG_PROCESS_REPLAY") {
+        replay(Path::new(&root));
         return;
     }
     let repetitions = setting("SEGMENT_LOG_PROCESS_REPETITIONS", 3);
@@ -881,6 +914,6 @@ fn killed_writers_preserve_the_recorded_contract() {
             thread::yield_now();
         }
         drop(pipe);
-        oracle(&s.log(), &ledger);
+        check(&s.log(), ledger);
     }
 }

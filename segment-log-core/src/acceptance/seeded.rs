@@ -258,13 +258,34 @@ fn save_pair(path: &Path, sim: &Sim, ledger: &Ledger) {
     trace::save(&path.with_extension("trace"), seed, &events).unwrap();
     saved::save(&path.with_extension("ledger"), ledger);
 }
-fn replay(path: &Path) {
-    let ledger = saved::load(&path.with_extension("ledger"));
+/// A record that the oracle must reject: a permanent refusal of a request that fits every limit.
+fn false_refusal() -> Request {
+    Request {
+        inputs: literal(2, 2, 7, 0),
+        original: true,
+        answer: Answer::Refused("TooLarge".into()),
+        watermark: 0,
+    }
+}
+/// Whether the checks of this process plant the false refusal. A hosted drill sets it to prove
+/// that a failed check leaves a pair that can be fetched and replayed to the same rejection.
+fn drill() -> bool {
+    match std::env::var("SEGMENT_LOG_TRACE_DRILL").as_deref() {
+        Err(std::env::VarError::NotPresent) | Ok("0") => false,
+        Ok("1") => true,
+        other => panic!("invalid SEGMENT_LOG_TRACE_DRILL: {other:?}"),
+    }
+}
+fn replay(path: &Path, drill: bool) {
+    let mut ledger = saved::load(&path.with_extension("ledger"));
+    if drill {
+        ledger.requests.push(false_refusal());
+    }
     let (seed, events) = trace::load(&path.with_extension("trace")).unwrap();
     let sim = Sim::replay(seed, &events);
     check_replay(&sim, &ledger);
 }
-fn run(seed: u64, mode: Crash, variant: usize, keep: bool) -> PathBuf {
+fn run(seed: u64, mode: Crash, variant: usize, keep: bool, drill: bool) -> PathBuf {
     let path = artifact(seed, mode, variant);
     let label = format!(
         "cases=ORACLE-1..5,7..12 seed={seed} mode={mode:?} variant={variant} artifacts={}",
@@ -303,7 +324,7 @@ fn run(seed: u64, mode: Crash, variant: usize, keep: bool) -> PathBuf {
         eprintln!("{label}");
         std::panic::resume_unwind(panic);
     }
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(&path)));
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(&path, drill)));
     if let Err(panic) = result {
         eprintln!("{label}");
         std::panic::resume_unwind(panic);
@@ -321,10 +342,11 @@ fn suite(default: u64) {
     let first = setting("SEGMENT_LOG_TRACE_SEED", 900);
     let count = setting("SEGMENT_LOG_TRACE_SEEDS", default);
     assert!((1..=10000).contains(&count));
+    let drill = drill();
     for seed in first..first.checked_add(count).unwrap() {
         for mode in [Crash::Kill, Crash::PowerLoss, Crash::PowerLossTorn] {
             for variant in 0..9 {
-                run(seed, mode, variant, false);
+                run(seed, mode, variant, false, drill);
             }
         }
     }
@@ -365,10 +387,10 @@ fn saved_trace_replays_the_oracle() {
     if let Some(path) = std::env::var_os("SEGMENT_LOG_TRACE_REPLAY") {
         let path = PathBuf::from(path);
         let _watchdog = watchdog(format!("replay {}", path.display()));
-        replay(&path);
+        replay(&path, drill());
     } else {
-        let path = run(919, Crash::PowerLoss, 6, true);
-        replay(&path);
+        let path = run(919, Crash::PowerLoss, 6, true, false);
+        replay(&path, false);
         if std::env::var_os("SEGMENT_LOG_TRACE_KEEP").is_none() {
             std::fs::remove_file(path.with_extension("trace")).unwrap();
             std::fs::remove_file(path.with_extension("ledger")).unwrap();
@@ -378,6 +400,23 @@ fn saved_trace_replays_the_oracle() {
     }
 }
 
+/// Given a threaded trace that passes, and a drill that plants one false refusal in its ledger
+/// When the run checks the pair, and the retained pair is then replayed with and without the drill
+/// Then the run and the drill replay fail, the plain replay passes, and the pair stays on disk
+/// Cases: SIM-MODEL, ADM-SIZE
+#[test]
+fn a_drill_failure_retains_a_pair_that_replays_the_rejection() {
+    let _watchdog = watchdog("drill".into());
+    let path = artifact(920, Crash::Kill, 0);
+    let failed = std::panic::catch_unwind(|| run(920, Crash::Kill, 0, false, true));
+    assert!(failed.is_err(), "the planted refusal passed the run");
+    replay(&path, false);
+    let replayed = std::panic::catch_unwind(|| replay(&path, true));
+    assert!(replayed.is_err(), "the planted refusal passed the replay");
+    std::fs::remove_file(path.with_extension("trace")).unwrap();
+    std::fs::remove_file(path.with_extension("ledger")).unwrap();
+}
+
 /// Given the reduced pressure trace from seed 1000 with a small group cap
 /// When recovery finishes and the oracle checks durable-offset non-reuse
 /// Then its fresh verification submit fits the saved cap without changing options
@@ -385,7 +424,10 @@ fn saved_trace_replays_the_oracle() {
 #[test]
 fn recovery_verification_respects_the_saved_small_group_cap() {
     let _watchdog = watchdog("reduced pressure seed 1000".into());
-    replay(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/evidence/m1/seeded/pressure-1000"));
+    replay(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/evidence/m1/seeded/pressure-1000"),
+        false,
+    );
 }
 
 /// Given a recorded TooLarge refusal for a small, structurally valid request
@@ -395,13 +437,7 @@ fn recovery_verification_respects_the_saved_small_group_cap() {
 #[test]
 fn oracle_rejects_a_false_permanent_size_refusal() {
     let _watchdog = watchdog("false size refusal".into());
-    let request = Request {
-        inputs: literal(2, 2, 7, 0),
-        original: true,
-        answer: Answer::Refused("TooLarge".into()),
-        watermark: 0,
-    };
-    let checked = std::panic::catch_unwind(|| oracle::answers(&[request], &[], &options()));
+    let checked = std::panic::catch_unwind(|| oracle::answers(&[false_refusal()], &[], &options()));
     assert!(
         checked.is_err(),
         "oracle accepted an eligible request's TooLarge refusal"

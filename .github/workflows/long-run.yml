@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '23 4 * * *'
   workflow_dispatch:
+    inputs:
+      drill:
+        description: Plant a known-bad oracle record, then fetch and replay the failure artifacts
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -20,11 +25,15 @@ jobs:
       SEGMENT_LOG_TRACE_ARTIFACT_DIR: ${{ github.workspace }}/.audit/trace-failures
       SEGMENT_LOG_PROCESS_REPETITIONS: '30'
       SEGMENT_LOG_PROCESS_SEED: '10000'
+      SEGMENT_LOG_TRACE_DRILL: ${{ inputs.drill && '1' || '0' }}
+      SEGMENT_LOG_PROCESS_DRILL: ${{ inputs.drill && '1' || '0' }}
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install
       - run: cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture
-      - run: |
+      # A trace failure must not hide the process result, and a drill needs both artifacts.
+      - if: ${{ !cancelled() }}
+        run: |
           mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"
           TMPDIR="$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process" cargo test -p segment-log-core --test process_crash killed_writers_preserve_the_recorded_contract -- --nocapture
       - uses: actions/upload-artifact@v4
@@ -34,3 +43,23 @@ jobs:
           path: .audit/trace-failures
           include-hidden-files: true
           if-no-files-found: ignore
+  drill-replay:
+    name: Drill replay (${{ matrix.os }})
+    if: ${{ always() && inputs.drill }}
+    needs: m1-long-run
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - name: The planted record failed the long run
+        run: test "${{ needs.m1-long-run.result }}" = failure
+      - uses: actions/download-artifact@v4
+        with:
+          name: trace-failures-${{ matrix.os }}
+          path: .audit/drill
+      - run: scripts/m1-drill-replay.sh .audit/drill
