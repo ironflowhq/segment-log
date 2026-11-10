@@ -2,6 +2,8 @@
 
 #[path = "../src/acceptance/support/deadline.rs"]
 mod deadline;
+#[path = "../src/acceptance/support/roll_size.rs"]
+mod roll_size;
 
 use segment_log_core::*;
 use std::{
@@ -23,6 +25,7 @@ const LIMIT: Duration = Duration::from_secs(20);
 fn options() -> Options {
     Options {
         linger: Duration::ZERO,
+        roll_bytes: roll_size::roll_bytes(Options::default().roll_bytes),
         ..Options::default()
     }
 }
@@ -153,10 +156,11 @@ fn snapshot(root: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
     out
 }
 
-/// Given a live public handle and then an unsupported two-segment layout
+/// Given a live public handle and then a second segment longer than a header with a bad header
 /// When another handle opens, Drop runs, open fails, or the owner unwinds
 /// Then the live writer excludes competitors and every completed owner releases the OS lock
-/// Cases: ORACLE-11, OPEN-LAYOUT
+/// And the failed open changes no file
+/// Cases: ORACLE-11, OPEN-LAYOUT, RECOVERY-FIXTURES
 #[test]
 fn public_locks_release_after_drop_failed_open_and_unwind() {
     let s = Scenario::new("locks", 0);
@@ -167,12 +171,16 @@ fn public_locks_release_after_drop_failed_open_and_unwind() {
     ));
     drop(log);
     let extra = s.log().join("00000000000000000001.seg");
-    fs::write(&extra, b"incomplete").unwrap();
+    fs::write(&extra, [0xff; 65]).unwrap();
     let before = snapshot(&s.root);
     for _ in 0..2 {
-        assert!(
-            matches!(SegmentLog::open(s.log(), options()), Err(OpenError::Io(e)) if e.kind() == std::io::ErrorKind::Unsupported)
-        );
+        assert!(matches!(
+            SegmentLog::open(s.log(), options()),
+            Err(OpenError::Corrupt {
+                segment: 1,
+                position: 0
+            })
+        ));
         assert_eq!(snapshot(&s.root), before);
     }
     fs::remove_file(extra).unwrap();
@@ -549,10 +557,23 @@ fn predict(records: &[NewRecord], history: &mut Vec<Record>) -> Answer {
     }
 }
 
-// The pipe cannot observe writer order across callers. Read the pre-recovery file
+// The pipe cannot observe writer order across callers. Read the pre-recovery files
 // independently to constrain that order; expected records still come from requests.
 fn written_keys(dir: &Path) -> Vec<Vec<Vec<u8>>> {
-    let bytes = fs::read(dir.join("00000000000000000000.seg")).unwrap();
+    let mut segments: Vec<_> = fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|e| e == "seg"))
+        .collect();
+    segments.sort();
+    let mut frames = vec![];
+    for segment in segments {
+        frames.extend(segment_keys(&fs::read(segment).unwrap()));
+    }
+    frames
+}
+
+fn segment_keys(bytes: &[u8]) -> Vec<Vec<Vec<u8>>> {
     let mut frames = vec![];
     let mut at = 64;
     while at + 8 <= bytes.len() {

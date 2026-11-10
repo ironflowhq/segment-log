@@ -46,7 +46,7 @@ fn crash_during_a_flush_has_an_unknown_but_atomic_outcome() {
             for seed in 0..8 {
                 let sim = Sim::new(12);
                 let log = open(&sim);
-                let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+                let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
                 let pending = append(&log, b"s");
                 hold.wait();
                 assert!(pending.probe().is_none());
@@ -157,7 +157,7 @@ fn failed_data_flush_recovery_makes_the_readable_submit_durable() {
                 payload: payload.clone(),
             })
             .collect();
-        let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let pending = log.append(Submit { records }).unwrap();
         hold.wait();
         assert_eq!(log.watermark(), 1);

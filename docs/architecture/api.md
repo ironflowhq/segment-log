@@ -257,7 +257,7 @@ A positive byte budget smaller than a request's charge is valid configuration. T
 
 `open` creates only the final directory component. Its parent and ancestor entries must already exist durably. A missing ancestor returns `Io`; the core does not create it recursively. The [recovery sequence](overview.md#open-and-recovery) syncs the log directory and its parent before publishing records.
 
-M1 and M2 accept at most one segment file. After taking the writer lock, they reject a directory with multiple segment files with `Io` whose kind is `Unsupported`, before segment cleanup or recovery writes. M3 adds multi-segment recovery with full scans. M4 adds footer-based open and read-only sealed logs. This scope check avoids applying a partial recovery algorithm to later-milestone layouts.
+From M3, `open` recovers a directory with any number of segment files. It scans every segment in full. M1 and M2 accepted at most one segment file. After taking the writer lock, they rejected a directory with multiple segment files with `Io` whose kind is `Unsupported`, before segment cleanup or recovery writes. M4 adds footer-based open and read-only sealed logs.
 
 ## Counter exhaustion
 

@@ -59,13 +59,13 @@ fn check(place: usize, end: End, answer: Result<Committed, CommitError>) {
 fn deliver(size: usize, role: impl Fn(usize) -> Caller, end: End) {
     let sim = Sim::new(4400 + size as u64);
     let log = open(&sim);
-    let bootstrap_hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+    let bootstrap_hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
     let bootstrap = log.append(request(usize::MAX)).unwrap();
     bootstrap_hold.wait();
     let handles: Vec<_> = (0..size)
         .map(|place| log.append(request(place)).unwrap())
         .collect();
-    let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+    let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
     bootstrap_hold.release(None);
     assert_eq!(bootstrap.wait().unwrap().records[0].offset, 0);
     hold.wait();
@@ -109,7 +109,10 @@ fn deliver(size: usize, role: impl Fn(usize) -> Caller, end: End) {
             // The writer takes this submit only after it has finished answering the group.
             let after = log.append(request(size)).unwrap().wait().unwrap();
             assert_eq!(after.records[0].offset, 1 + size as u64);
-            assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 3);
+            assert_eq!(
+                sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+                3
+            );
             let history = log.read(0, size + 3).unwrap();
             assert_eq!(history.len(), size + 2);
             let trace = sim.trace();

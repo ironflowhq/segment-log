@@ -43,15 +43,15 @@ fn positions(result: Committed, expected: &[(u64, u64)], retry: bool) {
     );
 }
 fn flush() -> Call {
-    Call::new(SEG, Purpose::Group, Op::SyncData)
+    Call::new(ANY_SEG, Purpose::Group, Op::SyncData)
 }
 fn calls(sim: &Sim, writes: usize, flushes: usize) {
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
         writes
     );
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
         flushes
     );
 }
@@ -251,7 +251,7 @@ fn failed_groups_drain_matched_waiters_and_poison_queued_retries() {
                 let next = sim.hold(if at_flush {
                     flush()
                 } else {
-                    Call::new(SEG, Purpose::Group, Op::Append(pending_frame()))
+                    Call::new(ANY_SEG, Purpose::Group, Op::Append(pending_frame()))
                 });
                 held.release(None);
                 bootstrap.wait().unwrap();
@@ -375,11 +375,10 @@ fn lookup_failure_drains_pending_waiters_before_any_group_write() {
             let sim = Sim::new(505);
             let log = open(&sim);
             send(&log, vec![boot()]).wait().unwrap();
-            let position = raw::bytes(&sim).len();
             let held = sim.hold(flush());
             let bootstrap = send(&log, vec![record(b"lookup", Some(b"lookup"), b"target")]);
             held.wait();
-            let length = raw::bytes(&sim).len() - position;
+            let (segment, position, frame) = raw::last_frame(&sim);
             let first = send(&log, vec![a(), b()]);
             let second = send(&log, vec![c()]);
             let exact = send(&log, vec![a(), b()]);
@@ -392,11 +391,8 @@ fn lookup_failure_drains_pending_waiters_before_any_group_write() {
                 &log,
                 vec![c(), boot(), record(b"lookup", Some(b"lookup"), b"target")],
             );
-            let next = sim.hold(Call::new(
-                SEG,
-                Purpose::Lookup,
-                Op::Read(position as u64, length),
-            ));
+            let lookup = Call::new(&segment, Purpose::Lookup, Op::Read(position, frame.len()));
+            let next = sim.hold(lookup);
             held.release(None);
             bootstrap.wait().unwrap();
             next.wait();
@@ -409,14 +405,14 @@ fn lookup_failure_drains_pending_waiters_before_any_group_write() {
             );
             if fault.is_none() {
                 use crate::storage::Storage;
-                let mut bytes = raw::bytes(&sim)[position..position + length].to_vec();
+                let mut bytes = frame;
                 bytes[9] = 1;
                 let input = [&bytes[..4], &bytes[8..]].concat();
                 bytes[4..8].copy_from_slice(&raw::crc(&input).to_le_bytes());
                 sim.call(Call::new(
-                    SEG,
+                    &segment,
                     Purpose::Open,
-                    Op::Write(position as u64, bytes),
+                    Op::Write(position, bytes),
                 ))
                 .unwrap();
             }
@@ -493,7 +489,7 @@ fn pending_rejections_and_originals_survive_only_as_a_valid_prefix() {
                         vec![record(b"fresh", Some(b"fresh"), b"never"), b(), boot()],
                     );
                     let next = sim.hold(if point == 0 {
-                        Call::new(SEG, Purpose::Group, Op::Append(pending_frame()))
+                        Call::new(ANY_SEG, Purpose::Group, Op::Append(pending_frame()))
                     } else {
                         flush()
                     });
@@ -597,7 +593,7 @@ fn failed_pending_groups_recover_originals_without_retry_records() {
                 let next = sim.hold(if at_flush {
                     flush()
                 } else {
-                    Call::new(SEG, Purpose::Group, Op::Append(pending_frame()))
+                    Call::new(ANY_SEG, Purpose::Group, Op::Append(pending_frame()))
                 });
                 held.release(None);
                 bootstrap.wait().unwrap();

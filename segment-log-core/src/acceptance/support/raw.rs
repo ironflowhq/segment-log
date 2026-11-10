@@ -66,3 +66,86 @@ pub(crate) fn bytes(sim: &Sim) -> Vec<u8> {
     };
     bytes
 }
+/// The same header under another log id. `header` fills the id with 7.
+pub(crate) fn with_log_id(mut header: Vec<u8>, log_id: [u8; 16]) -> Vec<u8> {
+    header[8..24].copy_from_slice(&log_id);
+    let checksum = crc(&header[..60]);
+    header[60..64].copy_from_slice(&checksum.to_le_bytes());
+    header
+}
+/// The log id, base offset and epoch of a segment image whose header checksum matches.
+pub(crate) fn header_fields(segment: &[u8]) -> ([u8; 16], u64, u64) {
+    assert_eq!(
+        crc(&segment[..60]),
+        u32::from_le_bytes(segment[60..64].try_into().unwrap())
+    );
+    (
+        segment[8..24].try_into().unwrap(),
+        u64::from_le_bytes(segment[24..32].try_into().unwrap()),
+        u64::from_le_bytes(segment[32..40].try_into().unwrap()),
+    )
+}
+/// The frames of a segment image. Panics unless the image is a header followed by whole frames.
+pub(crate) fn frames(segment: &[u8]) -> Vec<&[u8]> {
+    let mut frames = vec![];
+    let mut at = 64;
+    while at < segment.len() {
+        let length = u32::from_le_bytes(segment[at..at + 4].try_into().unwrap()) as usize + 8;
+        frames.push(&segment[at..at + length]);
+        at += length;
+    }
+    frames
+}
+pub(crate) fn segment(base: u64) -> String {
+    format!("/log/{base:020}.seg")
+}
+/// Replaces the segment files of the log with `segments`, each named by its base offset.
+pub(crate) fn install_segments(sim: &Sim, segments: &[(u64, Vec<u8>)]) {
+    drop(open(sim));
+    for (base, _) in self::segments(sim) {
+        sim.call(Call::new(segment(base), Purpose::Open, Op::Remove))
+            .unwrap();
+    }
+    for (base, bytes) in segments {
+        let path = segment(*base);
+        sim.call(Call::new(&path, Purpose::Open, Op::Create))
+            .unwrap();
+        sim.call(Call::new(&path, Purpose::Open, Op::Write(0, bytes.clone())))
+            .unwrap();
+        sim.call(Call::new(&path, Purpose::Open, Op::SyncAll))
+            .unwrap();
+    }
+    sim.call(Call::new("/log", Purpose::Open, Op::SyncDir))
+        .unwrap();
+}
+/// Every segment file of the log with its bytes, oldest first. A log directory that does not exist
+/// yet has none.
+pub(crate) fn segments(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
+    let names = match sim.call(Call::new("/log", Purpose::Open, Op::List)) {
+        Ok(Value::Names(names)) => names,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return vec![],
+        other => panic!("list /log: {other:?}"),
+    };
+    let mut bases: Vec<u64> = names
+        .iter()
+        .filter_map(|name| name.to_str()?.strip_suffix(".seg")?.parse().ok())
+        .collect();
+    bases.sort_unstable();
+    bases
+        .into_iter()
+        .map(|base| {
+            let read = Call::new(segment(base), Purpose::Open, Op::Read(0, usize::MAX));
+            let Value::Bytes(bytes) = sim.call(read).unwrap() else {
+                panic!("read bytes")
+            };
+            (base, bytes)
+        })
+        .collect()
+}
+/// The path, position and bytes of the last frame in the newest segment.
+pub(crate) fn last_frame(sim: &Sim) -> (String, u64, Vec<u8>) {
+    let (base, bytes) = segments(sim).pop().expect("a segment");
+    let last = frames(&bytes).pop().expect("a frame").to_vec();
+    let position = bytes.len() - last.len();
+    (segment(base), position as u64, last)
+}

@@ -40,7 +40,10 @@ fn wrong_revision_does_not_consume_a_position() {
             (result.records[0].offset, result.records[0].revision),
             (1, 1)
         );
-        assert_eq!(sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData), 2);
+        assert_eq!(
+            sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
+            2
+        );
     });
 }
 
@@ -97,11 +100,11 @@ fn assert_wrong(error: &CommitError, index: usize, actual: Option<u64>) {
 
 fn assert_group_calls(sim: &Sim, count: usize) {
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
         count
     );
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
         count
     );
 }
@@ -330,7 +333,7 @@ enum FlushEnd {
 fn pending_rejection(end: FlushEnd) {
     let sim = Sim::new(305);
     let log = open(&sim);
-    let bootstrap_hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+    let bootstrap_hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
     let bootstrap = log
         .append(Submit {
             records: vec![new(b"s", ExpectedRevision::Empty, None)],
@@ -366,7 +369,7 @@ fn pending_rejection(end: FlushEnd) {
             ],
         })
         .unwrap();
-    let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+    let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
     bootstrap_hold.release(None);
     assert_positions(bootstrap.wait().unwrap(), &[(0, 0)]);
     hold.wait();
@@ -536,7 +539,7 @@ fn a_group_checks_revisions_against_its_own_changes_over_many_durable_streams() 
                 .collect(),
         );
         let start = sim.trace().1.len();
-        let bootstrap_hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let bootstrap_hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let bootstrap = log
             .append(Submit {
                 records: vec![new(b"boot", ExpectedRevision::Empty, None)],
@@ -562,7 +565,7 @@ fn a_group_checks_revisions_against_its_own_changes_over_many_durable_streams() 
             new(b"n0", ExpectedRevision::At(0), None),
             new(d10, ExpectedRevision::At(3), None),
         ]);
-        let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let hold = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         bootstrap_hold.release(None);
         assert_positions(bootstrap.wait().unwrap(), &[(450, 0)]);
         hold.wait();

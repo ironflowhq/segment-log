@@ -26,4 +26,6 @@ mod seeded;
 
 mod model;
 
+mod roll;
+
 mod evidence;

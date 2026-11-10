@@ -1,6 +1,7 @@
 use super::*;
 pub(super) struct Recovered {
-    pub segment: PathBuf,
+    pub active: Active,
+    pub log_id: [u8; 16],
     pub lock: Box<dyn Lock>,
     pub published: Published,
     pub epoch: u64,
@@ -11,6 +12,24 @@ impl From<io::Error> for OpenError {
         Self::Io(error)
     }
 }
+
+/// What the scan has kept so far, across the segments it has read.
+#[derive(Default)]
+struct Kept {
+    published: Published,
+    keys: Keys,
+    /// The epoch that the next frame must not be lower than.
+    epoch: u64,
+}
+
+struct Scan {
+    /// The file position after the last valid frame.
+    end: u64,
+    reached_end_of_file: bool,
+    /// Position and bytes of the last valid frame.
+    last: Option<(u64, Vec<u8>)>,
+}
+
 pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenError> {
     match call(storage, dir, Purpose::Open, Op::CreateDir) {
         Ok(_) => (),
@@ -33,42 +52,34 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
     let Value::Names(names) = call(storage, dir, Purpose::Open, Op::List)? else {
         return Err(io::Error::other("storage did not list directory").into());
     };
-    let names: Vec<_> = names
-        .into_iter()
-        .filter(|n| {
-            n.to_str().is_some_and(|s| {
-                s.len() == 24 && s.ends_with(".seg") && s[..20].bytes().all(|b| b.is_ascii_digit())
-            })
+    let mut bases: Vec<u64> = names
+        .iter()
+        .filter_map(|name| {
+            let digits = name.to_str()?.strip_suffix(".seg")?;
+            if digits.len() == 20 && digits.bytes().all(|b| b.is_ascii_digit()) {
+                digits.parse().ok()
+            } else {
+                None
+            }
         })
         .collect();
-    if names.len() > 1 {
-        return Err(io::Error::from(io::ErrorKind::Unsupported).into());
-    }
-    let segment = dir.join(
-        names
-            .first()
-            .cloned()
-            .unwrap_or_else(|| "00000000000000000000.seg".into()),
-    );
-    let mut created = names.is_empty();
-    if !created {
-        let Value::Length(len) = call(storage, &segment, Purpose::Open, Op::Open)? else {
+    bases.sort_unstable();
+
+    if let Some(&newest) = bases.last() {
+        let path = segment_path(dir, newest);
+        let Value::Length(length) = call(storage, &path, Purpose::Open, Op::Open)? else {
             return Err(io::Error::other("storage did not return length").into());
         };
-        let header = read_bytes(storage, &segment, Purpose::Open, 0, 64)?;
-        let crc_valid = header.len() == 64
+        let header = read_bytes(storage, &path, Purpose::Open, 0, codec::HEADER_LEN)?;
+        let crc_valid = header.len() == codec::HEADER_LEN
             && codec::crc32c(&header[..60]) == u32::from_le_bytes(header[60..].try_into().unwrap());
-        if len <= 64 && !crc_valid {
-            call(storage, &segment, Purpose::Open, Op::Remove)?;
+        if length <= codec::HEADER_LEN as u64 && !crc_valid {
+            call(storage, &path, Purpose::Open, Op::Remove)?;
             call(storage, dir, Purpose::Open, Op::SyncDir)?;
-            created = true;
+            bases.pop();
         }
     }
-    let segment = if created {
-        dir.join("00000000000000000000.seg")
-    } else {
-        segment
-    };
+    let created = bases.is_empty();
     if created {
         let Value::Bytes(id) = call(storage, dir, Purpose::Open, Op::Random(16))? else {
             return Err(io::Error::other("storage did not return random bytes").into());
@@ -76,23 +87,100 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         let log_id = id
             .try_into()
             .map_err(|_| io::Error::other("invalid random byte count"))?;
-        let header = codec::encode_header(&codec::Header {
-            log_id,
-            base_offset: 0,
-            epoch: 1,
-        });
-        call(storage, &segment, Purpose::Open, Op::Create)?;
-        call(
+        create_segment(
             storage,
-            &segment,
+            dir,
             Purpose::Open,
-            Op::Write(0, header.to_vec()),
+            &codec::Header {
+                log_id,
+                base_offset: 0,
+                epoch: 1,
+            },
         )?;
-        call(storage, &segment, Purpose::Open, Op::SyncData)?;
-        call(storage, dir, Purpose::Open, Op::SyncDir)?;
+        bases.push(0);
     }
-    let bytes = read_bytes(storage, &segment, Purpose::Open, 0, 64)?;
-    if bytes.len() == 64
+
+    let headers = bases
+        .iter()
+        .map(|&base| header(storage, dir, base))
+        .collect::<Result<Vec<_>, _>>()?;
+    let log_id = headers[0].0.log_id;
+    for (&base, (header, _)) in bases.iter().zip(&headers) {
+        if header.log_id != log_id {
+            return Err(OpenError::LogIdMismatch { segment: base });
+        }
+    }
+
+    let mut kept = Kept::default();
+    let newest = *bases.last().unwrap();
+    let mut tail = None;
+    for (&base, (header, bytes)) in bases.iter().zip(headers) {
+        if kept.published.watermark != base {
+            return Err(OpenError::Gap { segment: base });
+        }
+        kept.epoch = kept.epoch.max(header.epoch);
+        let scan = scan(storage, &segment_path(dir, base), base, &mut kept)?;
+        if base == newest {
+            tail = Some((scan, bytes));
+        } else if !scan.reached_end_of_file {
+            // Every segment with a successor is sealed, and recovery never truncates one (I7).
+            return Err(OpenError::Corrupt {
+                segment: base,
+                position: scan.end,
+            });
+        }
+    }
+    let (scan, header) = tail.unwrap();
+    let epoch = if created {
+        1
+    } else {
+        kept.epoch.checked_add(1).ok_or(OpenError::Exhausted)?
+    };
+
+    let segment = segment_path(dir, newest);
+    if !scan.reached_end_of_file {
+        call(storage, &segment, Purpose::Recovery, Op::Truncate(scan.end))?;
+    }
+    let (position, bytes) = scan.last.unwrap_or((0, header));
+    call(
+        storage,
+        &segment,
+        Purpose::Recovery,
+        Op::Write(position, bytes),
+    )?;
+    call(storage, &segment, Purpose::Recovery, Op::SyncAll)?;
+    call(storage, dir, Purpose::Recovery, Op::SyncDir)?;
+    let parent = dir
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    call(storage, parent, Purpose::Recovery, Op::SyncDir)?;
+    Ok(Recovered {
+        active: Active {
+            base: newest,
+            length: scan.end,
+        },
+        log_id,
+        lock,
+        published: kept.published,
+        epoch,
+        keys: kept.keys,
+    })
+}
+
+fn header(
+    storage: &dyn Storage,
+    dir: &Path,
+    base: u64,
+) -> Result<(codec::Header, Vec<u8>), OpenError> {
+    let bytes = read_bytes(
+        storage,
+        &segment_path(dir, base),
+        Purpose::Open,
+        0,
+        codec::HEADER_LEN,
+    )?;
+    if bytes.len() == codec::HEADER_LEN
         && &bytes[..4] == b"SGLG"
         && bytes[6..8] == [64, 0]
         && bytes[40..60] == [0; 20]
@@ -103,38 +191,34 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
             return Err(OpenError::UnsupportedVersion(version));
         }
     }
-    let header = codec::decode_header(&bytes).map_err(|_| OpenError::Corrupt {
-        segment: 0,
-        position: 0,
-    })?;
-    if segment.file_name().unwrap().to_str().unwrap() != format!("{:020}.seg", header.base_offset) {
-        return Err(OpenError::Corrupt {
-            segment: header.base_offset,
+    match codec::decode_header(&bytes) {
+        Ok(header) if header.base_offset == base => Ok((header, bytes)),
+        _ => Err(OpenError::Corrupt {
+            segment: base,
             position: 0,
-        });
+        }),
     }
-    if header.base_offset != 0 {
-        return Err(OpenError::Gap {
-            segment: header.base_offset,
-        });
-    }
-    let mut published = Published::default();
-    let mut keys = Keys::default();
-    let mut epoch = header.epoch;
-    let mut position = 64;
-    let mut tail = (0, bytes);
-    let mut truncate = false;
+}
+
+/// Reads the frames of one segment into `kept` and stops at the first frame that is not valid.
+fn scan(storage: &dyn Storage, path: &Path, segment: u64, kept: &mut Kept) -> io::Result<Scan> {
+    let mut position = codec::HEADER_LEN as u64;
+    let mut last = None;
     loop {
-        let envelope = read_bytes(storage, &segment, Purpose::Recovery, position, 8)?;
+        let envelope = read_bytes(storage, path, Purpose::Recovery, position, 8)?;
         if envelope.is_empty() {
-            break;
+            return Ok(Scan {
+                end: position,
+                reached_end_of_file: true,
+                last,
+            });
         }
         let frame = if envelope.len() == 8 {
             let length = u32::from_le_bytes(envelope[..4].try_into().unwrap()) as usize;
             if (24..=8 * 1024 * 1024).contains(&length) {
                 Some(read_bytes(
                     storage,
-                    &segment,
+                    path,
                     Purpose::Recovery,
                     position,
                     length + 8,
@@ -148,51 +232,30 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         let valid = frame
             .as_deref()
             .and_then(|b| codec::decode(b).ok())
-            .filter(|g| g.base_offset == published.watermark && g.epoch >= epoch);
+            .filter(|g| g.base_offset == kept.published.watermark && g.epoch >= kept.epoch);
         let Some(group) = valid else {
-            truncate = true;
-            break;
+            return Ok(Scan {
+                end: position,
+                reached_end_of_file: false,
+                last,
+            });
         };
-        epoch = group.epoch;
-        let bytes = frame.as_ref().unwrap();
-        let kept = Frame {
-            position,
-            length: bytes.len(),
-            base: group.base_offset,
-            end: group.base_offset + group.entries.len() as u64,
-            epoch: group.epoch,
-        };
-        keys.recover(&group);
-        publish(&mut published, kept, &group);
-        tail = (position, frame.unwrap());
-        position += tail.1.len() as u64;
+        kept.epoch = group.epoch;
+        let length = frame.as_ref().unwrap().len();
+        kept.keys.recover(&group);
+        publish(
+            &mut kept.published,
+            Frame {
+                segment,
+                position,
+                length,
+                base: group.base_offset,
+                end: group.base_offset + group.entries.len() as u64,
+                epoch: group.epoch,
+            },
+            &group,
+        );
+        last = Some((position, frame.unwrap()));
+        position += length as u64;
     }
-    let epoch = if created {
-        1
-    } else {
-        epoch.checked_add(1).ok_or(OpenError::Exhausted)?
-    };
-    if truncate {
-        call(storage, &segment, Purpose::Recovery, Op::Truncate(position))?;
-    }
-    call(
-        storage,
-        &segment,
-        Purpose::Recovery,
-        Op::Write(tail.0, tail.1),
-    )?;
-    call(storage, &segment, Purpose::Recovery, Op::SyncAll)?;
-    call(storage, dir, Purpose::Recovery, Op::SyncDir)?;
-    let parent = dir
-        .parent()
-        .filter(|p| !p.as_os_str().is_empty())
-        .unwrap_or(Path::new("."));
-    call(storage, parent, Purpose::Recovery, Op::SyncDir)?;
-    Ok(Recovered {
-        segment,
-        lock,
-        published,
-        epoch,
-        keys,
-    })
 }

@@ -32,7 +32,7 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Indeterminate** | The result when the writer cannot tell whether a submit is durable, for example after an `fsync` error or a lost writer reply. Reopen before resolving the outcome. Fully keyed requests can confirm survivors by retry; [mixed and unkeyed requests](architecture/api.md#retry-after-an-unknown-outcome) have narrower guarantees. |
 | **Poisoned** | The writer's state after a write-path I/O or integrity failure, or after the writer stops unexpectedly. It accepts no more submits until the log is reopened. |
 | **Torn tail** | Bytes at the end of the active segment that do not form a complete, CRC-valid frame. Recovery removes them. |
-| **Writer epoch** | A number that each opening writer gets: one more than the highest epoch in the newest segment. Every frame stores it, inside the span that the CRC covers. |
+| **Writer epoch** | A number that each opening writer gets: one more than the highest epoch in any segment ([ADR 0047](decisions/0047-writer-epoch-from-every-segment.md)). Every frame stores it, inside the span that the CRC covers. |
 | **Log id** | A random id that the log gets at creation. Every segment header stores it. |
 | **Footer** | A frame near the end of a sealed segment. It lists each stream in that segment: stream id, last revision, last log offset, last file position. |
 | **Locator** | The last frame of a sealed segment (from M4). It holds the footer's file position, so that open can find the footer from the end of the file. |

@@ -48,6 +48,7 @@ We will derive the writer epoch from the newest segment and drop the `EPOCH` fil
 
 ## Consequences
 
+- [ADR 0047](0047-writer-epoch-from-every-segment.md) amends the epoch rule for logs with several segments: the writer epoch counts every segment header and kept frame.
 - The log must be on a local filesystem. A network filesystem is not supported.
 - [format.md](../architecture/format.md) has no `EPOCH` file. Open ignores an `EPOCH` file that an older build left behind.
 - The storage trait no longer needs rename.

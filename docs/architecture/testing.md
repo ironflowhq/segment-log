@@ -17,7 +17,7 @@ The [PRD milestone gates](../prd.md#milestones) remain the source for completion
 | M0-READINESS | None | Green CI run linked in the [PRD](../prd.md#milestones) | Implemented |
 | M1 | [M1 groups below](#m1-acceptance-coverage) | [M1 completion gate](#m1-completion-gate), [completion record](../evidence/m1/completion.md) | Implemented |
 | M2-MODEL | `MODEL`, `REV-NO-OFFSET` | None beyond the tests | Implemented |
-| M3-ROLL | `ORACLE-6`, M3 parts of `OPEN-LAYOUT`, `RECOVERY-FIXTURES`, `KEY-LIFETIME` and `HISTORY`; M1 scenarios rerun with a small `roll_bytes` | Linux syscall trace of the roll directory sync | Planned |
+| M3-ROLL | `ORACLE-6`, M3 parts of `OPEN-LAYOUT`, `RECOVERY-FIXTURES`, `KEY-LIFETIME` and `HISTORY`; M1 scenarios rerun with a small `roll_bytes` | Linux syscall trace of the roll directory sync (not yet recorded) | Implemented |
 | M4-SEAL-READ | `READER`, `ROLL-FOOTER`, M4 parts of `CODEC-GROUP`, `ADM-PRECEDENCE`, `RECOVERY-FIXTURES` and `HISTORY` | None beyond the tests | Planned |
 | M4-LOOKUP-OPEN | `ORACLE-13`, M4 parts of `ORACLE-12` and `KEY-LIFETIME` | Open-time target result; lookup reads, rebuild cost and key-cache memory under the [M4 design](../prd.md#open-items) | Planned |
 | M5-FORMAT-FUZZ | `FUZZ-DECODER`, `FUZZ-RECOVERY` | Accepted format ADR; one-hour fuzz run in CI | Planned |
@@ -105,7 +105,7 @@ A test can chain crashes, for example `Kill`, then a reopen, then `PowerLoss`.
 
 The storage can also fail on purpose: `sync_data`, `sync_all` or `sync_dir` returns an error, `write` writes only part of the buffer and then fails, or the disk is full (`ENOSPC`). A durable-key lookup can return a read error, unexpected EOF or a frame with a bad CRC or malformed contents. These lookup faults poison the writer, rather than treating the key as absent or conflicting. After a failed `sync_data` or `sync_all`, the volatile bytes stay readable, but a later successful file sync does not make them durable. Only a new write to those bytes does. This models how Linux can mark pages clean after a writeback error ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)). A call can also panic on purpose, so that a test can stop the writer thread without an answer.
 
-A test can hold a chosen call at its start and later release it with success or an injected error. The simulated storage reports when the held call has started. This lets a scenario stop the writer at a flush, a write or a key lookup without a sleep and without a hook in the writer. The storage also counts calls by file and purpose, for observations such as one data flush for each group.
+A test can hold a chosen call at its start and later release it with success or an injected error. The simulated storage reports when the held call has started. This lets a scenario stop the writer at a flush, a write or a key lookup without a sleep and without a hook in the writer. The storage also counts calls by file and purpose, for observations such as one data flush for each group. A held, injected or counted call on `<dir>/*.seg` stands for that call on any segment file in the directory, so a scenario can name a group's flush without knowing which segment a roll left active.
 
 The simulated storage records every call and its result, in order, as a trace. `crash(mode, seed)` derives the crash state from that trace and the seed alone. The thread interleaving that produced the trace cannot be replayed, but the crash state and the recovery that follows can. Recovery runs on one thread, so it is deterministic for a given crash state.
 

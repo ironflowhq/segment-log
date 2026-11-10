@@ -203,6 +203,7 @@ pub(crate) fn decode(bytes: &[u8]) -> Result<Group<'_>, Error> {
     })
 }
 
+pub(crate) const HEADER_LEN: usize = 64;
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Header {
     pub log_id: [u8; 16],
