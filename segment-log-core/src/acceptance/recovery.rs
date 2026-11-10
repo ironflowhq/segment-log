@@ -323,3 +323,61 @@ fn variable_binary_payloads_recover_atomically_at_each_group_boundary() {
         }
     });
 }
+
+/// Given a durable group and a second group whose frame length takes each remainder of an
+/// eight-byte checksum step
+/// When each storage boundary of the second group is replayed through every crash mode
+/// Then recovery keeps the first record and exposes the second whole or not at all
+/// And a completed flush preserves both
+/// Cases: ORACLE-1, ORACLE-2, ORACLE-3, ORACLE-9
+#[test]
+fn frames_of_every_checksum_step_remainder_recover_atomically() {
+    bounded(|| {
+        for len in 0..8 {
+            let sim = Sim::new(520 + len as u64);
+            let log = open(&sim);
+            let record = |revision: u64| NewRecord {
+                stream: b"s".to_vec(),
+                expected: match revision.checked_sub(1) {
+                    None => ExpectedRevision::Empty,
+                    Some(previous) => ExpectedRevision::At(previous),
+                },
+                key: None,
+                payload: vec![0xa5 ^ revision as u8; len],
+            };
+            let first = Submit {
+                records: vec![record(0)],
+            };
+            log.append(first).unwrap().wait().unwrap();
+            let start = sim.trace().1.len();
+            let second = Submit {
+                records: vec![record(1)],
+            };
+            log.append(second).unwrap().wait().unwrap();
+            let (seed, trace) = sim.trace();
+            drop(log);
+            for end in start..=trace.len() {
+                for mode in [
+                    storage::sim::Crash::Kill,
+                    storage::sim::Crash::PowerLoss,
+                    storage::sim::Crash::PowerLossTorn,
+                ] {
+                    let replay = Sim::replay(seed, &trace[..end]);
+                    replay.crash(mode, end as u64);
+                    let recovered = open(&replay);
+                    let records = recovered.read(0, 3).unwrap();
+                    assert!((1..=2).contains(&records.len()), "length {len} end {end}");
+                    if end == trace.len() {
+                        assert_eq!(records.len(), 2, "length {len}");
+                    }
+                    for (i, record) in records.iter().enumerate() {
+                        assert_eq!((record.offset, record.revision), (i as u64, i as u64));
+                        assert_eq!(record.payload, vec![0xa5 ^ i as u8; len]);
+                        assert_eq!(record.stream, b"s");
+                        assert!(record.key.is_none());
+                    }
+                }
+            }
+        }
+    });
+}

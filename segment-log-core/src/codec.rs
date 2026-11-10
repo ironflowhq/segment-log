@@ -22,27 +22,52 @@ pub(crate) struct Group<'a> {
     pub base_offset: u64,
     pub entries: Vec<Entry<'a>>,
 }
-pub(crate) fn crc32c(bytes: &[u8]) -> u32 {
-    const TABLE: [u32; 256] = {
-        let mut table = [0; 256];
+// Slicing-by-8: eight table lookups consume eight input bytes per step.
+const TABLES: [[u32; 256]; 8] = {
+    let mut tables = [[0; 256]; 8];
+    let mut index = 0;
+    while index < 256 {
+        let mut crc = index as u32;
+        let mut bit = 0;
+        while bit < 8 {
+            crc = (crc >> 1) ^ (0x82f63b78 & 0u32.wrapping_sub(crc & 1));
+            bit += 1;
+        }
+        tables[0][index] = crc;
+        index += 1;
+    }
+    let mut table = 1;
+    while table < 8 {
         let mut index = 0;
-        while index < table.len() {
-            let mut crc = index as u32;
-            let mut bit = 0;
-            while bit < 8 {
-                crc = (crc >> 1) ^ (0x82f63b78 & 0u32.wrapping_sub(crc & 1));
-                bit += 1;
-            }
-            table[index] = crc;
+        while index < 256 {
+            let previous = tables[table - 1][index];
+            tables[table][index] = (previous >> 8) ^ tables[0][(previous & 0xff) as usize];
             index += 1;
         }
-        table
-    };
-    let mut crc = !0u32;
-    for &byte in bytes {
-        crc = (crc >> 8) ^ TABLE[((crc ^ u32::from(byte)) & 0xff) as usize];
+        table += 1;
     }
-    !crc
+    tables
+};
+fn crc_update(mut crc: u32, bytes: &[u8]) -> u32 {
+    let (chunks, rest) = bytes.as_chunks::<8>();
+    for chunk in chunks {
+        let word = u64::from_le_bytes(*chunk) ^ u64::from(crc);
+        crc = TABLES[7][(word & 0xff) as usize]
+            ^ TABLES[6][((word >> 8) & 0xff) as usize]
+            ^ TABLES[5][((word >> 16) & 0xff) as usize]
+            ^ TABLES[4][((word >> 24) & 0xff) as usize]
+            ^ TABLES[3][((word >> 32) & 0xff) as usize]
+            ^ TABLES[2][((word >> 40) & 0xff) as usize]
+            ^ TABLES[1][((word >> 48) & 0xff) as usize]
+            ^ TABLES[0][(word >> 56) as usize];
+    }
+    for &byte in rest {
+        crc = (crc >> 8) ^ TABLES[0][((crc ^ u32::from(byte)) & 0xff) as usize];
+    }
+    crc
+}
+pub(crate) fn crc32c(bytes: &[u8]) -> u32 {
+    !crc_update(!0, bytes)
 }
 fn fields(entry: &Entry<'_>) -> Result<(), Error> {
     if entry.stream.is_empty() || entry.stream.len() > 1024 {
@@ -92,11 +117,9 @@ pub(crate) fn encode(group: &Group<'_>) -> Result<Vec<u8>, Error> {
     out[4..8].copy_from_slice(&crc.to_le_bytes());
     Ok(out)
 }
+// The checksum skips its own field, bytes 4..8.
 fn frame_crc(bytes: &[u8]) -> u32 {
-    let mut input = Vec::with_capacity(bytes.len() - 4);
-    input.extend_from_slice(&bytes[..4]);
-    input.extend_from_slice(&bytes[8..]);
-    crc32c(&input)
+    !crc_update(crc_update(!0, &bytes[..4]), &bytes[8..])
 }
 struct Cursor<'a> {
     bytes: &'a [u8],

@@ -253,3 +253,54 @@ fn checksums_and_frames_match_the_bitwise_fixture() {
         assert_eq!(codec::decode(&expected).unwrap(), group);
     }
 }
+
+/// Given byte strings and group frames of every length across eight eight-byte checksum steps
+/// When CRC32C and complete frames are compared with the independent bitwise fixture
+/// Then every checksum and every durable byte match, whatever remainder follows the last step
+/// Cases: CODEC-GROUP
+#[test]
+fn checksums_match_the_bitwise_fixture_at_every_step_remainder() {
+    use super::support::raw;
+    let bytes: Vec<u8> = (0..64).map(|n| ((n * 151 + 13) % 256) as u8).collect();
+    for len in 0..=bytes.len() {
+        let payload = &bytes[..len];
+        assert_eq!(codec::crc32c(payload), raw::crc(payload), "length {len}");
+        let group = Group {
+            epoch: 3,
+            base_offset: 5,
+            entries: vec![Entry {
+                stream: b"s",
+                key: None,
+                payload,
+                revision: 5,
+            }],
+        };
+        let expected = raw::group(3, 5, &[payload]);
+        assert_eq!(codec::encode(&group).unwrap(), expected, "length {len}");
+        assert_eq!(codec::decode(&expected).unwrap(), group, "length {len}");
+    }
+}
+
+/// Given valid group frames whose lengths take every remainder of an eight-byte checksum step
+/// When any one bit of a frame changes
+/// Then the decoder rejects the frame: a size change by its length, any other change by its checksum
+/// Cases: CODEC-GROUP
+#[test]
+fn every_single_bit_change_in_a_frame_is_rejected() {
+    use super::support::raw;
+    use codec::Error;
+    for len in 0..8 {
+        let frame = raw::group(3, 5, &[&[0xa5; 8][..len]]);
+        assert!(codec::decode(&frame).is_ok());
+        for bit in 0..frame.len() * 8 {
+            let mut changed = frame.clone();
+            changed[bit / 8] ^= 1 << (bit % 8);
+            let expected = if bit < 32 { Error::Length } else { Error::Crc };
+            assert_eq!(
+                codec::decode(&changed),
+                Err(expected),
+                "length {len} bit {bit}"
+            );
+        }
+    }
+}
