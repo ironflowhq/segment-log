@@ -118,13 +118,13 @@ pub(crate) fn install_segments(sim: &Sim, segments: &[(u64, Vec<u8>)]) {
     sim.call(Call::new("/log", Purpose::Open, Op::SyncDir))
         .unwrap();
 }
-/// Every segment file of the log with its bytes, oldest first.
+/// Every segment file of the log with its bytes, oldest first. A log directory that does not exist
+/// yet has none.
 pub(crate) fn segments(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
-    let Value::Names(names) = sim
-        .call(Call::new("/log", Purpose::Open, Op::List))
-        .unwrap()
-    else {
-        panic!("list names")
+    let names = match sim.call(Call::new("/log", Purpose::Open, Op::List)) {
+        Ok(Value::Names(names)) => names,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return vec![],
+        other => panic!("list /log: {other:?}"),
     };
     let mut bases: Vec<u64> = names
         .iter()
@@ -141,4 +141,11 @@ pub(crate) fn segments(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
             (base, bytes)
         })
         .collect()
+}
+/// The path, position and length of the last frame in the newest segment.
+pub(crate) fn last_frame(sim: &Sim) -> (String, u64, usize) {
+    let (base, bytes) = segments(sim).pop().expect("a segment");
+    let last = frames(&bytes).pop().expect("a frame");
+    let position = bytes.len() - last.len();
+    (segment(base), position as u64, last.len())
 }

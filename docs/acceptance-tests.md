@@ -108,7 +108,9 @@ Simulated `Kill`, `PowerLoss` and `PowerLossTorn` and real-process `SIGKILL` hav
 The implementation and saved replay commands are documented in the
 [slice 9 record](evidence/m1/slice9.md#reproduce). The ordinary workspace run
 uses two trace seeds. `SEGMENT_LOG_TRACE_SEED` and `SEGMENT_LOG_TRACE_SEEDS`
-select the start and count. The named `m1-long-run` scheduled job runs the ignored
+select the start and count. Odd seeds use a roll size that every segment with a
+frame has reached, so each of their groups starts a new segment. Every reopen checks
+that recovery left each sealed segment byte for byte as it was (`ORACLE-6`). The named `m1-long-run` scheduled job runs the ignored
 variant on Linux and macOS. `SEGMENT_LOG_TRACE_REPLAY` loads paired storage and
 caller/reader artifacts without reproducing the original schedule.
 

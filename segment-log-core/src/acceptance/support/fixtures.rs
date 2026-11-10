@@ -11,7 +11,14 @@ pub(crate) fn options() -> Options {
     }
 }
 pub(crate) fn open(sim: &Sim) -> SegmentLog {
-    SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone())).unwrap()
+    open_with(sim, options())
+}
+/// Opens the log at `/log`, and checks that recovery left every sealed segment as it was.
+pub(crate) fn open_with(sim: &Sim, options: Options) -> SegmentLog {
+    let before = super::raw::segments(sim);
+    let log = SegmentLog::with_storage(Path::new("/log"), options, Arc::new(sim.clone())).unwrap();
+    super::oracle::sealed_unchanged(&before, &super::raw::segments(sim));
+    log
 }
 pub(crate) fn submit(stream: &[u8]) -> Submit {
     Submit {

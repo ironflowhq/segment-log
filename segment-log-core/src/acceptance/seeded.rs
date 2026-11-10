@@ -37,7 +37,7 @@ fn opts(o: &Options) -> Options {
     }
 }
 fn open(sim: &Sim, o: &Options) -> SegmentLog {
-    SegmentLog::with_storage(Path::new("/log"), opts(o), Arc::new(sim.clone())).unwrap()
+    super::support::fixtures::open_with(sim, opts(o))
 }
 fn flush() -> Call {
     Call::new(ANY_SEG, Purpose::Group, Op::SyncData)
@@ -183,7 +183,7 @@ fn check_replay(sim: &Sim, ledger: &Ledger) {
     let (written, ends) = oracle::written(&events, &ledger.requests);
     oracle::flush_contract(&ledger.requests, &ledger.reads, &events);
     oracle::answers(&ledger.requests, &events, &ledger.options);
-    let valid = oracle::valid_length(&super::support::raw::bytes(sim));
+    let valid = oracle::valid_length(&super::support::raw::segments(sim));
     let log = open(sim, &ledger.options);
     let kept = log.watermark() as usize;
     assert_eq!(
@@ -287,15 +287,20 @@ fn replay(path: &Path, drill: bool) {
 }
 fn run(seed: u64, mode: Crash, variant: usize, keep: bool, drill: bool) -> PathBuf {
     let path = artifact(seed, mode, variant);
+    let mut options = options();
+    if seed % 2 == 1 {
+        options.roll_bytes = EVERY_GROUP;
+    }
     let label = format!(
-        "cases=ORACLE-1..5,7..12 seed={seed} mode={mode:?} variant={variant} artifacts={}",
+        "cases=ORACLE-1..12 seed={seed} mode={mode:?} variant={variant} roll_bytes={} artifacts={}",
+        options.roll_bytes,
         path.display()
     );
     let sim = Sim::new(seed);
     let ledger = Arc::new(Mutex::new(Ledger {
         seed,
         mode,
-        options: options(),
+        options,
         requests: vec![],
         reads: vec![],
     }));
@@ -335,6 +340,9 @@ fn run(seed: u64, mode: Crash, variant: usize, keep: bool, drill: bool) -> PathB
     }
     path
 }
+/// The roll size of odd seeds. Every segment that holds a frame has reached it, so each group
+/// starts a new segment.
+const EVERY_GROUP: u64 = 65;
 fn setting(name: &str, default: u64) -> u64 {
     std::env::var(name).map_or(default, |v| v.parse().expect("numeric trace setting"))
 }
@@ -361,7 +369,7 @@ fn suite(default: u64) {
 /// When actual threads hit held writes, flushes and lookups, with crashes or injected failures
 /// Then literal inputs and written order bound atomic recovery, unknown retries and all observations
 /// And same-boot fault recovery, chained power loss and cache reconstruction preserve the contract
-/// Cases: ORACLE-1, ORACLE-2, ORACLE-3, ORACLE-4, ORACLE-5, ORACLE-7, ORACLE-8, ORACLE-9, ORACLE-10, ORACLE-11, ORACLE-12, RETRY-PENDING, RETRY-REGROUPED, KEY-CONFLICT-CRASH, KEY-PARTIAL-CRASH, READ-BOUNDED, ADM-BUDGETS, ADM-SIZE
+/// Cases: ORACLE-1, ORACLE-2, ORACLE-3, ORACLE-4, ORACLE-5, ORACLE-6, ORACLE-7, ORACLE-8, ORACLE-9, ORACLE-10, ORACLE-11, ORACLE-12, RETRY-PENDING, RETRY-REGROUPED, KEY-CONFLICT-CRASH, KEY-PARTIAL-CRASH, READ-BOUNDED, ADM-BUDGETS, ADM-SIZE
 #[test]
 fn threaded_seeded_traces_preserve_the_contract() {
     suite(2);

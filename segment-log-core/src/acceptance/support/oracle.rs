@@ -346,31 +346,62 @@ pub(crate) fn observations(
     }
 }
 
-pub(crate) fn valid_length(bytes: &[u8]) -> usize {
-    let mut at = 64;
+/// The number of records that recovery must keep: the valid prefix across every segment. Each
+/// segment before the newest must be whole and start where the one before it ends. A newest file no
+/// longer than a header, whose header checksum does not match, holds no record.
+pub(crate) fn valid_length(segments: &[(u64, Vec<u8>)]) -> usize {
     let mut count = 0;
-    let mut epoch = u64::from_le_bytes(bytes[32..40].try_into().unwrap());
-    while at + 32 <= bytes.len() {
-        let len = u32::from_le_bytes(bytes[at..at + 4].try_into().unwrap()) as usize;
-        if !(24..=8 * 1024 * 1024).contains(&len) || at + 8 + len > bytes.len() {
+    let mut epoch = 0;
+    for (index, (base, bytes)) in segments.iter().enumerate() {
+        let newest = index + 1 == segments.len();
+        let header_valid = bytes.len() >= 64
+            && raw::crc(&bytes[..60]) == u32::from_le_bytes(bytes[60..64].try_into().unwrap());
+        if newest && bytes.len() <= 64 && !header_valid {
             break;
         }
-        let frame = &bytes[at..at + 8 + len];
-        let crc = u32::from_le_bytes(frame[4..8].try_into().unwrap());
-        let next_epoch = u64::from_le_bytes(frame[12..20].try_into().unwrap());
-        let base = u64::from_le_bytes(frame[20..28].try_into().unwrap());
-        if raw::crc(&[&frame[..4], &frame[8..]].concat()) != crc
-            || frame[8..12] != [1, 0, 0, 0]
-            || next_epoch < epoch
-            || base != count as u64
-        {
-            break;
+        assert!(header_valid, "segment {base} has a valid header");
+        assert_eq!(
+            *base, count as u64,
+            "segment {base} starts where the one before ends"
+        );
+        epoch = epoch.max(u64::from_le_bytes(bytes[32..40].try_into().unwrap()));
+        let mut at = 64;
+        while at + 32 <= bytes.len() {
+            let len = u32::from_le_bytes(bytes[at..at + 4].try_into().unwrap()) as usize;
+            if !(24..=8 * 1024 * 1024).contains(&len) || at + 8 + len > bytes.len() {
+                break;
+            }
+            let frame = &bytes[at..at + 8 + len];
+            let crc = u32::from_le_bytes(frame[4..8].try_into().unwrap());
+            let next_epoch = u64::from_le_bytes(frame[12..20].try_into().unwrap());
+            let frame_base = u64::from_le_bytes(frame[20..28].try_into().unwrap());
+            if raw::crc(&[&frame[..4], &frame[8..]].concat()) != crc
+                || frame[8..12] != [1, 0, 0, 0]
+                || next_epoch < epoch
+                || frame_base != count as u64
+            {
+                break;
+            }
+            count += frame_inputs(frame).len();
+            epoch = next_epoch;
+            at += 8 + len;
         }
-        count += frame_inputs(frame).len();
-        epoch = next_epoch;
-        at += 8 + len;
+        assert!(
+            newest || at == bytes.len(),
+            "sealed segment {base} is whole"
+        );
     }
     count
+}
+
+/// ORACLE-6: recovery leaves every segment that had a successor byte for byte as it found it.
+pub(crate) fn sealed_unchanged(before: &[(u64, Vec<u8>)], after: &[(u64, Vec<u8>)]) {
+    let sealed = &before[..before.len().saturating_sub(1)];
+    assert_eq!(
+        after.get(..sealed.len()),
+        Some(sealed),
+        "recovery changed a sealed segment"
+    );
 }
 
 pub(crate) fn answers(

@@ -13,15 +13,13 @@ mod rolling;
 const EVERY_GROUP: u64 = 65;
 
 fn open_rolling(sim: &Sim, roll_bytes: u64) -> SegmentLog {
-    SegmentLog::with_storage(
-        Path::new("/log"),
+    open_with(
+        sim,
         Options {
             roll_bytes,
             ..options()
         },
-        Arc::new(sim.clone()),
     )
-    .unwrap()
 }
 
 fn record(stream: &[u8], key: Option<&[u8]>, payload: &[u8], revision: Option<u64>) -> NewRecord {
