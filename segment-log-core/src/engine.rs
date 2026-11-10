@@ -358,9 +358,12 @@ struct RevisionSlot {
 }
 // Classification reuses the result-position allowance before any result is allocated.
 const _: () = assert!(std::mem::size_of::<RevisionSlot>() <= std::mem::size_of::<Position>());
+/// `pending` holds the revisions that the current group has assigned. It overrides the
+/// durable heads, which the group has not changed yet.
 fn revisions(
     submit: &Submit,
-    heads: &BTreeMap<Vec<u8>, u64>,
+    pending: &BTreeMap<Vec<u8>, u64>,
+    published: &Mutex<Published>,
 ) -> Result<Box<[RevisionSlot]>, CommitError> {
     let mut slots: Box<[_]> = (0..submit.records.len())
         .map(|index| RevisionSlot { index, revision: 0 })
@@ -373,9 +376,14 @@ fn revisions(
     });
     let mut cursor = 0;
     let mut failure: Option<(usize, CommitError)> = None;
+    // Only the writer thread changes the durable heads, and it does so between groups.
+    let durable = published.lock().unwrap();
     while cursor < slots.len() {
         let stream = &submit.records[slots[cursor].index].stream;
-        let mut actual = heads.get(stream).copied();
+        let mut actual = pending
+            .get(stream)
+            .copied()
+            .or_else(|| durable.heads.get(stream).map(|head| head.revision));
         while cursor < slots.len() && submit.records[slots[cursor].index].stream == *stream {
             let index = slots[cursor].index;
             let matches = match submit.records[index].expected {
@@ -435,11 +443,8 @@ fn run(
         crate::pipeline::request(&first.submit, crate::pipeline::DEQUEUE);
         let snapshot = published.lock().unwrap();
         let base = snapshot.watermark;
-        let mut heads: BTreeMap<_, _> = snapshot
-            .heads
-            .iter()
-            .map(|(k, v)| (k.clone(), v.revision))
-            .collect();
+        // Copying every durable head here would make each group cost grow with the stream count.
+        let mut heads = BTreeMap::new();
         let position = snapshot
             .frames
             .last()
@@ -461,7 +466,7 @@ fn run(
                 &mut writer.lookup,
                 &requests,
             ) {
-                Classification::New => match revisions(&request.submit, &heads) {
+                Classification::New => match revisions(&request.submit, &heads, &published) {
                     Err(error) => {
                         request.answer(Err(error));
                     }

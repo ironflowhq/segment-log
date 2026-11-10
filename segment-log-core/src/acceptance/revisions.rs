@@ -480,3 +480,145 @@ fn finalized_revision_rejection_is_unchanged_by_each_crash_mode() {
         }
     });
 }
+
+fn numbered(prefix: u8, number: usize) -> Vec<u8> {
+    format!("{}{number:03}", prefix as char).into_bytes()
+}
+
+fn assert_heads_follow_history(log: &SegmentLog, streams: &[Vec<u8>]) -> Vec<Record> {
+    let history = log.read(0, 1000).unwrap();
+    assert_eq!(history.len() as u64, log.watermark());
+    for (offset, record) in history.iter().enumerate() {
+        assert_eq!(record.offset, offset as u64);
+    }
+    for stream in streams {
+        let last = history.iter().rev().find(|record| record.stream == *stream);
+        let head = log.stream_head(stream);
+        assert_eq!(
+            head.map(|head| (head.offset, head.revision)),
+            last.map(|record| (record.offset, record.revision)),
+            "stream {stream:?}"
+        );
+    }
+    history
+}
+
+/// Given 300 durable streams, half of them at revision one, and requests queued behind a held flush
+/// When one group mixes untouched durable streams, streams that its earlier submits advanced
+/// and new streams, with a stale expectation against each kind
+/// Then each check sees the group's earlier revisions over the durable head
+/// And each stale submit is rejected with that revision before the flush, without changing a head
+/// When the flush succeeds
+/// Then the valid submits get the next positions and only then do the public heads move
+/// When each storage boundary of that group is replayed through every crash mode
+/// Then recovery exposes the group whole or not at all, and every head matches its last record
+/// Cases: REV-EXPECTED, REV-NO-OFFSET, ANSWER-TIMING, ORACLE-2, ORACLE-3, ORACLE-10
+#[test]
+fn a_group_checks_revisions_against_its_own_changes_over_many_durable_streams() {
+    bounded(|| {
+        let sim = Sim::new(331);
+        let log = open(&sim);
+        let durable: Vec<_> = (0..300).map(|n| numbered(b'd', n)).collect();
+        let seeded = |records: Vec<NewRecord>| {
+            log.append(Submit { records }).unwrap().wait().unwrap();
+        };
+        seeded(
+            durable
+                .iter()
+                .map(|stream| new(stream, ExpectedRevision::Empty, None))
+                .collect(),
+        );
+        seeded(
+            durable
+                .iter()
+                .step_by(2)
+                .map(|stream| new(stream, ExpectedRevision::At(0), None))
+                .collect(),
+        );
+        let start = sim.trace().1.len();
+        let bootstrap_hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let bootstrap = log
+            .append(Submit {
+                records: vec![new(b"boot", ExpectedRevision::Empty, None)],
+            })
+            .unwrap();
+        bootstrap_hold.wait();
+        let queue = |records: Vec<NewRecord>| log.append(Submit { records }).unwrap();
+        let (d10, d11, d13, d299) = (&durable[10], &durable[11], &durable[13], &durable[299]);
+        let advances = queue(vec![
+            new(d10, ExpectedRevision::At(1), None),
+            new(b"n0", ExpectedRevision::Empty, None),
+        ]);
+        let follows = queue(vec![
+            new(d10, ExpectedRevision::At(2), None),
+            new(d11, ExpectedRevision::At(0), None),
+        ]);
+        let stale_advanced = queue(vec![new(d10, ExpectedRevision::At(1), None)]);
+        let stale_untouched = queue(vec![new(d13, ExpectedRevision::Empty, None)]);
+        let stale_new = queue(vec![new(b"n0", ExpectedRevision::Empty, None)]);
+        let absent = queue(vec![new(b"n1", ExpectedRevision::At(0), None)]);
+        let last = queue(vec![
+            new(d299, ExpectedRevision::At(0), None),
+            new(b"n0", ExpectedRevision::At(0), None),
+            new(d10, ExpectedRevision::At(3), None),
+        ]);
+        let hold = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        bootstrap_hold.release(None);
+        assert_positions(bootstrap.wait().unwrap(), &[(450, 0)]);
+        hold.wait();
+        assert_wrong(&stale_advanced.wait().unwrap_err(), 0, Some(3));
+        assert_wrong(&stale_untouched.wait().unwrap_err(), 0, Some(0));
+        assert_wrong(&stale_new.wait().unwrap_err(), 0, Some(0));
+        assert_wrong(&absent.wait().unwrap_err(), 0, None);
+        assert!(advances.probe().is_none());
+        assert!(follows.probe().is_none());
+        assert!(last.probe().is_none());
+        let mut streams = durable.clone();
+        streams.extend([b"boot".to_vec(), b"n0".to_vec(), b"n1".to_vec()]);
+        assert_eq!(assert_heads_follow_history(&log, &streams).len(), 451);
+        hold.release(None);
+        assert_positions(advances.wait().unwrap(), &[(451, 2), (452, 0)]);
+        assert_positions(follows.wait().unwrap(), &[(453, 3), (454, 1)]);
+        assert_positions(last.wait().unwrap(), &[(455, 1), (456, 1), (457, 4)]);
+        let history = assert_heads_follow_history(&log, &streams);
+        assert_eq!(history.len(), 458);
+        assert!(log.stream_head(b"n1").is_none());
+        let head = log.stream_head(d13).unwrap();
+        assert_eq!((head.offset, head.revision), (13, 0));
+        assert_group_calls(&sim, 4);
+        let (seed, trace) = sim.trace();
+        drop(log);
+        for end in start..=trace.len() {
+            for mode in [Crash::Kill, Crash::PowerLoss, Crash::PowerLossTorn] {
+                let replay = Sim::replay(seed, &trace[..end]);
+                replay.crash(mode, end as u64);
+                let recovered = open(&replay);
+                let kept = assert_heads_follow_history(&recovered, &streams);
+                assert!(
+                    [450, 451, 458].contains(&kept.len()),
+                    "end {end} kept {}",
+                    kept.len()
+                );
+                if end == trace.len() {
+                    assert_eq!(kept.len(), 458);
+                }
+                assert_records(&kept, &history[..kept.len()]);
+                let next = recovered
+                    .stream_head(d10)
+                    .map(|head| head.revision)
+                    .unwrap();
+                assert_eq!(next, if kept.len() == 458 { 4 } else { 1 });
+                assert_positions(
+                    recovered
+                        .append(Submit {
+                            records: vec![new(d10, ExpectedRevision::At(next), None)],
+                        })
+                        .unwrap()
+                        .wait()
+                        .unwrap(),
+                    &[(kept.len() as u64, next + 1)],
+                );
+            }
+        }
+    });
+}
