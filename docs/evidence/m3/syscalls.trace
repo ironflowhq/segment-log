@@ -1,0 +1,169 @@
+3125  23:44:53.784145 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3</etc/ld.so.cache> <0.000032>
+3125  23:44:53.800136 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/lib/x86_64-linux-gnu/libgcc_s.so.1", O_RDONLY|O_CLOEXEC) = 3</usr/lib/x86_64-linux-gnu/libgcc_s.so.1> <0.000022>
+3125  23:44:53.800495 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3</usr/lib/x86_64-linux-gnu/libc.so.6> <0.000022>
+3125  23:44:53.801913 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/proc/self/maps", O_RDONLY|O_CLOEXEC) = 3</proc/3125/maps> <0.000034>
+3125  23:44:53.802705 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/proc/self/cgroup", O_RDONLY|O_CLOEXEC) = 3</proc/3125/cgroup> <0.000029>
+3125  23:44:53.803036 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/sys/fs/cgroup/system.slice/hosted-compute-agent.service/cpu.max", O_RDONLY|O_CLOEXEC) = 3</sys/fs/cgroup/system.slice/hosted-compute-agent.service/cpu.max> <0.000035>
+3125  23:44:53.803309 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/sys/fs/cgroup/system.slice/cpu.max", O_RDONLY|O_CLOEXEC) = 3</sys/fs/cgroup/system.slice/cpu.max> <0.000024>
+3125  23:44:53.803557 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/sys/fs/cgroup/cpu.max", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory) <0.000022>
+3125  23:44:53.803677 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\nrunning 1 test\n", 16) = 16 <0.000059>
+3125  23:44:53.807916 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/proc/self/cgroup", O_RDONLY|O_CLOEXEC) = 3</proc/3125/cgroup> <0.000024>
+3125  23:44:53.808208 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/sys/fs/cgroup/system.slice/hosted-compute-agent.service/cpu.max", O_RDONLY|O_CLOEXEC) = 3</sys/fs/cgroup/system.slice/hosted-compute-agent.service/cpu.max> <0.000023>
+3125  23:44:53.808458 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/sys/fs/cgroup/system.slice/cpu.max", O_RDONLY|O_CLOEXEC) = 3</sys/fs/cgroup/system.slice/cpu.max> <0.000023>
+3125  23:44:53.808703 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/sys/fs/cgroup/cpu.max", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory) <0.000021>
+3126  23:44:53.809938 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "PHASE provision\n", 16) = 16 <0.000032>
+3126  23:44:53.810283 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0", O_RDONLY|O_CLOEXEC) = 3</tmp/evidence-3125-0> <0.000022>
+3126  23:44:53.810372 fsync(3</tmp/evidence-3125-0>) = 0 <0.001770>
+3126  23:44:53.812245 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp", O_RDONLY|O_CLOEXEC) = 3</tmp> <0.000026>
+3126  23:44:53.812350 fsync(3</tmp>)    = 0 <0.000359>
+3126  23:44:53.812812 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/", O_RDONLY|O_CLOEXEC) = 3</> <0.000048>
+3126  23:44:53.812927 fsync(3</>)       = 0 <0.000194>
+3126  23:44:53.813212 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "PHASE create\n", 13) = 13 <0.000030>
+3126  23:44:53.813388 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log/LOCK", O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC, 0666) = 3</tmp/evidence-3125-0/log/LOCK> <0.000060>
+3126  23:44:53.813506 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log/LOCK", O_RDWR|O_CLOEXEC) = 4</tmp/evidence-3125-0/log/LOCK> <0.000028>
+3126  23:44:53.813639 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 5</tmp/evidence-3125-0/log> <0.000027>
+3126  23:44:53.813949 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/dev/urandom", O_RDONLY|O_CLOEXEC) = 5</dev/urandom<char 1:9>> <0.000031>
+3126  23:44:53.814135 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log/00000000000000000000.seg", O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC, 0666) = 5</tmp/evidence-3125-0/log/00000000000000000000.seg> <0.000046>
+3126  23:44:53.814340 write(5</tmp/evidence-3125-0/log/00000000000000000000.seg>, "SGLG\0\0@\0005\365\306\30R\341\205\20\363=\254w\341\330A\26\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\\\344\222\177", 64) = 64 <0.000036>
+3126  23:44:53.814426 fdatasync(5</tmp/evidence-3125-0/log/00000000000000000000.seg>) = 0 <0.000386>
+3126  23:44:53.814879 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000030>
+3126  23:44:53.814963 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Open.SyncData", 13) = 13 <0.000028>
+3126  23:44:53.815037 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000028>
+3126  23:44:53.815111 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0/log/00000000000000000000.seg", 49) = 49 <0.000028>
+3126  23:44:53.815184 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000028>
+3126  23:44:53.815256 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000027>
+3126  23:44:53.815329 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000028>
+3126  23:44:53.815402 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000027>
+3126  23:44:53.815475 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000028>
+3126  23:44:53.815547 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000028>
+3126  23:44:53.815621 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log", O_RDONLY|O_CLOEXEC) = 3</tmp/evidence-3125-0/log> <0.000027>
+3126  23:44:53.815699 fsync(3</tmp/evidence-3125-0/log>) = 0 <0.000196>
+3126  23:44:53.815990 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000028>
+3126  23:44:53.816065 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Open.SyncDir", 12) = 12 <0.000027>
+3126  23:44:53.816138 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000027>
+3126  23:44:53.816210 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0/log", 24) = 24 <0.000028>
+3126  23:44:53.816283 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000028>
+3126  23:44:53.816355 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000028>
+3126  23:44:53.816427 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000027>
+3126  23:44:53.816500 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000027>
+3126  23:44:53.816572 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000030>
+3126  23:44:53.816646 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000039>
+3126  23:44:53.816904 write(5</tmp/evidence-3125-0/log/00000000000000000000.seg>, "SGLG\0\0@\0005\365\306\30R\341\205\20\363=\254w\341\330A\26\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\\\344\222\177", 64) = 64 <0.000029>
+3126  23:44:53.816985 fsync(5</tmp/evidence-3125-0/log/00000000000000000000.seg>) = 0 <0.000256>
+3126  23:44:53.817285 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000029>
+3126  23:44:53.817361 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Recovery.SyncAll", 16) = 16 <0.000029>
+3126  23:44:53.817439 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000029>
+3126  23:44:53.817514 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0/log/00000000000000000000.seg", 49) = 49 <0.000028>
+3126  23:44:53.817587 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000027>
+3126  23:44:53.817659 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000027>
+3126  23:44:53.817731 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000028>
+3126  23:44:53.817810 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000050>
+3126  23:44:53.817916 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000028>
+3126  23:44:53.817991 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000028>
+3126  23:44:53.818066 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log", O_RDONLY|O_CLOEXEC) = 3</tmp/evidence-3125-0/log> <0.000028>
+3126  23:44:53.818144 fsync(3</tmp/evidence-3125-0/log>) = 0 <0.000158>
+3126  23:44:53.818392 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000029>
+3126  23:44:53.818471 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000041>
+3126  23:44:53.818557 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000027>
+3126  23:44:53.818629 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0/log", 24) = 24 <0.000027>
+3126  23:44:53.818702 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000027>
+3126  23:44:53.818775 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000027>
+3126  23:44:53.818847 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000034>
+3126  23:44:53.818955 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000028>
+3126  23:44:53.819030 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000039>
+3126  23:44:53.819114 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000028>
+3126  23:44:53.819189 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0", O_RDONLY|O_CLOEXEC) = 3</tmp/evidence-3125-0> <0.000027>
+3126  23:44:53.819266 fsync(3</tmp/evidence-3125-0>) = 0 <0.000169>
+3126  23:44:53.819523 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000029>
+3126  23:44:53.819600 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000028>
+3126  23:44:53.819673 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000027>
+3126  23:44:53.819745 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0", 20) = 20 <0.000028>
+3126  23:44:53.819818 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000048>
+3126  23:44:53.819915 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000028>
+3126  23:44:53.819990 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000027>
+3126  23:44:53.820062 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000029>
+3126  23:44:53.820136 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000028>
+3126  23:44:53.820209 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000027>
+3126  23:44:53.820792 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "PHASE commit-0\n", 15) = 15 <0.000034>
+3128  23:44:53.822056 write(5</tmp/evidence-3125-0/log/00000000000000000000.seg>, "@\4\0\0\233\320\35j\1\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 1096) = 1096 <0.000028>
+3128  23:44:53.822138 fdatasync(5</tmp/evidence-3125-0/log/00000000000000000000.seg>) = 0 <0.000322>
+3128  23:44:53.822504 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000031>
+3128  23:44:53.822584 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Group.SyncData", 14) = 14 <0.000028>
+3128  23:44:53.822660 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000030>
+3128  23:44:53.822743 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0/log/00000000000000000000.seg", 49) = 49 <0.000028>
+3128  23:44:53.822817 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000048>
+3128  23:44:53.822913 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000029>
+3128  23:44:53.822990 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000029>
+3128  23:44:53.823065 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000028>
+3128  23:44:53.823145 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000029>
+3128  23:44:53.823221 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000029>
+3126  23:44:53.823365 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</tmp/evidence-3125-0/log> <0.000025>
+3126  23:44:53.823631 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "PHASE roll\n", 11) = 11 <0.000023>
+3128  23:44:53.823766 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log/00000000000000000001.seg", O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC, 0666) = 3</tmp/evidence-3125-0/log/00000000000000000001.seg> <0.000048>
+3128  23:44:53.823997 write(3</tmp/evidence-3125-0/log/00000000000000000001.seg>, "SGLG\0\0@\0005\365\306\30R\341\205\20\363=\254w\341\330A\26\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\340_^L", 64) = 64 <0.000038>
+3128  23:44:53.824089 fdatasync(3</tmp/evidence-3125-0/log/00000000000000000001.seg>) = 0 <0.000345>
+3128  23:44:53.824481 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000029>
+3128  23:44:53.824558 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Roll.SyncData", 13) = 13 <0.000029>
+3128  23:44:53.824633 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000027>
+3128  23:44:53.824706 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0/log/00000000000000000001.seg", 49) = 49 <0.000031>
+3128  23:44:53.824783 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000028>
+3128  23:44:53.824881 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000036>
+3128  23:44:53.824971 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000029>
+3128  23:44:53.825047 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000028>
+3128  23:44:53.825122 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000029>
+3128  23:44:53.825197 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000028>
+3128  23:44:53.825274 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log", O_RDONLY|O_CLOEXEC) = 5</tmp/evidence-3125-0/log> <0.000028>
+3128  23:44:53.825355 fsync(5</tmp/evidence-3125-0/log>) = 0 <0.000171>
+3128  23:44:53.825622 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000030>
+3128  23:44:53.825702 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Roll.SyncDir", 12) = 12 <0.000029>
+3128  23:44:53.825781 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000028>
+3128  23:44:53.825855 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0/log", 24) = 24 <0.000034>
+3128  23:44:53.825969 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000028>
+3128  23:44:53.826042 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000028>
+3128  23:44:53.826115 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000037>
+3128  23:44:53.826197 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000027>
+3128  23:44:53.826269 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000029>
+3128  23:44:53.826348 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000028>
+3128  23:44:53.826475 write(3</tmp/evidence-3125-0/log/00000000000000000001.seg>, "@\1\0\0\333\261\345u\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000030>
+3128  23:44:53.826553 fdatasync(3</tmp/evidence-3125-0/log/00000000000000000001.seg>) = 0 <0.000280>
+3128  23:44:53.826899 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000029>
+3128  23:44:53.826980 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Group.SyncData", 14) = 14 <0.000028>
+3128  23:44:53.827054 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000027>
+3128  23:44:53.827126 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0/log/00000000000000000001.seg", 49) = 49 <0.000027>
+3128  23:44:53.827199 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000027>
+3128  23:44:53.827271 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000028>
+3128  23:44:53.827343 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000027>
+3128  23:44:53.827417 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000029>
+3128  23:44:53.827490 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000027>
+3128  23:44:53.827562 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000027>
+3126  23:44:53.827689 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 5</tmp/evidence-3125-0/log> <0.000024>
+3126  23:44:53.827943 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "PHASE commit-1\n", 15) = 15 <0.000024>
+3128  23:44:53.829162 write(3</tmp/evidence-3125-0/log/00000000000000000001.seg>, "@\1\0\0\323/\272\313\1\0\0\0\1\0\0\0\0\0\0\0\2\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\2\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000031>
+3128  23:44:53.829246 fdatasync(3</tmp/evidence-3125-0/log/00000000000000000001.seg>) = 0 <0.000320>
+3128  23:44:53.829609 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "STORAGE ", 8) = 8 <0.000030>
+3128  23:44:53.829685 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Group.SyncData", 14) = 14 <0.000028>
+3128  23:44:53.829758 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " path=", 6) = 6 <0.000028>
+3128  23:44:53.829831 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "/tmp/evidence-3125-0/log/00000000000000000001.seg", 49) = 49 <0.000049>
+3128  23:44:53.829926 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, " result=", 8) = 8 <0.000028>
+3128  23:44:53.830001 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "Ok", 2) = 2 <0.000027>
+3128  23:44:53.830073 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "(", 1) = 1 <0.000028>
+3128  23:44:53.830145 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "()", 2) = 2 <0.000027>
+3128  23:44:53.830217 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, ")", 1) = 1 <0.000027>
+3128  23:44:53.830289 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000028>
+3126  23:44:53.830419 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 5</tmp/evidence-3125-0/log> <0.000024>
+3126  23:44:53.830649 write(2</home/runner/work/_temp/m3-evidence/roll-phases.log>, "PHASE done\n", 11) = 11 <0.000023>
+3128  23:44:53.831143 +++ exited with 0 +++
+3126  23:44:53.831328 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 3</tmp/evidence-3125-0> <0.000021>
+3126  23:44:53.831542 openat(3</tmp/evidence-3125-0>, "log", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4</tmp/evidence-3125-0/log> <0.000020>
+3127  23:44:53.832630 +++ exited with 0 +++
+3126  23:44:53.832970 +++ exited with 0 +++
+3125  23:44:53.832987 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, "test acceptance::evidence::real_storage_roll_phases ... ", 56) = 56 <0.000029>
+3125  23:44:53.833062 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, "ok", 2) = 2 <0.000028>
+3125  23:44:53.833135 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000027>
+3125  23:44:53.833211 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n", 1) = 1 <0.000028>
+3125  23:44:53.833284 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, "test result: ", 13) = 13 <0.000027>
+3125  23:44:53.833355 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, "ok", 2) = 2 <0.000028>
+3125  23:44:53.833428 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, ". 1 passed; 0 failed; 0 ignored; 0 measured; 178 filtered out", 61) = 61 <0.000027>
+3125  23:44:53.833502 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, "; finished in 0.03s", 19) = 19 <0.000028>
+3125  23:44:53.833574 write(1</home/runner/work/_temp/m3-evidence/roll-phases.log>, "\n\n", 2) = 2 <0.000027>
+3125  23:44:53.833911 +++ exited with 0 +++

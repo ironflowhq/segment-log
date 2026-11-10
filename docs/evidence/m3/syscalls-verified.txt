@@ -1,0 +1,26 @@
+provision: fdatasync=0 fsync=3 success
+3126  23:44:53.810372 fsync(3</tmp/evidence-3125-0>) = 0 <0.001770>
+3126  23:44:53.812350 fsync(3</tmp>)    = 0 <0.000359>
+3126  23:44:53.812927 fsync(3</>)       = 0 <0.000194>
+create: fdatasync=1 fsync=4 success
+3126  23:44:53.814426 fdatasync(5</tmp/evidence-3125-0/log/00000000000000000000.seg>) = 0 <0.000386>
+3126  23:44:53.815699 fsync(3</tmp/evidence-3125-0/log>) = 0 <0.000196>
+3126  23:44:53.816985 fsync(5</tmp/evidence-3125-0/log/00000000000000000000.seg>) = 0 <0.000256>
+3126  23:44:53.818144 fsync(3</tmp/evidence-3125-0/log>) = 0 <0.000158>
+3126  23:44:53.819266 fsync(3</tmp/evidence-3125-0>) = 0 <0.000169>
+commit-0: fdatasync=1 fsync=0 success
+3128  23:44:53.822138 fdatasync(5</tmp/evidence-3125-0/log/00000000000000000000.seg>) = 0 <0.000322>
+roll: fdatasync=2 fsync=1 success
+3128  23:44:53.824089 fdatasync(3</tmp/evidence-3125-0/log/00000000000000000001.seg>) = 0 <0.000345>
+3128  23:44:53.825355 fsync(5</tmp/evidence-3125-0/log>) = 0 <0.000171>
+3128  23:44:53.826553 fdatasync(3</tmp/evidence-3125-0/log/00000000000000000001.seg>) = 0 <0.000280>
+commit-1: fdatasync=1 fsync=0 success
+3128  23:44:53.829246 fdatasync(3</tmp/evidence-3125-0/log/00000000000000000001.seg>) = 0 <0.000320>
+done: fdatasync=0 fsync=0 success
+roll order: openat O_CREAT new segment < header write < fdatasync new segment < fsync log directory < group frame write < fdatasync new segment
+  openat O_CREAT new segment: 3128  23:44:53.823766 openat(AT_FDCWD</home/runner/work/segment-log/segment-log>, "/tmp/evidence-3125-0/log/00000000000000000001.seg", O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC, 0666) = 3</tmp/evidence-3125-0/log/00000000000000000001.seg> <0.000048>
+  header write: 3128  23:44:53.823997 write(3</tmp/evidence-3125-0/log/00000000000000000001.seg>, "SGLG\0\0@\0005\365\306\30R\341\205\20\363=\254w\341\330A\26\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\340_^L", 64) = 64 <0.000038>
+  fdatasync new segment: 3128  23:44:53.824089 fdatasync(3</tmp/evidence-3125-0/log/00000000000000000001.seg>) = 0 <0.000345>
+  fsync log directory: 3128  23:44:53.825355 fsync(5</tmp/evidence-3125-0/log>) = 0 <0.000171>
+  group frame write: 3128  23:44:53.826475 write(3</tmp/evidence-3125-0/log/00000000000000000001.seg>, "@\1\0\0\333\261\345u\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 328) = 328 <0.000030>
+  fdatasync new segment: 3128  23:44:53.826553 fdatasync(3</tmp/evidence-3125-0/log/00000000000000000001.seg>) = 0 <0.000280>
