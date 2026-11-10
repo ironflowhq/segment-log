@@ -17,7 +17,7 @@ The [PRD milestone gates](../prd.md#milestones) remain the source for completion
 | M0-READINESS | None | Green CI run linked in the [PRD](../prd.md#milestones) | Implemented |
 | M1 | [M1 groups below](#m1-acceptance-coverage) | [M1 completion gate](#m1-completion-gate), [completion record](../evidence/m1/completion.md) | Implemented |
 | M2-MODEL | `MODEL`, `REV-NO-OFFSET` | None beyond the tests | Implemented |
-| M3-ROLL | `ORACLE-6`, M3 parts of `OPEN-LAYOUT`, `RECOVERY-FIXTURES`, `KEY-LIFETIME` and `HISTORY`; M1 scenarios rerun with a small `roll_bytes` | Linux syscall trace of the roll directory sync | Planned |
+| M3-ROLL | `ORACLE-6`, M3 parts of `OPEN-LAYOUT`, `RECOVERY-FIXTURES`, `KEY-LIFETIME` and `HISTORY`; M1 scenarios rerun with a small `roll_bytes` | Linux syscall trace of the roll directory sync (not yet recorded) | Implemented |
 | M4-SEAL-READ | `READER`, `ROLL-FOOTER`, M4 parts of `CODEC-GROUP`, `ADM-PRECEDENCE`, `RECOVERY-FIXTURES` and `HISTORY` | None beyond the tests | Planned |
 | M4-LOOKUP-OPEN | `ORACLE-13`, M4 parts of `ORACLE-12` and `KEY-LIFETIME` | Open-time target result; lookup reads, rebuild cost and key-cache memory under the [M4 design](../prd.md#open-items) | Planned |
 | M5-FORMAT-FUZZ | `FUZZ-DECODER`, `FUZZ-RECOVERY` | Accepted format ADR; one-hour fuzz run in CI | Planned |
