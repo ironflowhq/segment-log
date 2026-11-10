@@ -178,7 +178,8 @@ fn invalid_options_precede_locks_missing_ancestors_and_permissions() {
 }
 
 /// Given two segment files, where one is valid and the other is empty, shorter than a header,
-/// Or a valid segment followed by bytes that are not a frame
+/// Or longer than a header, with a header that does not match its name or with bytes after
+/// its frames that are not a frame
 /// When the damaged file is the newest and no longer than a header
 /// Then open removes it and recovers the records of the valid segment
 /// When the damaged file is older, or is longer than a header

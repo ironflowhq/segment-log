@@ -161,7 +161,7 @@ There is no clean-shutdown marker. Recovery always scans the active segment, and
 A roll happens only between groups, so no submit crosses a roll.
 
 1. From M4: write the footer frame and the locator frame at the end of the active segment, and `fsync` it. The segment is now sealed.
-2. Create the new segment file, named by the next log offset. Write its header and `fsync` the file.
+2. Create the new segment file, named by the next log offset. Write its header and `sync_data` the file, as open does when it creates the log.
 3. `fsync` the directory, so that the new directory entry is durable.
 4. Make the new file the active segment.
 
