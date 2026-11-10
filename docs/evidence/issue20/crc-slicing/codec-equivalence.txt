@@ -1,0 +1,4 @@
+  451781 .audit/codec-compare/before/bytes.bin
+243f2d693417c052d3bc42798211d22740f37c00075ef5e3a06d738ccaefe842  .audit/codec-compare/before/bytes.bin
+243f2d693417c052d3bc42798211d22740f37c00075ef5e3a06d738ccaefe842  .audit/codec-compare/after/bytes.bin
+PASS: checksums, group frames, and headers match source 5e95407cb3e427800cdb29c687595d35bae56410

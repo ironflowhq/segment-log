@@ -1,0 +1,13 @@
+phase,thread_allocated_bytes,process_live_delta_bytes,process_peak_extra_bytes,process_live_bytes
+open_empty,264492,263709,263709,265522
+caller_build,136024000,136024000,136024000,136289660
+append_and_release_caller,33445040,33760368,36054426,170050028
+drop_before_reopen,0,-169845063,0,1861
+warm_reopen,297961044,169819495,169819495,169821356
+read_start,120506,400,120472,169821732
+read_end,120506,400,120472,169821732
+validation_buffer,352655024,140274850,140434882,310096182
+validation_check,0,0,0,310096182
+validation_release,0,-140274688,0,169821494
+drop_engine,0,-169819633,0,1861
+validated_records=1000000,failures=0,groups=1000
