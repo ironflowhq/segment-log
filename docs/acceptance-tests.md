@@ -65,6 +65,8 @@ These paths are planned. Nothing exists yet.
 | `segment-log-core/src/acceptance/mod.rs` | In-crate scenarios, loaded through `#[cfg(test)] mod acceptance;` |
 | `segment-log-core/src/acceptance/support/` | Fixtures, held-call helpers, the trace oracle and the coverage check |
 | `segment-log-core/src/acceptance/<group>.rs` | One module per coverage group, such as `durability`, `recovery`, `revisions`, `retries`, `admission`, `poison`, `open` and `drop` |
+| `segment-log-core/src/acceptance/model/` | The parts of the `model` module: the contract model, the case generators, and the driver. Only the driver names the log |
+| `segment-log-core/proptest-regressions/` | The seeds of failed `proptest` cases. Commit them |
 | `segment-log-core/tests/real_storage.rs` | Public API scenarios against real storage in temporary directories |
 | `segment-log-core/tests/process_crash.rs` | The [real-process harness](#real-process-harness) for `SIGKILL` and locking |
 | `fuzz/` (M5) | `cargo fuzz` targets, built with a nightly toolchain |
@@ -109,6 +111,23 @@ uses two trace seeds. `SEGMENT_LOG_TRACE_SEED` and `SEGMENT_LOG_TRACE_SEEDS`
 select the start and count. The named `m1-long-run` scheduled job runs the ignored
 variant on Linux and macOS. `SEGMENT_LOG_TRACE_REPLAY` loads paired storage and
 caller/reader artifacts without reproducing the original schedule.
+
+The model properties in `acceptance/model.rs` use one caller thread, so a seed
+replays a run exactly. The ordinary workspace run checks 256 cases of each property.
+`SEGMENT_LOG_MODEL_SEED` and `SEGMENT_LOG_MODEL_CASES` select the seed and the count.
+A failure prints its case IDs, both values, the shrunk case, its script, and both
+traces. `proptest` saves the failed case's seed in
+`segment-log-core/proptest-regressions/acceptance/model.txt`, and every later run
+checks the saved seeds first. Commit that file. To replay a run, pass the printed
+values:
+
+```sh
+SEGMENT_LOG_MODEL_SEED=2000 SEGMENT_LOG_MODEL_CASES=256 cargo test -p segment-log-core --lib acceptance::model
+```
+
+The named `m2-long-run` scheduled job runs the two ignored variants on Linux and
+macOS. It takes its seed from the run number, and it uploads the regression file
+when a variant fails.
 
 ### Drill the failure path
 
