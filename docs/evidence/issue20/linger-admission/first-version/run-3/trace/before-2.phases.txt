@@ -1,0 +1,45 @@
+groups=2557 counted_groups=2557 min_count=1
+group phase, ms: median p10 p90 share_of_cycle
+  formation     1.017    1.002    1.045   66.0%
+  encode        0.030    0.023    0.041    1.9%
+  write         0.023    0.018    0.035    1.5%
+  flush         0.393    0.345    0.455   25.5%
+  publish       0.012    0.009    0.020    0.8%
+  delivery      0.050    0.038    0.071    3.2%
+  cycle         1.541    1.482    1.624  100.0%
+request interval, ms: mean p50 p99 share_of_latency
+  admission         0.002    0.001    0.007    0.1%
+  queue             0.170    0.016    1.113   11.1%
+  formation_wait    0.669    0.765    1.039   43.6%
+  encode            0.033    0.030    0.098    2.1%
+  write             0.026    0.024    0.056    1.7%
+  flush             0.423    0.394    0.672   27.6%
+  publish           0.014    0.012    0.040    0.9%
+  answer_wait       0.020    0.018    0.064    1.3%
+  answer_to_wake    0.177    0.163    0.620   11.5%
+  total             1.534    1.450    4.275  100.0%
+slowest 1% of requests (2000 at or above 4.275 ms), ms: mean of each interval, share of their latency
+  admission         0.002    0.0%
+  queue             4.926   53.2%
+  formation_wait    0.631    6.8%
+  encode            0.117    1.3%
+  write             0.051    0.5%
+  flush             2.708   29.2%
+  publish           0.045    0.5%
+  answer_wait       0.076    0.8%
+  answer_to_wake    0.710    7.7%
+  total             9.266  100.0%
+slowest 0.1% of requests (200 at or above 15.928 ms), ms: mean of each interval, share of their latency
+  admission         0.002    0.0%
+  queue             3.525   20.5%
+  formation_wait    0.850    4.9%
+  encode            0.070    0.4%
+  write             0.048    0.3%
+  flush            11.928   69.3%
+  publish           0.045    0.3%
+  answer_wait       0.064    0.4%
+  answer_to_wake    0.672    3.9%
+  total            17.202  100.0%
+latency, ms: p999 15.928 max 19.515
+admission to end of gathering, ms: mean p50 p90 p99 max
+  gather_wait       0.839    0.787    1.427    1.847   15.139

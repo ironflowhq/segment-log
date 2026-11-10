@@ -1,0 +1,2 @@
+ 04:31:39 up 4 min,  0 user,  load average: 13.78, 8.32, 3.49
+guest_busy_percent_before=0.2 quiet_seconds=2 waited_seconds=2

@@ -1,0 +1,30 @@
+
+running 1 test
+PACED interval_ns=20000000 offered_records_per_second=50000.000 latency_from=scheduled_send
+DIAGNOSTIC measured_storage=true phase_cpu=true
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=883235 p50=1316490 p99=1639822 p999=3219098 max=6089602 sum=1291813272
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=1185400 records=0 segments=1 bytes=64
+PHASE_CPU role=writer running_ns=5912874814 runnable_ns=475458601
+PHASE_CPU role=callers running_ns=15823060566 runnable_ns=42664278517
+APPEND records=1000000 elapsed_ns=20020229999 records_per_second=49949.476 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=287232 admission_call_sum_ns=2406313289
+METRIC append_ns count=1000000 min=449793 p50=1160667 p99=1697469 p999=5238781 max=11033443 sum=1164166120512
+METRIC group_submits count=19053 min=6 p50=52 p99=56 p999=88 max=492 sum=1000000
+METRIC group_frame_bytes count=19053 min=1808 p50=15424 p99=16608 p999=26080 max=145664 sum=296609696
+METRIC group_fdatasync_ns count=19053 min=251738 p50=402123 p99=545279 p999=890425 max=8651206 sum=7766019234
+STORAGE kind=Group.Append count=19053 sum_ns=330896444
+STORAGE kind=Group.SyncData count=19053 sum_ns=7766019234
+STORAGE kind=Lookup.Other count=19053 sum_ns=95379769
+STORAGE kind=Open.Other count=7 sum_ns=117792
+STORAGE kind=Open.SyncData count=1 sum_ns=524386
+STORAGE kind=Open.SyncDir count=1 sum_ns=3282
+STORAGE kind=Recovery.Other count=2 sum_ns=1969
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=309173
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=2856
+END records=1000000 segments=1 bytes=296609760
+REOPEN ns=801090570 start_records=1000000 end_records=1000000 start_segments=1 end_segments=1 start_bytes=296609760 end_bytes=296609760 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 150 filtered out; finished in 24.00s
+

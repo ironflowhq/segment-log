@@ -1,0 +1,51 @@
+
+running 1 test
+PACED interval_ns=20000000 offered_records_per_second=50000.000 latency_from=scheduled_send
+DIAGNOSTIC measured_storage=true phase_cpu=false
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=246017 p50=311279 p99=601067 p999=3730736 max=3957578 sum=336243792
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=817340 records=0 segments=1 bytes=64
+APPEND records=1000000 elapsed_ns=20030235845 records_per_second=49924.524 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=334016 admission_call_sum_ns=2689654459
+METRIC append_ns count=1000000 min=408017 p50=1172249 p99=3826481 p999=8654760 max=13637323 sum=1242397834305
+METRIC group_submits count=18541 min=10 p50=53 p99=92 p999=228 max=490 sum=1000000
+METRIC group_frame_bytes count=18541 min=2992 p50=15720 p99=27264 p999=67520 max=145072 sum=296593312
+METRIC group_fdatasync_ns count=18541 min=220440 p50=313522 p99=1207752 p999=3490199 max=5999795 sum=6369377166
+STORAGE kind=Group.Append count=18541 sum_ns=542010200
+STORAGE kind=Group.SyncData count=18541 sum_ns=6369377166
+STORAGE kind=Lookup.Other count=18541 sum_ns=122384259
+STORAGE kind=Open.Other count=7 sum_ns=134770
+STORAGE kind=Open.SyncData count=1 sum_ns=241299
+STORAGE kind=Open.SyncDir count=1 sum_ns=7473
+STORAGE kind=Recovery.Other count=2 sum_ns=4179
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=186076
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=10300
+END records=1000000 segments=1 bytes=296593376
+REOPEN ns=830109538 start_records=1000000 end_records=1000000 start_segments=1 end_segments=1 start_bytes=296593376 end_bytes=296593376 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 152 filtered out; finished in 23.44s
+
+	Command being timed: "/tmp/tmp.HPQcyjSAvd/target-after/release/deps/segment_log_core-3d365a8d7243eacd --exact acceptance::evidence::measured_appends_survive_reopen --nocapture"
+	User time (seconds): 11.89
+	System time (seconds): 20.59
+	Percent of CPU this job got: 138%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:23.44
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 662060
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 190434
+	Voluntary context switches: 2290308
+	Involuntary context switches: 82073
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 1239376
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
