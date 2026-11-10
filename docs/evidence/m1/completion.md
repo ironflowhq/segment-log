@@ -77,10 +77,13 @@ Hosted CI passed on Linux and macOS for the head of each pull request in this st
 | [42754928006](https://github.com/ironflowhq/segment-log/actions/runs/42754928006) | Manual, 10 November, after the workflow change | Passed on Linux and macOS |
 | [42754924923](https://github.com/ironflowhq/segment-log/actions/runs/42754924923) | Manual drill, 10 November | Both platforms failed as planted, uploaded, and replayed ([record](../issue20/hosted-drill/README.md)) |
 | [42818173749](https://github.com/ironflowhq/segment-log/actions/runs/42818173749) | Scheduled, 10 November at 12:43 UTC | Passed on Linux and macOS |
+| [42855610214](https://github.com/ironflowhq/segment-log/actions/runs/42855610214) | Manual, 10 November at 16:32 UTC, on the merged tree | Passed on Linux and macOS |
 
 The first scheduled run was due on 10 November 2026 at 04:23 UTC. When this record was captured, more than one hour later, the repository showed no run with the `schedule` event. GitHub does not promise when a scheduled workflow starts. The run started at 12:43 UTC, eight hours and twenty minutes after its slot, and passed on both platforms. [completion/scheduled-run.json](completion/scheduled-run.json) is its API record.
 
 The scheduled run used `86f8da8`, the `main` before this stack. So it ran the workflow without the drill input, and the engine before the linger change. It shows that the schedule fires and that the long run passes on hosted runners. It does not test the measured tree; the two manual runs and the local long runs above do. This gate does not require a scheduled run.
+
+Note of 10 November 2026: a manual run then used `main` at `ff74647`, after the merge. Its `segment-log-core` tree is the measured tree. Each platform passed trace seeds 10000 to 10099 with 2,700 scenarios, and then the process-crash test. [completion/merged-tree-run.json](completion/merged-tree-run.json) is its API record.
 
 ## 2. One `fdatasync` for each new group
 
@@ -221,13 +224,15 @@ Every run validated all its records against the literal inputs and the callers' 
 
 ## Findings and limits carried forward
 
-- **No physical local NVMe.** The targets name it, and no host here has it. [The pull request](https://github.com/ironflowhq/segment-log/pull/40) lists ways to get that measurement.
-- **Deployment storage is not qualified.** That is a requirement before M6 ([ADR 0032](../../decisions/0032-qualify-deployment-storage-before-m6.md)), not part of this gate.
+Note of 10 November 2026: the owner closed [issue 20](https://github.com/ironflowhq/segment-log/issues/20) and moved each open limit to its own issue. The entries below name them.
+
+- **No physical local NVMe.** The targets name it, and no host here has it. [The pull request](https://github.com/ironflowhq/segment-log/pull/40) lists ways to get that measurement. [Issue 49](https://github.com/ironflowhq/segment-log/issues/49) tracks it and holds a plan. It is due before the M6 benchmark.
+- **Deployment storage is not qualified.** That is a requirement before M6 ([ADR 0032](../../decisions/0032-qualify-deployment-storage-before-m6.md)), not part of this gate. [Issue 46](https://github.com/ironflowhq/segment-log/issues/46) tracks it.
 - **The paced p99 depends on rare slow flushes.** See the tables above.
 - **ADR 0046 is accepted.** The measured tree counts a group's linger from its first submit's admission. The owner accepted that decision on 10 November 2026, so this record needs no second capture.
-- **Exact peak memory for each phase is a lower bound on this guest.** See the [Linux phase record](../issue20/linux-phase-peaks/README.md).
-- **Workloads beyond these stay unmeasured:** more than 1,000 callers, more than 1,000,000 records, and long soaks, which need roll (M3).
-- **The scheduled long run has not yet run the merged tree.** Its first run passed on the `main` before this stack. The next slot is 11 November 2026 at 04:23 UTC.
+- **Exact peak memory for each phase is a lower bound on this guest.** See the [Linux phase record](../issue20/linux-phase-peaks/README.md). [Issue 48](https://github.com/ironflowhq/segment-log/issues/48) tracks exact peaks and engine-owned bytes.
+- **Workloads beyond these stay unmeasured:** more than 1,000 callers, more than 1,000,000 records, and long soaks, which need roll (M3). [Issue 47](https://github.com/ironflowhq/segment-log/issues/47) tracks them.
+- **No scheduled long run has yet run the merged tree.** The first scheduled run passed on the `main` before this stack. A manual run passed on the merged tree on 10 November 2026; the table of hosted long runs has it. The next scheduled slot is 11 November 2026 at 04:23 UTC.
 - **Missing original red evidence stays missing.** Some early behavior was implemented before its scenario ([evidence archive](README.md)). Later tests do not repair that history.
 
 ## Reproduce
