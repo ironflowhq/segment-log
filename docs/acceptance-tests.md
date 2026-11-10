@@ -110,6 +110,35 @@ select the start and count. The named `m1-long-run` scheduled job runs the ignor
 variant on Linux and macOS. `SEGMENT_LOG_TRACE_REPLAY` loads paired storage and
 caller/reader artifacts without reproducing the original schedule.
 
+### Drill the failure path
+
+A passing long run never shows that a failure leaves usable artifacts. Dispatch the
+`m1-long-run` workflow with its `drill` input to check that path on both platforms:
+
+```sh
+gh workflow run long-run.yml -f drill=true
+```
+
+The drill sets `SEGMENT_LOG_TRACE_DRILL=1` and `SEGMENT_LOG_PROCESS_DRILL=1`. The trace
+check then adds one false permanent refusal to each ledger that it checks, and the
+process oracle gets a watermark that no child reported. Both steps of the long-run job
+must fail, and the job uploads its artifacts as it does for a real failure. The saved
+pair and the kept process directory hold only what the run recorded, without the
+planted records. The `drill-replay` job downloads them and runs
+`scripts/m1-drill-replay.sh`. Each plain replay must pass. Each replay with the drill
+variable set must fail on the planted record. A drill run therefore ends as failed,
+with a failed long-run job and a passed replay job for each platform.
+
+To check artifacts on another machine, download them and run the same script:
+
+```sh
+gh run download RUN_ID --name trace-failures-ubuntu-24.04 --dir .audit/drill
+scripts/m1-drill-replay.sh .audit/drill
+```
+
+A real failure needs no drill variable: replay its pair with `SEGMENT_LOG_TRACE_REPLAY`
+alone.
+
 ## Real-process harness
 
 The test binary starts itself again as the child: it runs `std::env::current_exe()` with the child test's exact name and an environment variable that selects child mode. The child runs with `--nocapture`. It writes each request before it calls `append`, and each result after, as lines on its standard output with a fixed prefix, so that the parent can skip the test runner's own output. The parent stops it with `Child::kill`, which sends `SIGKILL` on Unix, then reopens the directory and runs the oracle checks that `PROC-SIGKILL` lists. A request with no recorded result is an unknown outcome. The same harness checks that a second process gets `Locked` while the child holds the log. No new dependency is needed.
@@ -132,6 +161,10 @@ Each process repetition prints its seed, mode and transcript path. A failed repe
 its temporary directory and `protocol.txt`; a passing scenario removes them.
 The transcript records the pipe, including test-runner output and any partial
 last line. It supports ledger inspection, not deterministic replay of scheduling.
+`SEGMENT_LOG_PROCESS_REPLAY` names a kept directory. The test then rebuilds the ledger
+from the transcript's complete lines and runs the oracle on the kept log again. The
+first check already recovered that log, and its retries may have appended to it, so
+replay a copy.
 Child cleanup kills and reaps the process before joining its pipe reader.
 Pipe and exit waits have watchdogs. A scenario-wide watchdog also bounds open,
 recovery and retry waits; on expiry it cleans up the child and aborts the test
