@@ -2,7 +2,7 @@
 
 This record supplies the evidence that the [M1 completion gate](../../architecture/testing.md#m1-completion-gate) requires, for the tree that this pull request leaves on `main`. It replaces [slice 10](slice10.md) as the completion record. Slice 10 measured the tree before the issue 20 changes, and its benchmark had no paced run.
 
-The owner decides the gate in [issue 17](https://github.com/ironflowhq/segment-log/issues/17). This record does not mark M1 complete.
+The owner decides the gate in [issue 17](https://github.com/ironflowhq/segment-log/issues/17). The [PRD](../../prd.md#milestones) records that decision.
 
 ## Result
 
