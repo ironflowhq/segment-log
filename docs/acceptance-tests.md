@@ -108,7 +108,9 @@ Simulated `Kill`, `PowerLoss` and `PowerLossTorn` and real-process `SIGKILL` hav
 The implementation and saved replay commands are documented in the
 [slice 9 record](evidence/m1/slice9.md#reproduce). The ordinary workspace run
 uses two trace seeds. `SEGMENT_LOG_TRACE_SEED` and `SEGMENT_LOG_TRACE_SEEDS`
-select the start and count. The named `m1-long-run` scheduled job runs the ignored
+select the start and count. Odd seeds use a roll size that every segment with a
+frame has reached, so each of their groups starts a new segment. Every reopen checks
+that recovery left each sealed segment byte for byte as it was (`ORACLE-6`). The named `m1-long-run` scheduled job runs the ignored
 variant on Linux and macOS. `SEGMENT_LOG_TRACE_REPLAY` loads paired storage and
 caller/reader artifacts without reproducing the original schedule.
 
@@ -204,6 +206,8 @@ binary so a stuck local writer cannot outlive the test.
 Keep earlier scenarios as regression tests, and extend them when a later milestone adds behavior. When a milestone changes a supported outcome, keep the scenario's intent and update its expectation under the governing ADR. For example, M1 refuses multiple segments with `Unsupported`, and M3 replaces that refusal with multi-segment recovery. Do not keep an obsolete refusal as a permanent contract.
 
 From M3, rerun the M1 scenarios through their fixtures with a small `roll_bytes`, so that retries, recovery and crash cases also run across rolls. From M4, extend them with sealing where it applies.
+
+`SEGMENT_LOG_TEST_ROLL_BYTES` sets the roll size of the shared fixtures, of the even trace seeds, and of the process and read-range tests. CI reruns `cargo test --workspace` with 65 bytes, so that every group after the first starts a segment, and with 256 bytes, so that a segment holds a few groups. A scenario names a group's held, injected or counted write or flush on `/log/*.seg`, and it finds a written frame in whichever segment holds it, so it does not depend on the active segment. A scenario sets its own roll size only when the file names or frame placement that it asserts follow from that size: the roll scenarios, the option boundaries and the odd trace seeds.
 
 ## Boundary outcomes
 

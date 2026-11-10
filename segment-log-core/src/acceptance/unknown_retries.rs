@@ -17,11 +17,11 @@ fn send(log: &SegmentLog, records: Vec<NewRecord>) -> Pending {
 }
 fn no_new_group(sim: &Sim, count: usize) {
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
         count
     );
     assert_eq!(
-        sim.count(Path::new(SEG), Purpose::Group, &Op::SyncData),
+        sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
         count
     );
 }
@@ -84,7 +84,7 @@ fn unknown_regrouped_retry_can_have_only_a_subset_of_matches() {
         for mode in [Crash::Kill, Crash::PowerLoss, Crash::PowerLossTorn] {
             let sim = Sim::new(521);
             let log = open(&sim);
-            let held = sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+            let held = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
             let bootstrap = send(&log, vec![record(b"s", Some(b"k"), b"one")]);
             held.wait();
             let original = send(&log, vec![record(b"t", Some(b"t"), b"two")]);
@@ -106,7 +106,7 @@ fn unknown_regrouped_retry_can_have_only_a_subset_of_matches() {
                 }],
             })
             .unwrap();
-            let next = sim.hold(Call::new(SEG, Purpose::Group, Op::Append(bytes)));
+            let next = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::Append(bytes)));
             held.release(None);
             bootstrap.wait().unwrap();
             next.wait();

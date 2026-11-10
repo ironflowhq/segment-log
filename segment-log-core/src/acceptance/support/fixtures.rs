@@ -2,14 +2,24 @@ pub(crate) use crate::storage::sim::Sim;
 use crate::*;
 use std::{path::Path, sync::Arc, time::Duration};
 pub(crate) const SEG: &str = "/log/00000000000000000000.seg";
+/// Any segment file of the log, for a held, injected or counted call of a group.
+pub(crate) const ANY_SEG: &str = "/log/*.seg";
 pub(crate) fn options() -> Options {
     Options {
         linger: Duration::ZERO,
+        roll_bytes: super::roll_size::roll_bytes(Options::default().roll_bytes),
         ..Options::default()
     }
 }
 pub(crate) fn open(sim: &Sim) -> SegmentLog {
-    SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone())).unwrap()
+    open_with(sim, options())
+}
+/// Opens the log at `/log`, and checks that recovery left every sealed segment as it was.
+pub(crate) fn open_with(sim: &Sim, options: Options) -> SegmentLog {
+    let before = super::raw::segments(sim);
+    let log = SegmentLog::with_storage(Path::new("/log"), options, Arc::new(sim.clone())).unwrap();
+    super::oracle::sealed_unchanged(&before, &super::raw::segments(sim));
+    log
 }
 pub(crate) fn submit(stream: &[u8]) -> Submit {
     Submit {

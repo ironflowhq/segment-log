@@ -53,7 +53,7 @@ impl Keys {
     pub(super) fn classify(
         &self,
         storage: &dyn Storage,
-        segment: &Path,
+        dir: &Path,
         submit: &Submit,
         scratch: &mut Vec<u8>,
         staged: &Staged<'_>,
@@ -83,7 +83,7 @@ impl Keys {
                 let entry_index = (position.offset - frame.base) as usize;
                 let Ok(bytes) = read_bytes(
                     storage,
-                    segment,
+                    &segment_path(dir, frame.segment),
                     Purpose::Lookup,
                     frame.position,
                     frame.length,

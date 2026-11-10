@@ -135,7 +135,7 @@ fn inclusive_option_boundaries_open_without_budget_sized_allocation() {
                         result.unwrap().wait().unwrap();
                         assert_records(&log.read(0, 1).unwrap(), &[stored(b"s", None, b"", 0, 0)]);
                         assert_eq!(
-                            sim.count(Path::new(SEG), Purpose::Group, &Op::Append(vec![])),
+                            sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::Append(vec![])),
                             1
                         );
                     }
@@ -177,57 +177,60 @@ fn invalid_options_precede_locks_missing_ancestors_and_permissions() {
     });
 }
 
-/// Given two recognized segments, with an incomplete header or invalid tail beside a valid file
-/// When open rejects this unsupported layout
-/// Then all bytes and directory entries remain unchanged, before cleanup or recovery writes
-/// Cases: OPEN-LAYOUT
+/// Given two segment files, where one is valid and the other is empty, shorter than a header,
+/// Or longer than a header, with a header that does not match its name or with bytes after
+/// its frames that are not a frame
+/// When the damaged file is the newest and no longer than a header
+/// Then open removes it and recovers the records of the valid segment
+/// When the damaged file is older, or is longer than a header
+/// Then open fails with `Corrupt` and names that file, and no byte or directory entry changes
+/// Cases: OPEN-LAYOUT, RECOVERY-FIXTURES
 #[test]
-fn multiple_segments_are_refused_before_any_recovery_mutation() {
+fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
     bounded(|| {
         use super::support::raw;
-        use crate::storage::{Call, Storage};
         let valid = [raw::header(0, 0, 1), raw::group(1, 0, &[b"kept"])].concat();
-        for damaged in [vec![], vec![0; 63], [valid.clone(), vec![0; 33]].concat()] {
-            for damaged_is_newest in [false, true] {
-                let sim = Sim::new(802);
-                raw::install(
-                    &sim,
-                    if damaged_is_newest {
-                        valid.clone()
-                    } else {
-                        damaged.clone()
-                    },
-                );
-                let second = "/log/00000000000000000001.seg";
-                sim.call(Call::new(second, Purpose::Open, Op::Create))
-                    .unwrap();
-                sim.call(Call::new(
-                    second,
-                    Purpose::Open,
-                    Op::Write(
-                        0,
-                        if damaged_is_newest {
-                            damaged.clone()
-                        } else {
-                            raw::header(0, 1, 1)
-                        },
-                    ),
-                ))
-                .unwrap();
-                sim.call(Call::new(second, Purpose::Open, Op::SyncAll))
-                    .unwrap();
-                sim.call(Call::new("/log", Purpose::Open, Op::SyncDir))
-                    .unwrap();
-                let before = sim.image();
-                let start = sim.trace().1.len();
-                assert!(
-                    matches!(SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone())),
-                    Err(OpenError::Io(e)) if e.kind() == std::io::ErrorKind::Unsupported)
-                );
-                assert_eq!(sim.image(), before);
-                assert!(!sim.trace().1[start..].iter().any(|e| matches!(e,
-                    crate::storage::sim::Event::Call(c, _, _) if matches!(c.op,
-                        Op::Write(..) | Op::Truncate(_) | Op::Remove | Op::SyncAll | Op::SyncData | Op::SyncDir))));
+        let trailing = [valid.clone(), vec![0; 33]].concat();
+        for (segments, corrupt) in [
+            (vec![(0, valid.clone()), (1, vec![])], None),
+            (vec![(0, valid.clone()), (1, vec![0; 63])], None),
+            (
+                vec![(0, valid.clone()), (1, trailing.clone())],
+                Some((1, 0)),
+            ),
+            (vec![(0, vec![]), (1, raw::header(0, 1, 1))], Some((0, 0))),
+            (
+                vec![(0, vec![0; 63]), (1, raw::header(0, 1, 1))],
+                Some((0, 0)),
+            ),
+            (
+                vec![(0, trailing), (1, raw::header(0, 1, 1))],
+                Some((0, valid.len() as u64)),
+            ),
+        ] {
+            let sim = Sim::new(802);
+            raw::install_segments(&sim, &segments);
+            let before = sim.image();
+            let result =
+                SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone()));
+            match corrupt {
+                None => {
+                    let log = result.unwrap();
+                    assert_eq!(log.watermark(), 1);
+                    assert_eq!(log.read(0, 10).unwrap()[0].payload, b"kept");
+                    assert_eq!(raw::segments(&sim), [(0, valid.clone())]);
+                }
+                Some(expected) => {
+                    assert!(
+                        matches!(
+                            result,
+                            Err(OpenError::Corrupt { segment, position })
+                                if (segment, position) == expected
+                        ),
+                        "expected Corrupt at {expected:?}"
+                    );
+                    assert_eq!(sim.image(), before);
+                }
             }
         }
     });

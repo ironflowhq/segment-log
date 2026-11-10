@@ -1,5 +1,5 @@
 use super::contract::*;
-use crate::acceptance::support::fixtures::{SEG, Sim};
+use crate::acceptance::support::fixtures::{ANY_SEG, Sim};
 use crate::storage::{Call, Op, Purpose, sim::Hold};
 use crate::*;
 use std::{
@@ -111,7 +111,9 @@ impl Driver<'_> {
     /// is held next, so every member is classified and none of its records is durable.
     fn group(&mut self, submits: &[Sub], closer: &Sub) {
         let number = self.steps.len() + usize::from(self.held.is_some());
-        let flush = self.sim.hold(Call::new(SEG, Purpose::Group, Op::SyncData));
+        let flush = self
+            .sim
+            .hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
         let append = |sub: &Sub| match self.log().append(to_submit(sub)) {
             Ok(pending) => Some(pending),
             Err(AppendError::Invalid(_)) => None,
@@ -236,7 +238,7 @@ impl Driver<'_> {
 
     fn flushed(&self) -> usize {
         self.sim
-            .count(Path::new(SEG), Purpose::Group, &Op::SyncData)
+            .count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData)
     }
 }
 

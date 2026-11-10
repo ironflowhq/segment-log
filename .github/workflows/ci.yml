@@ -28,4 +28,11 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      # Rerun every scenario across rolls: 65 bytes rolls after each group, 256 after a few.
+      - run: cargo test --workspace
+        env:
+          SEGMENT_LOG_TEST_ROLL_BYTES: 65
+      - run: cargo test --workspace
+        env:
+          SEGMENT_LOG_TEST_ROLL_BYTES: 256
       - run: python3 -m unittest discover -s scripts -p 'test_m1_*.py'

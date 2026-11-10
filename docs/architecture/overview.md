@@ -74,7 +74,7 @@ These rules hold at every point. Code and tests must not break them. A change to
 4. The writer writes the group as one frame at the end of the active segment, then calls `fsync` once.
 5. If the `fsync` succeeds: the writer applies the pending changes to the tail map and the key map, moves the watermark, and acks each new submit and each matched retry waiting for this group. Retry waiters get original positions in request order with `deduplicated: true`. The writer records every answer of the group, then wakes only a few of its callers. Each woken caller wakes a few more before it returns ([ADR 0044](../decisions/0044-woken-callers-relay-group-acks.md)).
 6. If a write, `fsync`, or durable-key lookup read or frame validation fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). Every unfinished request in the current group, including the lookup request and matched retry waiters, gets `Indeterminate`. This includes a group not yet written. Each request still queued or deferred to the next group, and each later admitted request, gets `Poisoned`. Results already finalized under the [answer-ordering rules](api.md#admission-and-answer-ordering) stay fixed. No later write or flush is attempted on the failed handle.
-7. From M3, if the active segment is at or over the roll size, the writer rolls before it starts the next group. From M4, the writer also rolls before a group whose new streams would make the segment's footer pass the frame limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
+7. From M3, if the active segment is at or over the roll size, the writer [rolls](#roll) before the next group's first new submit joins that group. A group with no new records does not roll, so step 2 still holds for it. From M4, the writer also rolls before a group whose new streams would make the segment's footer pass the frame limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
 
 A fully matching retry in step 3.1 may select subsets, reorder records, combine original submits, or mix pending and durable matches. All-durable matches need no new `fsync`. Pending matches wait for their existing group's flush and watermark publication. Normal admission limits still apply. Retry success confirms durability, not that the records originally committed atomically together. New writes retain their all-or-nothing submit guarantee.
 
@@ -142,7 +142,7 @@ flowchart TD
 6. Scan the newest segment forward from the header under the [rules for readers](format.md#rules-for-readers). From M4, the newest segment is sealed only if the scan reaches the end of the file through the closing run: a footer, then a seal frame if there is one, then a locator that points to that footer. The last bytes alone never decide this, because the tail of a record's payload can look like a locator.
 7. If the scan stopped before the end of the file, apply the following check from M4 before changing the file. If its last bytes form a valid locator that points to a valid footer frame, fail with `Corrupt`, because this is a sealed segment with a bad frame and recovery never truncates one. Otherwise, or before M4, truncate where the scan stopped. Closing frames that truncation drops were written before an `fsync` that never returned, so no ack depends on them.
 8. Make the end of the newest segment durable ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)). Write back, at the same position and with the same bytes, the trailing closing frames if the segment ends with any. Otherwise, write back the last group frame. If it has neither, write back the header. Then call `sync_all` on the segment, and `fsync` the log directory and its parent. If a call fails, open fails with `Io`.
-9. Set the writer epoch to one more than the highest epoch in the newest segment's header and its kept frames ([ADR 0018](../decisions/0018-writer-epoch-from-the-segments.md)). If step 3 created the log, the writer epoch is 1, as in its header.
+9. Set the writer epoch to one more than the highest epoch in any segment header or kept frame ([ADR 0018](../decisions/0018-writer-epoch-from-the-segments.md), [ADR 0047](../decisions/0047-writer-epoch-from-every-segment.md)). If step 3 created the log, the writer epoch is 1, as in its header.
 10. Decide the state from the end of the newest segment:
     - If step 6 found it sealed and its closing run has a seal frame, the log is sealed. Open read-only.
     - From M4, if step 6 found it sealed and its closing run has no seal frame, the crash came after a roll's footer and before the next segment existed. Create the next segment, as in roll steps 2–4.
@@ -161,13 +161,15 @@ There is no clean-shutdown marker. Recovery always scans the active segment, and
 A roll happens only between groups, so no submit crosses a roll.
 
 1. From M4: write the footer frame and the locator frame at the end of the active segment, and `fsync` it. The segment is now sealed.
-2. Create the new segment file, named by the next log offset. Write its header and `fsync` the file.
+2. Create the new segment file, named by the next log offset. Write its header and `sync_data` the file, as open does when it creates the log.
 3. `fsync` the directory, so that the new directory entry is durable.
 4. Make the new file the active segment.
 
 Before M4, step 1 does nothing. Every segment except the newest counts as sealed.
 
-If any step of a roll fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). It never appends to a segment after writing that segment's footer.
+The writer rolls when the first new submit of a group has passed its checks, before it stages any record of that group. A submit that appends nothing never starts a roll. A segment with no record does not roll, because the new segment would take its name. A roll size that an empty segment has already reached therefore rolls after every group that wrote a frame.
+
+If any step of a roll fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). No group is in flight during a roll. The submit that started the roll and every queued submit get `Poisoned`, because the writer wrote none of their records. The writer never appends to a segment after writing that segment's footer.
 
 ## Seal
 

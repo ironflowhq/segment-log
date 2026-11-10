@@ -44,12 +44,12 @@ pub(super) fn workload(sim: &Sim, shared: &Arc<Mutex<Ledger>>, variant: usize) {
     let first = Caller::start(&log, shared, anchor.clone(), true);
     first.finish();
     oracle::predict(&anchor, &mut predicted);
-    let boot_position = crate::acceptance::support::raw::bytes(sim).len();
     let held = sim.hold(flush());
     let bootstrap = Caller::start(&log, shared, boot.clone(), true);
     held.wait();
     oracle::predict(&boot, &mut predicted);
-    let boot_len = crate::acceptance::support::raw::bytes(sim).len() - boot_position;
+    let (boot_segment, boot_position, boot_frame) =
+        crate::acceptance::support::raw::last_frame(sim);
     let mut callers = vec![];
     let mut planned = vec![];
     for inputs in &originals {
@@ -116,13 +116,13 @@ pub(super) fn workload(sim: &Sim, shared: &Arc<Mutex<Ledger>>, variant: usize) {
     let deferred_id = deferred.id;
     let next = sim.hold(if lookup_failure {
         Call::new(
-            SEG,
+            boot_segment,
             Purpose::Lookup,
-            Op::Read(boot_position as u64, boot_len),
+            Op::Read(boot_position, boot_frame.len()),
         )
     } else if matches!(variant, 1 | 4 | 5) {
         Call::new(
-            SEG,
+            ANY_SEG,
             Purpose::Group,
             Op::Append(frame(2, &all, &predicted[..2])),
         )

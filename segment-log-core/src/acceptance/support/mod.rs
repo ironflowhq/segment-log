@@ -54,3 +54,5 @@ pub(crate) mod fixtures;
 pub(crate) mod raw;
 
 pub(crate) mod oracle;
+
+pub(crate) mod roll_size;

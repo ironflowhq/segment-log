@@ -21,10 +21,52 @@ struct Writer {
     epoch: u64,
     keys: Keys,
     lookup: Vec<u8>,
+    active: Active,
+    log_id: [u8; 16],
+}
+
+/// The segment that takes new frames. Only the writer thread appends to it.
+struct Active {
+    base: u64,
+    length: u64,
+}
+
+impl Writer {
+    /// Starts a new active segment at `next`, the next log offset, if the active one has
+    /// reached the roll size.
+    fn roll(
+        &mut self,
+        storage: &dyn Storage,
+        dir: &Path,
+        next: u64,
+        options: &Options,
+    ) -> io::Result<()> {
+        // A segment with no record cannot roll: its successor would take its name.
+        if self.active.length < options.roll_bytes || next == self.active.base {
+            return Ok(());
+        }
+        let header = codec::Header {
+            log_id: self.log_id,
+            base_offset: next,
+            epoch: self.epoch,
+        };
+        create_segment(storage, dir, Purpose::Roll, &header)?;
+        self.active = Active {
+            base: next,
+            length: codec::HEADER_LEN as u64,
+        };
+        Ok(())
+    }
+}
+
+fn segment_path(dir: &Path, base: u64) -> PathBuf {
+    dir.join(format!("{base:020}.seg"))
 }
 
 #[derive(Clone)]
 struct Frame {
+    /// Base offset of the segment file that holds the frame.
+    segment: u64,
     position: u64,
     length: usize,
     base: u64,
@@ -78,7 +120,7 @@ impl Request {
 }
 pub struct SegmentLog {
     storage: Arc<dyn Storage>,
-    segment: PathBuf,
+    dir: PathBuf,
     published: Arc<Mutex<Published>>,
     sender: Option<mpsc::SyncSender<Request>>,
     writer: Option<JoinHandle<()>>,
@@ -115,12 +157,12 @@ impl SegmentLog {
         }
         let options = Arc::new(options);
         let recovered = recovery::open(storage.as_ref(), dir)?;
-        let segment = recovered.segment;
+        let dir = dir.to_owned();
         let published = Arc::new(Mutex::new(recovered.published));
         let poisoned = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let (sender, receiver) = mpsc::sync_channel(options.queue_capacity);
         let writer_storage = storage.clone();
-        let writer_segment = segment.clone();
+        let writer_dir = dir.clone();
         let writer_published = published.clone();
         let writer_poisoned = poisoned.clone();
         let writer_options = options.clone();
@@ -129,7 +171,7 @@ impl SegmentLog {
             .spawn(move || {
                 run(
                     writer_storage,
-                    writer_segment,
+                    writer_dir,
                     writer_published,
                     writer_poisoned,
                     receiver,
@@ -137,6 +179,8 @@ impl SegmentLog {
                         epoch: recovered.epoch,
                         keys: recovered.keys,
                         lookup: Vec::new(),
+                        active: recovered.active,
+                        log_id: recovered.log_id,
                     },
                     writer_options,
                 );
@@ -144,7 +188,7 @@ impl SegmentLog {
             .map_err(OpenError::Io)?;
         Ok(Self {
             storage,
-            segment,
+            dir,
             published,
             sender: Some(sender),
             writer: Some(writer),
@@ -253,23 +297,21 @@ impl SegmentLog {
         for frame in frames {
             let bytes = read_bytes(
                 self.storage.as_ref(),
-                &self.segment,
+                &segment_path(&self.dir, frame.segment),
                 Purpose::Lookup,
                 frame.position,
                 frame.length,
             )
             .map_err(ReadError::Io)?;
-            let group = codec::decode(&bytes).map_err(|_| ReadError::Corrupt {
-                segment: 0,
+            let corrupt = || ReadError::Corrupt {
+                segment: frame.segment,
                 position: frame.position,
-            })?;
+            };
+            let group = codec::decode(&bytes).map_err(|_| corrupt())?;
             if group.base_offset != frame.base
                 || group.base_offset + group.entries.len() as u64 != frame.end
             {
-                return Err(ReadError::Corrupt {
-                    segment: 0,
-                    position: frame.position,
-                });
+                return Err(corrupt());
             }
             for (i, entry) in group.entries.into_iter().enumerate() {
                 let offset = group.base_offset + i as u64;
@@ -316,6 +358,22 @@ fn read_bytes(
         Value::Bytes(bytes) => Ok(bytes),
         _ => Err(io::Error::other("storage did not return bytes")),
     }
+}
+/// Creates a segment that holds only its header. Returns after the file and its directory
+/// entry are durable, so that a frame is never appended to a segment that a crash can remove.
+fn create_segment(
+    storage: &dyn Storage,
+    dir: &Path,
+    purpose: Purpose,
+    header: &codec::Header,
+) -> io::Result<()> {
+    let path = segment_path(dir, header.base_offset);
+    call(storage, &path, purpose, Op::Create)?;
+    let bytes = codec::encode_header(header).to_vec();
+    call(storage, &path, purpose, Op::Write(0, bytes))?;
+    call(storage, &path, purpose, Op::SyncData)?;
+    call(storage, dir, purpose, Op::SyncDir)?;
+    Ok(())
 }
 fn publish(published: &mut Published, frame: Frame, group: &codec::Group<'_>) {
     for (i, entry) in group.entries.iter().enumerate() {
@@ -430,7 +488,7 @@ fn revisions(
 
 fn run(
     storage: Arc<dyn Storage>,
-    segment: PathBuf,
+    dir: PathBuf,
     published: Arc<Mutex<Published>>,
     poisoned: Arc<std::sync::atomic::AtomicBool>,
     receiver: mpsc::Receiver<Request>,
@@ -445,15 +503,9 @@ fn run(
         };
         #[cfg(test)]
         crate::pipeline::request(&first.submit, crate::pipeline::DEQUEUE);
-        let snapshot = published.lock().unwrap();
-        let base = snapshot.watermark;
+        let base = published.lock().unwrap().watermark;
         // Copying every durable head here would make each group cost grow with the stream count.
         let mut heads = BTreeMap::new();
-        let position = snapshot
-            .frames
-            .last()
-            .map_or(64, |f| f.position + f.length as u64);
-        drop(snapshot);
         let mut requests = Vec::new();
         let mut assigned = Vec::new();
         let mut origins = Vec::new();
@@ -467,7 +519,7 @@ fn run(
             crate::pipeline::request(&request.submit, crate::pipeline::CLASSIFY);
             match writer.keys.classify(
                 storage.as_ref(),
-                &segment,
+                &dir,
                 &request.submit,
                 &mut writer.lookup,
                 &keys::Staged {
@@ -494,6 +546,14 @@ fn run(
                         {
                             request.answer(Err(CommitError::Exhausted));
                         } else {
+                            // The roll waits for the group's first new submit, so that a group
+                            // that appends nothing writes and flushes nothing.
+                            if requests.is_empty()
+                                && writer.roll(storage.as_ref(), &dir, base, &options).is_err()
+                            {
+                                poison(&poisoned, requests, waiters, Some(request), receiver);
+                                return;
+                            }
                             writer.keys.stage(
                                 &request.submit,
                                 base + assigned.len() as u64,
@@ -585,6 +645,7 @@ fn run(
         };
         let bytes = codec::encode(&group).expect("validated group");
         let length = bytes.len();
+        let segment = segment_path(&dir, writer.active.base);
         #[cfg(test)]
         timeline.mark(1);
         let result = call(
@@ -605,12 +666,14 @@ fn run(
             return;
         }
         let frame = Frame {
-            position,
+            segment: writer.active.base,
+            position: writer.active.length,
             length,
             base,
             end: base + assigned.len() as u64,
             epoch: writer.epoch,
         };
+        writer.active.length += length as u64;
         publish(&mut published.lock().unwrap(), frame, &group);
         #[cfg(test)]
         timeline.mark(4);

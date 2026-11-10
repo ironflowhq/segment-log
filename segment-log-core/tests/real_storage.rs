@@ -70,3 +70,66 @@ fn public_open_runs_the_same_engine_on_real_storage() {
         std::panic::resume_unwind(panic);
     }
 }
+
+const MANY_SEGMENTS_CHILD: &str = "a_log_of_many_segments_runs_under_a_small_open_file_limit";
+
+fn write_and_reopen_many_segments(dir: &std::path::Path) {
+    let options = || Options {
+        linger: Duration::ZERO,
+        roll_bytes: 1,
+        ..Options::default()
+    };
+    let count = 100;
+    let log = SegmentLog::open(dir, options()).unwrap();
+    for i in 0..count {
+        let committed = log
+            .append(Submit {
+                records: vec![NewRecord {
+                    stream: format!("s{i}").into_bytes(),
+                    expected: ExpectedRevision::Empty,
+                    key: None,
+                    payload: vec![7],
+                }],
+            })
+            .unwrap_or_else(|e| panic!("append {i} refused: {e:?}"))
+            .wait()
+            .unwrap_or_else(|e| panic!("append {i} failed: {e:?}"));
+        assert_eq!(committed.records[0].offset, i);
+    }
+    assert_eq!(log.read(0, 1000).unwrap().len(), count as usize);
+    drop(log);
+    let log = SegmentLog::open(dir, options()).unwrap();
+    assert_eq!(log.watermark(), count);
+    assert_eq!(log.read(0, 1000).unwrap().len(), count as usize);
+    let segments = std::fs::read_dir(dir)
+        .unwrap()
+        .filter(|e| e.as_ref().unwrap().path().extension() == Some("seg".as_ref()))
+        .count();
+    assert!(segments >= count as usize, "{segments} segments");
+}
+
+/// Given a process whose open-file limit is far below the number of segments it writes
+/// When it appends one record per segment, reads them all, drops the log and reopens it
+/// Then every append succeeds and both reads return every record
+///
+/// Cases: ORACLE-1, OPEN-LAYOUT, HISTORY
+#[test]
+fn a_log_of_many_segments_runs_under_a_small_open_file_limit() {
+    if let Some(dir) = std::env::var_os("SEGMENT_LOG_MANY_SEGMENTS_DIR") {
+        write_and_reopen_many_segments(std::path::Path::new(&dir));
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("segment-log-many-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir(&dir).unwrap();
+    let status = std::process::Command::new("sh")
+        .arg("-c")
+        .arg(r#"ulimit -n 32 && exec "$0" --exact "$1" --nocapture --test-threads=1"#)
+        .arg(std::env::current_exe().unwrap())
+        .arg(MANY_SEGMENTS_CHILD)
+        .env("SEGMENT_LOG_MANY_SEGMENTS_DIR", dir.join("log"))
+        .status()
+        .unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(status.success(), "child under a 32-file limit: {status}");
+}
