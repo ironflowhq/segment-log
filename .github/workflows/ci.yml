@@ -35,4 +35,4 @@ jobs:
       - run: cargo test --workspace
         env:
           SEGMENT_LOG_TEST_ROLL_BYTES: 256
-      - run: python3 -m unittest discover -s scripts -p 'test_m1_*.py'
+      - run: python3 -m unittest discover -s scripts -p 'test_m*.py'

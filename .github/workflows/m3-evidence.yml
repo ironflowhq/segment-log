@@ -1,0 +1,30 @@
+name: M3 evidence capture
+# Captures the M3 roll evidence on a hosted Linux runner: the Linux syscall trace of a roll and
+# the verifier's result (ADR 0029). Dispatch it, or put the `m3-evidence` label on a pull
+# request to capture that pull request's head.
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+permissions:
+  contents: read
+jobs:
+  linux:
+    name: Linux roll syscall capture
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'm3-evidence' }}
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace
+      - run: scripts/m3-evidence.sh "$RUNNER_TEMP/m3-evidence"
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/m3-build
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: m3-evidence-linux
+          path: ${{ runner.temp }}/m3-evidence

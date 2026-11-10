@@ -130,6 +130,60 @@ fn real_storage_sync_phases() {
     mark("done");
 }
 
+/// Reached by the first group's 1 KiB record, and not by a segment that holds one 256-byte record.
+const ROLL_BYTES: u64 = 512;
+
+fn segment_names(path: &Path) -> Vec<String> {
+    let mut names: Vec<_> = fs::read_dir(path)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .filter(|name| name.ends_with(".seg"))
+        .collect();
+    names.sort();
+    names
+}
+
+/// Given actual storage and a roll size that the first group's segment reaches
+/// When an append follows that group, then another append follows the roll
+/// Then the roll syncs the new segment and the log directory before the group frame, and the group lands in the new segment
+/// Cases: GROUP-FORMATION, OPEN-DIR
+#[test]
+fn real_storage_roll_phases() {
+    let _watchdog = super::support::deadline::Deadline::new(Duration::from_secs(300), || {});
+    mark("provision");
+    let workspace = Workspace::new();
+    let path = workspace.0.join("log");
+    let storage = Arc::new(Measured::new(true));
+    let options = Options {
+        roll_bytes: ROLL_BYTES,
+        ..Options::default()
+    };
+    mark("create");
+    let log = SegmentLog::with_storage(&path, options, storage.clone()).unwrap();
+    storage.assert_directories(&path, 2, 1);
+    for (revision, phase) in ["commit-0", "roll", "commit-1"].into_iter().enumerate() {
+        mark(phase);
+        let mut submit = input(0, revision);
+        if revision == 0 {
+            submit.records[0].payload.resize(1024, 0x5a);
+        }
+        let result = log.append(submit).unwrap().wait().unwrap();
+        assert_eq!(result.records[0].offset, revision as u64);
+        let rolled = revision > 0;
+        let names: &[&str] = if rolled {
+            &["00000000000000000000.seg", "00000000000000000001.seg"]
+        } else {
+            &["00000000000000000000.seg"]
+        };
+        assert_eq!(segment_names(&path), names);
+        storage.assert_directories(&path, 2 + usize::from(rolled), 1);
+        assert_eq!(storage.group_flushes(), revision + 1);
+    }
+    assert_eq!(log.watermark(), 3);
+    mark("done");
+    drop(log);
+}
+
 fn setting(name: &str, default: usize) -> usize {
     std::env::var(name).map_or(default, |s| s.parse().unwrap())
 }
