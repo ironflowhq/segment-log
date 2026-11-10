@@ -109,8 +109,8 @@ These numbers remain provisional. M1 measures the applicable core targets as dia
 
 | Metric | Proposed target | Conditions |
 | --- | --- | --- |
-| Append throughput | ≥ 50,000 records/s | 256-byte payloads, 1,000 caller threads, 1 ms linger, local NVMe, Linux |
-| Append latency, p99 | ≤ linger + 2 × the device's `fsync` p99 | Same |
+| Append throughput | ≥ 50,000 records/s | 256-byte payloads, 1,000 caller threads in a closed loop, 1 ms linger, local NVMe, Linux |
+| Append latency, p99 | ≤ linger + 2 × the device's `fsync` p99 | Same payloads, linger and storage. The 1,000 caller threads are paced to offer the throughput target, and latency runs from each scheduled send ([ADR 0045](decisions/0045-latency-target-is-measured-at-a-paced-rate.md)) |
 | Open time | ≤ 50 ms | 4 MiB active segment, 100 sealed segments with footers (M4 onward) |
 | Seal-to-exit | ≤ 20 ms from the `seal` call to process exit | Empty accept queue, footer for 10,000 streams |
 | Idle resident set | ≤ 8 MiB | Server binary, empty log, after open (M6) |
@@ -123,7 +123,7 @@ Measure from the defaults in [api.md](architecture/api.md).
 No published number matches this contract (an `fsync` before each acknowledgment, many streams, expected revision). See [performance reference points](architecture/prior-art.md#performance-reference-points).
 
 - **Throughput.** Systems that `fsync` on every write report hundreds to about 10,000 writes/s. Systems that do not `fsync` on acknowledgment report 30,000 to 300,000+ records/s. The 50,000 records/s target sits between the two groups. It is about 12.8 MB/s, which is small in bytes. Group commit is what makes it reachable.
-- **Latency.** The bound is relative to the device, so no other system's number applies.
+- **Latency.** The bound is relative to the device, so no other system's number applies. It is measured at the throughput target's rate, because a closed loop ties latency to throughput ([ADR 0045](decisions/0045-latency-target-is-measured-at-a-paced-rate.md)).
 - **Open time, seal-to-exit, idle resident set, binary size.** No comparable system publishes these. The M1 and M6 benchmarks are the only evidence.
 - Do not read a Kafka or default NATS number as a target. Neither `fsync`s on acknowledgment.
 
