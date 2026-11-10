@@ -44,7 +44,8 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
   drill-replay:
-    name: Drill replay (${{ matrix.os }})
+    # No matrix expression here: a skipped job would show it unexpanded. The matrix value is appended.
+    name: Drill replay
     if: ${{ always() && inputs.drill }}
     needs: m1-long-run
     timeout-minutes: 30
