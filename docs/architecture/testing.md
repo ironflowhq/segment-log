@@ -15,7 +15,7 @@ The [PRD milestone gates](../prd.md#milestones) remain the source for completion
 | Group | Scenario cases | Gate evidence | Status |
 | --- | --- | --- | --- |
 | M0-READINESS | None | Green CI run linked in the [PRD](../prd.md#milestones) | Implemented |
-| M1 | [M1 groups below](#m1-acceptance-coverage) | [M1 completion gate](#m1-completion-gate) | Partial |
+| M1 | [M1 groups below](#m1-acceptance-coverage) | [M1 completion gate](#m1-completion-gate), [completion record](../evidence/m1/completion.md) | Implemented |
 | M2-MODEL | `MODEL`, `REV-NO-OFFSET` | None beyond the tests | Planned |
 | M3-ROLL | `ORACLE-6`, M3 parts of `OPEN-LAYOUT`, `RECOVERY-FIXTURES`, `KEY-LIFETIME` and `HISTORY`; M1 scenarios rerun with a small `roll_bytes` | Linux syscall trace of the roll directory sync | Planned |
 | M4-SEAL-READ | `READER`, `ROLL-FOOTER`, M4 parts of `CODEC-GROUP`, `ADM-PRECEDENCE`, `RECOVERY-FIXTURES` and `HISTORY` | None beyond the tests | Planned |
@@ -34,7 +34,8 @@ evidence for each former Partial row and distinguishes fixed synthetic boundarie
 from generated workloads. The oracle saves caller and reader ledgers with storage
 traces and reruns recovery without replaying thread scheduling. Full model-based
 verification remains M2. Rolling, sealed segments, footers, locators and read-only
-open retain their later gates. M1 completion artifacts remain outstanding.
+open retain their later gates. The [completion record](../evidence/m1/completion.md)
+holds the M1 completion artifacts.
 
 | Group | Requirements or invariants | Scenario cases | Status |
 | --- | --- | --- | --- |
@@ -66,7 +67,7 @@ All of the following evidence is required:
 3. Directory-sync checks succeed on Linux and macOS during log creation and recovery, using the actual storage implementation. Record the commands and results. These checks verify the calls used by the library; they do not certify a deployment's storage contract. [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) keeps actual-stack qualification as a pre-M6 requirement under PRD item 3.
 4. A reproducible Linux core benchmark report is saved in `docs/`. It includes the commands, workload parameters, actual hardware and software conditions, and applicable measurements in the benchmark section below. Record deviations from target conditions and do not claim a target passed under different conditions. Report seeds or other parameters needed to reproduce randomized workloads.
 
-Correctness or durability failures block completion. Missing evidence, omitted applicable measurements or an unreproducible report also block completion. Missed provisional M1 performance targets are explicit findings in the report, not completion blockers. The completion record links the test results, syscall and directory-sync evidence, and benchmark report. This gate defines required evidence; it does not claim that any of it has run yet.
+Correctness or durability failures block completion. Missing evidence, omitted applicable measurements or an unreproducible report also block completion. Missed provisional M1 performance targets are explicit findings in the report, not completion blockers. The completion record links the test results, syscall and directory-sync evidence, and benchmark report. This gate defines the required evidence. The [completion record](../evidence/m1/completion.md) holds it for the tree that passed.
 
 Roll-specific syscall verification belongs to M3. Footer-based open-time and seal targets wait for M4, and server footprint and socket measurements wait for M6. An M1 report marks these later-feature metrics as not applicable. Existing later-milestone gates remain unchanged.
 
