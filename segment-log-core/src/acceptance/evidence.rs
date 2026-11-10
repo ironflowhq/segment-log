@@ -151,6 +151,11 @@ fn distribution(name: &str, mut values: Vec<u64>) {
         values.iter().sum::<u64>()
     );
 }
+/// When a paced caller sends its submit for `round`. Callers are spread evenly over one
+/// interval, so the offered rate is `callers / interval` without a burst at each tick.
+fn due(epoch: Instant, interval: Duration, caller: usize, callers: usize, round: usize) -> Instant {
+    epoch + interval.mul_f64(caller as f64 / callers as f64) + interval * round as u32
+}
 fn size(path: &Path) -> u64 {
     fs::metadata(path.join("00000000000000000000.seg"))
         .unwrap()
@@ -176,6 +181,18 @@ fn measured_appends_survive_reopen() {
         other => panic!("invalid SEGMENT_LOG_BENCH_STORAGE: {other:?}"),
     };
     let profile_cpu = std::env::var_os("SEGMENT_LOG_BENCH_CPU").is_some();
+    // Unset, each caller submits again as soon as it is answered (a closed loop).
+    let interval = std::env::var("SEGMENT_LOG_BENCH_INTERVAL_US")
+        .ok()
+        .map(|micros| Duration::from_micros(micros.parse().unwrap()));
+    if let Some(interval) = interval {
+        assert!(!interval.is_zero());
+        println!(
+            "PACED interval_ns={} offered_records_per_second={:.3} latency_from=scheduled_send",
+            interval.as_nanos(),
+            callers as f64 / interval.as_secs_f64()
+        );
+    }
     println!("DIAGNOSTIC measured_storage={measured} phase_cpu={profile_cpu}");
     let options = Options::default();
     println!(
@@ -234,16 +251,25 @@ fn measured_appends_survive_reopen() {
                 .name(format!("caller-{caller}"))
                 .spawn_scoped(scope, move || {
                     ready.send(()).unwrap();
-                    if start.recv().is_err() {
+                    let Ok(epoch) = start.recv() else {
                         return None;
-                    }
+                    };
                     let cpu_start = profile_cpu.then(cpu::current);
                     let mut latencies = Vec::with_capacity(rounds);
                     let mut offsets = Vec::with_capacity(rounds);
                     let mut full = 0;
                     let mut admission_ns = 0;
                     for revision in 0..rounds {
-                        let now = Instant::now();
+                        // A late paced caller still measures from its scheduled send, so a
+                        // stall delays later samples instead of removing them.
+                        let now = match interval {
+                            None => Instant::now(),
+                            Some(interval) => {
+                                let due = due(epoch, interval, caller, callers, revision);
+                                thread::sleep(due.saturating_duration_since(Instant::now()));
+                                due
+                            }
+                        };
                         crate::pipeline::caller(caller, revision, crate::pipeline::START);
                         let pending = loop {
                             let request = input(caller, revision);
@@ -296,7 +322,7 @@ fn measured_appends_survive_reopen() {
         let writer_start = profile_cpu.then(cpu::writer);
         let now = Instant::now();
         for gate in gates {
-            gate.send(()).unwrap();
+            gate.send(now).unwrap();
         }
         let mut latencies = Vec::new();
         let mut positions = Vec::new();
@@ -372,4 +398,21 @@ fn measured_appends_survive_reopen() {
         size(&path)
     );
     drop(log);
+}
+
+/// Given four paced callers and a 20 ms interval
+/// When their sends are scheduled from one start time
+/// Then each caller sends once per interval and the callers are 5 ms apart
+#[test]
+fn paced_callers_spread_evenly_over_each_interval() {
+    let epoch = Instant::now();
+    let interval = Duration::from_millis(20);
+    for round in 0..3 {
+        for caller in 0..4 {
+            assert_eq!(
+                due(epoch, interval, caller, 4, round),
+                epoch + Duration::from_millis(20 * round as u64 + 5 * caller as u64)
+            );
+        }
+    }
 }
