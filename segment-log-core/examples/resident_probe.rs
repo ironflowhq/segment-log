@@ -106,7 +106,7 @@ fn work<T>(phase: &str, f: impl FnOnce() -> Result<T, String>) -> Result<T, Stri
 fn run(c: &mut Counts) -> Result<(), String> {
     let args: Vec<_> = std::env::args().collect();
     if args.len() != 8 {
-        return Err("usage: resident_probe MODE DIR RECORDS KEYS STREAMS GROUP PAYLOAD; MODE = empty|caller|append|recover|touch".into());
+        return Err("usage: resident_probe MODE DIR RECORDS KEYS STREAMS GROUP PAYLOAD; MODE = empty|caller|append|recover|touch|pulse".into());
     }
     let number = |i: usize| args[i].parse::<usize>().map_err(|e| e.to_string());
     let h = History {
@@ -144,6 +144,22 @@ fn run(c: &mut Counts) -> Result<(), String> {
             }
             drop(buffer);
             barrier("touched_dropped")?;
+        }
+        // A known transient: the buffer is resident only inside the phase, never at a barrier.
+        "pulse" => {
+            let bytes = h
+                .records
+                .checked_mul(h.payload)
+                .ok_or("pulse size overflow")?;
+            work("pulse", || {
+                let buffer = black_box(vec![0xa5u8; bytes]);
+                if buffer.iter().all(|&b| b == 0xa5) {
+                    Ok(())
+                } else {
+                    Err("pulse mismatch".to_string())
+                }
+            })?;
+            barrier("pulsed")?;
         }
         "caller" => {
             let submits = work("caller_build", || Ok(h.submits()))?;

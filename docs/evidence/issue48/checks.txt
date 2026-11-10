@@ -1,0 +1,18 @@
+.....................................................
+----------------------------------------------------------------------
+Ran 53 tests in 0.073s
+
+OK
+
+caught	2 failing	peak ignores the start
+caught	2 failing	snapshot trusts the first read
+caught	1 failing	lost events accepted
+caught	1 failing	replay mismatch accepted
+caught	1 failing	remote events of other memories kept
+caught	1 failing	own events of another memory accepted
+caught	1 failing	own remote-context events accepted
+caught	1 failing	unknown trace lines skipped
+caught	1 failing	swap counted as resident
+caught	1 failing	pulse lower bound dropped
+caught	1 failing	pin not checked
+caught	1 failing	owner known-size checks skipped
