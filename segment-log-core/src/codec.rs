@@ -36,6 +36,10 @@ pub(crate) const LOCATOR_LEN: usize = 40;
 
 const ENVELOPE_LEN: usize = 8;
 pub(crate) const BODY_HEADER_LEN: usize = 24;
+/// A footer body before its entries: the body header and `key_filter_position`.
+pub(crate) const FOOTER_HEADER_LEN: usize = BODY_HEADER_LEN + 8;
+/// A footer entry before its stream id.
+pub(crate) const FOOTER_ENTRY_LEN: usize = 28;
 
 const _: () = assert!(
     BODY_HEADER_LEN + PAGE_SIZE * KEYED_RECORD_LIMIT.div_ceil(PAGE_ENTRIES) <= FRAME_BODY_LIMIT

@@ -453,3 +453,179 @@ fn a_newest_segment_that_ends_in_a_closing_run_gets_its_successor() {
         assert_eq!(sim.image(), before);
     });
 }
+
+/// Opens the log at `/log` with the default roll size and scaled closing-frame limits.
+fn open_limited(sim: &Sim, limits: crate::engine::Limits) -> SegmentLog {
+    let before = raw::segments(sim);
+    let log = SegmentLog::with_hooks(
+        Path::new("/log"),
+        unrolled(),
+        Arc::new(sim.clone()),
+        crate::engine::Hooks {
+            limits,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    super::support::oracle::sealed_unchanged(&before, &raw::segments(sim));
+    log
+}
+
+fn on(stream: &[u8], key: Option<&[u8]>, revision: Option<u64>) -> Submit {
+    Submit {
+        records: vec![NewRecord {
+            stream: stream.to_vec(),
+            key: key.map(<[u8]>::to_vec),
+            payload: b"x".to_vec(),
+            expected: revision.map_or(ExpectedRevision::Empty, ExpectedRevision::At),
+        }],
+    }
+}
+
+/// The body length and `count` of each closing frame of a sealed segment image, in file order.
+fn closing_frames(segment: &[u8]) -> Vec<(usize, u32)> {
+    let (groups, run) = raw::split_run(segment);
+    frames_at(run, groups.len())
+        .into_iter()
+        .map(|(at, length)| {
+            let count = u32::from_le_bytes(segment[at + 28..at + 32].try_into().unwrap());
+            (length - 8, count)
+        })
+        .collect()
+}
+
+/// Commits `first` while its group's flush is held, so that `queued` all gather in the next group.
+fn behind_a_held_flush(
+    sim: &Sim,
+    log: &SegmentLog,
+    first: Submit,
+    queued: Vec<Submit>,
+) -> Vec<u64> {
+    use crate::storage::{Call, Op, Purpose};
+    let flush = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::SyncData));
+    let first = log.append(first).unwrap();
+    flush.wait();
+    let queued: Vec<_> = queued
+        .into_iter()
+        .map(|submit| log.append(submit).unwrap())
+        .collect();
+    flush.release(None);
+    first.wait().unwrap();
+    queued
+        .into_iter()
+        .map(|pending| pending.wait().unwrap().records[0].offset)
+        .collect()
+}
+
+/// Given a footer limit, scaled for the test, that three streams with one-byte ids fill exactly
+/// When submits on streams a and b commit, and then submits on c, on a again, on d and on e queue
+/// behind a held flush into one group
+/// Then the submits on c and a join that group, which fills the footer to the limit
+/// And the submit on d waits for the next group, which rolls first, so it takes the next segment's
+/// first offset, and the submit on e follows it there in order
+/// And the sealed segment's footer body is exactly the limit, and no closing frame passes it
+///
+/// Cases: ROLL-FOOTER, GROUP-FORMATION
+#[test]
+fn a_submit_whose_new_streams_would_pass_the_footer_limit_rolls_first() {
+    bounded(|| {
+        let limit = 24 + 8 + 3 * (28 + 1);
+        let sim = Sim::new(336);
+        let log = open_limited(
+            &sim,
+            crate::engine::Limits {
+                footer_body: limit,
+                ..Default::default()
+            },
+        );
+        log.append(on(b"a", None, None)).unwrap().wait().unwrap();
+        let offsets = behind_a_held_flush(
+            &sim,
+            &log,
+            on(b"b", None, None),
+            vec![
+                on(b"c", None, None),
+                on(b"a", None, Some(0)),
+                on(b"d", None, None),
+                on(b"e", None, None),
+            ],
+        );
+        assert_eq!(offsets, [2, 3, 4, 5]);
+        let segments = raw::segments(&sim);
+        assert_eq!(
+            segments.iter().map(|(base, _)| *base).collect::<Vec<_>>(),
+            [0, 4]
+        );
+        let frames = closing_frames(&segments[0].1);
+        assert_eq!(frames[2], (limit, 3), "the footer fills the limit");
+        assert!(
+            frames
+                .iter()
+                .all(|&(body, _)| body <= codec::FRAME_BODY_LIMIT)
+        );
+    });
+}
+
+/// Given a keyed-record limit, scaled for the test, of three
+/// When a submit with two keys commits, and then a submit with one key, an unkeyed submit, and two
+/// more keyed submits queue behind a held flush into one group
+/// Then the keyed and the unkeyed submit join that group, which fills the limit
+/// And the next keyed submit waits for the next group, which rolls first, so it takes the next
+/// segment's first offset, and the last one follows it there in order
+/// And the sealed segment's key filter and key index each hold exactly three keyed records
+/// And a retry of each of those keys returns its original position
+///
+/// Cases: ROLL-FOOTER, GROUP-FORMATION, KEY-LIFETIME
+#[test]
+fn a_submit_whose_keys_would_pass_the_key_index_limit_rolls_first() {
+    bounded(|| {
+        let sim = Sim::new(337);
+        let log = open_limited(
+            &sim,
+            crate::engine::Limits {
+                keyed_records: 3,
+                ..Default::default()
+            },
+        );
+        let pair = Submit {
+            records: vec![keyed(0), keyed(1)],
+        };
+        log.append(pair).unwrap().wait().unwrap();
+        let offsets = behind_a_held_flush(
+            &sim,
+            &log,
+            on(b"plain", None, None),
+            vec![
+                Submit {
+                    records: vec![keyed(2)],
+                },
+                on(b"plain", None, Some(0)),
+                Submit {
+                    records: vec![keyed(3)],
+                },
+                Submit {
+                    records: vec![keyed(4)],
+                },
+            ],
+        );
+        assert_eq!(offsets, [3, 4, 5, 6]);
+        let segments = raw::segments(&sim);
+        assert_eq!(
+            segments.iter().map(|(base, _)| *base).collect::<Vec<_>>(),
+            [0, 5]
+        );
+        let frames = closing_frames(&segments[0].1);
+        assert_eq!((frames[0].1, frames[1].1), (3, 3), "three keyed records");
+        for (n, offset) in [(0, 0), (1, 1), (2, 3)] {
+            let answer = log
+                .append(Submit {
+                    records: vec![keyed(n)],
+                })
+                .unwrap()
+                .wait()
+                .unwrap();
+            assert!(answer.deduplicated);
+            assert_eq!(answer.records[0].offset, offset);
+        }
+    });
+}

@@ -132,11 +132,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         found.published.roll();
         (Active::new(next), BTreeMap::new())
     } else {
-        let active = Active {
-            base: newest,
-            length: found.newest.end,
-            tails: found.newest.tails,
-        };
+        let active = Active::recovered(newest, found.newest.end, found.newest.tails);
         (active, found.newest.keys)
     };
     Ok(Recovered {

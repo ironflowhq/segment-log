@@ -5,6 +5,7 @@ const SHARED: u64 = 0x5eed_0000_0000_5eed;
 fn sharing(keys: &[Vec<u8>]) -> Hooks {
     Hooks {
         key_hashes: keys.iter().map(|key| (key.clone(), SHARED)).collect(),
+        ..Hooks::default()
     }
 }
 

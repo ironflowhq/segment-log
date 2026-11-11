@@ -250,6 +250,11 @@ impl Keys {
         }
     }
 
+    /// The keyed records of the active segment, staged ones included.
+    pub(super) fn keyed(&self) -> usize {
+        self.active.len()
+    }
+
     /// Roll step 1: the active segment's key index entries.
     pub(super) fn index_entries(&self) -> Vec<codec::KeyEntry> {
         self.active

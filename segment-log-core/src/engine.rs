@@ -72,6 +72,24 @@ impl Request {
 pub(crate) struct Hooks {
     /// KEY-COLLISION: these keys hash to the given value, at roll and at lookup alike.
     pub key_hashes: BTreeMap<Vec<u8>, u64>,
+    /// ROLL-FOOTER: smaller closing-frame limits, so that a test can fill them.
+    pub limits: Limits,
+}
+/// The closing-frame limits that make the writer roll early (format.md, limits).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Limits {
+    /// The largest footer body.
+    pub footer_body: usize,
+    /// The most keyed records in one segment.
+    pub keyed_records: usize,
+}
+impl Default for Limits {
+    fn default() -> Self {
+        Self {
+            footer_body: codec::FRAME_BODY_LIMIT,
+            keyed_records: codec::KEYED_RECORD_LIMIT,
+        }
+    }
 }
 /// Key-cache memory as rule 5 of ADR 0048 counts it.
 #[cfg(test)]
@@ -110,7 +128,7 @@ impl SegmentLog {
         options: Options,
         storage: Arc<dyn Storage>,
     ) -> Result<Self, OpenError> {
-        Self::start(dir, options, storage, KeyHash::new)
+        Self::start(dir, options, storage, KeyHash::new, Limits::default())
     }
     #[cfg(test)]
     pub(crate) fn with_hooks(
@@ -119,15 +137,16 @@ impl SegmentLog {
         storage: Arc<dyn Storage>,
         hooks: Hooks,
     ) -> Result<Self, OpenError> {
-        Self::start(dir, options, storage, |log_id| {
-            KeyHash::new(log_id).forcing(hooks.key_hashes)
-        })
+        let Hooks { key_hashes, limits } = hooks;
+        let hash = |log_id| KeyHash::new(log_id).forcing(key_hashes);
+        Self::start(dir, options, storage, hash, limits)
     }
     fn start(
         dir: &Path,
         options: Options,
         storage: Arc<dyn Storage>,
         hash: impl FnOnce(codec::LogId) -> KeyHash,
+        limits: Limits,
     ) -> Result<Self, OpenError> {
         if options.queue_capacity == 0 || options.pending_byte_budget == 0 {
             return Err(OpenError::InvalidOptions("capacities must be positive"));
@@ -171,6 +190,7 @@ impl SegmentLog {
                         epoch: recovered.epoch,
                         keys,
                         active: recovered.active,
+                        limits,
                         #[cfg(test)]
                         memory: writer_memory,
                     },

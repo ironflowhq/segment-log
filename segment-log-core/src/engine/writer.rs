@@ -6,6 +6,7 @@ pub(super) struct Writer {
     pub epoch: u64,
     pub keys: Keys,
     pub active: Active,
+    pub limits: Limits,
     #[cfg(test)]
     pub memory: Arc<Mutex<KeyMemory>>,
 }
@@ -16,24 +17,58 @@ pub(super) struct Active {
     pub base: u64,
     pub length: u64,
     /// Each stream's last durable record in this segment.
-    pub tails: BTreeMap<Vec<u8>, Tail>,
+    tails: BTreeMap<Vec<u8>, Tail>,
+    /// The body length of a footer for `tails`.
+    footer_body: usize,
 }
 
 impl Active {
     pub(super) fn new(base: u64) -> Self {
+        Self::recovered(base, codec::HEADER_LEN as u64, BTreeMap::new())
+    }
+
+    pub(super) fn recovered(base: u64, length: u64, tails: BTreeMap<Vec<u8>, Tail>) -> Self {
+        let footer_body = tails
+            .keys()
+            .map(|stream| footer_entry(stream))
+            .sum::<usize>();
         Self {
             base,
-            length: codec::HEADER_LEN as u64,
-            tails: BTreeMap::new(),
+            length,
+            tails,
+            footer_body: codec::FOOTER_HEADER_LEN + footer_body,
         }
     }
 }
 
+fn footer_entry(stream: &[u8]) -> usize {
+    codec::FOOTER_ENTRY_LEN + stream.len()
+}
+
 impl Writer {
-    /// Whether the next group's first new submit, at log offset `next`, starts a new segment.
-    fn rolls_before(&self, next: u64, options: &Options) -> bool {
+    /// Whether the active segment's closing frames, with the draft's submits and `submit` added,
+    /// stay within their limits (ROLL-FOOTER).
+    fn fits(&self, draft: &Draft, submit: &Submit) -> bool {
+        let mut streams: Vec<&[u8]> = submit
+            .records
+            .iter()
+            .map(|record| record.stream.as_slice())
+            .filter(|stream| !self.active.tails.contains_key(*stream))
+            .filter(|stream| !draft.tails.contains_key(*stream))
+            .collect();
+        streams.sort_unstable();
+        streams.dedup();
+        let footer = self.active.footer_body
+            + draft.footer_growth
+            + streams.into_iter().map(footer_entry).sum::<usize>();
+        let keyed = submit.records.iter().filter(|r| r.key.is_some()).count();
+        footer <= self.limits.footer_body && self.keys.keyed() + keyed <= self.limits.keyed_records
+    }
+
+    /// Whether the group's first new submit, at log offset `next`, starts a new segment.
+    fn rolls_before(&self, next: u64, fits: bool, options: &Options) -> bool {
         // A segment with no record cannot roll: its successor would take its name.
-        self.active.length >= options.roll_bytes && next != self.active.base
+        (self.active.length >= options.roll_bytes || !fits) && next != self.active.base
     }
 
     /// Seals the active segment with its closing run, then starts a new active segment at `next`,
@@ -158,6 +193,8 @@ struct Draft {
     /// Each stream's last record among the submits staged so far. Its revision overrides the
     /// durable heads, which the group has not changed yet.
     tails: BTreeMap<Vec<u8>, Tail>,
+    /// What those streams add to the active segment's footer body.
+    footer_growth: usize,
     waiters: Vec<RetryWaiter>,
     size: usize,
 }
@@ -171,6 +208,7 @@ impl Draft {
             assigned: Vec::new(),
             // Copying every durable head here would make each group cost grow with the stream count.
             tails: BTreeMap::new(),
+            footer_growth: 0,
             waiters: Vec::new(),
             size: codec::BODY_HEADER_LEN,
         }
@@ -200,6 +238,11 @@ impl Writer {
             .extend((0..submit.records.len()).map(|record| (draft.requests.len(), record)));
         draft.size += body_size(submit).unwrap() - codec::BODY_HEADER_LEN;
         for (i, (record, revision)) in submit.records.iter().zip(revisions).enumerate() {
+            if !self.active.tails.contains_key(&record.stream)
+                && !draft.tails.contains_key(&record.stream)
+            {
+                draft.footer_growth += footer_entry(&record.stream);
+            }
             draft.tails.insert(
                 record.stream.clone(),
                 Tail {
@@ -252,7 +295,12 @@ pub(super) fn run(
                         Ok(revisions) => {
                             let added =
                                 body_size(&request.submit).unwrap() - codec::BODY_HEADER_LEN;
-                            if draft.size + added > options.group_byte_cap {
+                            let fits = writer.fits(&draft, &request.submit);
+                            // The next group rolls before a submit that does not fit the
+                            // closing frames (overview, write path step 2).
+                            if draft.size + added > options.group_byte_cap
+                                || (!fits && !draft.requests.is_empty())
+                            {
                                 deferred = Some(request);
                                 break;
                             }
@@ -269,11 +317,16 @@ pub(super) fn run(
                                 // The roll waits for the group's first new submit, so that a group
                                 // that appends nothing writes and flushes nothing.
                                 if draft.requests.is_empty()
-                                    && writer.rolls_before(draft.base, &options)
-                                    && writer.roll(&view, draft.base).is_err()
+                                    && writer.rolls_before(draft.base, fits, &options)
                                 {
-                                    poison(&poisoned, draft, Some(request), receiver);
-                                    return;
+                                    if writer.roll(&view, draft.base).is_err() {
+                                        poison(&poisoned, draft, Some(request), receiver);
+                                        return;
+                                    }
+                                    debug_assert!(
+                                        writer.fits(&draft, &request.submit),
+                                        "a submit under the group cap fits an empty segment's closing frames"
+                                    );
                                 }
                                 writer.stage(&mut draft, request, &revisions);
                             }
@@ -388,6 +441,7 @@ impl Writer {
         let span = GroupSpan::of(self.active.length, length, &group);
         self.active.length += length as u64;
         self.active.tails.append(&mut draft.tails);
+        self.active.footer_body += std::mem::take(&mut draft.footer_growth);
         view.published.lock().unwrap().publish(span, &group);
         #[cfg(test)]
         timeline.mark(4);
