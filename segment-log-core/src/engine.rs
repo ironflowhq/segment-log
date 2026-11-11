@@ -14,6 +14,7 @@ use std::{
 mod keys;
 mod recovery;
 mod reply;
+mod survey;
 mod view;
 mod writer;
 use keys::Keys;
