@@ -40,7 +40,7 @@ callers (threads, or a socket server in M6)
 - **Writer thread.** The only thread that writes segment files. It owns the tail map and the key map, and it assigns log offsets and revisions. Because one thread does every check, a check is atomic with respect to other appends.
 - **Segments.** Append-only files. The active segment takes new frames. Sealed segments never change.
 - **Watermark.** An atomic value that readers load. Only the writer stores it.
-- **Caches.** The tail map, the key map and the sparse index. The log can rebuild each one from the segments.
+- **Caches.** The tail map, the key map, the sparse index and, from M4, the key filters that open loads from sealed segments. The log can rebuild each one from the segments.
 
 ## Storage contract
 
@@ -73,10 +73,12 @@ These rules hold at every point. Code and tests must not break them. A change to
    3. assigns log offsets and revisions, and adds the records to the group and to the pending changes.
 4. The writer writes the group as one frame at the end of the active segment, then calls `fsync` once.
 5. If the `fsync` succeeds: the writer applies the pending changes to the tail map and the key map, moves the watermark, and acks each new submit and each matched retry waiting for this group. Retry waiters get original positions in request order with `deduplicated: true`. The writer records every answer of the group, then wakes only a few of its callers. Each woken caller wakes a few more before it returns ([ADR 0044](../decisions/0044-woken-callers-relay-group-acks.md)).
-6. If a write, `fsync`, or durable-key lookup read or frame validation fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). Every unfinished request in the current group, including the lookup request and matched retry waiters, gets `Indeterminate`. This includes a group not yet written. Each request still queued or deferred to the next group, and each later admitted request, gets `Poisoned`. Results already finalized under the [answer-ordering rules](api.md#admission-and-answer-ordering) stay fixed. No later write or flush is attempted on the failed handle.
-7. From M3, if the active segment is at or over the roll size, the writer [rolls](#roll) before the next group's first new submit joins that group. A group with no new records does not roll, so step 2 still holds for it. From M4, the writer also rolls before a group whose new streams would make the segment's footer pass the frame limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)).
+6. If a write, `fsync`, or durable-key lookup read, frame validation or key index page validation fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). Every unfinished request in the current group, including the lookup request and matched retry waiters, gets `Indeterminate`. This includes a group not yet written. Each request still queued or deferred to the next group, and each later admitted request, gets `Poisoned`. Results already finalized under the [answer-ordering rules](api.md#admission-and-answer-ordering) stay fixed. No later write or flush is attempted on the failed handle.
+7. From M3, if the active segment is at or over the roll size, the writer [rolls](#roll) before the next group's first new submit joins that group. A group with no new records does not roll, so step 2 still holds for it. From M4, the writer also rolls before a group whose new streams would make the segment's footer pass the frame limit ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)), or whose keys would make its key index frame pass it ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)).
 
 A fully matching retry in step 3.1 may select subsets, reorder records, combine original submits, or mix pending and durable matches. All-durable matches need no new `fsync`. Pending matches wait for their existing group's flush and watermark publication. Normal admission limits still apply. Retry success confirms durability, not that the records originally committed atomically together. New writes retain their all-or-nothing submit guarantee.
+
+From M4, step 3.1 looks for an existing key in this order ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)): the keys staged by the current group, then the active segment's key map, then each sealed segment's [key filter](format.md#key-filter-frame-m4), from the newest segment back. For each "maybe", the writer reads the key index page that can hold the key's [hash](format.md#key-hash-m4), then reads and validates each group frame that an entry with that hash names, and compares the key bytes first. A different key there is a false hit, and the writer tries the next entry with that hash, then older segments. A false hit is never a match, never a `KeyConflict` and never a lookup failure. Through M3, the key map holds every retained key.
 
 Each accepted request holds its admission byte reservation through processing and retry waiting. Every answer path releases it, including rejection, success and poison. Queue insertion failure and writer shutdown must not leak reservations. A dropped result handle does not release a request that is still being processed. The charge includes retained allocation capacities and explicit bookkeeping and result allowances under [ADR 0026](../decisions/0026-admission-charges-retained-allocations.md). The [formula](api.md#admission-charge) is separate from encoded group size and does not bound total process memory. The default is an accounting ceiling without a budget-sized preallocation ([ADR 0027](../decisions/0027-default-admission-budget-is-an-accounting-ceiling.md)). Requests that cannot fit the entire budget get `TooLarge` under ADR 0028.
 
@@ -100,7 +102,7 @@ A stricter rule, "ignore a CRC-valid suffix after the last acknowledged group", 
 
 The flowchart shows the decisions in the steps below. The steps are the rule. If the two disagree, the steps win, and the flowchart must be fixed in the same change.
 
-The flowchart shows the cumulative algorithm. The [API's option and layout checks](api.md#opening-a-directory) run before recovery mutations. M1 and M2 handle one segment without roll. M3 adds the older-segment scans and roll recovery in the steps below. M4 adds the footer, seal and locator branches.
+The flowchart shows the cumulative algorithm. The [API's option and layout checks](api.md#opening-a-directory) run before recovery mutations. M1 and M2 handle one segment without roll. M3 adds the older-segment scans and roll recovery in the steps below. M4 adds the closing-run branches.
 
 ```mermaid
 flowchart TD
@@ -116,11 +118,11 @@ flowchart TD
     any -->|yes| headers["4. Check every header"]
     create --> headers
     headers -->|bad header or log id| badhdr(["Corrupt or LogIdMismatch"])
-    headers --> older["5. Read the older segments:<br/>locator and footer only"]
+    headers --> older["5. Read the older segments:<br/>locator, footer and key filter only"]
     older -->|bad frame or gap| badold(["Corrupt or Gap"])
     older --> scan["6. Scan the newest segment forward"]
     scan --> eof{"Did the scan reach<br/>the end of the file?"}
-    eof -->|no| loc{"7. Do the last bytes form a valid locator<br/>that points to a valid footer?"}
+    eof -->|no| loc{"7. Do the last bytes form a valid locator<br/>that points to a valid footer, and did the scan<br/>stop before that footer's closing run?"}
     loc -->|yes| corrupt(["Corrupt"])
     loc -->|no| cut["Truncate where the scan stopped"]
     eof -->|yes| rewrite["8. Rewrite the tail, sync_all,<br/>fsync the directory and its parent"]
@@ -128,8 +130,8 @@ flowchart TD
     rewrite -->|a call fails| io(["Io"])
     rewrite --> epoch["9. Writer epoch: highest epoch + 1"]
     epoch --> ends{"10. How does the newest<br/>segment end?"}
-    ends -->|footer, seal, locator| ro(["Sealed log: open read-only"])
-    ends -->|footer, locator| next["Crash mid-roll:<br/>create the next segment"]
+    ends -->|a seal's closing run| ro(["Sealed log: open read-only"])
+    ends -->|a roll's closing run| next["Crash mid-roll:<br/>create the next segment"]
     ends -->|group frames| run(["11–12. Set the watermark, rebuild<br/>the caches, start the writer"])
     next --> run
 ```
@@ -138,21 +140,21 @@ flowchart TD
 2. List the segment files and sort them by base offset. If the newest file is no longer than a segment header and its header CRC does not match, delete it and `fsync` the directory. A crash while creating the segment left it, and it holds no record, because the writer appends frames to a new segment only after its header and its directory entry are durable. Any other bad header is an error, never a deletion.
 3. If no segment is left, create the log. Take the `log_id` from the storage trait's random bytes. Write segment `00000000000000000000.seg` with its header and epoch 1, `sync_data` it, and `fsync` the directory.
 4. Check every header against the [rules for readers](format.md#rules-for-readers). A bad header fails with `Corrupt`. A different log id fails with `LogIdMismatch`.
-5. From M3, read every segment except the newest. Each one is sealed. From M4, its successor proves that its real locator is its last frame. In M3, scan all of its frames to rebuild the caches. From M4, read only its locator and its footer, plus any separate lookup metadata chosen under [PRD item 1](../prd.md#open-items). The segment-file read limit still applies. Any frame that is not valid fails with `Corrupt`. Recovery never truncates a sealed segment. Each sealed segment's next unused offset must equal the next segment's base offset. A gap fails with `Gap`.
-6. Scan the newest segment forward from the header under the [rules for readers](format.md#rules-for-readers). From M4, the newest segment is sealed only if the scan reaches the end of the file through the closing run: a footer, then a seal frame if there is one, then a locator that points to that footer. The last bytes alone never decide this, because the tail of a record's payload can look like a locator.
-7. If the scan stopped before the end of the file, apply the following check from M4 before changing the file. If its last bytes form a valid locator that points to a valid footer frame, fail with `Corrupt`, because this is a sealed segment with a bad frame and recovery never truncates one. Otherwise, or before M4, truncate where the scan stopped. Closing frames that truncation drops were written before an `fsync` that never returned, so no ack depends on them.
+5. From M3, read every segment except the newest. Each one is sealed. From M4, its successor proves that its real locator is its last frame. In M3, scan all of its frames to rebuild the caches. From M4, read only its locator, its footer and the key filter frame that the footer names ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)), and keep the filter in memory. Any frame that is not valid fails with `Corrupt`. Recovery never truncates a sealed segment. Each sealed segment's next unused offset must equal the next segment's base offset. A gap fails with `Gap`.
+6. Scan the newest segment forward from the header under the [rules for readers](format.md#rules-for-readers). From M4, the newest segment is sealed only if the scan reaches the end of the file through a complete closing run, a roll's or a seal's. The last bytes alone never decide this, because the tail of a record's payload can look like a locator.
+7. If the scan stopped before the end of the file, apply the following check from M4 before changing the file. If its last bytes form a valid locator that points to a valid footer frame, and the scan stopped before that footer's closing run starts, fail with `Corrupt`, because this is a sealed segment with a bad group frame and recovery never truncates one. The run starts at the footer's `key_filter_position`, or at the footer when that is `0`. Otherwise, or before M4, truncate where the scan stopped. A scan that stopped at the start of the run, because the run is not complete and valid, means that a power loss kept the footer and locator pages and dropped another page of the run, such as a key frame page or the seal frame. Closing frames that truncation drops were written before an `fsync` that never returned, so no ack depends on them.
 8. Make the end of the newest segment durable ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)). Write back, at the same position and with the same bytes, the trailing closing frames if the segment ends with any. Otherwise, write back the last group frame. If it has neither, write back the header. Then call `sync_all` on the segment, and `fsync` the log directory and its parent. If a call fails, open fails with `Io`.
 9. Set the writer epoch to one more than the highest epoch in any segment header or kept frame ([ADR 0018](../decisions/0018-writer-epoch-from-the-segments.md), [ADR 0047](../decisions/0047-writer-epoch-from-every-segment.md)). If step 3 created the log, the writer epoch is 1, as in its header.
 10. Decide the state from the end of the newest segment:
-    - If step 6 found it sealed and its closing run has a seal frame, the log is sealed. Open read-only.
-    - From M4, if step 6 found it sealed and its closing run has no seal frame, the crash came after a roll's footer and before the next segment existed. Create the next segment, as in roll steps 2–4.
+    - If step 6 found it sealed by a seal's run, the log is sealed. Open read-only.
+    - From M4, if step 6 found it sealed by a roll's run, the crash came after the roll's `fsync` and before the next segment existed. Create the next segment, as in roll steps 2–4.
     - Otherwise it is the active segment.
-11. Set the watermark to the offset after the last kept record. Rebuild the tail map and the key map from the kept frames.
+11. Set the watermark to the offset after the last kept record. Rebuild the tail map and the key map from the kept frames. From M4, the tail map comes from the footers and the scan of the newest segment, and the key map holds only the active segment's keys.
 12. Start the writer thread.
 
-Through M3, recovery rebuilds keys by scanning retained segment records. A key remains valid after roll and reopen while its segment is retained. Before M4 replaces old record scans with summaries, it must settle the key lookup mechanism and key-cache memory budget ([ADR 0031](../decisions/0031-keys-live-with-retained-segments.md)). Footers alone do not contain the keys.
+Through M3, recovery rebuilds keys by scanning retained segment records. From M4, it scans only the newest segment, and the writer finds older keys through each sealed segment's key filter and key index ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). A key remains valid after roll and reopen while its segment is retained ([ADR 0031](../decisions/0031-keys-live-with-retained-segments.md)). Footers alone do not contain the keys. Key-cache memory follows rule 5 of ADR 0048 and has no fixed upper limit.
 
-Open reads all of the newest segment. In the open-time target's conditions, that is the small active segment. A sealed log's final segment can be as large as the roll size.
+Open reads all of the newest segment. In the open-time target's conditions, that is the small active segment. From M4, open also reads the key filters, about 2 bytes for each key in the sealed segments, so open time grows with keyed history. The owner accepted this in ADR 0048. A sealed log's final segment can be as large as the roll size.
 
 There is no clean-shutdown marker. Recovery always scans the active segment, and that costs little because the segment is small. The seal frame marks a sealed log ([ADR 0011](../decisions/0011-sealed-footer-and-no-shutdown-marker.md)).
 
@@ -160,16 +162,16 @@ There is no clean-shutdown marker. Recovery always scans the active segment, and
 
 A roll happens only between groups, so no submit crosses a roll.
 
-1. From M4: write the footer frame and the locator frame at the end of the active segment, and `fsync` it. The segment is now sealed.
+1. From M4: write the key filter frame, the key index frame, the footer frame and the locator frame at the end of the active segment, and `fsync` it. The segment is now sealed. The writer builds the key frames from the active segment's key map.
 2. Create the new segment file, named by the next log offset. Write its header and `sync_data` the file, as open does when it creates the log.
 3. `fsync` the directory, so that the new directory entry is durable.
-4. Make the new file the active segment.
+4. Make the new file the active segment. From M4, keep the sealed segment's key filter in memory and start an empty key map.
 
 Before M4, step 1 does nothing. Every segment except the newest counts as sealed.
 
 The writer rolls when the first new submit of a group has passed its checks, before it stages any record of that group. A submit that appends nothing never starts a roll. A segment with no record does not roll, because the new segment would take its name. A roll size that an empty segment has already reached therefore rolls after every group that wrote a frame.
 
-If any step of a roll fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). No group is in flight during a roll. The submit that started the roll and every queued submit get `Poisoned`, because the writer wrote none of their records. The writer never appends to a segment after writing that segment's footer.
+If any step of a roll fails, the writer is poisoned ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). No group is in flight during a roll. The submit that started the roll and every queued submit get `Poisoned`, because the writer wrote none of their records. The writer never appends to a segment after writing that segment's first closing frame.
 
 ## Seal
 
@@ -177,12 +179,12 @@ Seal ships in M4, together with the footer and the locator. A seal frame is neve
 
 1. Stop admission. New submits get `Sealed`.
 2. Commit the submits that are already in the queue, as usual. If a write or an `fsync` fails, the writer is poisoned, `seal` returns `Poisoned`, and step 3 does not run.
-3. Write the footer, the seal frame and the locator. `fsync`. If a write or the `fsync` fails, the writer is poisoned and `seal` returns `Poisoned`.
+3. Write the footer, the seal frame and the locator, with no key frames ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). `fsync`. If a write or the `fsync` fails, the writer is poisoned and `seal` returns `Poisoned`.
 4. Stop the writer thread and release the lock. The handle keeps the segment files open, so `read`, `watermark` and `stream_head` keep working until it is dropped. The process can exit.
 
 ## Read-only reader
 
-A reader after the guest is gone uses `LogReader` ([ADR 0016](../decisions/0016-read-only-reader-without-a-lock.md)). It opens only a sealed log. It runs the checks and scans of open steps 4–7 without deleting, truncating, syncing or locking anything. Where open would truncate, the log is not sealed. Every record in a sealed log was covered by an `fsync` that returned before the seal frame was written, so the reader never shows a record that I1 forbids. It works on a read-only volume and with many readers at once. An unsealed log fails with `NotSealed`. To read one, open it with `SegmentLog::open` on a writable volume, which recovers it, and then `seal` it.
+A reader after the guest is gone uses `LogReader` ([ADR 0016](../decisions/0016-read-only-reader-without-a-lock.md)). It opens only a sealed log. It runs the checks and scans of open steps 4–7 without deleting, truncating, syncing or locking anything. Its step 5 reads no key filter, because a reader never checks a key. Where open would truncate, the log is not sealed. Every record in a sealed log was covered by an `fsync` that returned before the seal frame was written, so the reader never shows a record that I1 forbids. It works on a read-only volume and with many readers at once. An unsealed log fails with `NotSealed`. To read one, open it with `SegmentLog::open` on a writable volume, which recovers it, and then `seal` it.
 
 ## Retention
 
@@ -201,6 +203,6 @@ M6 implements Unix socket first, followed by vsock with the same protocol ([ADR 
 These are targets that nobody has measured yet:
 
 - the build is small enough for a microVM,
-- open time stays proportional to the active segment after M4,
+- open time after M4 meets its target, including the key filters that [ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md) adds to it,
 - a snapshot's dirty set is only the written segment pages plus the caches, the accept queue and the key map,
 - startup and seal time fit the [footprint targets](../prd.md#footprint-and-performance-targets).
