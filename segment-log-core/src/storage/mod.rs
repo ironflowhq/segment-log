@@ -18,16 +18,22 @@ pub(crate) enum Purpose {
     Roll,
     /// Open's reads of a locator and the footer it names.
     Summary,
+    /// Open's reads of a sealed segment's key filter frame.
+    KeyFilter,
+    /// A writer key lookup's reads of a sealed segment's key index pages.
+    KeyIndex,
 }
 impl Purpose {
     #[cfg(test)]
-    pub(crate) const ALL: [Purpose; 6] = [
+    pub(crate) const ALL: [Purpose; 8] = [
         Purpose::Open,
         Purpose::Group,
         Purpose::Recovery,
         Purpose::Lookup,
         Purpose::Roll,
         Purpose::Summary,
+        Purpose::KeyFilter,
+        Purpose::KeyIndex,
     ];
 }
 #[derive(Clone, Debug, PartialEq, Eq)]

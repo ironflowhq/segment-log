@@ -5,8 +5,9 @@ use keys::Classification;
 pub(super) struct Writer {
     pub epoch: u64,
     pub keys: Keys,
-    pub lookup: Vec<u8>,
     pub active: Active,
+    #[cfg(test)]
+    pub memory: Arc<Mutex<KeyMemory>>,
 }
 
 /// The segment that takes new frames, and what its footer will hold. Only the writer thread
@@ -40,19 +41,23 @@ impl Writer {
     fn roll(&mut self, view: &View, next: u64) -> io::Result<()> {
         let storage = view.storage.as_ref();
         let path = segment_path(&view.dir, self.active.base);
-        let mut keys = {
-            let published = view.published.lock().unwrap();
-            self.keys
-                .index_entries(self.active.base, &published.newest.spans)
-        };
+        let mut keys = self.keys.index_entries();
+        let filter_at = self.active.length;
         let run = closing::roll_run(
             &view.log_id,
             self.epoch,
             next,
-            self.active.length,
+            filter_at,
             &self.active.tails,
             &mut keys,
         );
+        let summary = keys::SealedSummary {
+            base: self.active.base,
+            next,
+            filter_at,
+            footer_at: filter_at + (run[0].len() + run[1].len()) as u64,
+        };
+        let sealed = keys::SealedKeys::written(summary, &view.log_id, &run[0]);
         for frame in run {
             call(storage, &path, Purpose::Roll, Op::Append(frame))?;
         }
@@ -63,6 +68,7 @@ impl Writer {
             epoch: self.epoch,
         };
         create_segment(storage, &view.dir, Purpose::Roll, &header)?;
+        self.keys.roll(sealed);
         view.published.lock().unwrap().roll();
         self.active = Active::new(next);
         Ok(())
@@ -170,11 +176,14 @@ impl Draft {
         }
     }
 
-    fn staged(&self) -> keys::Staged<'_> {
+    /// The group as classification sees it, whose frame would start at `position`.
+    fn staged(&self, position: u64) -> keys::Staged<'_> {
         keys::Staged {
+            position,
             base: self.base,
             requests: &self.requests,
             origins: &self.origins,
+            assigned: &self.assigned,
         }
     }
 }
@@ -184,7 +193,8 @@ impl Writer {
     fn stage(&mut self, draft: &mut Draft, request: Request, revisions: &[RevisionSlot]) {
         let submit = &request.submit;
         let first = draft.base + draft.assigned.len() as u64;
-        self.keys.stage(submit, first, revisions);
+        self.keys
+            .stage(submit, self.active.length, draft.assigned.len());
         draft
             .origins
             .extend((0..submit.records.len()).map(|record| (draft.requests.len(), record)));
@@ -232,7 +242,7 @@ pub(super) fn run(
             crate::pipeline::request(&request.submit, crate::pipeline::CLASSIFY);
             match writer
                 .keys
-                .classify(&view, &request.submit, &mut writer.lookup, &draft.staged())
+                .classify(&view, &request.submit, &draft.staged(writer.active.length))
             {
                 Classification::New => {
                     match revisions(&request.submit, &draft.tails, &view.published) {
@@ -406,6 +416,10 @@ impl Writer {
                 records: waiter.positions,
                 deduplicated: true,
             })));
+        }
+        #[cfg(test)]
+        {
+            *self.memory.lock().unwrap() = self.keys.memory();
         }
         reply::Relay::start(slots);
         #[cfg(test)]

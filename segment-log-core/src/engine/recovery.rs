@@ -1,4 +1,5 @@
 use super::*;
+use keys::{ActiveKey, SealedKeys};
 use survey::{Ending, ReadOnly};
 pub(super) struct Recovered {
     pub active: Active,
@@ -6,7 +7,10 @@ pub(super) struct Recovered {
     pub lock: Box<dyn Lock>,
     pub published: Published,
     pub epoch: u64,
-    pub keys: Keys,
+    /// The active segment's keys.
+    pub active_keys: BTreeMap<Vec<u8>, ActiveKey>,
+    /// Every sealed segment's key filter, oldest first.
+    pub sealed_keys: Vec<SealedKeys>,
 }
 impl From<io::Error> for OpenError {
     fn from(error: io::Error) -> Self {
@@ -76,6 +80,16 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         found.epoch.checked_add(1).ok_or(OpenError::Exhausted)?
     };
 
+    // Step 11's reads come before any change, so that a bad key filter changes no file.
+    let mut summaries = found.sealed.clone();
+    if let Ending::Rolled(run) = &found.newest.ending {
+        summaries.push(run.summary);
+    }
+    let sealed_keys = summaries
+        .into_iter()
+        .map(|summary| SealedKeys::load(&reader, dir, &found.log_id, summary))
+        .collect::<Result<Vec<_>, _>>()?;
+
     let segment = segment_path(dir, newest);
     if let Ending::Stopped = found.newest.ending {
         call(
@@ -86,7 +100,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         )?;
     }
     let (position, bytes) = match &found.newest.ending {
-        Ending::Rolled(run) => (run.start, run.frames.concat()),
+        Ending::Rolled(run) => (run.summary.filter_at, run.frames.concat()),
         _ => found.newest.last.unwrap_or((0, found.newest_header)),
     };
     call(
@@ -102,7 +116,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         .filter(|p| !p.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
     call(storage, parent, Purpose::Recovery, Op::SyncDir)?;
-    let active = if let Ending::Rolled(_) = found.newest.ending {
+    let (active, active_keys) = if let Ending::Rolled(_) = found.newest.ending {
         // A crash came after the roll's flush and before the next segment existed.
         let next = found.published.watermark;
         create_segment(
@@ -116,13 +130,14 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
             },
         )?;
         found.published.roll();
-        Active::new(next)
+        (Active::new(next), BTreeMap::new())
     } else {
-        Active {
+        let active = Active {
             base: newest,
             length: found.newest.end,
             tails: found.newest.tails,
-        }
+        };
+        (active, found.newest.keys)
     };
     Ok(Recovered {
         active,
@@ -130,6 +145,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         lock,
         published: found.published,
         epoch,
-        keys: found.keys,
+        active_keys,
+        sealed_keys,
     })
 }

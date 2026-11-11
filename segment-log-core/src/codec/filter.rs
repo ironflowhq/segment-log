@@ -152,6 +152,11 @@ impl KeyFilter {
         self.count
     }
 
+    /// The hash of the first entry of key index page `page`.
+    pub(crate) fn fence(&self, page: usize) -> u64 {
+        self.fences[page]
+    }
+
     pub(crate) fn memory_bytes(&self) -> usize {
         self.fences.len() * size_of::<u64>() + self.blocks.len() * BLOCK_BYTES
     }

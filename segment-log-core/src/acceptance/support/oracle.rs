@@ -506,7 +506,10 @@ pub(crate) fn flush_contract(
         match e {
             Event::Canceled(_) => failed = true,
             Event::Call(c, fault, result)
-                if matches!(c.purpose, Purpose::Group | Purpose::Lookup | Purpose::Roll) =>
+                if matches!(
+                    c.purpose,
+                    Purpose::Group | Purpose::Lookup | Purpose::KeyIndex | Purpose::Roll
+                ) =>
             {
                 if !matches!(c.op, Op::Read(..)) {
                     assert!(!failed, "failed writer performed more I/O");

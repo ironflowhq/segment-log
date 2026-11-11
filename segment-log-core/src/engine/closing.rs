@@ -74,8 +74,8 @@ pub(super) enum Step {
     Run(RunState),
     /// The log ends at `at`: the frame's position, or the start of a run that it cannot continue.
     Stop { at: u64 },
-    /// A complete roll's run from `start` ends the segment.
-    Closed { start: u64 },
+    /// A complete roll's run from `start`, with its footer at `footer`, ends the segment.
+    Closed { start: u64, footer: u64 },
 }
 
 impl RunState {
@@ -100,7 +100,7 @@ impl RunState {
             (Self::Footer { start, footer }, Body::Locator { footer_position })
                 if *footer_position == footer && end == length =>
             {
-                Step::Closed { start }
+                Step::Closed { start, footer }
             }
             _ => Step::Stop { at: self.stop(at) },
         }

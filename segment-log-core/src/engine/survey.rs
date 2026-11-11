@@ -1,5 +1,6 @@
 use super::*;
 use closing::{RunState, Step, Tail};
+use keys::{ActiveKey, SealedSummary};
 
 pub(super) use read_only::ReadOnly;
 
@@ -66,7 +67,8 @@ mod read_only {
 pub(super) struct Survey {
     pub log_id: codec::LogId,
     pub published: Published,
-    pub keys: Keys,
+    /// Every segment before the newest, oldest first.
+    pub sealed: Vec<SealedSummary>,
     /// The highest epoch in any segment header or kept frame (ADR 0047).
     pub epoch: u64,
     pub newest_header: Vec<u8>,
@@ -81,6 +83,8 @@ pub(super) struct Scan {
     pub last: Option<(u64, Vec<u8>)>,
     /// Each stream's last record in the segment.
     pub tails: BTreeMap<Vec<u8>, Tail>,
+    /// The segment's keys.
+    pub keys: BTreeMap<Vec<u8>, ActiveKey>,
 }
 
 pub(super) enum Ending {
@@ -93,8 +97,7 @@ pub(super) enum Ending {
 }
 
 pub(super) struct Run {
-    /// The key filter's position, where the run starts.
-    pub start: u64,
+    pub summary: SealedSummary,
     /// The run's frames, in file order.
     pub frames: Vec<Vec<u8>>,
 }
@@ -102,7 +105,6 @@ pub(super) struct Run {
 /// What the scan has kept so far, across the segments it has read.
 struct Kept {
     published: Published,
-    keys: Keys,
     /// The epoch that the next frame must not be lower than.
     epoch: u64,
 }
@@ -151,10 +153,10 @@ pub(super) fn survey(
 
     let mut kept = Kept {
         published: Published::default(),
-        keys: Keys::new(log_id.clone()),
         epoch: 0,
     };
     let newest = *bases.last().unwrap();
+    let mut sealed = vec![];
     let mut tail = None;
     for (&base, (header, bytes)) in bases.iter().zip(headers) {
         if kept.published.watermark != base {
@@ -163,7 +165,7 @@ pub(super) fn survey(
         kept.epoch = kept.epoch.max(header.epoch);
         let path = segment_path(dir, base);
         let length = storage.length(&path, Purpose::Recovery)?;
-        let scan = scan(storage, &log_id, &path, length, &mut kept)?;
+        let scan = scan(storage, &log_id, base, &path, length, &mut kept)?;
         if base == newest {
             if matches!(scan.ending, Ending::Stopped)
                 && closing::sealed_behind(storage, &path, &log_id, length, scan.end)?
@@ -174,7 +176,8 @@ pub(super) fn survey(
                 });
             }
             tail = Some((scan, bytes));
-        } else if let Ending::Rolled(_) = scan.ending {
+        } else if let Ending::Rolled(run) = scan.ending {
+            sealed.push(run.summary);
             kept.published.roll();
         } else {
             // Every segment with a successor is sealed, and recovery never truncates one (I7).
@@ -188,7 +191,7 @@ pub(super) fn survey(
     Ok(Survey {
         log_id,
         published: kept.published,
-        keys: kept.keys,
+        sealed,
         epoch: kept.epoch,
         newest_header,
         newest,
@@ -231,6 +234,7 @@ fn header(
 fn scan(
     storage: &ReadOnly<'_>,
     log: &codec::LogId,
+    base: u64,
     path: &Path,
     length: u64,
     kept: &mut Kept,
@@ -241,24 +245,38 @@ fn scan(
     let mut run = vec![];
     let mut last = None;
     let mut tails = BTreeMap::new();
-    let end = |at, ending, last, tails| Scan {
+    let mut keys = BTreeMap::new();
+    let end = |at, ending, last, tails, keys| Scan {
         end: at,
         ending,
         last,
         tails,
+        keys,
     };
     loop {
         if position == length && state == RunState::Groups {
-            return Ok(end(position, Ending::Groups, last, tails));
+            return Ok(end(position, Ending::Groups, last, tails, keys));
         }
         let Some(bytes) = storage.frame(path, Purpose::Recovery, position, length)? else {
-            return Ok(end(state.stop(position), Ending::Stopped, last, tails));
+            return Ok(end(
+                state.stop(position),
+                Ending::Stopped,
+                last,
+                tails,
+                keys,
+            ));
         };
         let frame = codec::decode(log, &bytes)
             .ok()
             .filter(|f| f.base_offset == kept.published.watermark && f.epoch >= epoch);
         let Some(frame) = frame else {
-            return Ok(end(state.stop(position), Ending::Stopped, last, tails));
+            return Ok(end(
+                state.stop(position),
+                Ending::Stopped,
+                last,
+                tails,
+                keys,
+            ));
         };
         let next = position + bytes.len() as u64;
         epoch = frame.epoch;
@@ -266,8 +284,14 @@ fn scan(
             Step::Group => {
                 let group = frame.into_group().expect("a group step has a group body");
                 kept.epoch = group.epoch;
-                kept.keys.recover(&group);
                 for (i, entry) in group.entries.iter().enumerate() {
+                    if let Some(key) = entry.key {
+                        let at = ActiveKey {
+                            position: position as u32,
+                            record: i as u32,
+                        };
+                        keys.insert(key.to_vec(), at);
+                    }
                     tails.insert(
                         entry.stream.to_vec(),
                         Tail {
@@ -285,12 +309,21 @@ fn scan(
                 state = next;
                 run.push(bytes);
             }
-            Step::Stop { at } => return Ok(end(at, Ending::Stopped, last, tails)),
-            Step::Closed { start } => {
+            Step::Stop { at } => return Ok(end(at, Ending::Stopped, last, tails, keys)),
+            Step::Closed { start, footer } => {
                 kept.epoch = epoch;
                 run.push(bytes);
-                let rolled = Ending::Rolled(Run { start, frames: run });
-                return Ok(end(length, rolled, last, tails));
+                let summary = SealedSummary {
+                    base,
+                    next: kept.published.watermark,
+                    filter_at: start,
+                    footer_at: footer,
+                };
+                let rolled = Ending::Rolled(Run {
+                    summary,
+                    frames: run,
+                });
+                return Ok(end(length, rolled, last, tails, keys));
             }
         }
         position = next;
