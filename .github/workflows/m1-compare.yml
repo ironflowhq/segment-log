@@ -1,8 +1,7 @@
 name: M1 latency comparison
-# Measures the append benchmark of two commits on one Linux machine, in alternating pairs.
+# Measures the append benchmark of two commits on one hosted Linux runner, in alternating pairs.
 # Dispatch it with a base, or put the `m1-compare` label on a pull request to compare its base
-# with its head. This repository's Linux runs use the Hetzner runner. A fork pull request uses
-# GitHub-hosted Ubuntu so fork code does not run on that persistent machine.
+# with its head.
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +13,12 @@ on:
         required: false
   pull_request:
     types: [labeled]
+
+# A repeated pull request event replaces the run still in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 jobs:
@@ -21,21 +26,23 @@ jobs:
     name: Compare base and head
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'm1-compare' }}
     timeout-minutes: 60
-    runs-on: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["ubuntu-24.04"]' || '["self-hosted","hetzner"]') }}
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
-          persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-      - uses: ./.github/actions/rust-toolchain
-      - run: scripts/ci-ensure-commands.sh /usr/bin/time:time
-      # Segment files go to the job temp directory. The runner deletes it. The upload is the logs.
-      - run: scripts/m1-compare-refs.sh "$BASE" "$HEAD" "$RUNNER_TEMP/m1-compare"
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends time
+      # The benchmark data goes to the runner's local disk under /mnt, not to the workspace.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          scripts/m1-compare-refs.sh "$BASE" "$HEAD" "$RUNNER_TEMP/m1-compare"
         env:
           BASE: ${{ inputs.base || github.event.pull_request.base.sha }}
           HEAD: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
-          SEGMENT_LOG_EVIDENCE_DIR: ${{ runner.temp }}/segment-log-data
+          SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
@@ -43,5 +50,3 @@ jobs:
           path: ${{ runner.temp }}/m1-compare
           retention-days: 3
           compression-level: 9
-      - if: always()
-        run: rm -rf "${{ runner.temp }}/segment-log-data"
