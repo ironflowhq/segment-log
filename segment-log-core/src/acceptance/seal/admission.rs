@@ -181,3 +181,45 @@ fn a_failed_or_panicked_seal_poisons_the_writer() {
         }
     });
 }
+
+/// Given a log whose writer thread panicked at a group flush, which an append has observed as
+/// `Poisoned`
+/// When appends keep arriving while `seal` closes admission
+/// Then every append gets `Poisoned`, never `Sealed`, and `seal` returns `Poisoned`
+///
+/// Cases: ADM-PRECEDENCE
+#[test]
+fn a_panicked_writer_answers_appends_racing_seal_with_poisoned() {
+    bounded(|| {
+        for seed in 0..50 {
+            let sim = Sim::new(850 + seed);
+            let log = std::sync::Arc::new(open_with(&sim, unrolled()));
+            sim.inject(group_flush(), Fault::Panic);
+            let failed = send(&log, vec![record(b"s", None, b"a", None)]).wait();
+            assert!(matches!(failed, Err(CommitError::Indeterminate)));
+            while !matches!(
+                log.append(Submit {
+                    records: vec![record(b"s", None, b"b", None)]
+                }),
+                Err(AppendError::Poisoned)
+            ) {}
+            let racer = {
+                let log = log.clone();
+                std::thread::spawn(move || {
+                    for _ in 0..2000 {
+                        let answer = log.append(Submit {
+                            records: vec![record(b"s", None, b"c", None)],
+                        });
+                        assert!(
+                            matches!(answer, Err(AppendError::Poisoned)),
+                            "seed {seed}: {:?}",
+                            answer.err()
+                        );
+                    }
+                })
+            };
+            assert!(matches!(log.seal(), Err(SealError::Poisoned)));
+            racer.join().unwrap();
+        }
+    });
+}

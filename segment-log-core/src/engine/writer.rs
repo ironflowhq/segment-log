@@ -274,6 +274,17 @@ fn dequeued(message: Option<Message>, seal: &mut Option<mpsc::Sender<()>>) -> Op
     }
 }
 
+/// Marks the writer poisoned when its thread panics (api.md, admission step 3).
+struct PoisonOnPanic<'a>(&'a std::sync::atomic::AtomicBool);
+
+impl Drop for PoisonOnPanic<'_> {
+    fn drop(&mut self) {
+        if std::thread::panicking() {
+            self.0.store(true, std::sync::atomic::Ordering::Release);
+        }
+    }
+}
+
 pub(super) fn run(
     view: Arc<View>,
     poisoned: Arc<std::sync::atomic::AtomicBool>,
@@ -281,6 +292,9 @@ pub(super) fn run(
     mut writer: Writer,
     options: Arc<Options>,
 ) {
+    // A local, so that unwinding drops it before `receiver`: admission sees the flag before it
+    // can see the disconnected queue.
+    let _panic = PoisonOnPanic(&poisoned);
     let mut deferred = None;
     let mut seal: Option<mpsc::Sender<()>> = None;
     loop {
