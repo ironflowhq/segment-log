@@ -18,7 +18,6 @@ fn kept() -> [Record; 3] {
     ]
 }
 
-/// The end of each frame of a closing run, relative to the run's start.
 fn frame_ends(run: &[u8]) -> Vec<usize> {
     let mut end = 0;
     raw::frames(&[vec![0; 64], run.to_vec()].concat())
@@ -51,8 +50,6 @@ fn seal_run_at(log_id: &codec::LogId, footer_at: usize, next: u64) -> Vec<u8> {
     [footer, seal, locator].concat()
 }
 
-/// Opens a log whose only segment is `bytes`, and checks that open cut it back to `groups`, that
-/// the log stays writable in that segment, and that a power loss after open changes nothing.
 fn assert_cut_to(bytes: Vec<u8>, groups: &[u8], label: &str) {
     let sim = Sim::new(811);
     raw::install_segments(&sim, &[(0, bytes)]);

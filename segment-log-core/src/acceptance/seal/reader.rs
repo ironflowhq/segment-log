@@ -5,7 +5,6 @@ use std::{
     sync::{Barrier, Mutex},
 };
 
-/// A volume mounted read-only: every call that could change a file fails, and so does the lock.
 struct ReadOnlyVolume {
     sim: Sim,
     refused: Mutex<Vec<String>>,
@@ -49,8 +48,6 @@ fn key_index_reads(sim: &Sim) -> usize {
 
 type Seen = (Observed, Vec<String>);
 
-/// Everything a reader can see, including three-record reads from every offset, which cross each
-/// segment boundary.
 fn seen(
     watermark: u64,
     read: impl Fn(u64, usize) -> Vec<Record>,
@@ -125,7 +122,6 @@ fn readers_on_a_read_only_volume_read_a_sealed_log() {
     });
 }
 
-/// A label, the segment files, and the records that recovery keeps from them.
 type Layout = (&'static str, Vec<(u64, Vec<u8>)>, usize);
 
 /// Given a log whose newest segment ends in its groups, in a torn group, in a roll's closing run,

@@ -101,7 +101,6 @@ impl Writer {
         Ok(())
     }
 
-    /// Seal step 3.
     fn seal(&mut self, view: &View) -> io::Result<()> {
         let storage = view.storage.as_ref();
         let path = segment_path(&view.dir, self.active.base);

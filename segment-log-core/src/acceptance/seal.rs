@@ -1,4 +1,3 @@
-//! Seal, the read-only open of a sealed log, and `LogReader`.
 use super::support::{bounded, fixtures::*, raw};
 use crate::storage::{Call, Op, Purpose};
 use crate::*;
@@ -18,7 +17,6 @@ fn unrolled() -> Options {
     }
 }
 
-/// Rolls every few groups.
 fn rolling() -> Options {
     Options {
         roll_bytes: 300,
@@ -26,8 +24,6 @@ fn rolling() -> Options {
     }
 }
 
-/// Appends rounds that each add a stream that only that round has, keyed in most rounds, and a
-/// record to one stream that appends throughout.
 fn fill(log: &SegmentLog) {
     for round in 0..24u64 {
         let once = format!("once-{round}").into_bytes();
@@ -61,7 +57,6 @@ fn send(log: &SegmentLog, records: Vec<NewRecord>) -> Pending {
     log.append(submit(records)).unwrap()
 }
 
-/// A valid, a malformed and an oversized submit, which a log refuses in that order of checks.
 fn refusals(log: &SegmentLog) -> [Result<Pending, AppendError>; 3] {
     let mut large = record(b"s", None, b"", None);
     large.payload = vec![0; Options::default().group_byte_cap];
@@ -86,7 +81,6 @@ fn key_filter_reads(sim: &Sim) -> usize {
     sim.count(Path::new(ANY_SEG), Purpose::KeyFilter, &Op::Read(0, 0))
 }
 
-/// Watermark, every stream head and every record, as a reader of the log sees them.
 type Observed = (u64, Vec<(Vec<u8>, Option<(u64, u64)>)>, String);
 
 fn observe(
@@ -126,8 +120,6 @@ fn seal_on_a_thread(log: &Arc<SegmentLog>) -> std::thread::JoinHandle<Result<(),
     std::thread::spawn(move || log.seal())
 }
 
-/// Whether the newest segment ends in a seal's closing run under `epoch`. Anything after its
-/// group frames must be that whole run.
 fn sealed_on_disk(sim: &Sim, epoch: u64) -> bool {
     let (_, newest) = raw::segments(sim).pop().unwrap();
     let (groups, run) = raw::split_run(&newest);

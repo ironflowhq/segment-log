@@ -168,8 +168,6 @@ pub(crate) fn last_frame(sim: &Sim) -> (String, u64, Vec<u8>) {
 }
 type Tails<'a> = std::collections::BTreeMap<&'a [u8], (u64, u64, u64)>;
 
-/// The log id, the next offset, the key index entries and the footer tails of a segment image
-/// that holds only group frames.
 fn groups(
     segment: &[u8],
 ) -> (
@@ -246,8 +244,6 @@ pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
     [key_frames.filter, key_frames.index, footer, locator].concat()
 }
 
-/// A seal's closing run for a segment image of group frames: a footer that names no key filter,
-/// a seal frame and a locator.
 pub(crate) fn seal_run(segment: &[u8], epoch: u64) -> Vec<u8> {
     use crate::codec;
     let (log_id, next, _, tails) = groups(segment);

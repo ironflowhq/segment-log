@@ -4,7 +4,6 @@ use survey::{Ending, ReadOnly};
 pub(super) struct Recovered {
     pub log_id: codec::LogId,
     pub published: Published,
-    /// None for a sealed log, which opens read-only and has already released the lock.
     pub writable: Option<Writable>,
 }
 

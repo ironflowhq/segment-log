@@ -121,9 +121,9 @@ enum Lifecycle {
         writer: JoinHandle<()>,
         lock: Box<dyn Lock>,
     },
-    /// The writer thread has ended without sealing the log. The lock is held until drop.
-    Stopped { _lock: Box<dyn Lock> },
-    /// Sealed by this handle, or at open. No writer and no lock.
+    Stopped {
+        _lock: Box<dyn Lock>,
+    },
     Sealed,
 }
 

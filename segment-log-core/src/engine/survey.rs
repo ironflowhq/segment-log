@@ -86,7 +86,6 @@ pub(super) enum Ending {
     Sealed(Run),
 }
 
-/// A complete closing run, kept for step 8's rewrite.
 pub(super) struct Run {
     pub start: u64,
     pub frames: Vec<Vec<u8>>,

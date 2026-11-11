@@ -72,24 +72,11 @@ fn footer(
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum RunState {
     Groups,
-    Filter {
-        start: u64,
-        count: u32,
-    },
-    Index {
-        start: u64,
-    },
-    Footer {
-        start: u64,
-        footer: u64,
-    },
-    /// A seal's run starts at its footer.
-    SealFooter {
-        footer: u64,
-    },
-    Seal {
-        footer: u64,
-    },
+    Filter { start: u64, count: u32 },
+    Index { start: u64 },
+    Footer { start: u64, footer: u64 },
+    SealFooter { footer: u64 },
+    Seal { footer: u64 },
 }
 
 pub(super) enum Step {

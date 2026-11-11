@@ -206,8 +206,6 @@ struct Appended {
     unknown: usize,
 }
 
-/// One appender: each submit to a stream of its own, each answer awaited before the next submit,
-/// until a refusal.
 fn append_until_refused(
     log: &SegmentLog,
     name: usize,
@@ -243,8 +241,6 @@ fn append_until_refused(
     appended
 }
 
-/// Starts `seal` while a group flush is held in the middle of the appends, then releases that
-/// flush, with a failure if `fault`.
 fn race(sim: &Sim, fault: bool) -> Appended {
     let log = Arc::new(open(sim));
     let admitted = Arc::new(AtomicUsize::new(0));

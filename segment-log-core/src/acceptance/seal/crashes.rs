@@ -7,7 +7,6 @@ fn keyed(payload: &[u8], revision: Option<u64>) -> NewRecord {
     record(b"s", Some(payload), payload, revision)
 }
 
-/// The seal's three appends and its flush, for a segment of group frames.
 fn seal_steps(groups: &[u8]) -> Vec<Call> {
     let sealed = [groups.to_vec(), raw::seal_run(groups, 1)].concat();
     raw::frames(&sealed)

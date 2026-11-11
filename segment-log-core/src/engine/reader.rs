@@ -14,10 +14,10 @@ impl LogReader {
     pub(crate) fn with_storage(dir: &Path, storage: Arc<dyn Storage>) -> Result<Self, OpenError> {
         let reader = ReadOnly::new(storage.as_ref());
         let bases = survey::segment_bases(&reader, dir)?;
-        // A seal is the last write to a log, so a torn header-only file means a roll that crashed.
         let Some(&newest) = bases.last() else {
             return Err(OpenError::NotSealed);
         };
+        // A seal is the last write to a log, so a torn header-only file means a roll that crashed.
         if survey::is_torn_header(&reader, dir, newest)? {
             return Err(OpenError::NotSealed);
         }
