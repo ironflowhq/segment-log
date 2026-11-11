@@ -126,8 +126,8 @@ fn seal_on_a_thread(log: &Arc<SegmentLog>) -> std::thread::JoinHandle<Result<(),
     std::thread::spawn(move || log.seal())
 }
 
-/// Whether the newest segment ends in the seal's closing run, written under `epoch`, after its
-/// group frames. Panics unless it ends in those groups alone otherwise.
+/// Whether the newest segment ends in a seal's closing run under `epoch`. Anything after its
+/// group frames must be that whole run.
 fn sealed_on_disk(sim: &Sim, epoch: u64) -> bool {
     let (_, newest) = raw::segments(sim).pop().unwrap();
     let (groups, run) = raw::split_run(&newest);
