@@ -1,0 +1,36 @@
+== BPK=10
+CANARY start crc32c_1MiB_best_GBps=2.14 (P-core reference 2.16)
+RESULT scale=S1-bpk10 cand=B metric=open_ms median=16.291 min=15.974 max=50.690 n=7
+RESULT scale=S1-bpk10 cand=B metric=resident_bytes value=25483200.000000
+RESULT scale=S1-bpk10 cand=B metric=neg_lookup_ns_end_to_end median=4444.044 min=4313.074 max=6073.134 n=7
+RESULT scale=S1-bpk10 cand=B metric=neg_preads_per_lookup value=0.968191
+RESULT scale=S1-bpk10 cand=D16 metric=neg_lookup_ns_end_to_end median=214.087 min=210.280 max=221.297 n=7
+RESULT scale=S1-bpk10 cand=D16 metric=neg_preads_per_lookup value=0.042790
+CANARY end crc32c_1MiB_best_GBps=2.14 (P-core reference 2.16)
+== BPK=16
+CANARY start crc32c_1MiB_best_GBps=2.14 (P-core reference 2.16)
+RESULT scale=S1-bpk16 cand=B metric=open_ms median=24.689 min=24.290 max=69.810 n=7
+RESULT scale=S1-bpk16 cand=B metric=resident_bytes value=40478400.000000
+RESULT scale=S1-bpk16 cand=B metric=neg_lookup_ns_end_to_end median=1900.691 min=1863.602 max=3667.157 n=7
+RESULT scale=S1-bpk16 cand=B metric=neg_preads_per_lookup value=0.088814
+RESULT scale=S1-bpk16 cand=D16 metric=neg_lookup_ns_end_to_end median=106.698 min=98.637 max=118.713 n=7
+RESULT scale=S1-bpk16 cand=D16 metric=neg_preads_per_lookup value=0.003901
+CANARY end crc32c_1MiB_best_GBps=2.14 (P-core reference 2.16)
+== BPK=10
+CANARY start crc32c_1MiB_best_GBps=2.14 (P-core reference 2.16)
+RESULT scale=S1-bpk10 cand=B metric=open_ms median=18.064 min=16.230 max=27.333 n=7
+RESULT scale=S1-bpk10 cand=B metric=resident_bytes value=25483200.000000
+RESULT scale=S1-bpk10 cand=B metric=neg_lookup_ns_end_to_end median=4272.904 min=4216.728 max=6091.957 n=7
+RESULT scale=S1-bpk10 cand=B metric=neg_preads_per_lookup value=0.968191
+RESULT scale=S1-bpk10 cand=D16 metric=neg_lookup_ns_end_to_end median=211.139 min=205.529 max=283.602 n=7
+RESULT scale=S1-bpk10 cand=D16 metric=neg_preads_per_lookup value=0.042790
+CANARY end crc32c_1MiB_best_GBps=2.14 (P-core reference 2.16)
+== BPK=16
+CANARY start crc32c_1MiB_best_GBps=2.14 (P-core reference 2.16)
+RESULT scale=S1-bpk16 cand=B metric=open_ms median=24.632 min=24.329 max=27.026 n=7
+RESULT scale=S1-bpk16 cand=B metric=resident_bytes value=40478400.000000
+RESULT scale=S1-bpk16 cand=B metric=neg_lookup_ns_end_to_end median=1698.343 min=1664.656 max=1729.013 n=7
+RESULT scale=S1-bpk16 cand=B metric=neg_preads_per_lookup value=0.088814
+RESULT scale=S1-bpk16 cand=D16 metric=neg_lookup_ns_end_to_end median=96.344 min=95.050 max=98.890 n=7
+RESULT scale=S1-bpk16 cand=D16 metric=neg_preads_per_lookup value=0.003901
+CANARY end crc32c_1MiB_best_GBps=2.14 (P-core reference 2.16)

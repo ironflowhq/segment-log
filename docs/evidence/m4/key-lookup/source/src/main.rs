@@ -257,8 +257,8 @@ fn per_page() -> usize {
     (page() - 16) / 12
 }
 const PAGE: usize = 4096;
-const B_BITS_PER_KEY: f64 = 10.0;
-const B_K: u32 = 7;
+fn bbpk() -> f64 { std::env::var("BPK").ok().and_then(|v| v.parse().ok()).unwrap_or(10.0) }
+fn bk() -> u32 { k_opt(bbpk()) }
 struct Header {
     count: u32,
     k: u32,
@@ -423,7 +423,7 @@ fn generate(dir: &Path, scale: Scale, nocache: bool) {
     let mut globals: Vec<Bloom> = BUDGETS_MIB.iter().map(|&m| Bloom::with_bytes(m << 20, gk(scale, m))).collect();
     for s in 0..SEGS {
         let e = segment_entries(s, scale.keys_per_seg, &mut kb);
-        let mut f = Bloom::for_keys(e.len(), B_BITS_PER_KEY, B_K);
+        let mut f = Bloom::for_keys(e.len(), bbpk(), bk());
         for &(h, _) in &e {
             f.insert(h);
             for g in &mut globals {
@@ -1002,7 +1002,7 @@ fn bench(root: &Path, scale: Scale, cold: bool) {
             e.sort_unstable();
             ts.push(ms(t));
             let t = Instant::now();
-            let mut f = Bloom::for_keys(e.len(), B_BITS_PER_KEY, B_K);
+            let mut f = Bloom::for_keys(e.len(), bbpk(), bk());
             e.iter().for_each(|&(h, _)| f.insert(h));
             tf.push(ms(t));
             let t = Instant::now();
@@ -1037,7 +1037,7 @@ fn bench(root: &Path, scale: Scale, cold: bool) {
         report(sn, "roll", "write_nosync_ms", &tw);
         report(sn, "roll", "write_sync_all_ms", &tws);
         note(sn, "roll", "sidecar_bytes_per_key_with_filter", side_len as f64 / n as f64);
-        let filt = Bloom::for_keys(n as usize, B_BITS_PER_KEY, B_K).bytes() + 4;
+        let filt = Bloom::for_keys(n as usize, bbpk(), bk()).bytes() + 4;
         note(sn, "roll", "sidecar_bytes_per_key_without_filter", (side_len - filt) as f64 / n as f64);
         for (gi, &m) in BUDGETS_MIB.iter().enumerate() {
             report(sn, &format!("C{m}"), "roll_or_into_global_ms", &tg[gi].0);
@@ -1196,7 +1196,52 @@ fn main() {
         "S1-cold" => bench(&root, s1, true),
         "S2-cold" => bench(&root, s2, true),
         "canary" => {}
+        "neg" => negonly(&root, s1),
         _ => panic!("usage: m4-proto <coldtest|S1|S2|S1-cold|S2-cold> <data-dir>"),
     }
     canary("end");
+}
+
+fn negonly(root: &Path, scale: Scale) {
+    canary("start");
+    let dir = root.join(format!("S1-bpk{}", bbpk()));
+    if !dir.join("seg-0099.kidx").exists() {
+        generate(&dir, scale, false);
+    }
+    let mut kb = Vec::new();
+    let neg_h: Vec<u64> = (0..1_000_000u32).map(|j| { key(NEG_SEG, j, &mut kb); h64(&kb) }).collect();
+    let mut topen = vec![];
+    let mut mem = 0;
+    for _ in 0..REPS {
+        let before = LIVE.load(Relaxed);
+        let t = Instant::now();
+        let b = open_b(&dir);
+        topen.push(ms(t));
+        mem = LIVE.load(Relaxed) - before;
+        black_box(b.segs.len());
+    }
+    let tag = format!("S1-bpk{}", bbpk());
+    report(&tag, "B", "open_ms", &topen);
+    note(&tag, "B", "resident_bytes", mem as f64);
+    let b = open_b(&dir);
+    let c16 = open_c(&dir, 16, gk(scale, 16));
+    let mut buf = vec![0u8; page()];
+    let (mut tb, mut td) = (vec![], vec![]);
+    let (mut sb, mut sd) = (Stats::default(), Stats::default());
+    for r in 0..REPS {
+        let mut st = Stats::default();
+        let t = Instant::now();
+        for &h in &neg_h { black_box(b.lookup(black_box(h), &mut buf, &mut st)); }
+        tb.push(t.elapsed().as_nanos() as f64 / neg_h.len() as f64);
+        if r == 0 { sb = st; }
+        let mut st = Stats::default();
+        let t = Instant::now();
+        for &h in &neg_h { let h = black_box(h); if c16.global.contains(h) { black_box(b.lookup(h, &mut buf, &mut st)); } }
+        td.push(t.elapsed().as_nanos() as f64 / neg_h.len() as f64);
+        if r == 0 { sd = st; }
+    }
+    report(&tag, "B", "neg_lookup_ns_end_to_end", &tb);
+    note(&tag, "B", "neg_preads_per_lookup", sb.preads as f64 / neg_h.len() as f64);
+    report(&tag, "D16", "neg_lookup_ns_end_to_end", &td);
+    note(&tag, "D16", "neg_preads_per_lookup", sd.preads as f64 / neg_h.len() as f64);
 }
