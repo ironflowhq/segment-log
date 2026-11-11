@@ -61,12 +61,10 @@ impl Keys {
 
     pub(super) fn classify(
         &self,
-        storage: &dyn Storage,
-        dir: &Path,
+        view: &View,
         submit: &Submit,
         scratch: &mut Vec<u8>,
         staged: &Staged<'_>,
-        published: &Mutex<Published>,
     ) -> Classification {
         let mut positions = Vec::new();
         let mut has_pending = false;
@@ -82,24 +80,22 @@ impl Keys {
                 }
                 has_pending = true;
             } else {
-                let frame = {
-                    let durable = published.lock().unwrap();
-                    let covering = durable
-                        .frames
-                        .partition_point(|frame| frame.end <= position.offset);
-                    durable.frames[covering].clone()
+                let span = view.published.lock().unwrap().span_at(position.offset);
+                let Some((segment, span)) = span else {
+                    return Classification::LookupFailure;
                 };
-                let entry_index = (position.offset - frame.base) as usize;
+                let length = span.length as usize;
+                let entry_index = (position.offset - span.base) as usize;
                 let Ok(bytes) = read_bytes(
-                    storage,
-                    &segment_path(dir, frame.segment),
+                    view.storage.as_ref(),
+                    &segment_path(&view.dir, segment),
                     Purpose::Lookup,
-                    frame.position,
-                    frame.length,
+                    span.position,
+                    length,
                 ) else {
                     return Classification::LookupFailure;
                 };
-                if bytes.len() != frame.length {
+                if bytes.len() != length {
                     return Classification::LookupFailure;
                 }
                 *scratch = bytes;
@@ -109,10 +105,7 @@ impl Keys {
                 else {
                     return Classification::LookupFailure;
                 };
-                if group.epoch != frame.epoch
-                    || group.base_offset != frame.base
-                    || group.base_offset.checked_add(group.entries.len() as u64) != Some(frame.end)
-                {
+                if group.base_offset != span.base || group.entries.len() != span.count as usize {
                     return Classification::LookupFailure;
                 }
                 let Some(entry) = group.entries.get(entry_index) else {

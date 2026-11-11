@@ -6,7 +6,6 @@ pub(super) struct Writer {
     pub keys: Keys,
     pub lookup: Vec<u8>,
     pub active: Active,
-    pub log_id: codec::LogId,
 }
 
 /// The segment that takes new frames. Only the writer thread appends to it.
@@ -18,23 +17,18 @@ pub(super) struct Active {
 impl Writer {
     /// Starts a new active segment at `next`, the next log offset, if the active one has
     /// reached the roll size.
-    fn roll(
-        &mut self,
-        storage: &dyn Storage,
-        dir: &Path,
-        next: u64,
-        options: &Options,
-    ) -> io::Result<()> {
+    fn roll(&mut self, view: &View, next: u64, options: &Options) -> io::Result<()> {
         // A segment with no record cannot roll: its successor would take its name.
         if self.active.length < options.roll_bytes || next == self.active.base {
             return Ok(());
         }
         let header = codec::Header {
-            log_id: *self.log_id.bytes(),
+            log_id: *view.log_id.bytes(),
             base_offset: next,
             epoch: self.epoch,
         };
-        create_segment(storage, dir, Purpose::Roll, &header)?;
+        create_segment(view.storage.as_ref(), &view.dir, Purpose::Roll, &header)?;
+        view.published.lock().unwrap().roll();
         self.active = Active {
             base: next,
             length: codec::HEADER_LEN as u64,
@@ -116,9 +110,7 @@ fn revisions(
 }
 
 pub(super) fn run(
-    storage: Arc<dyn Storage>,
-    dir: PathBuf,
-    published: Arc<Mutex<Published>>,
+    view: Arc<View>,
     poisoned: Arc<std::sync::atomic::AtomicBool>,
     receiver: mpsc::Receiver<Request>,
     mut writer: Writer,
@@ -132,7 +124,7 @@ pub(super) fn run(
         };
         #[cfg(test)]
         crate::pipeline::request(&first.submit, crate::pipeline::DEQUEUE);
-        let base = published.lock().unwrap().watermark;
+        let base = view.watermark();
         // Copying every durable head here would make each group cost grow with the stream count.
         let mut heads = BTreeMap::new();
         let mut requests = Vec::new();
@@ -147,8 +139,7 @@ pub(super) fn run(
             #[cfg(test)]
             crate::pipeline::request(&request.submit, crate::pipeline::CLASSIFY);
             match writer.keys.classify(
-                storage.as_ref(),
-                &dir,
+                &view,
                 &request.submit,
                 &mut writer.lookup,
                 &keys::Staged {
@@ -156,9 +147,8 @@ pub(super) fn run(
                     requests: &requests,
                     origins: &origins,
                 },
-                &published,
             ) {
-                Classification::New => match revisions(&request.submit, &heads, &published) {
+                Classification::New => match revisions(&request.submit, &heads, &view.published) {
                     Err(error) => {
                         request.answer(Err(error));
                     }
@@ -177,9 +167,7 @@ pub(super) fn run(
                         } else {
                             // The roll waits for the group's first new submit, so that a group
                             // that appends nothing writes and flushes nothing.
-                            if requests.is_empty()
-                                && writer.roll(storage.as_ref(), &dir, base, &options).is_err()
-                            {
+                            if requests.is_empty() && writer.roll(&view, base, &options).is_err() {
                                 poison(&poisoned, requests, waiters, Some(request), receiver);
                                 return;
                             }
@@ -272,13 +260,13 @@ pub(super) fn run(
             base_offset: base,
             entries,
         };
-        let bytes = codec::encode_group(&writer.log_id, &group).expect("validated group");
+        let bytes = codec::encode_group(&view.log_id, &group).expect("validated group");
         let length = bytes.len();
-        let segment = segment_path(&dir, writer.active.base);
+        let segment = segment_path(&view.dir, writer.active.base);
         #[cfg(test)]
         timeline.mark(1);
         let result = call(
-            storage.as_ref(),
+            view.storage.as_ref(),
             &segment,
             Purpose::Group,
             Op::Append(bytes),
@@ -286,7 +274,12 @@ pub(super) fn run(
         .and_then(|_| {
             #[cfg(test)]
             timeline.mark(2);
-            call(storage.as_ref(), &segment, Purpose::Group, Op::SyncData)
+            call(
+                view.storage.as_ref(),
+                &segment,
+                Purpose::Group,
+                Op::SyncData,
+            )
         });
         #[cfg(test)]
         timeline.mark(3);
@@ -294,16 +287,9 @@ pub(super) fn run(
             poison(&poisoned, requests, waiters, deferred.take(), receiver);
             return;
         }
-        let frame = Frame {
-            segment: writer.active.base,
-            position: writer.active.length,
-            length,
-            base,
-            end: base + assigned.len() as u64,
-            epoch: writer.epoch,
-        };
+        let span = GroupSpan::of(writer.active.length, length, &group);
         writer.active.length += length as u64;
-        publish(&mut published.lock().unwrap(), frame, &group);
+        view.published.lock().unwrap().publish(span, &group);
         #[cfg(test)]
         timeline.mark(4);
         let mut index = 0;

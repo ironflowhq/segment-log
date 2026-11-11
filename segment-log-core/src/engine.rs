@@ -14,31 +14,17 @@ use std::{
 mod keys;
 mod recovery;
 mod reply;
+mod view;
 mod writer;
 use keys::Keys;
 pub use reply::Pending;
+use view::{GroupSpan, Published, View};
 use writer::{Active, RevisionSlot, Writer, run};
 
 fn segment_path(dir: &Path, base: u64) -> PathBuf {
     dir.join(format!("{base:020}.seg"))
 }
 
-#[derive(Clone)]
-struct Frame {
-    /// Base offset of the segment file that holds the frame.
-    segment: u64,
-    position: u64,
-    length: usize,
-    base: u64,
-    end: u64,
-    epoch: u64,
-}
-#[derive(Default)]
-struct Published {
-    frames: Vec<Frame>,
-    heads: BTreeMap<Vec<u8>, StreamHead>,
-    watermark: u64,
-}
 struct Reservation {
     bytes: usize,
     used: Arc<std::sync::atomic::AtomicUsize>,
@@ -79,14 +65,11 @@ impl Request {
     }
 }
 pub struct SegmentLog {
-    storage: Arc<dyn Storage>,
-    dir: PathBuf,
-    published: Arc<Mutex<Published>>,
+    view: Arc<View>,
     sender: Option<mpsc::SyncSender<Request>>,
     writer: Option<JoinHandle<()>>,
     poisoned: Arc<std::sync::atomic::AtomicBool>,
     options: Arc<Options>,
-    log_id: codec::LogId,
     used: Arc<std::sync::atomic::AtomicUsize>,
     _lock: Mutex<Box<dyn Lock>>,
     #[cfg(test)]
@@ -118,23 +101,22 @@ impl SegmentLog {
         }
         let options = Arc::new(options);
         let recovered = recovery::open(storage.as_ref(), dir)?;
-        let dir = dir.to_owned();
-        let published = Arc::new(Mutex::new(recovered.published));
+        let view = Arc::new(View {
+            storage,
+            dir: dir.to_owned(),
+            log_id: recovered.log_id,
+            published: Mutex::new(recovered.published),
+        });
         let poisoned = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let (sender, receiver) = mpsc::sync_channel(options.queue_capacity);
-        let writer_storage = storage.clone();
-        let writer_dir = dir.clone();
-        let writer_published = published.clone();
+        let writer_view = view.clone();
         let writer_poisoned = poisoned.clone();
         let writer_options = options.clone();
-        let writer_log_id = recovered.log_id.clone();
         let writer = thread::Builder::new()
             .name("segment-log-writer".into())
             .spawn(move || {
                 run(
-                    writer_storage,
-                    writer_dir,
-                    writer_published,
+                    writer_view,
                     writer_poisoned,
                     receiver,
                     Writer {
@@ -142,21 +124,17 @@ impl SegmentLog {
                         keys: recovered.keys,
                         lookup: Vec::new(),
                         active: recovered.active,
-                        log_id: writer_log_id,
                     },
                     writer_options,
                 );
             })
             .map_err(OpenError::Io)?;
         Ok(Self {
-            storage,
-            dir,
-            published,
+            view,
             sender: Some(sender),
             writer: Some(writer),
             poisoned,
             options,
-            log_id: recovered.log_id,
             used: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
             _lock: Mutex::new(recovered.lock),
             #[cfg(test)]
@@ -173,8 +151,8 @@ impl SegmentLog {
     }
     #[cfg(test)]
     pub(crate) fn seed_counters(&self, watermark: u64, heads: &[(&[u8], u64)]) {
-        let mut state = self.published.lock().unwrap();
-        assert!(state.frames.is_empty());
+        let mut state = self.view.published.lock().unwrap();
+        assert!(state.sealed.is_empty() && state.newest.spans.is_empty());
         state.watermark = watermark;
         for (stream, revision) in heads {
             state.heads.insert(
@@ -233,69 +211,13 @@ impl SegmentLog {
         }
     }
     pub fn watermark(&self) -> LogOffset {
-        self.published.lock().unwrap().watermark
+        self.view.watermark()
     }
     pub fn stream_head(&self, stream: &[u8]) -> Option<StreamHead> {
-        self.published
-            .lock()
-            .unwrap()
-            .heads
-            .get(stream)
-            .map(|h| StreamHead {
-                revision: h.revision,
-                offset: h.offset,
-            })
+        self.view.stream_head(stream)
     }
     pub fn read(&self, from: LogOffset, max: usize) -> Result<Vec<Record>, ReadError> {
-        let state = self.published.lock().unwrap();
-        if max == 0 || from >= state.watermark {
-            return Ok(vec![]);
-        }
-        let first = state.frames.partition_point(|frame| frame.end <= from);
-        let end = from.saturating_add(max as u64);
-        let last = state.frames.partition_point(|frame| frame.base < end);
-        let frames = state.frames[first..last].to_vec();
-        drop(state);
-        let mut records = Vec::new();
-        for frame in frames {
-            let bytes = read_bytes(
-                self.storage.as_ref(),
-                &segment_path(&self.dir, frame.segment),
-                Purpose::Lookup,
-                frame.position,
-                frame.length,
-            )
-            .map_err(ReadError::Io)?;
-            let corrupt = || ReadError::Corrupt {
-                segment: frame.segment,
-                position: frame.position,
-            };
-            let group = codec::decode(&self.log_id, &bytes)
-                .ok()
-                .and_then(codec::Frame::into_group)
-                .ok_or_else(corrupt)?;
-            if group.base_offset != frame.base
-                || group.base_offset + group.entries.len() as u64 != frame.end
-            {
-                return Err(corrupt());
-            }
-            for (i, entry) in group.entries.into_iter().enumerate() {
-                let offset = group.base_offset + i as u64;
-                if offset >= from {
-                    records.push(Record {
-                        offset,
-                        stream: entry.stream.to_vec(),
-                        revision: entry.revision,
-                        key: entry.key.map(<[u8]>::to_vec),
-                        payload: entry.payload.to_vec(),
-                    });
-                    if records.len() == max {
-                        return Ok(records);
-                    }
-                }
-            }
-        }
-        Ok(records)
+        self.view.read(from, max)
     }
 }
 impl Drop for SegmentLog {
@@ -340,19 +262,6 @@ fn create_segment(
     call(storage, &path, purpose, Op::SyncData)?;
     call(storage, dir, purpose, Op::SyncDir)?;
     Ok(())
-}
-fn publish(published: &mut Published, frame: Frame, group: &codec::Group<'_>) {
-    for (i, entry) in group.entries.iter().enumerate() {
-        published.heads.insert(
-            entry.stream.to_vec(),
-            StreamHead {
-                revision: entry.revision,
-                offset: group.base_offset + i as u64,
-            },
-        );
-    }
-    published.watermark = frame.end;
-    published.frames.push(frame);
 }
 fn validate(submit: &Submit) -> Result<(), AppendError> {
     if submit.records.is_empty() {

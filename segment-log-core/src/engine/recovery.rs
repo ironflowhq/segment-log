@@ -122,7 +122,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
             return Err(OpenError::Gap { segment: base });
         }
         kept.epoch = kept.epoch.max(header.epoch);
-        let scan = scan(storage, &log_id, &segment_path(dir, base), base, &mut kept)?;
+        let scan = scan(storage, &log_id, &segment_path(dir, base), &mut kept)?;
         if base == newest {
             tail = Some((scan, bytes));
         } else if !scan.reached_end_of_file {
@@ -131,6 +131,8 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
                 segment: base,
                 position: scan.end,
             });
+        } else {
+            kept.published.roll();
         }
     }
     let (scan, header) = tail.unwrap();
@@ -208,7 +210,6 @@ fn scan(
     storage: &dyn Storage,
     log: &codec::LogId,
     path: &Path,
-    segment: u64,
     kept: &mut Kept,
 ) -> io::Result<Scan> {
     let mut position = codec::HEADER_LEN as u64;
@@ -253,18 +254,8 @@ fn scan(
         kept.epoch = group.epoch;
         let length = frame.as_ref().unwrap().len();
         kept.keys.recover(&group);
-        publish(
-            &mut kept.published,
-            Frame {
-                segment,
-                position,
-                length,
-                base: group.base_offset,
-                end: group.base_offset + group.entries.len() as u64,
-                epoch: group.epoch,
-            },
-            &group,
-        );
+        kept.published
+            .publish(GroupSpan::of(position, length, &group), &group);
         last = Some((position, frame.unwrap()));
         position += length as u64;
     }
