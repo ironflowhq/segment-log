@@ -1,7 +1,7 @@
 use super::*;
 
 /// Durable keys and the keys staged by the current group. A staged position is
-/// final: its group becomes durable or the writer stops. `log` validates the frames it reads.
+/// final: its group becomes durable or the writer stops.
 pub(super) struct Keys {
     log: codec::LogId,
     map: BTreeMap<Vec<u8>, Position>,

@@ -1,4 +1,3 @@
-//! Format v1 scenarios: the frame CRC over the log id, and the closing frames of a sealed segment.
 use super::{CHECK_ID, log};
 use crate::acceptance::support::{bounded, raw};
 use crate::codec::{self, Entry, Group, LogId};
@@ -15,13 +14,11 @@ fn frame_of(body: &[u8]) -> Vec<u8> {
     raw::frame(&CHECK_ID, body)
 }
 
-/// The salts of the key filter in format.md.
 const SALTS: [u32; 11] = [
     0x47b6137b, 0x44974d91, 0x8824ad5b, 0xa2b7289d, 0x705495c7, 0x2df1424b, 0x9efc4947, 0x5c6bfb31,
     0x1d0f3e9b, 0x6ac1e2f5, 0xb3a8c64d,
 ];
 
-/// The block and the bit numbers of a hash in a filter of `blocks` blocks, as format.md defines them.
 fn probes(hash: u64, blocks: usize) -> (usize, Vec<usize>) {
     let block = (((hash >> 32) * blocks as u64) >> 32) as usize;
     let low = (hash & 0xffff_ffff) as u32;

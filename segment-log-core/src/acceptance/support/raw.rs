@@ -15,9 +15,7 @@ pub(crate) fn crc(bytes: &[u8]) -> u32 {
     }
     state ^ u32::MAX
 }
-/// The id of every hand-built log. A segment that holds a frame from `group` has this id.
 pub(crate) const LOG_ID: [u8; 16] = [7; 16];
-/// The version that a hand-built segment header must carry to open.
 pub(crate) const VERSION: u16 = 1;
 pub(crate) fn header(version: u16, base: u64, epoch: u64) -> Vec<u8> {
     assert_eq!(crc(b"123456789"), 0xe3069283);
@@ -32,16 +30,13 @@ pub(crate) fn header(version: u16, base: u64, epoch: u64) -> Vec<u8> {
     bytes[60..64].copy_from_slice(&checksum.to_le_bytes());
     bytes
 }
-/// The CRC of `frame` in the log `log_id`: the id, then the length, then the body.
 pub(crate) fn frame_crc(log_id: &[u8; 16], frame: &[u8]) -> u32 {
     crc(&[log_id.as_slice(), &frame[..4], &frame[8..]].concat())
 }
-/// Writes the checksum of a frame whose bytes changed.
 pub(crate) fn rechecksum(log_id: &[u8; 16], frame: &mut [u8]) {
     let checksum = frame_crc(log_id, frame);
     frame[4..8].copy_from_slice(&checksum.to_le_bytes());
 }
-/// A frame of the log `log_id` around `body`, with the right length and checksum.
 pub(crate) fn frame(log_id: &[u8; 16], body: &[u8]) -> Vec<u8> {
     let mut frame = (body.len() as u32).to_le_bytes().to_vec();
     frame.extend([0; 4]);
@@ -49,7 +44,6 @@ pub(crate) fn frame(log_id: &[u8; 16], body: &[u8]) -> Vec<u8> {
     rechecksum(log_id, &mut frame);
     frame
 }
-/// The group frame of `payloads` as a log with `log_id` writes it.
 pub(crate) fn group_in(log_id: &[u8; 16], epoch: u64, base: u64, payloads: &[&[u8]]) -> Vec<u8> {
     let mut body = vec![1, 0, 0, 0];
     body.extend(epoch.to_le_bytes());
@@ -68,7 +62,6 @@ pub(crate) fn group_in(log_id: &[u8; 16], epoch: u64, base: u64, payloads: &[&[u
 pub(crate) fn group(epoch: u64, base: u64, payloads: &[&[u8]]) -> Vec<u8> {
     group_in(&LOG_ID, epoch, base, payloads)
 }
-/// The log id in the header of the first segment that `sim` holds.
 pub(crate) fn log_id(sim: &Sim) -> [u8; 16] {
     header_fields(&segments(sim)[0].1).0
 }

@@ -3,7 +3,6 @@ use std::ops::Range;
 
 const BLOCK_BYTES: usize = 64;
 const KEYS_PER_BLOCK: usize = 32;
-/// Eleven probes is `round(16 * ln 2)`, for 16 bits per key.
 const SALTS: [u32; 11] = [
     0x47b6137b, 0x44974d91, 0x8824ad5b, 0xa2b7289d, 0x705495c7, 0x2df1424b, 0x9efc4947, 0x5c6bfb31,
     0x1d0f3e9b, 0x6ac1e2f5, 0xb3a8c64d,
@@ -22,7 +21,6 @@ fn round(v: &mut [u64; 4]) {
     v[2] = v[2].rotate_left(32);
 }
 
-// SipHash-2-4, written out because the format fixes it and the standard hashers do not promise it.
 fn siphash24([k0, k1]: [u64; 2], bytes: &[u8]) -> u64 {
     let mut v = [
         k0 ^ 0x736f6d6570736575,
@@ -54,14 +52,11 @@ fn siphash24([k0, k1]: [u64; 2], bytes: &[u8]) -> u64 {
 }
 
 impl LogId {
-    /// The hash that the key frames hold for an idempotency key.
     pub(crate) fn key_hash(&self, key: &[u8]) -> u64 {
         siphash24(self.keys, key)
     }
 }
 
-/// What open keeps of a sealed segment's key filter frame: the first hash of each index page,
-/// and a blocked Bloom filter with 16 bits for each key.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct KeyFilter {
     count: u32,
@@ -70,7 +65,6 @@ pub(crate) struct KeyFilter {
 }
 
 impl KeyFilter {
-    /// The filter of `entries`, which are sorted.
     pub(super) fn build(entries: &[KeyEntry]) -> Self {
         let mut filter = Self {
             count: entries.len() as u32,
@@ -87,7 +81,6 @@ impl KeyFilter {
         filter
     }
 
-    /// The body after the body header, which has been checked against `count`.
     pub(super) fn decode(count: u32, body: &[u8]) -> Result<Self, Error> {
         let pages = page_count(count);
         let blocks = (count as usize).div_ceil(KEYS_PER_BLOCK);
@@ -120,7 +113,6 @@ impl KeyFilter {
         }
     }
 
-    /// The block of `hash` and the bit numbers of its probes.
     fn probes(&self, hash: u64) -> (usize, [usize; SALTS.len()]) {
         let block = (((hash >> 32) * self.blocks.len() as u64) >> 32) as usize;
         let low = hash as u32;
@@ -137,7 +129,6 @@ impl KeyFilter {
         }
     }
 
-    /// `false` means the key is not in the segment. `true` means maybe.
     pub(crate) fn may_contain(&self, hash: u64) -> bool {
         if self.blocks.is_empty() {
             return false;
@@ -147,8 +138,6 @@ impl KeyFilter {
             .all(|bit| self.blocks[block][bit / 8] & (1 << (bit % 8)) != 0)
     }
 
-    /// The key index pages that can hold `hash`: the last page whose fence is below it, or page 0,
-    /// and the pages after it whose fence equals it.
     pub(crate) fn index_pages(&self, hash: u64) -> Range<usize> {
         if self.fences.is_empty() {
             return 0..0;
@@ -163,7 +152,6 @@ impl KeyFilter {
         self.count
     }
 
-    /// The bytes of fences and blocks that this filter holds.
     pub(crate) fn memory_bytes(&self) -> usize {
         self.fences.len() * size_of::<u64>() + self.blocks.len() * BLOCK_BYTES
     }

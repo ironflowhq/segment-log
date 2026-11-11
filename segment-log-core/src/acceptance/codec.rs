@@ -2,7 +2,6 @@ mod closing;
 
 use super::support::{bounded, raw};
 use crate::codec::{self, Entry, Group, LogId};
-/// The log id of the format.md check values: bytes `00 01 02 … 0f`.
 const CHECK_ID: [u8; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 fn log() -> LogId {
     LogId::new(CHECK_ID)

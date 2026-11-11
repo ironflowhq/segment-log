@@ -213,7 +213,6 @@ pub(crate) fn frame_inputs(log_id: &[u8; 16], frame: &[u8]) -> Vec<Identity> {
     out
 }
 
-/// The log id of the first segment header that a trace writes.
 fn trace_log_id(trace: &[crate::storage::sim::Event]) -> [u8; 16] {
     use crate::storage::{Op, sim::Event};
     trace

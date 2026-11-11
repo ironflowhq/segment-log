@@ -37,7 +37,6 @@ pub(crate) const LOCATOR_LEN: usize = 40;
 const ENVELOPE_LEN: usize = 8;
 pub(crate) const BODY_HEADER_LEN: usize = 24;
 
-// The key index frame is the largest body, and the keyed-record limit is what keeps it in range.
 const _: () = assert!(
     BODY_HEADER_LEN + PAGE_SIZE * KEYED_RECORD_LIMIT.div_ceil(PAGE_ENTRIES) <= FRAME_BODY_LIMIT
 );
@@ -56,19 +55,14 @@ pub(crate) enum Error {
     Stream,
     Key,
     Offset,
-    /// Entries or fences that are not in ascending order, or an entry that repeats.
     Order,
-    /// A page whose first hash is not its fence.
     Fence,
 }
 
-/// The log id of one log, with what every frame and key hash needs from it. Build it once.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct LogId {
     bytes: [u8; 16],
-    /// The CRC state after the log id bytes, where every frame's CRC starts.
     crc: u32,
-    /// The SipHash key: `k0` is bytes 0..8 and `k1` is bytes 8..16.
     keys: [u64; 2],
 }
 

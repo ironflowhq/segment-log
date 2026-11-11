@@ -36,7 +36,6 @@ pub(crate) struct Entry<'a> {
     pub revision: u64,
 }
 
-/// The input of a group frame.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Group<'a> {
     pub epoch: u64,
@@ -54,13 +53,10 @@ pub(crate) struct StreamTail<'a> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Footer<'a> {
-    /// `0` in the final segment of a sealed log, which has no key frames.
     pub key_filter_position: u64,
     pub streams: Vec<StreamTail<'a>>,
 }
 
-/// A frame that passed every check its own bytes allow. The log offset and epoch order across
-/// frames are for the caller.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Frame<'a> {
     pub epoch: u64,
@@ -73,19 +69,12 @@ pub(crate) enum Body<'a> {
     Group(Vec<Entry<'a>>),
     Footer(Footer<'a>),
     Seal,
-    Locator {
-        footer_position: u64,
-    },
+    Locator { footer_position: u64 },
     KeyFilter(KeyFilter),
-    /// The pages, whole. `decode_page` checks one.
-    KeyIndex {
-        count: u32,
-        pages: &'a [u8],
-    },
+    KeyIndex { count: u32, pages: &'a [u8] },
 }
 
 impl<'a> Frame<'a> {
-    /// The group, or `None` for any other kind.
     pub(crate) fn into_group(self) -> Option<Group<'a>> {
         match self.body {
             Body::Group(entries) => Some(Group {
@@ -99,13 +88,11 @@ impl<'a> Frame<'a> {
 }
 
 impl LogId {
-    // The checksum skips its own field, bytes 4..8.
     fn frame_crc(&self, frame: &[u8]) -> u32 {
         !crc::update(crc::update(self.crc, &frame[..4]), &frame[ENVELOPE_LEN..])
     }
 }
 
-/// Starts a frame with its envelope blank and its body header written.
 pub(super) fn begin(
     kind: Kind,
     epoch: u64,
@@ -122,7 +109,6 @@ pub(super) fn begin(
     out
 }
 
-/// Fills the envelope of a frame whose body is written. The caller has checked the body size.
 pub(super) fn finish(log: &LogId, mut frame: Vec<u8>) -> Vec<u8> {
     let body_len = (frame.len() - ENVELOPE_LEN) as u32;
     frame[..4].copy_from_slice(&body_len.to_le_bytes());
@@ -187,7 +173,6 @@ pub(crate) fn encode_group(log: &LogId, group: &Group<'_>) -> Result<Vec<u8>, Er
     Ok(finish(log, out))
 }
 
-/// `base_offset` is the next unused log offset.
 pub(crate) fn encode_footer(
     log: &LogId,
     epoch: u64,
@@ -221,7 +206,6 @@ pub(crate) fn encode_footer(
     Ok(finish(log, out))
 }
 
-/// `base_offset` is the next unused log offset.
 pub(crate) fn encode_seal(log: &LogId, epoch: u64, base_offset: u64) -> Vec<u8> {
     finish(
         log,
@@ -229,7 +213,6 @@ pub(crate) fn encode_seal(log: &LogId, epoch: u64, base_offset: u64) -> Vec<u8> 
     )
 }
 
-/// `base_offset` is the next unused log offset.
 pub(crate) fn encode_locator(
     log: &LogId,
     epoch: u64,
@@ -270,7 +253,6 @@ impl<'a> Cursor<'a> {
     }
 }
 
-/// Decodes one whole frame of the log `log`.
 pub(crate) fn decode<'a>(log: &LogId, bytes: &'a [u8]) -> Result<Frame<'a>, Error> {
     let mut c = Cursor { bytes, position: 0 };
     let size = c.u32()? as usize;
@@ -321,7 +303,6 @@ pub(crate) fn decode<'a>(log: &LogId, bytes: &'a [u8]) -> Result<Frame<'a>, Erro
     })
 }
 
-/// A kind with a fixed body: no count, and the body is `body_len` bytes.
 fn empty(c: &Cursor<'_>, count: u32, body_len: usize) -> Result<(), Error> {
     if count != 0 {
         return Err(Error::Count);

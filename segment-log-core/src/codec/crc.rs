@@ -1,4 +1,3 @@
-// Slicing-by-8: eight table lookups consume eight input bytes per step.
 // A `static`, not a `const`: an unoptimized build copies a `const` array at every use, which
 // here was the whole 8 KiB table for each lookup.
 static TABLES: [[u32; 256]; 8] = {

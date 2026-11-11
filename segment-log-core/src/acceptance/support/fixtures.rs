@@ -49,7 +49,6 @@ pub(crate) fn assert_record(log: &SegmentLog) {
     assert_eq!((head.offset, head.revision), (0, 0));
 }
 
-/// The log id of the log that `sim` holds, from its first segment header.
 pub(crate) fn log_id(sim: &Sim) -> crate::codec::LogId {
     crate::codec::LogId::new(super::raw::log_id(sim))
 }

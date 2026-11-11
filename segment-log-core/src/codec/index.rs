@@ -4,21 +4,16 @@ use super::{
 };
 
 const ENTRY_LEN: usize = 16;
-/// The entry count, 8 reserved bytes and the CRC close each page.
 const PAGE_CRC_AT: usize = PAGE_SIZE - 4;
 const PAGE_COUNT_AT: usize = PAGE_ENTRIES * ENTRY_LEN;
 
-/// One keyed record of a segment, ordered by `(hash, position, record)`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct KeyEntry {
     pub hash: u64,
-    /// The file position of the group frame that holds the record.
     pub position: u32,
-    /// The record's index in that frame.
     pub record: u32,
 }
 
-/// The two frames that a roll writes before the footer.
 pub(crate) struct KeyFrames {
     pub filter: Vec<u8>,
     pub index: Vec<u8>,
@@ -42,8 +37,6 @@ fn write_page(out: &mut Vec<u8>, entries: &[KeyEntry]) {
     out.extend_from_slice(&crc.to_le_bytes());
 }
 
-/// Builds the key filter and key index frames of a segment from its keyed records. It sorts
-/// `entries`. `base_offset` is the next unused log offset.
 pub(crate) fn encode_key_frames(
     log: &LogId,
     epoch: u64,
@@ -84,8 +77,6 @@ pub(crate) fn encode_key_frames(
     })
 }
 
-/// Decodes page `number` of a key index frame with `count` keyed records, and checks every page
-/// rule of format.md. `fence` is the page's entry in the key filter.
 pub(crate) fn decode_page(
     page: &[u8],
     number: usize,

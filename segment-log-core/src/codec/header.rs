@@ -10,7 +10,6 @@ pub(crate) struct Header {
     pub epoch: u64,
 }
 
-/// The magic, `format_version` and `header_len`.
 fn prefix() -> [u8; 8] {
     let mut bytes = [0; 8];
     bytes[..4].copy_from_slice(b"SGLG");
