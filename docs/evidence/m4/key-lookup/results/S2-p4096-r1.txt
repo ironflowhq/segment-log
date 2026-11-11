@@ -1,0 +1,107 @@
+LOAD_START { 2.99 8.57 8.33 } 19:22:32
+CANARY start crc32c_1MiB_best_GBps=1.41 (P-core reference 2.16)
+INFO gen S2-p4096 744 ms
+RESULT scale=S2-p4096 cand=hash metric=wyhash_style_ns_per_key median=11.023 min=10.793 max=11.277 n=7
+RESULT scale=S2-p4096 cand=hash metric=siphash24_ns_per_key median=14.789 min=14.614 max=14.937 n=7
+RESULT scale=S2-p4096 cand=A metric=open_ms median=26.925 min=25.910 max=31.177 n=7
+RESULT scale=S2-p4096 cand=A metric=resident_bytes value=71303176.000000
+RESULT scale=S2-p4096 cand=A metric=resident_bytes_per_key value=35.651588
+RESULT scale=S2-p4096 cand=B metric=open_ms median=2.758 min=2.559 max=3.248 n=7
+RESULT scale=S2-p4096 cand=B metric=resident_bytes value=2556800.000000
+RESULT scale=S2-p4096 cand=B metric=resident_bytes_per_key value=1.278400
+RESULT scale=S2-p4096 cand=C4 metric=open_ms median=3.414 min=3.378 max=4.149 n=7
+RESULT scale=S2-p4096 cand=C4 metric=resident_bytes value=4245504.000000
+RESULT scale=S2-p4096 cand=C4 metric=resident_bytes_per_key value=2.122752
+RESULT scale=S2-p4096 cand=C16 metric=open_ms median=10.540 min=10.395 max=11.376 n=7
+RESULT scale=S2-p4096 cand=C16 metric=resident_bytes value=16828416.000000
+RESULT scale=S2-p4096 cand=C16 metric=resident_bytes_per_key value=8.414208
+RESULT scale=S2-p4096 cand=C64 metric=open_ms median=38.988 min=38.093 max=40.020 n=7
+RESULT scale=S2-p4096 cand=C64 metric=resident_bytes value=67160064.000000
+RESULT scale=S2-p4096 cand=C64 metric=resident_bytes_per_key value=33.580032
+RESULT scale=S2-p4096 cand=A metric=rss_delta_bytes_per_key value=0.024576
+RESULT scale=S2-p4096 cand=A metric=hashmap_capacity value=3670016.000000
+RESULT scale=S2-p4096 cand=A metric=positive_mismatches value=0.000000
+RESULT scale=S2-p4096 cand=A metric=negative_hash_hits value=0.000000
+RESULT scale=S2-p4096 cand=A metric=neg_lookup_ns median=2.148 min=1.892 max=3.186 n=7
+RESULT scale=S2-p4096 cand=A metric=pos_lookup_ns_excl_frame_read median=5.463 min=3.329 max=7.106 n=7
+RESULT scale=S2-p4096 cand=B+C metric=positive_mismatches value=0.000000
+RESULT scale=S2-p4096 cand=B+C metric=negative_found value=0.000000
+RESULT scale=S2-p4096 cand=D4 metric=neg_lookup_ns_end_to_end median=15.679 min=14.517 max=40.995 n=7
+RESULT scale=S2-p4096 cand=D4 metric=neg_preads_per_lookup value=0.000728
+RESULT scale=S2-p4096 cand=D16 metric=neg_lookup_ns_end_to_end median=6.954 min=5.852 max=22.659 n=7
+RESULT scale=S2-p4096 cand=D16 metric=neg_preads_per_lookup value=0.000000
+RESULT scale=S2-p4096 cand=D64 metric=neg_lookup_ns_end_to_end median=9.275 min=7.971 max=23.196 n=7
+RESULT scale=S2-p4096 cand=D64 metric=neg_preads_per_lookup value=0.000000
+RESULT scale=S2-p4096 cand=B metric=neg_lookup_ns_end_to_end median=4033.123 min=3710.265 max=7222.474 n=7
+RESULT scale=S2-p4096 cand=B metric=neg_filter_probe_only_ns median=1097.658 min=1043.978 max=2855.155 n=7
+RESULT scale=S2-p4096 cand=B metric=neg_filter_hits_per_lookup value=0.964368
+RESULT scale=S2-p4096 cand=B metric=neg_preads_per_lookup value=0.964313
+RESULT scale=S2-p4096 cand=B metric=neg_any_found value=0.000000
+RESULT scale=S2-p4096 cand=C4 metric=neg_lookup_ns_end_to_end median=206.600 min=201.816 max=446.842 n=7
+RESULT scale=S2-p4096 cand=C4 metric=neg_fpr_measured value=0.000682
+RESULT scale=S2-p4096 cand=C4 metric=neg_preads_per_lookup value=0.068200
+RESULT scale=S2-p4096 cand=C4 metric=k value=12.000000
+RESULT scale=S2-p4096 cand=C16 metric=neg_lookup_ns_end_to_end median=8.979 min=7.406 max=19.717 n=7
+RESULT scale=S2-p4096 cand=C16 metric=neg_fpr_measured value=0.000000
+RESULT scale=S2-p4096 cand=C16 metric=neg_preads_per_lookup value=0.000000
+RESULT scale=S2-p4096 cand=C16 metric=k value=16.000000
+RESULT scale=S2-p4096 cand=C64 metric=neg_lookup_ns_end_to_end median=8.308 min=7.854 max=42.196 n=7
+RESULT scale=S2-p4096 cand=C64 metric=neg_fpr_measured value=0.000000
+RESULT scale=S2-p4096 cand=C64 metric=neg_preads_per_lookup value=0.000000
+RESULT scale=S2-p4096 cand=C64 metric=k value=16.000000
+RESULT scale=S2-p4096 cand=B metric=pos_uniform_ns_excl_frame_read median=4444.596 min=4230.821 max=4972.171 n=7
+RESULT scale=S2-p4096 cand=B metric=pos_uniform_preads value=1.485050
+RESULT scale=S2-p4096 cand=C metric=pos_uniform_ns_excl_frame_read median=134512.477 min=129295.744 max=224877.948 n=7
+RESULT scale=S2-p4096 cand=C metric=pos_uniform_preads value=50.866350
+RESULT scale=S2-p4096 cand=B metric=pos_newest_ns_excl_frame_read median=2394.079 min=2358.860 max=4501.731 n=7
+RESULT scale=S2-p4096 cand=B metric=pos_newest_preads value=1.002700
+RESULT scale=S2-p4096 cand=C metric=pos_newest_ns_excl_frame_read median=2447.083 min=2430.373 max=9991.877 n=7
+RESULT scale=S2-p4096 cand=C metric=pos_newest_preads value=1.002700
+RESULT scale=S2-p4096 cand=C metric=false_positive_cost_us_all_100_segments median=295.187 min=260.541 max=605.787 n=7
+RESULT scale=S2-p4096 cand=C metric=false_positive_preads value=99.999000
+RESULT scale=S2-p4096 cand=BC metric=one_index_page_probe_ns median=2320.742 min=2262.883 max=2392.358 n=7
+RESULT scale=S2-p4096 cand=BC metric=crc_of_one_page_ns value=1954.591250
+RESULT scale=S2-p4096 cand=C4 metric=fpr_k12 value=0.000682
+RESULT scale=S2-p4096 cand=C4 metric=fpr_k4 value=0.002319
+RESULT scale=S2-p4096 cand=C4 metric=fpr_k8 value=0.000686
+RESULT scale=S2-p4096 cand=C4 metric=bits_per_key value=16.777216
+RESULT scale=S2-p4096 cand=C16 metric=fpr_k16 value=0.000000
+RESULT scale=S2-p4096 cand=C16 metric=fpr_k4 value=0.000016
+RESULT scale=S2-p4096 cand=C16 metric=fpr_k8 value=0.000000
+RESULT scale=S2-p4096 cand=C16 metric=bits_per_key value=67.108864
+RESULT scale=S2-p4096 cand=C64 metric=fpr_k16 value=0.000000
+RESULT scale=S2-p4096 cand=C64 metric=fpr_k4 value=0.000000
+RESULT scale=S2-p4096 cand=C64 metric=fpr_k8 value=0.000000
+RESULT scale=S2-p4096 cand=C64 metric=bits_per_key value=268.435456
+RESULT scale=S2-p4096 cand=B metric=per_segment_fpr_bpk10_k7 value=0.009644
+RESULT scale=S2-p4096 cand=B metric=p_any_of_100_hits_bpk10 value=0.616471
+RESULT scale=S2-p4096 cand=B metric=per_segment_fpr_bpk16_k11 value=0.000883
+RESULT scale=S2-p4096 cand=B metric=p_any_of_100_hits_bpk16 value=0.084225
+RESULT scale=S2-p4096 cand=B metric=per_segment_fpr_bpk20_k14 value=0.000229
+RESULT scale=S2-p4096 cand=B metric=p_any_of_100_hits_bpk20 value=0.022683
+RESULT scale=S2-p4096 cand=roll metric=hash_keys_ms median=0.334 min=0.220 max=0.606 n=7
+RESULT scale=S2-p4096 cand=roll metric=sort_ms median=0.346 min=0.248 max=0.653 n=7
+RESULT scale=S2-p4096 cand=roll metric=bloom_build_B_ms median=0.102 min=0.087 max=0.247 n=7
+RESULT scale=S2-p4096 cand=roll metric=serialize_crc_ms median=0.192 min=0.149 max=0.452 n=7
+RESULT scale=S2-p4096 cand=roll metric=write_nosync_ms median=3.501 min=1.290 max=16.487 n=7
+RESULT scale=S2-p4096 cand=roll metric=write_sync_all_ms median=11.518 min=7.799 max=419.014 n=7
+RESULT scale=S2-p4096 cand=roll metric=sidecar_bytes_per_key_with_filter value=13.516800
+RESULT scale=S2-p4096 cand=roll metric=sidecar_bytes_per_key_without_filter value=12.265400
+RESULT scale=S2-p4096 cand=C4 metric=roll_or_into_global_ms median=0.161 min=0.117 max=2.482 n=7
+RESULT scale=S2-p4096 cand=C4 metric=roll_serialize_crc_global_ms median=2.399 min=2.132 max=5.317 n=7
+RESULT scale=S2-p4096 cand=C4 metric=roll_write_sync_rename_dirsync_ms median=47.170 min=25.671 max=494.119 n=7
+RESULT scale=S2-p4096 cand=C16 metric=roll_or_into_global_ms median=0.874 min=0.705 max=3.047 n=7
+RESULT scale=S2-p4096 cand=C16 metric=roll_serialize_crc_global_ms median=10.036 min=8.511 max=18.308 n=7
+RESULT scale=S2-p4096 cand=C16 metric=roll_write_sync_rename_dirsync_ms median=57.532 min=43.803 max=138.729 n=7
+RESULT scale=S2-p4096 cand=C64 metric=roll_or_into_global_ms median=1.011 min=0.757 max=1.786 n=7
+RESULT scale=S2-p4096 cand=C64 metric=roll_serialize_crc_global_ms median=42.206 min=33.918 max=48.211 n=7
+RESULT scale=S2-p4096 cand=C64 metric=roll_write_sync_rename_dirsync_ms median=194.600 min=120.660 max=1170.458 n=7
+RESULT scale=S2-p4096 cand=rebuild metric=read_64MiB_warm_ms median=4.426 min=4.375 max=4.543 n=7
+RESULT scale=S2-p4096 cand=rebuild metric=read_64MiB_nocache_ms median=23.726 min=23.293 max=29.390 n=7
+RESULT scale=S2-p4096 cand=rebuild metric=crc32c_64MiB_ms median=31.104 min=30.982 max=32.328 n=7
+RESULT scale=S2-p4096 cand=C16 metric=rebuild_global_from_sidecars_ms median=62.004 min=52.098 max=74.709 n=7
+RESULT scale=S2-p4096 cand=A0 metric=build_from_keys_ms value=1581.838084
+RESULT scale=S2-p4096 cand=A0 metric=resident_bytes_per_key value=88.343821
+RESULT scale=S2-p4096 cand=A0 metric=neg_lookup_ns median=641.838 min=624.709 max=689.000 n=5
+CANARY end crc32c_1MiB_best_GBps=2.16 (P-core reference 2.16)
+LOAD_END { 6.73 8.50 8.34 } 19:24:21

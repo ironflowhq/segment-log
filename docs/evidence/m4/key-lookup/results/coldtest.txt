@@ -1,0 +1,3 @@
+COLDTEST written-normal read-normal: 0.76 us per random 4 KiB pread
+COLDTEST written-normal read-nocache: 0.74 us per random 4 KiB pread
+COLDTEST written-nocache read-nocache: 75.67 us per random 4 KiB pread
