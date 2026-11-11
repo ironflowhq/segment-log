@@ -150,7 +150,7 @@ The filter is a blocked Bloom filter with 16 bits for each key. To add a hash `h
 2. Let `lo` be the low 32 bits of `h`. For each salt `s` in the table below, the bit is `p = (lo * s mod 2^32) >> 23`, a number from 0 to 511.
 3. Bit `p` of a block is bit `p mod 8` of byte `p / 8`, counting bits from the least significant.
 
-Adding a hash sets its 11 bits. A test answers "maybe" when all 11 bits are set. Otherwise the key is not in this segment. The salts, in order:
+Adding a hash sets its 11 bits. A test answers "maybe" when all 11 bits are set. Otherwise the key is not in this segment. When `B = 0`, a test answers that the key is not in this segment without reading a block. The salts, in order:
 
 ```text
 0x47b6137b 0x44974d91 0x8824ad5b 0xa2b7289d 0x705495c7 0x2df1424b
