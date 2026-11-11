@@ -12,13 +12,19 @@ permissions:
   contents: read
 jobs:
   m1-long-run:
-    name: M1 long run (${{ matrix.os }})
+    name: M1 long run (${{ matrix.name }})
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          # Schedule and dispatch only. Linux uses the Hetzner runner. macOS stays on
+          # GitHub-hosted runners because the process-crash long run has to run there.
+          - name: linux
+            runner: '["self-hosted","hetzner"]'
+          - name: macos
+            runner: '["macos-latest"]'
+    runs-on: ${{ fromJSON(matrix.runner) }}
     env:
       SEGMENT_LOG_TRACE_SEEDS: '100'
       SEGMENT_LOG_TRACE_SEED: '10000'
@@ -29,7 +35,9 @@ jobs:
       SEGMENT_LOG_PROCESS_DRILL: ${{ inputs.drill && '1' || '0' }}
     steps:
       - uses: actions/checkout@v7
-      - run: rustup toolchain install
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust-toolchain
       - run: cargo test -p segment-log-core --lib acceptance::seeded::threaded_seeded_traces_long_run -- --ignored --exact --nocapture
       # A trace failure must not hide the process result, and a drill needs both artifacts.
       - if: ${{ !cancelled() }}
@@ -39,25 +47,33 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: trace-failures-${{ matrix.os }}
+          name: trace-failures-${{ matrix.name }}
           path: .audit/trace-failures
           include-hidden-files: true
           if-no-files-found: ignore
+          retention-days: 3
+          compression-level: 9
   m2-long-run:
-    name: M2 long run (${{ matrix.os }})
+    name: M2 long run (${{ matrix.name }})
     if: ${{ !inputs.drill }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - name: linux
+            runner: '["self-hosted","hetzner"]'
+          - name: macos
+            runner: '["macos-latest"]'
+    runs-on: ${{ fromJSON(matrix.runner) }}
     env:
       SEGMENT_LOG_MODEL_CASES: '20000'
       SEGMENT_LOG_MODEL_SEED: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v7
-      - run: rustup toolchain install
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust-toolchain
       - run: cargo test -p segment-log-core --lib acceptance::model::the_log_agrees_with_the_model_long_run -- --ignored --exact --nocapture
       - if: ${{ !cancelled() }}
         run: cargo test -p segment-log-core --lib acceptance::model::erasing_rejected_submits_changes_nothing_long_run -- --ignored --exact --nocapture
@@ -65,9 +81,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: model-regressions-${{ matrix.os }}
+          name: model-regressions-${{ matrix.name }}
           path: segment-log-core/proptest-regressions
           if-no-files-found: ignore
+          retention-days: 3
+          compression-level: 9
   drill-replay:
     # No matrix expression here: a skipped job would show it unexpanded. The matrix value is appended.
     name: Drill replay
@@ -77,15 +95,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - name: linux
+            runner: '["self-hosted","hetzner"]'
+          - name: macos
+            runner: '["macos-latest"]'
+    runs-on: ${{ fromJSON(matrix.runner) }}
     steps:
       - uses: actions/checkout@v7
-      - run: rustup toolchain install
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust-toolchain
       - name: The planted record failed the long run
         run: test "${{ needs.m1-long-run.result }}" = failure
       - uses: actions/download-artifact@v4
         with:
-          name: trace-failures-${{ matrix.os }}
+          name: trace-failures-${{ matrix.name }}
           path: .audit/drill
       - run: scripts/m1-drill-replay.sh .audit/drill

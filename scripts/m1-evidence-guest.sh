@@ -1,7 +1,7 @@
 #!/bin/bash
 # Captures the M1 completion evidence on Linux. Run from the repository root.
-# The defaults are the container paths that scripts/m1-evidence-linux.sh mounts. A native host,
-# such as a hosted runner, sets M1_OUT, CARGO_TARGET_DIR and SEGMENT_LOG_EVIDENCE_DIR instead.
+# The defaults are the container paths that scripts/m1-evidence-linux.sh mounts. A native host
+# sets M1_OUT, CARGO_TARGET_DIR and SEGMENT_LOG_EVIDENCE_DIR instead.
 set -euo pipefail
 out="${M1_OUT:-/out}"
 mkdir -p "$out"
@@ -10,10 +10,8 @@ trap 'printf "exit=%s\n" "$?" > "$out/exit-status.txt"' EXIT
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/build}"
 export SEGMENT_LOG_EVIDENCE_DIR="${SEGMENT_LOG_EVIDENCE_DIR:-/data}"
 mkdir -p "$SEGMENT_LOG_EVIDENCE_DIR"
-sudo=""
-[ "$(id -u)" = 0 ] || sudo=sudo
-$sudo apt-get update
-$sudo apt-get install -y --no-install-recommends strace sysstat time python3
+# The container image does not have these tools. A persistent runner keeps them.
+scripts/ci-ensure-commands.sh strace:strace python3:python3 /usr/bin/time:time
 {
     date -u
     # A container cannot read a worktree's git directory. Its wrapper writes source.txt instead.
