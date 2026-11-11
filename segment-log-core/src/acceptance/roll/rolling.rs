@@ -3,9 +3,10 @@ use crate::acceptance::support::{bounded, oracle};
 use crate::storage::{Call, Op, Purpose};
 
 fn frame_counts(segment: &[u8]) -> Vec<usize> {
+    let (log_id, _, _) = raw::header_fields(segment);
     raw::frames(segment)
         .into_iter()
-        .map(|frame| oracle::frame_inputs(frame).len())
+        .map(|frame| oracle::frame_inputs(&log_id, frame).len())
         .collect()
 }
 

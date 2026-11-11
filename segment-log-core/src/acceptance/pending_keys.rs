@@ -251,7 +251,11 @@ fn failed_groups_drain_matched_waiters_and_poison_queued_retries() {
                 let next = sim.hold(if at_flush {
                     flush()
                 } else {
-                    Call::new(ANY_SEG, Purpose::Group, Op::Append(pending_frame()))
+                    Call::new(
+                        ANY_SEG,
+                        Purpose::Group,
+                        Op::Append(pending_frame(&log_id(&sim))),
+                    )
                 });
                 held.release(None);
                 bootstrap.wait().unwrap();
@@ -280,31 +284,34 @@ fn failed_groups_drain_matched_waiters_and_poison_queued_retries() {
     });
 }
 
-fn pending_frame() -> Vec<u8> {
-    crate::codec::encode(&crate::codec::Group {
-        epoch: 1,
-        base_offset: 1,
-        entries: vec![
-            crate::codec::Entry {
-                stream: b"s",
-                key: Some(b"a"),
-                payload: b"one",
-                revision: 0,
-            },
-            crate::codec::Entry {
-                stream: b"s",
-                key: Some(b"b"),
-                payload: b"two",
-                revision: 1,
-            },
-            crate::codec::Entry {
-                stream: b"s",
-                key: Some(b"c"),
-                payload: b"three",
-                revision: 2,
-            },
-        ],
-    })
+fn pending_frame(log_id: &crate::codec::LogId) -> Vec<u8> {
+    crate::codec::encode_group(
+        log_id,
+        &crate::codec::Group {
+            epoch: 1,
+            base_offset: 1,
+            entries: vec![
+                crate::codec::Entry {
+                    stream: b"s",
+                    key: Some(b"a"),
+                    payload: b"one",
+                    revision: 0,
+                },
+                crate::codec::Entry {
+                    stream: b"s",
+                    key: Some(b"b"),
+                    payload: b"two",
+                    revision: 1,
+                },
+                crate::codec::Entry {
+                    stream: b"s",
+                    key: Some(b"c"),
+                    payload: b"three",
+                    revision: 2,
+                },
+            ],
+        },
+    )
     .unwrap()
 }
 
@@ -407,8 +414,7 @@ fn lookup_failure_drains_pending_waiters_before_any_group_write() {
                 use crate::storage::Storage;
                 let mut bytes = frame;
                 bytes[9] = 1;
-                let input = [&bytes[..4], &bytes[8..]].concat();
-                bytes[4..8].copy_from_slice(&raw::crc(&input).to_le_bytes());
+                raw::rechecksum(&raw::log_id(&sim), &mut bytes);
                 sim.call(Call::new(
                     &segment,
                     Purpose::Open,
@@ -489,7 +495,11 @@ fn pending_rejections_and_originals_survive_only_as_a_valid_prefix() {
                         vec![record(b"fresh", Some(b"fresh"), b"never"), b(), boot()],
                     );
                     let next = sim.hold(if point == 0 {
-                        Call::new(ANY_SEG, Purpose::Group, Op::Append(pending_frame()))
+                        Call::new(
+                            ANY_SEG,
+                            Purpose::Group,
+                            Op::Append(pending_frame(&log_id(&sim))),
+                        )
                     } else {
                         flush()
                     });
@@ -577,7 +587,7 @@ fn failed_pending_groups_recover_originals_without_retry_records() {
         for mode in [Crash::Kill, Crash::PowerLoss, Crash::PowerLossTorn] {
             for fault in [
                 Fault::Partial(35),
-                Fault::Partial(pending_frame().len()),
+                Fault::Partial(pending_frame(&crate::codec::LogId::new([0; 16])).len()),
                 Fault::NoSpace,
                 Fault::error(std::io::ErrorKind::Other).unwrap(),
             ] {
@@ -593,7 +603,11 @@ fn failed_pending_groups_recover_originals_without_retry_records() {
                 let next = sim.hold(if at_flush {
                     flush()
                 } else {
-                    Call::new(ANY_SEG, Purpose::Group, Op::Append(pending_frame()))
+                    Call::new(
+                        ANY_SEG,
+                        Purpose::Group,
+                        Op::Append(pending_frame(&log_id(&sim))),
+                    )
                 });
                 held.release(None);
                 bootstrap.wait().unwrap();

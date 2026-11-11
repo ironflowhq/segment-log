@@ -22,7 +22,7 @@ struct Writer {
     keys: Keys,
     lookup: Vec<u8>,
     active: Active,
-    log_id: [u8; 16],
+    log_id: codec::LogId,
 }
 
 /// The segment that takes new frames. Only the writer thread appends to it.
@@ -46,7 +46,7 @@ impl Writer {
             return Ok(());
         }
         let header = codec::Header {
-            log_id: self.log_id,
+            log_id: *self.log_id.bytes(),
             base_offset: next,
             epoch: self.epoch,
         };
@@ -126,6 +126,7 @@ pub struct SegmentLog {
     writer: Option<JoinHandle<()>>,
     poisoned: Arc<std::sync::atomic::AtomicBool>,
     options: Arc<Options>,
+    log_id: codec::LogId,
     used: Arc<std::sync::atomic::AtomicUsize>,
     _lock: Mutex<Box<dyn Lock>>,
     #[cfg(test)]
@@ -149,10 +150,10 @@ impl SegmentLog {
         if options.queue_capacity == 0 || options.pending_byte_budget == 0 {
             return Err(OpenError::InvalidOptions("capacities must be positive"));
         }
-        if !(41..=8 * 1024 * 1024).contains(&options.group_byte_cap) {
+        if !(41..=codec::GROUP_BODY_LIMIT).contains(&options.group_byte_cap) {
             return Err(OpenError::InvalidOptions("group byte cap outside limits"));
         }
-        if options.roll_bytes == 0 || options.roll_bytes > 4000 * 1024 * 1024 {
+        if options.roll_bytes == 0 || options.roll_bytes > codec::ROLL_BYTES_LIMIT {
             return Err(OpenError::InvalidOptions("roll bytes outside limits"));
         }
         let options = Arc::new(options);
@@ -166,6 +167,7 @@ impl SegmentLog {
         let writer_published = published.clone();
         let writer_poisoned = poisoned.clone();
         let writer_options = options.clone();
+        let writer_log_id = recovered.log_id.clone();
         let writer = thread::Builder::new()
             .name("segment-log-writer".into())
             .spawn(move || {
@@ -180,7 +182,7 @@ impl SegmentLog {
                         keys: recovered.keys,
                         lookup: Vec::new(),
                         active: recovered.active,
-                        log_id: recovered.log_id,
+                        log_id: writer_log_id,
                     },
                     writer_options,
                 );
@@ -194,6 +196,7 @@ impl SegmentLog {
             writer: Some(writer),
             poisoned,
             options,
+            log_id: recovered.log_id,
             used: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
             _lock: Mutex::new(recovered.lock),
             #[cfg(test)]
@@ -307,7 +310,10 @@ impl SegmentLog {
                 segment: frame.segment,
                 position: frame.position,
             };
-            let group = codec::decode(&bytes).map_err(|_| corrupt())?;
+            let group = codec::decode(&self.log_id, &bytes)
+                .ok()
+                .and_then(codec::Frame::into_group)
+                .ok_or_else(corrupt)?;
             if group.base_offset != frame.base
                 || group.base_offset + group.entries.len() as u64 != frame.end
             {
@@ -394,11 +400,11 @@ fn validate(submit: &Submit) -> Result<(), AppendError> {
     }
     let mut keys = std::collections::BTreeSet::new();
     for record in &submit.records {
-        if !(1..=1024).contains(&record.stream.len()) {
+        if !(1..=codec::STREAM_LEN_MAX).contains(&record.stream.len()) {
             return Err(AppendError::Invalid("stream length outside limits"));
         }
         if let Some(key) = &record.key {
-            if !(1..=256).contains(&key.len()) {
+            if !(1..=codec::KEY_LEN_MAX).contains(&key.len()) {
                 return Err(AppendError::Invalid("key length outside limits"));
             }
             if !keys.insert(key.as_slice()) {
@@ -643,7 +649,7 @@ fn run(
             base_offset: base,
             entries,
         };
-        let bytes = codec::encode(&group).expect("validated group");
+        let bytes = codec::encode_group(&writer.log_id, &group).expect("validated group");
         let length = bytes.len();
         let segment = segment_path(&dir, writer.active.base);
         #[cfg(test)]

@@ -1,9 +1,11 @@
 use super::*;
 
 /// Durable keys and the keys staged by the current group. A staged position is
-/// final: its group becomes durable or the writer stops.
-#[derive(Default)]
-pub(super) struct Keys(BTreeMap<Vec<u8>, Position>);
+/// final: its group becomes durable or the writer stops. `log` validates the frames it reads.
+pub(super) struct Keys {
+    log: codec::LogId,
+    map: BTreeMap<Vec<u8>, Position>,
+}
 
 /// The current group's new records. An offset at or past `base` is still pending.
 pub(super) struct Staged<'a> {
@@ -22,10 +24,17 @@ pub(super) enum Classification {
 }
 
 impl Keys {
+    pub(super) fn new(log: codec::LogId) -> Self {
+        Self {
+            log,
+            map: BTreeMap::new(),
+        }
+    }
+
     pub(super) fn recover(&mut self, group: &codec::Group<'_>) {
         for (entry, record) in group.entries.iter().enumerate() {
             if let Some(key) = record.key {
-                self.0.insert(
+                self.map.insert(
                     key.to_vec(),
                     Position {
                         offset: group.base_offset + entry as u64,
@@ -39,7 +48,7 @@ impl Keys {
     pub(super) fn stage(&mut self, submit: &Submit, base: u64, revisions: &[RevisionSlot]) {
         for (record, (input, revision)) in submit.records.iter().zip(revisions).enumerate() {
             if let Some(key) = &input.key {
-                self.0.insert(
+                self.map.insert(
                     key.clone(),
                     Position {
                         offset: base + record as u64,
@@ -62,7 +71,7 @@ impl Keys {
         let mut positions = Vec::new();
         let mut has_pending = false;
         for (index, record) in submit.records.iter().enumerate() {
-            let Some(position) = record.key.as_ref().and_then(|key| self.0.get(key)) else {
+            let Some(position) = record.key.as_ref().and_then(|key| self.map.get(key)) else {
                 continue;
             };
             if position.offset >= staged.base {
@@ -94,7 +103,10 @@ impl Keys {
                     return Classification::LookupFailure;
                 }
                 *scratch = bytes;
-                let Ok(group) = codec::decode(scratch) else {
+                let Some(group) = codec::decode(&self.log, scratch)
+                    .ok()
+                    .and_then(codec::Frame::into_group)
+                else {
                     return Classification::LookupFailure;
                 };
                 if group.epoch != frame.epoch

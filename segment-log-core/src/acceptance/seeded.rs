@@ -143,7 +143,7 @@ fn body(inputs: &[Input]) -> usize {
         .map(|r| 16 + r.stream.len() + r.key.as_ref().map_or(0, Vec::len) + r.payload.len())
         .sum::<usize>()
 }
-fn frame(base: u64, inputs: &[Input], prior: &[Record]) -> Vec<u8> {
+fn frame(log_id: &[u8; 16], base: u64, inputs: &[Input], prior: &[Record]) -> Vec<u8> {
     let mut history: Vec<_> = prior
         .iter()
         .map(|r| Record {
@@ -173,9 +173,7 @@ fn frame(base: u64, inputs: &[Input], prior: &[Record]) -> Vec<u8> {
         }
         body.extend(&r.payload);
     }
-    let len = (body.len() as u32).to_le_bytes();
-    let crc = super::support::raw::crc(&[len.as_slice(), &body].concat());
-    [len.as_slice(), &crc.to_le_bytes(), &body].concat()
+    super::support::raw::frame(log_id, &body)
 }
 
 fn check_replay(sim: &Sim, ledger: &Ledger) {

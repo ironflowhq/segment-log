@@ -11,7 +11,7 @@ use std::{path::Path, sync::Arc};
 fn handmade_invalid_tails_stop_at_the_first_bad_frame() {
     bounded(|| {
         let prefix = [
-            raw::header(0, 0, 1),
+            raw::header(raw::VERSION, 0, 1),
             raw::group(2, 0, &[b"first", b"second"]),
         ]
         .concat();
@@ -63,26 +63,32 @@ fn handmade_invalid_tails_stop_at_the_first_bad_frame() {
 #[test]
 fn invalid_complete_headers_are_never_repaired() {
     bounded(|| {
-        let mut bad_crc = raw::header(0, 0, 1);
+        let mut bad_crc = raw::header(raw::VERSION, 0, 1);
         bad_crc[60] ^= 1;
-        let mut bad_magic = raw::header(0, 0, 1);
+        let mut bad_magic = raw::header(raw::VERSION, 0, 1);
         bad_magic[0] ^= 1;
-        for (header, extra) in [
-            (bad_crc, 17),
-            (bad_magic, 17),
-            (raw::header(0, 1, 1), 17),
-            (raw::header(1, 0, 1), 0),
-            (raw::header(1, 0, 1), 17),
+        for (header, extra, version) in [
+            (bad_crc, 17, None),
+            (bad_magic, 17, None),
+            (raw::header(raw::VERSION, 1, 1), 17, None),
+            (raw::header(0, 0, 1), 0, Some(0)),
+            (raw::header(0, 0, 1), 17, Some(0)),
+            (
+                raw::header(raw::VERSION + 1, 0, 1),
+                0,
+                Some(raw::VERSION + 1),
+            ),
         ] {
             let sim = Sim::new(202);
             raw::install(&sim, [header.clone(), vec![0; extra]].concat());
             let image = sim.image();
             let result =
                 SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone()));
-            if header[4] == 1 {
-                assert!(matches!(result, Err(OpenError::UnsupportedVersion(1))));
-            } else {
-                assert!(matches!(result, Err(OpenError::Corrupt { .. })));
+            match version {
+                Some(version) => assert!(
+                    matches!(result, Err(OpenError::UnsupportedVersion(found)) if found == version)
+                ),
+                None => assert!(matches!(result, Err(OpenError::Corrupt { .. }))),
             }
             assert_eq!(sim.image(), image);
         }
@@ -119,7 +125,7 @@ fn recovery_rewrites_a_readable_group_after_failed_writeback() {
         let sim = Sim::new(204);
         drop(open(&sim));
         let payload = vec![0xa5; 5000];
-        let suffix = raw::group(1, 0, &[&payload, b"last"]);
+        let suffix = raw::group_in(&raw::log_id(&sim), 1, 0, &[&payload, b"last"]);
         sim.call(Call::new(SEG, Purpose::Group, Op::Append(suffix)))
             .unwrap();
         sim.inject(
