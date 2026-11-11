@@ -51,7 +51,7 @@ cold=no
 cold_reason=""
 case "${M4_COLD:-auto}:$(uname -s)" in
     off:*) cold_reason="M4_COLD=off" ;;
-    *:Linux) if [ "$(id -u)" = 0 ] || sudo -n true 2>/dev/null; then cold=yes; else cold_reason="no root to write /proc/sys/vm/drop_caches"; fi ;;
+    *:Linux) if (echo 3 > /proc/sys/vm/drop_caches) 2>/dev/null || sudo -n sh -c 'echo 3 > /proc/sys/vm/drop_caches' 2>/dev/null; then cold=yes; else cold_reason="cannot write /proc/sys/vm/drop_caches"; fi ;;
     *:Darwin) if command -v purge > /dev/null && sudo -n true 2>/dev/null; then cold=yes; else cold_reason="no root to run purge"; fi ;;
     *) cold_reason="no page-cache drop on $(uname -s)" ;;
 esac
