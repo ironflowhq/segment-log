@@ -1,5 +1,5 @@
 use super::{
-    Error, KEYED_RECORD_LIMIT, KeyFilter, LogId, PAGE_ENTRIES, PAGE_SIZE, crc32c,
+    BODY_HEADER_LEN, Error, KEYED_RECORD_LIMIT, KeyFilter, LogId, PAGE_ENTRIES, PAGE_SIZE, crc32c,
     frame::{Kind, begin, finish},
 };
 
@@ -57,7 +57,7 @@ pub(crate) fn encode_key_frames(
         epoch,
         base_offset,
         count,
-        24 + filter.memory_bytes(),
+        BODY_HEADER_LEN + filter.memory_bytes(),
     );
     filter.write_body(&mut out);
     let filter = finish(log, out);
@@ -66,7 +66,7 @@ pub(crate) fn encode_key_frames(
         epoch,
         base_offset,
         count,
-        24 + PAGE_SIZE * page_count(count),
+        BODY_HEADER_LEN + PAGE_SIZE * page_count(count),
     );
     for page in entries.chunks(PAGE_ENTRIES) {
         write_page(&mut out, page);

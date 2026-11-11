@@ -53,7 +53,8 @@ pub(crate) struct StreamTail<'a> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Footer<'a> {
-    pub key_filter_position: u64,
+    /// `None` in the final segment of a sealed log, which has no key frames.
+    pub key_filter_position: Option<std::num::NonZeroU64>,
     pub streams: Vec<StreamTail<'a>>,
 }
 
@@ -194,7 +195,12 @@ pub(crate) fn encode_footer(
         footer.streams.len() as u32,
         size,
     );
-    out.extend_from_slice(&footer.key_filter_position.to_le_bytes());
+    out.extend_from_slice(
+        &footer
+            .key_filter_position
+            .map_or(0, u64::from)
+            .to_le_bytes(),
+    );
     for tail in &footer.streams {
         out.extend_from_slice(&(tail.stream.len() as u16).to_le_bytes());
         out.extend_from_slice(&[0; 2]);
@@ -274,11 +280,11 @@ pub(crate) fn decode<'a>(log: &LogId, bytes: &'a [u8]) -> Result<Frame<'a>, Erro
         Kind::Group => Body::Group(decode_group(&mut c, size, base_offset, count)?),
         Kind::Footer => Body::Footer(decode_footer(&mut c, size, count)?),
         Kind::Seal => {
-            empty(&c, count, BODY_HEADER_LEN)?;
+            check_fixed_body(&c, count, BODY_HEADER_LEN)?;
             Body::Seal
         }
         Kind::Locator => {
-            empty(&c, count, LOCATOR_LEN - ENVELOPE_LEN)?;
+            check_fixed_body(&c, count, LOCATOR_LEN - ENVELOPE_LEN)?;
             Body::Locator {
                 footer_position: c.u64()?,
             }
@@ -303,7 +309,7 @@ pub(crate) fn decode<'a>(log: &LogId, bytes: &'a [u8]) -> Result<Frame<'a>, Erro
     })
 }
 
-fn empty(c: &Cursor<'_>, count: u32, body_len: usize) -> Result<(), Error> {
+fn check_fixed_body(c: &Cursor<'_>, count: u32, body_len: usize) -> Result<(), Error> {
     if count != 0 {
         return Err(Error::Count);
     }
@@ -367,7 +373,7 @@ fn decode_group<'a>(
 }
 
 fn decode_footer<'a>(c: &mut Cursor<'a>, size: usize, count: u32) -> Result<Footer<'a>, Error> {
-    let key_filter_position = c.u64()?;
+    let key_filter_position = std::num::NonZeroU64::new(c.u64()?);
     let count = count as usize;
     if count > (size - BODY_HEADER_LEN - 8) / 29 {
         return Err(Error::Count);

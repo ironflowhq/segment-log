@@ -76,7 +76,7 @@ fn tail(stream: &[u8]) -> codec::StreamTail<'_> {
 
 fn footer(streams: Vec<codec::StreamTail<'_>>) -> codec::Footer<'_> {
     codec::Footer {
-        key_filter_position: 0,
+        key_filter_position: None,
         streams,
     }
 }
@@ -172,11 +172,16 @@ fn footer_seal_and_locator_frames_round_trip() {
             ],
         ] {
             let footer = codec::Footer {
-                key_filter_position: 0x0102_0304_0506,
+                key_filter_position: std::num::NonZeroU64::new(0x0102_0304_0506),
                 streams,
             };
             let mut body = body_header(2, 7, 9, footer.streams.len() as u32);
-            body.extend(footer.key_filter_position.to_le_bytes());
+            body.extend(
+                footer
+                    .key_filter_position
+                    .map_or(0, u64::from)
+                    .to_le_bytes(),
+            );
             for tail in &footer.streams {
                 body.extend((tail.stream.len() as u16).to_le_bytes());
                 body.extend([0, 0]);
