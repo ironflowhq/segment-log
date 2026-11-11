@@ -1,4 +1,4 @@
-//! Seal and the read-only open of a sealed log.
+//! Seal, the read-only open of a sealed log, and `LogReader`.
 use super::support::{bounded, fixtures::*, raw};
 use crate::storage::{Call, Op, Purpose};
 use crate::*;
@@ -6,6 +6,7 @@ use std::{path::Path, sync::Arc};
 
 mod admission;
 mod crashes;
+mod reader;
 mod sealed_open;
 mod sealing;
 

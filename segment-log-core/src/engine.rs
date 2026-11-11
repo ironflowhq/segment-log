@@ -13,12 +13,14 @@ use std::{
 };
 mod closing;
 mod keys;
+mod reader;
 mod recovery;
 mod reply;
 mod survey;
 mod view;
 mod writer;
 use keys::{KeyHash, Keys};
+pub use reader::LogReader;
 pub use reply::Pending;
 use view::{GroupSpan, Published, View};
 use writer::{Active, Writer, run};
