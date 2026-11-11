@@ -54,8 +54,12 @@ Frames follow the header with no gap. Every frame has the same envelope:
 | Offset | Size | Field |
 | --- | --- | --- |
 | 0 | 4 | `body_len` — the size of the body in bytes. The whole frame is `8 + body_len` bytes. |
-| 4 | 4 | `crc` — CRC-32C of the 4 `body_len` bytes followed by the body |
+| 4 | 4 | `crc` — CRC-32C of the segment header's 16 `log_id` bytes, then the 4 `body_len` bytes, then the body |
 | 8 | `body_len` | body |
+
+The log id makes a frame valid only in a segment of its own log. A caller that cannot read the segment files cannot place a valid frame inside a payload ([ADR 0049](../decisions/0049-frame-crcs-cover-the-log-id.md)). The segment header's CRC does not include it. M1–M3 (`format_version` 0) computed the frame CRC without the log id.
+
+Check value: with `log_id` bytes `00 01 02 … 0f`, a seal frame with epoch 1 and `base_offset` 0 has `body_len = 24`, the body `03 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00`, and `crc = 0xfd78783f`.
 
 `body_len` must be at least 24 and at most the frame body limit. A value outside that range ends the valid prefix. A zero-filled tail therefore ends the scan.
 
