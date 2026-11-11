@@ -125,3 +125,102 @@ fn a_key_in_a_segment_that_open_seals_after_a_crash_still_matches() {
         }
     });
 }
+
+/// Given a sealed segment, and an active segment at the roll size whose 300 keyed records give it
+/// a key index frame of two pages
+/// When a new submit starts a roll, and a crash in each mode comes before or after each of the
+/// roll's four closing frame writes, or during their flush, or after a write that wrote only half
+/// of its frame
+/// Then the submit and the one queued behind it get `Poisoned`
+/// When the log reopens, and again after a power loss
+/// Then every acknowledged record is present, the older segment keeps its bytes, and the rolled
+/// segment either kept its whole closing run or lost all of it
+/// And a retry of every retained key returns its original position
+///
+/// Cases: KEY-FRAMES-CRASH, ORACLE-1, ORACLE-2, ORACLE-3, ORACLE-4, ORACLE-5, ORACLE-6
+#[test]
+fn a_crash_around_each_closing_frame_keeps_every_retained_key() {
+    use crate::storage::sim::Fault;
+    bounded(|| {
+        let keys: Vec<Vec<u8>> = (0..300).map(|n| format!("key-{n}").into_bytes()).collect();
+        for step in 0..5 {
+            for partial in [false, true] {
+                if partial && step == 4 {
+                    continue;
+                }
+                for mode in [Crash::Kill, Crash::PowerLoss, Crash::PowerLossTorn] {
+                    for seed in 0..2 {
+                        let label = format!("step {step} partial {partial} {mode:?} seed {seed}");
+                        let sim = Sim::new(343);
+                        let hooks = Hooks::default();
+                        let log = open_hooked(&sim, &hooks);
+                        commit(&log, vec![keyed(b"k0")]);
+                        commit(&log, keys.iter().map(|key| keyed(key)).collect());
+                        let before = raw::segments(&sim);
+                        let run = raw::roll_run(&before[1].1, 1);
+                        let frames = raw::frames(&[vec![0; 64], run.clone()].concat())
+                            .into_iter()
+                            .map(<[u8]>::to_vec)
+                            .collect::<Vec<_>>();
+                        let segment = raw::segment(1);
+                        let call = match frames.get(step) {
+                            Some(frame) => {
+                                Call::new(&segment, Purpose::Roll, Op::Append(frame.clone()))
+                            }
+                            None => Call::new(&segment, Purpose::Roll, Op::SyncData),
+                        };
+                        let hold = sim.hold(call);
+                        let rolling = log
+                            .append(Submit {
+                                records: vec![keyed(b"new")],
+                            })
+                            .unwrap();
+                        hold.wait();
+                        let queued = log
+                            .append(Submit {
+                                records: vec![keyed(b"queued")],
+                            })
+                            .unwrap();
+                        if partial {
+                            hold.release(Some(Fault::Partial(frames[step].len() / 2)));
+                        } else {
+                            sim.crash(mode, seed);
+                            hold.release(None);
+                        }
+                        assert!(
+                            matches!(rolling.wait(), Err(CommitError::Poisoned)),
+                            "{label}"
+                        );
+                        assert!(
+                            matches!(queued.wait(), Err(CommitError::Poisoned)),
+                            "{label}"
+                        );
+                        drop(log);
+                        if partial {
+                            sim.crash(mode, seed);
+                        }
+                        let rolled = [before[1].1.clone(), run].concat();
+                        for crash in [None, Some(Crash::PowerLoss)] {
+                            if let Some(crash) = crash {
+                                sim.crash(crash, seed + 7);
+                            }
+                            let log = open_hooked(&sim, &hooks);
+                            assert_eq!(log.watermark(), 301, "{label}");
+                            let after = raw::segments(&sim);
+                            assert_eq!(after[0], before[0], "{label}");
+                            assert!(
+                                after[1].1 == before[1].1 || after[1].1 == rolled,
+                                "{label}: the closing run is whole or absent"
+                            );
+                            assert_eq!(after.len() > 2, after[1].1 == rolled, "{label}");
+                            assert_retry(&log, &[b"k0"], &[0]);
+                            let sample: Vec<&[u8]> =
+                                [0, 254, 255, 299].iter().map(|&n| &keys[n][..]).collect();
+                            assert_retry(&log, &sample, &[1, 255, 256, 300]);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
