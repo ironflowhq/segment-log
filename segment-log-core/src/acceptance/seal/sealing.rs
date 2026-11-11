@@ -231,7 +231,13 @@ fn append_until_refused(
             }
             Err(AppendError::Sealed) => {
                 let again = log.append(submit(vec![record(b"s", None, b"x", None)]));
-                assert!(matches!(again.err(), Some(AppendError::Sealed)));
+                match again.err() {
+                    Some(AppendError::Sealed) => {}
+                    // A failing flush can poison the writer between the two appends, and Poisoned
+                    // comes before Sealed.
+                    Some(AppendError::Poisoned) if fault => {}
+                    other => panic!("refused again with {other:?}"),
+                }
                 break;
             }
             Err(AppendError::Poisoned) if fault => break,
