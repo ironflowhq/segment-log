@@ -166,12 +166,23 @@ pub(crate) fn last_frame(sim: &Sim) -> (String, u64, Vec<u8>) {
     let position = bytes.len() - last.len();
     (segment(base), position as u64, last)
 }
-pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
+type Tails<'a> = std::collections::BTreeMap<&'a [u8], (u64, u64, u64)>;
+
+/// The log id, the next offset, the key index entries and the footer tails of a segment image
+/// that holds only group frames.
+fn groups(
+    segment: &[u8],
+) -> (
+    crate::codec::LogId,
+    u64,
+    Vec<crate::codec::KeyEntry>,
+    Tails<'_>,
+) {
     use crate::codec;
     let log_id = codec::LogId::new(header_fields(segment).0);
     let mut next = header_fields(segment).1;
     let mut keys = vec![];
-    let mut tails = std::collections::BTreeMap::new();
+    let mut tails = Tails::new();
     let mut position = 64;
     for frame in frames(segment) {
         let group = codec::decode(&log_id, frame)
@@ -192,13 +203,23 @@ pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
         next = group.base_offset + group.entries.len() as u64;
         position += frame.len();
     }
-    let key_frames = codec::encode_key_frames(&log_id, epoch, next, &mut keys).unwrap();
-    let footer = codec::encode_footer(
-        &log_id,
+    (log_id, next, keys, tails)
+}
+
+fn footer(
+    log_id: &crate::codec::LogId,
+    epoch: u64,
+    next: u64,
+    key_filter_position: u64,
+    tails: Tails<'_>,
+) -> Vec<u8> {
+    use crate::codec;
+    codec::encode_footer(
+        log_id,
         epoch,
         next,
         &codec::Footer {
-            key_filter_position: std::num::NonZeroU64::new(segment.len() as u64),
+            key_filter_position: std::num::NonZeroU64::new(key_filter_position),
             streams: tails
                 .into_iter()
                 .map(
@@ -212,11 +233,30 @@ pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
                 .collect(),
         },
     )
-    .unwrap();
+    .unwrap()
+}
+
+pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
+    use crate::codec;
+    let (log_id, next, mut keys, tails) = groups(segment);
+    let key_frames = codec::encode_key_frames(&log_id, epoch, next, &mut keys).unwrap();
+    let footer = footer(&log_id, epoch, next, segment.len() as u64, tails);
     let footer_position = segment.len() + key_frames.filter.len() + key_frames.index.len();
     let locator = codec::encode_locator(&log_id, epoch, next, footer_position as u64);
     [key_frames.filter, key_frames.index, footer, locator].concat()
 }
+
+/// A seal's closing run for a segment image of group frames: a footer that names no key filter,
+/// a seal frame and a locator.
+pub(crate) fn seal_run(segment: &[u8], epoch: u64) -> Vec<u8> {
+    use crate::codec;
+    let (log_id, next, _, tails) = groups(segment);
+    let footer = footer(&log_id, epoch, next, 0, tails);
+    let seal = codec::encode_seal(&log_id, epoch, next);
+    let locator = codec::encode_locator(&log_id, epoch, next, segment.len() as u64);
+    [footer, seal, locator].concat()
+}
+
 pub(crate) fn rolled(segment: Vec<u8>, epoch: u64) -> Vec<u8> {
     let run = roll_run(&segment, epoch);
     [segment, run].concat()

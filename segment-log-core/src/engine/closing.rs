@@ -44,16 +44,32 @@ pub(super) fn roll_run(
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum RunState {
     Groups,
-    Filter { start: u64, count: u32 },
-    Index { start: u64 },
-    Footer { start: u64, footer: u64 },
+    Filter {
+        start: u64,
+        count: u32,
+    },
+    Index {
+        start: u64,
+    },
+    Footer {
+        start: u64,
+        footer: u64,
+    },
+    /// A seal's run starts at its footer.
+    SealFooter {
+        footer: u64,
+    },
+    Seal {
+        footer: u64,
+    },
 }
 
 pub(super) enum Step {
     Group,
     Run(RunState),
     Stop { at: u64 },
-    Closed { start: u64, footer: u64 },
+    Rolled { start: u64, footer: u64 },
+    Sealed { start: u64 },
 }
 
 impl RunState {
@@ -65,6 +81,9 @@ impl RunState {
                 start: at,
                 count: filter.count(),
             }),
+            (Self::Groups, Body::Footer(footer)) if footer.key_filter_position.is_none() => {
+                Step::Run(Self::SealFooter { footer: at })
+            }
             (Self::Filter { start, count }, Body::KeyIndex { count: n, .. }) if *n == count => {
                 Step::Run(Self::Index { start })
             }
@@ -73,10 +92,16 @@ impl RunState {
             {
                 Step::Run(Self::Footer { start, footer: at })
             }
+            (Self::SealFooter { footer }, Body::Seal) => Step::Run(Self::Seal { footer }),
             (Self::Footer { start, footer }, Body::Locator { footer_position })
                 if *footer_position == footer && end == length =>
             {
-                Step::Closed { start, footer }
+                Step::Rolled { start, footer }
+            }
+            (Self::Seal { footer }, Body::Locator { footer_position })
+                if *footer_position == footer && end == length =>
+            {
+                Step::Sealed { start: footer }
             }
             _ => Step::Stop { at: self.stop(at) },
         }
@@ -88,6 +113,7 @@ impl RunState {
             Self::Filter { start, .. } | Self::Index { start } | Self::Footer { start, .. } => {
                 start
             }
+            Self::SealFooter { footer } | Self::Seal { footer } => footer,
         }
     }
 }

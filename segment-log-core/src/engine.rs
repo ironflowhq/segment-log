@@ -94,12 +94,13 @@ pub(crate) struct KeyMemory {
 }
 pub struct SegmentLog {
     view: Arc<View>,
+    /// None in a sealed log, which has no writer.
     sender: Option<mpsc::SyncSender<Request>>,
     writer: Option<JoinHandle<()>>,
     poisoned: Arc<std::sync::atomic::AtomicBool>,
     options: Arc<Options>,
     used: Arc<std::sync::atomic::AtomicUsize>,
-    _lock: Mutex<Box<dyn Lock>>,
+    _lock: Mutex<Option<Box<dyn Lock>>>,
     #[cfg(test)]
     peak: std::sync::atomic::AtomicUsize,
     #[cfg(test)]
@@ -150,54 +151,68 @@ impl SegmentLog {
             return Err(OpenError::InvalidOptions("roll bytes outside limits"));
         }
         let options = Arc::new(options);
-        let recovered = recovery::open(storage.as_ref(), dir)?;
-        let keys = Keys::new(
-            hash(recovered.log_id.clone()),
-            recovered.active_keys,
-            recovered.sealed_keys,
-        );
-        #[cfg(test)]
-        let memory = Arc::new(Mutex::new(keys.memory()));
+        let recovery::Recovered {
+            log_id,
+            published,
+            writable,
+        } = recovery::open(storage.as_ref(), dir)?;
         let view = Arc::new(View {
             storage,
             dir: dir.to_owned(),
-            log_id: recovered.log_id,
-            published: Mutex::new(recovered.published),
+            log_id,
+            published: Mutex::new(published),
         });
         let poisoned = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let (sender, receiver) = mpsc::sync_channel(options.queue_capacity);
-        let writer_view = view.clone();
-        let writer_poisoned = poisoned.clone();
-        let writer_options = options.clone();
         #[cfg(test)]
-        let writer_memory = memory.clone();
-        let writer = thread::Builder::new()
-            .name("segment-log-writer".into())
-            .spawn(move || {
-                run(
-                    writer_view,
-                    writer_poisoned,
-                    receiver,
-                    Writer {
-                        epoch: recovered.epoch,
-                        keys,
-                        active: recovered.active,
-                        limits,
-                        #[cfg(test)]
-                        memory: writer_memory,
-                    },
-                    writer_options,
+        let memory = Arc::new(Mutex::new(KeyMemory::default()));
+        let (sender, writer, lock) = match writable {
+            None => (None, None, None),
+            Some(writable) => {
+                let keys = Keys::new(
+                    hash(view.log_id.clone()),
+                    writable.active_keys,
+                    writable.sealed_keys,
                 );
-            })
-            .map_err(OpenError::Io)?;
+                #[cfg(test)]
+                {
+                    *memory.lock().unwrap() = keys.memory();
+                }
+                let (sender, receiver) = mpsc::sync_channel(options.queue_capacity);
+                let writer_view = view.clone();
+                let writer_poisoned = poisoned.clone();
+                let writer_options = options.clone();
+                #[cfg(test)]
+                let writer_memory = memory.clone();
+                let writer = thread::Builder::new()
+                    .name("segment-log-writer".into())
+                    .spawn(move || {
+                        run(
+                            writer_view,
+                            writer_poisoned,
+                            receiver,
+                            Writer {
+                                epoch: writable.epoch,
+                                keys,
+                                active: writable.active,
+                                limits,
+                                #[cfg(test)]
+                                memory: writer_memory,
+                            },
+                            writer_options,
+                        );
+                    })
+                    .map_err(OpenError::Io)?;
+                (Some(sender), Some(writer), Some(writable.lock))
+            }
+        };
         Ok(Self {
             view,
-            sender: Some(sender),
-            writer: Some(writer),
+            sender,
+            writer,
             poisoned,
             options,
             used: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
-            _lock: Mutex::new(recovered.lock),
+            _lock: Mutex::new(lock),
             #[cfg(test)]
             peak: std::sync::atomic::AtomicUsize::new(0),
             #[cfg(test)]
@@ -245,6 +260,9 @@ impl SegmentLog {
         if self.poisoned.load(std::sync::atomic::Ordering::Acquire) {
             return Err(AppendError::Poisoned);
         }
+        let Some(sender) = &self.sender else {
+            return Err(AppendError::Sealed);
+        };
         let _previous = self
             .used
             .try_update(
@@ -266,7 +284,7 @@ impl SegmentLog {
         let (reply, pending) = reply::pair();
         #[cfg(test)]
         crate::pipeline::request(&submit, crate::pipeline::ENQUEUE);
-        match self.sender.as_ref().unwrap().try_send(Request {
+        match sender.try_send(Request {
             submit,
             reply,
             reservation,

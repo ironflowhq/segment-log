@@ -2,11 +2,16 @@ use super::*;
 use keys::{ActiveKey, SealedKeys};
 use survey::{Ending, ReadOnly};
 pub(super) struct Recovered {
-    pub active: Active,
     pub log_id: codec::LogId,
-    pub lock: Box<dyn Lock>,
     pub published: Published,
+    /// None for a sealed log, which opens read-only and has already released the lock.
+    pub writable: Option<Writable>,
+}
+
+pub(super) struct Writable {
+    pub lock: Box<dyn Lock>,
     pub epoch: u64,
+    pub active: Active,
     pub active_keys: BTreeMap<Vec<u8>, ActiveKey>,
     pub sealed_keys: Vec<SealedKeys>,
 }
@@ -78,10 +83,12 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         found.epoch.checked_add(1).ok_or(OpenError::Exhausted)?
     };
 
-    let mut summaries = found.sealed.clone();
-    if let Ending::Rolled(run) = &found.newest.ending {
-        summaries.push(run.summary);
-    }
+    let summaries = match &found.newest.ending {
+        // A sealed log never checks a key again.
+        Ending::Sealed(_) => vec![],
+        Ending::Rolled { summary, .. } => [found.sealed.as_slice(), &[*summary]].concat(),
+        Ending::Groups | Ending::Stopped => found.sealed.clone(),
+    };
     // Step 11's reads come before any change, so that a bad key filter changes no file.
     let sealed_keys = summaries
         .into_iter()
@@ -98,8 +105,8 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         )?;
     }
     let (position, bytes) = match &found.newest.ending {
-        Ending::Rolled(run) => (run.summary.filter_at, run.frames.concat()),
-        _ => found.newest.last.unwrap_or((0, found.newest_header)),
+        Ending::Rolled { run, .. } | Ending::Sealed(run) => (run.start, run.frames.concat()),
+        Ending::Groups | Ending::Stopped => found.newest.last.unwrap_or((0, found.newest_header)),
     };
     call(
         storage,
@@ -114,31 +121,44 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         .filter(|p| !p.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
     call(storage, parent, Purpose::Recovery, Op::SyncDir)?;
-    let (active, active_keys) = if let Ending::Rolled(_) = found.newest.ending {
-        let next = found.published.watermark;
-        create_segment(
-            storage,
-            dir,
-            Purpose::Recovery,
-            &codec::Header {
-                log_id: *found.log_id.bytes(),
-                base_offset: next,
-                epoch,
-            },
-        )?;
-        found.published.roll();
-        (Active::new(next), BTreeMap::new())
-    } else {
-        let active = Active::recovered(newest, found.newest.end, found.newest.tails);
-        (active, found.newest.keys)
+    let (active, active_keys) = match found.newest.ending {
+        Ending::Sealed(_) => {
+            drop(lock);
+            return Ok(Recovered {
+                log_id: found.log_id,
+                published: found.published,
+                writable: None,
+            });
+        }
+        Ending::Rolled { .. } => {
+            let next = found.published.watermark;
+            create_segment(
+                storage,
+                dir,
+                Purpose::Recovery,
+                &codec::Header {
+                    log_id: *found.log_id.bytes(),
+                    base_offset: next,
+                    epoch,
+                },
+            )?;
+            found.published.roll();
+            (Active::new(next), BTreeMap::new())
+        }
+        Ending::Groups | Ending::Stopped => {
+            let active = Active::recovered(newest, found.newest.end, found.newest.tails);
+            (active, found.newest.keys)
+        }
     };
     Ok(Recovered {
-        active,
         log_id: found.log_id,
-        lock,
         published: found.published,
-        epoch,
-        active_keys,
-        sealed_keys,
+        writable: Some(Writable {
+            lock,
+            epoch,
+            active,
+            active_keys,
+            sealed_keys,
+        }),
     })
 }
