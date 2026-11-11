@@ -1,7 +1,7 @@
 ---
 id: "0049"
 title: "Frame CRCs cover the log id"
-status: proposed
+status: accepted
 date: 2026-11-11
 deciders: [Altug Sahin]
 supersedes: null
