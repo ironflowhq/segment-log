@@ -319,6 +319,66 @@ fn a_failed_walk_of_a_sealed_segment_is_an_error_that_the_next_read_retries() {
     });
 }
 
+/// Given a sealed segment of about 100 KiB, where a group frame's envelope and body header cross
+/// the end of the walk's first read
+/// When the log reopens and reads every record
+/// Then every record comes back as it was appended
+/// And the walk of that segment takes a few storage calls, not one for each frame
+///
+/// Cases: READ-BOUNDED, HISTORY, ORACLE-12
+#[test]
+fn a_sealed_segment_larger_than_one_walk_read_is_read_in_full() {
+    const FRAME: usize = 1040;
+    bounded(|| {
+        let sim = Sim::new(405);
+        let options = || Options {
+            roll_bytes: 100_000,
+            ..options()
+        };
+        let log = open_with(&sim, options());
+        let mut expected = vec![];
+        for round in 0..120u64 {
+            let payload = vec![round as u8; FRAME - 49];
+            let submit = Submit {
+                records: vec![NewRecord {
+                    stream: b"s".to_vec(),
+                    key: None,
+                    payload: payload.clone(),
+                    expected: round
+                        .checked_sub(1)
+                        .map_or(ExpectedRevision::Empty, ExpectedRevision::At),
+                }],
+            };
+            log.append(submit).unwrap().wait().unwrap();
+            expected.push(stored(b"s", None, &payload, round, round));
+        }
+        drop(log);
+        let segments = raw::segments(&sim);
+        assert_eq!(segments.len(), 2);
+        let groups = closing(&segments[0].1).filter_at;
+        let frames = raw::frames(&segments[0].1).len() - 4;
+        assert!(groups > 64 * 1024, "{groups} bytes of groups");
+        let straddler = 64 + 63 * FRAME as u64;
+        assert!(straddler < 64 + 64 * 1024 && straddler + 32 > 64 + 64 * 1024);
+
+        let log = open_with(&sim, options());
+        let lookups = || {
+            sim.count(
+                Path::new(&raw::segment(0)),
+                Purpose::Lookup,
+                &Op::Read(0, 0),
+            )
+        };
+        let cold = lookups();
+        assert_records(&log.read(0, usize::MAX).unwrap(), &expected);
+        let walk = lookups() - cold - frames;
+        assert!(
+            walk <= groups.div_ceil(64 * 1024) as usize,
+            "{walk} walk reads"
+        );
+    });
+}
+
 /// Rewrites the bytes at `at` inside the frame that ends `back` frames before the end of
 /// `segment`, and makes that frame's checksum right again.
 fn patched(mut segment: Vec<u8>, back: usize, at: usize, bytes: &[u8]) -> Vec<u8> {
