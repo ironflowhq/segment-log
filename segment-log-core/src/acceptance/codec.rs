@@ -1,3 +1,5 @@
+mod closing;
+
 use super::support::{bounded, raw};
 use crate::codec::{self, Entry, Group, LogId};
 /// The log id of the format.md check values: bytes `00 01 02 … 0f`.

@@ -1,9 +1,12 @@
 //! The v1 byte layout of [format.md](../../docs/architecture/format.md). Every width, limit and
 //! check value comes from that file.
-#![allow(
-    dead_code,
-    unused_imports,
-    reason = "closing frames and key lookup have no callers until later slices"
+#![cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        unused_imports,
+        reason = "closing frames and key lookup have no callers until later slices"
+    )
 )]
 
 mod crc;

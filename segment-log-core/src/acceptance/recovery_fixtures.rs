@@ -56,6 +56,53 @@ fn handmade_invalid_tails_stop_at_the_first_bad_frame() {
     });
 }
 
+/// Given valid groups followed by a frame of a closing kind, an unknown kind, or another log's
+/// group, each with a checksum that is right for its writer, and then a valid group
+/// When recovery scans the active segment
+/// Then the frame ends the valid prefix, because this scan reads only group frames
+/// And recovery truncates there and keeps the records before it
+/// Cases: RECOVERY-FIXTURES, ORACLE-2, ORACLE-5
+#[test]
+fn frames_that_are_not_groups_of_this_log_end_the_valid_prefix() {
+    bounded(|| {
+        let prefix = [
+            raw::header(raw::VERSION, 0, 1),
+            raw::group(2, 0, &[b"first", b"second"]),
+        ]
+        .concat();
+        let header = |kind: u8, count: u32| {
+            let mut body = vec![kind, 0, 0, 0];
+            body.extend(2u64.to_le_bytes());
+            body.extend(2u64.to_le_bytes());
+            body.extend(count.to_le_bytes());
+            body
+        };
+        let mut locator = header(4, 0);
+        locator.extend(64u64.to_le_bytes());
+        let mut footer = header(2, 0);
+        footer.extend(0u64.to_le_bytes());
+        let id = raw::LOG_ID;
+        for tail in [
+            raw::frame(&id, &header(3, 0)),
+            raw::frame(&id, &locator),
+            raw::frame(&id, &footer),
+            raw::frame(&id, &header(5, 0)),
+            raw::frame(&id, &header(6, 0)),
+            raw::frame(&id, &header(7, 0)),
+            raw::group_in(&[9; 16], 2, 2, &[b"another log"]),
+        ] {
+            let sim = Sim::new(205);
+            raw::install(
+                &sim,
+                [prefix.clone(), tail, raw::group(3, 2, &[b"must not skip"])].concat(),
+            );
+            let log = open(&sim);
+            assert_eq!(log.watermark(), 2);
+            assert_eq!(raw::bytes(&sim), prefix);
+        }
+    });
+}
+
 /// Given a segment longer than 64 bytes with a damaged header, or a valid header with a mismatched filename
 /// When open validates the header
 /// Then it refuses without deleting or changing any bytes
