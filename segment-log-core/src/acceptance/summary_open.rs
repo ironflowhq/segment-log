@@ -11,9 +11,7 @@ use crate::storage::{
 use crate::*;
 use std::{path::Path, sync::Arc};
 
-/// A roll size that a segment passes after a few of `fill`'s groups.
 const ROLL_BYTES: u64 = 300;
-/// The rounds of `fill` whose records carry no key, so that some sealed segment holds none.
 const UNKEYED: std::ops::Range<u64> = 8..12;
 
 fn rolling() -> Options {
@@ -40,7 +38,6 @@ fn once(round: u64) -> NewRecord {
     }
 }
 
-/// Each round appends one record to a stream that never appears again, and one to `live`.
 fn fill(log: &SegmentLog, rounds: std::ops::Range<u64>) -> Vec<Record> {
     let mut records = vec![];
     for round in rounds {
@@ -78,8 +75,6 @@ fn fill(log: &SegmentLog, rounds: std::ops::Range<u64>) -> Vec<Record> {
 
 type Calls = Vec<(Purpose, Op)>;
 
-/// Opens the log as `open_rolling` does, and returns the storage calls that open made on each
-/// segment file before the newest.
 fn open_counted(sim: &Sim) -> (SegmentLog, Vec<(u64, Calls)>) {
     let before = raw::segments(sim);
     let start = sim.trace().1.len();
@@ -113,7 +108,6 @@ struct Closing {
     locator_at: u64,
 }
 
-/// Where the closing frames of a segment that a roll sealed are.
 fn closing(segment: &[u8]) -> Closing {
     let frames = raw::frames(segment);
     let [filter, index, footer, locator] = frames[frames.len() - 4..] else {
@@ -131,7 +125,6 @@ fn closing(segment: &[u8]) -> Closing {
     }
 }
 
-/// The calls that open makes on a sealed segment that is not the newest.
 fn summary_reads(segment: &[u8]) -> Calls {
     let at = closing(segment);
     vec![
@@ -379,8 +372,6 @@ fn a_sealed_segment_larger_than_one_walk_read_is_read_in_full() {
     });
 }
 
-/// Rewrites the bytes at `at` inside the frame that ends `back` frames before the end of
-/// `segment`, and makes that frame's checksum right again.
 fn patched(mut segment: Vec<u8>, back: usize, at: usize, bytes: &[u8]) -> Vec<u8> {
     let frames: Vec<usize> = raw::frames(&segment).iter().map(|f| f.len()).collect();
     let end = segment.len() - frames[frames.len() - back + 1..].iter().sum::<usize>();
@@ -392,10 +383,8 @@ fn patched(mut segment: Vec<u8>, back: usize, at: usize, bytes: &[u8]) -> Vec<u8
 
 const LOCATOR: usize = 1;
 const FOOTER: usize = 2;
-/// Where a frame's body header keeps the epoch and the next unused offset.
 const EPOCH: usize = 12;
 const NEXT: usize = 20;
-/// Where a footer keeps its key filter position, and a locator its footer position.
 const POSITION: usize = 32;
 
 fn sealed(base: u64, epoch: u64, payloads: &[&[u8]]) -> Vec<u8> {

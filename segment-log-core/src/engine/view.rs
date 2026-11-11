@@ -31,22 +31,16 @@ pub(super) struct SealedSegment {
 }
 
 enum Spans {
-    /// The writer's spans, kept when it rolled the segment.
     Rolled(Arc<[GroupSpan]>),
-    /// Built by the first read after an open that read only the segment's summary. The table is a
-    /// function of sealed bytes, so a second reader that builds it at the same time is harmless.
+    /// The table is a function of sealed bytes, so a second reader that builds it at the same time
+    /// is harmless.
     Lazy {
-        /// Where the group frames end: the position of the key filter frame.
         groups_end: u64,
-        /// The epochs that the group frames may carry: from the highest epoch before them, which
-        /// counts the segment header, to the footer's.
         epochs: RangeInclusive<u64>,
         built: OnceLock<Arc<[GroupSpan]>>,
     },
 }
 
-/// The span walk reads this much per storage call, so that a cold first read of a sealed segment
-/// is not one call per frame.
 const WALK_CHUNK: u64 = 64 * 1024;
 
 impl SealedSegment {
@@ -67,7 +61,6 @@ impl SealedSegment {
         }
     }
 
-    /// Reads each frame's envelope and body header from the segment header to the key filter.
     /// `read` checks each frame's checksum when it decodes the frame.
     fn walk(
         &self,
@@ -182,7 +175,6 @@ impl Published {
         self.newest.base = self.watermark;
     }
 
-    /// Adds a sealed segment that open read only the summary of, before the newest segment.
     pub(super) fn opened(
         &mut self,
         summary: &SealedSummary,
@@ -267,7 +259,6 @@ impl View {
         Ok(records)
     }
 
-    /// Appends the records of one group frame from `from` on, and says whether `records` is full.
     fn collect(
         &self,
         segment: u64,
