@@ -47,7 +47,7 @@ fn footer_entry(stream: &[u8]) -> usize {
 
 impl Writer {
     /// Whether the active segment's closing frames, with the draft's submits and `submit` added,
-    /// stay within their limits (ROLL-FOOTER).
+    /// stay within their limits.
     fn fits(&self, draft: &Draft, submit: &Submit) -> bool {
         let mut streams: Vec<&[u8]> = submit
             .records

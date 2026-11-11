@@ -397,6 +397,7 @@ fn active_record(
         span.position,
         length,
     )?;
+    // A short read can return a shorter frame that still decodes.
     if bytes.len() != length {
         return Err(LookupFailure);
     }
