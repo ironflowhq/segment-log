@@ -32,7 +32,7 @@ pub(crate) const KEYED_RECORD_LIMIT: usize = 4095 * PAGE_ENTRIES;
 pub(crate) const LOCATOR_LEN: usize = 40;
 
 const ENVELOPE_LEN: usize = 8;
-const BODY_HEADER_LEN: usize = 24;
+pub(crate) const BODY_HEADER_LEN: usize = 24;
 
 // The key index frame is the largest body, and the keyed-record limit is what keeps it in range.
 const _: () = assert!(

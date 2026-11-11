@@ -516,7 +516,7 @@ fn run(
         let mut assigned = Vec::new();
         let mut origins = Vec::new();
         let mut waiters = Vec::new();
-        let mut size = 24;
+        let mut size = codec::BODY_HEADER_LEN;
         // When the writer first saw this group's linger over.
         let mut gathered = None;
         let mut next = Some(first);
@@ -540,7 +540,7 @@ fn run(
                         request.answer(Err(error));
                     }
                     Ok(revisions) => {
-                        let added = body_size(&request.submit).unwrap() - 24;
+                        let added = body_size(&request.submit).unwrap() - codec::BODY_HEADER_LEN;
                         if size + added > options.group_byte_cap {
                             deferred = Some(request);
                             break;

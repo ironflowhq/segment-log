@@ -224,7 +224,7 @@ fn scan(
         }
         let frame = if envelope.len() == 8 {
             let length = u32::from_le_bytes(envelope[..4].try_into().unwrap()) as usize;
-            if (24..=codec::GROUP_BODY_LIMIT).contains(&length) {
+            if (codec::BODY_HEADER_LEN..=codec::GROUP_BODY_LIMIT).contains(&length) {
                 Some(read_bytes(
                     storage,
                     path,
