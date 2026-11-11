@@ -41,7 +41,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-CI (`.github/workflows/ci.yml`) runs the same three commands on Linux and macOS. It also reruns `cargo test --workspace` with `SEGMENT_LOG_TEST_ROLL_BYTES` set to a small roll size, so the scenarios roll.
+CI (`.github/workflows/ci.yml`) runs the same three commands on Linux and macOS. Linux jobs for this repository use the self-hosted Hetzner runner. A pull request from a fork runs Linux on a GitHub-hosted runner. macOS stays on a GitHub-hosted runner. CI also reruns `cargo test --workspace` with `SEGMENT_LOG_TEST_ROLL_BYTES` set to a small roll size, so the scenarios roll.
 
 ## Writing
 
