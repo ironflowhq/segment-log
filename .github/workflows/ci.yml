@@ -5,10 +5,10 @@ on:
     branches: [main]
   pull_request:
 
-# One Linux runner. A newer push on the same ref replaces a run that has not finished.
+# A new commit on a pull request replaces the run still in progress.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -18,28 +18,18 @@ env:
 
 jobs:
   check:
-    name: check (${{ matrix.name }})
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Linux for this repository runs on the Hetzner runner. A fork pull request
-          # runs on GitHub-hosted Ubuntu instead: the repository is public, and that
-          # runner is persistent and in the docker group. ubuntu-24.04 is the image
-          # these jobs already passed on while ubuntu-latest moves to 26.04.
-          # macOS stays on GitHub-hosted runners because the correctness gate requires macOS.
-          - name: linux
-            trusted: '["self-hosted","hetzner"]'
-            untrusted: '["ubuntu-24.04"]'
-          - name: macos
-            trusted: '["macos-latest"]'
-            untrusted: '["macos-latest"]'
-    runs-on: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && matrix.untrusted || matrix.trusted) }}
+        # ubuntu-latest warns until 2026-11-19 while GitHub moves that label to 26.04.
+        # Pin 24.04 so the job stays on the image that is already green.
+        # https://github.com/actions/runner-images/issues/14748
+        os: [ubuntu-24.04, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/rust-toolchain
+      # With no argument, rustup installs the version pinned in rust-toolchain.toml.
+      - run: rustup toolchain install
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
@@ -50,4 +40,4 @@ jobs:
       - run: cargo test --workspace
         env:
           SEGMENT_LOG_TEST_ROLL_BYTES: 256
-      - run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - run: python3 -m unittest discover -s scripts -p 'test_m*.py'

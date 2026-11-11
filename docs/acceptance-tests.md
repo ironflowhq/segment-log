@@ -129,8 +129,7 @@ SEGMENT_LOG_MODEL_SEED=2000 SEGMENT_LOG_MODEL_CASES=256 cargo test -p segment-lo
 
 The named `m2-long-run` scheduled job runs the two ignored variants on Linux and
 macOS. It takes its seed from the run number, and it uploads the regression file
-when a variant fails. The artifact names are `model-regressions-linux` and
-`model-regressions-macos`. Failure artifacts are kept for 3 days.
+when a variant fails. That upload is kept for 3 days.
 
 ### Drill the failure path
 
@@ -155,15 +154,11 @@ with a failed long-run job and a passed replay job for each platform.
 To check artifacts on another machine, download them and run the same script:
 
 ```sh
-gh run download RUN_ID --name trace-failures-linux --dir .audit/drill
+gh run download RUN_ID --name trace-failures-ubuntu-24.04 --dir .audit/drill
 scripts/m1-drill-replay.sh .audit/drill
 ```
 
-The macOS artifact name is `trace-failures-macos`. Failure artifacts are kept for 3 days.
-Linux long runs for this repository use the self-hosted Hetzner runner. macOS long
-runs stay on a GitHub-hosted runner.
-
-A real failure needs no drill variable: replay its pair with `SEGMENT_LOG_TRACE_REPLAY`
+Failure artifacts are kept for 3 days. A real failure needs no drill variable: replay its pair with `SEGMENT_LOG_TRACE_REPLAY`
 alone.
 
 ## Real-process harness
@@ -246,21 +241,11 @@ M6 adds Go-client scenarios for the cases in [M6 transport order and conformance
 
 Acceptance scenarios give correctness evidence. Each milestone also needs its own completion artifacts. M1 needs the syscall, directory-sync and Linux benchmark artifacts in the [completion gate](architecture/testing.md#m1-completion-gate). Later gates keep their own measurement, fuzzing, transport and deployment evidence. Keep missing evidence separate from a measured performance miss, under the milestone's pass criteria.
 
-Two workflows capture M1 evidence, so that a capture needs no extra local host. Linux
-jobs for this repository run on the self-hosted Hetzner runner. A pull request from a
-fork runs its Linux job on a GitHub-hosted `ubuntu-24.04` runner, so fork code does
-not execute on the persistent machine. The macOS job stays on a GitHub-hosted runner,
-because that capture has to run on macOS.
+Two workflows capture M1 evidence on hosted runners, so that a capture needs no local Linux host:
 
 - `m1-evidence` runs `scripts/m1-evidence-guest.sh` on Linux and `scripts/m1-evidence-macos.sh` on macOS, and uploads each output directory. It covers the checks, the syscall trace, both directory-sync results, and the default and paced benchmark runs.
 - `m1-compare` runs `scripts/m1-compare-refs.sh`, which builds two commits and measures them in alternating pairs, closed loop and paced.
 
 The `m3-evidence` workflow runs `scripts/m3-evidence.sh` on Linux. It traces `real_storage_roll_phases` with `strace`, checks the trace with `scripts/m3-verify-roll-syscalls.py` and uploads both. The script also runs in a Linux container with `strace` installed.
 
-Dispatch any of these workflows, or put the `m1-evidence`, `m1-compare` or `m3-evidence`
-label on a pull request. A labeled pull request captures its head, and `m1-compare`
-measures its base against its head. Record the machine, disk and mount as the
-measurement's conditions, as [testing.md](architecture/testing.md#benchmarks-m1-for-the-core-m6-for-the-server)
-requires, and do not read a target pass from a virtual machine. Uploaded artifacts
-are kept for 3 days. The workflows upload the capture logs. Benchmark segment files
-stay in the job temp directory, which the runner deletes at the end of the job.
+Dispatch any of these workflows, or put the `m1-evidence`, `m1-compare` or `m3-evidence` label on a pull request. A labeled pull request captures its head, and `m1-compare` measures its base against its head. A hosted runner is a shared virtual machine: record it as the measurement's conditions, as [testing.md](architecture/testing.md#benchmarks-m1-for-the-core-m6-for-the-server) requires, and do not read a target pass from it. Uploaded artifacts are kept for 3 days.
