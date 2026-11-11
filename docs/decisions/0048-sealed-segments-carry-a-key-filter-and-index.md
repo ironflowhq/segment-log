@@ -1,9 +1,9 @@
 ---
 id: "0048"
 title: "Each sealed segment carries a key filter and a key index"
-status: proposed
+status: accepted
 date: 2026-11-10
-deciders: []
+deciders: [Altug Sahin]
 supersedes: null
 superseded_by: null
 tags: [idempotency, recovery, memory, format]
@@ -79,12 +79,12 @@ The rules that follow from it:
 
 ## Consequences
 
-- PRD open item 1 has a proposed answer. M4 can start once this ADR is accepted.
+- PRD open item 1 is resolved. M4 can start.
 - R21 and ORACLE-13 change. From each sealed segment except the newest, open reads the header, the locator, the footer and the key filter frame.
 - format.md gains the key filter frame, the key index frame, the footer field for their position, and the hash. They stay provisional until M5. The sentence "The footer does not hold idempotency keys" stays true. The keys stay out of the footer.
 - api.md gains no option. The filter density is a format constant.
 - Each roll does about 8 ms more work on the writer thread at S1, and its `fsync` writes about 3.6 MB more. Appends wait for that roll.
-- Open reads about 2 bytes per sealed key. At S1 that is 40 MB and took 25 ms. With the footers and the active-segment scan, open at S1 is likely close to 50 ms warm and above it cold (inferred). This conflicts with PRD goal 5, which says open time is proportional to the active segment and not to history. The owner must accept that or ask for lazy loading.
+- Open reads about 2 bytes per sealed key. At S1 that is 40 MB and took 25 ms. With the footers and the active-segment scan, open at S1 is likely close to 50 ms warm and above it cold (inferred). This conflicts with PRD goal 5, which says open time is proportional to the active segment and not to history. The owner accepted this on 2026-11-10, together with memory that has no fixed upper limit.
 - A retry of a key in an old segment reads and checks a whole group frame, up to the group byte cap. With a cold cache that read goes to the device. Retries are rare, so this is accepted.
 - The M4 gate must measure on Linux: open time end to end, cold and warm, key-cache memory, and the effect on append throughput and p99 latency.
 

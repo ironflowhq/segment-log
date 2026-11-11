@@ -48,6 +48,7 @@ We accept leaving the lookup optimization and memory policy open until M4 to pre
 
 ## Consequences
 
+- [ADR 0048](0048-sealed-segments-carry-a-key-filter-and-index.md) settles the M4 lookup mechanism and key-cache memory with a key filter and a key index in each sealed segment. The key lifetime is unchanged.
 - [ADR 0037](0037-retain-complete-logs-through-current-milestones.md) keeps complete history through M1–M6 and assigns whole-log archival and expiry to deployment. The key lifetime is unchanged; only a future retention feature could add valid-segment deletion.
 - The lifetime part of PRD open item 1 is resolved. Its lookup mechanism and key-cache memory budget remain blockers for M4, not M1.
 - Footer summaries alone cannot implement retained-key lookup. M4 must address that gap rather than silently shortening key lifetime.
