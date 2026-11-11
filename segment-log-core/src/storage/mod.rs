@@ -17,6 +17,18 @@ pub(crate) enum Purpose {
     Lookup,
     Roll,
 }
+impl Purpose {
+    /// The trace codec writes a purpose as its index here. Append new purposes at the end so
+    /// that saved traces still decode.
+    #[cfg(test)]
+    pub(crate) const ALL: [Purpose; 5] = [
+        Purpose::Open,
+        Purpose::Group,
+        Purpose::Recovery,
+        Purpose::Lookup,
+        Purpose::Roll,
+    ];
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Op {
     CreateDir,
