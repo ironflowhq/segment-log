@@ -64,6 +64,7 @@ impl Writer {
         (self.active.length >= options.roll_bytes || !fits) && next != self.active.base
     }
 
+    /// The writer never appends to a segment after its first closing frame.
     fn roll(&mut self, view: &View, next: u64) -> io::Result<()> {
         let storage = view.storage.as_ref();
         let path = segment_path(&view.dir, self.active.base);
@@ -373,6 +374,7 @@ pub(super) fn run(
 }
 
 impl Writer {
+    /// A failed write or flush leaves every request of the draft unanswered.
     fn commit(&mut self, view: &View, draft: &mut Draft) -> io::Result<()> {
         let base = draft.base;
         #[cfg(test)]

@@ -7,6 +7,7 @@ pub(super) struct Keys {
     sealed: Vec<SealedKeys>,
 }
 
+/// A staged key's position is the current group's frame position, which no durable frame has.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct ActiveKey {
     pub position: u32,
@@ -316,6 +317,7 @@ impl Keys {
                     same: entry.stream == incoming.stream && entry.payload == incoming.payload,
                 }));
             }
+            // The exact map names this key's record, so another key there is a damaged file.
             return active_record(view, position, record, incoming)?
                 .map(Some)
                 .ok_or(LookupFailure);
@@ -363,6 +365,7 @@ fn active_record(
         span.position,
         length,
     )?;
+    // A short read can return a shorter frame that still decodes.
     if bytes.len() != length {
         return Err(LookupFailure);
     }

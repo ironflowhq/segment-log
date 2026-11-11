@@ -82,6 +82,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
     if let Ending::Rolled(run) = &found.newest.ending {
         summaries.push(run.summary);
     }
+    // Step 11's reads come before any change, so that a bad key filter changes no file.
     let sealed_keys = summaries
         .into_iter()
         .map(|summary| SealedKeys::load(&reader, dir, &found.log_id, summary))
