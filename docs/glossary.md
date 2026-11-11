@@ -33,7 +33,7 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Poisoned** | The writer's state after a write-path I/O or integrity failure, or after the writer stops unexpectedly. It accepts no more submits until the log is reopened. |
 | **Torn tail** | Bytes at the end of the active segment that do not form a complete, CRC-valid frame. Recovery removes them. |
 | **Writer epoch** | A number that each opening writer gets: one more than the highest epoch in any segment ([ADR 0047](decisions/0047-writer-epoch-from-every-segment.md)). Every frame stores it, inside the span that the CRC covers. |
-| **Log id** | A random id that the log gets at creation. Every segment header stores it. |
+| **Log id** | A random id that the log gets at creation. Every segment header stores it, and every frame's CRC covers it ([ADR 0049](decisions/0049-frame-crcs-cover-the-log-id.md)). |
 | **Footer** | A frame near the end of a sealed segment. It lists each stream in that segment: stream id, last revision, last log offset, last file position. |
 | **Key filter** | A frame that a roll writes before the footer (from M4). It answers "this key is certainly not in this segment" or "maybe" for an idempotency key's hash. A writable open of a log that is not sealed keeps every sealed segment's key filter in memory ([ADR 0048](decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). |
 | **Key index** | A frame that a roll writes after the key filter (from M4). It lists the segment's key hashes, sorted, each with the file position of the frame that holds its record. The writer reads one page of it after the key filter answers "maybe". |
