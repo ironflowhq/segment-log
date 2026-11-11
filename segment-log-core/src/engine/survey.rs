@@ -1,4 +1,3 @@
-//! The part of open that only reads, so that a read-only opener can share it.
 use super::*;
 
 pub(super) use read_only::ReadOnly;
@@ -6,8 +5,6 @@ pub(super) use read_only::ReadOnly;
 mod read_only {
     use super::super::*;
 
-    /// A storage handle that can only read, list and measure. A caller that holds one cannot
-    /// reach a write call.
     pub(in crate::engine) struct ReadOnly<'a>(&'a dyn Storage);
 
     impl<'a> ReadOnly<'a> {
@@ -41,12 +38,10 @@ mod read_only {
     }
 }
 
-/// What the scan found in every segment of the directory.
 pub(super) struct Survey {
     pub log_id: codec::LogId,
     pub published: Published,
     pub keys: Keys,
-    /// The highest epoch of any header or valid frame.
     pub epoch: u64,
     pub newest_header: Vec<u8>,
     pub newest: Scan,
@@ -68,7 +63,6 @@ struct Kept {
     epoch: u64,
 }
 
-/// The base offsets of the directory's segment files, oldest first.
 pub(super) fn segment_bases(storage: &ReadOnly<'_>, dir: &Path) -> io::Result<Vec<u64>> {
     let mut bases: Vec<u64> = storage
         .list(dir, Purpose::Open)?
@@ -86,7 +80,6 @@ pub(super) fn segment_bases(storage: &ReadOnly<'_>, dir: &Path) -> io::Result<Ve
     Ok(bases)
 }
 
-/// Whether the segment is a header that a crash tore before any frame followed it.
 pub(super) fn is_torn_header(storage: &ReadOnly<'_>, dir: &Path, base: u64) -> io::Result<bool> {
     let path = segment_path(dir, base);
     let length = storage.length(&path, Purpose::Open)?;
@@ -96,7 +89,6 @@ pub(super) fn is_torn_header(storage: &ReadOnly<'_>, dir: &Path, base: u64) -> i
     Ok(length <= codec::HEADER_LEN as u64 && !crc_valid)
 }
 
-/// Checks every header and scans every segment. `bases` is not empty.
 pub(super) fn survey(
     storage: &ReadOnly<'_>,
     dir: &Path,

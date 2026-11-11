@@ -18,8 +18,6 @@ pub(crate) enum Purpose {
     Roll,
 }
 impl Purpose {
-    /// The trace codec writes a purpose as its index here. Append new purposes at the end so
-    /// that saved traces still decode.
     #[cfg(test)]
     pub(crate) const ALL: [Purpose; 5] = [
         Purpose::Open,
