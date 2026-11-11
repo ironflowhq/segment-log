@@ -39,6 +39,7 @@ Unread Kafka 4.4 format pages and unread Kurrent gRPC names do not block a priva
 
 ## Consequences
 
+- [ADR 0049](0049-frame-crcs-cover-the-log-id.md) proposes that every frame's CRC start with the segment's log id, from `format_version` 1 in M4. The M5 review of the CRC fields starts from that rule.
 - Before M5, no data that must outlive a format change goes into this log.
 - M5 must review: the width of the log id, alignment, which fields are inside the CRC, and the frame size limit.
 
