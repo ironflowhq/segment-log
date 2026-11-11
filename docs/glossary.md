@@ -13,7 +13,7 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Record** | One event: stream id, stream revision, optional idempotency key, payload. |
 | **Submit** | One `append` call from a caller, holding one or more records. It is the atomic unit for new writes. A fully deduplicated retry confirms existing durable records and appends nothing ([ADR 0024](decisions/0024-fully-matching-retries-ignore-original-grouping.md)). |
 | **Group** | The records of one or more submits that the writer writes as one frame and makes durable with one `fsync`. A group is not a transaction. |
-| **Frame** | The on-disk form of a group, a footer, a seal, or a locator: length, CRC (cyclic redundancy check), body. See [format.md](architecture/format.md). |
+| **Frame** | The on-disk form of a group, a key filter, a key index, a footer, a seal, or a locator: length, CRC (cyclic redundancy check), body. See [format.md](architecture/format.md). |
 | **Linger** | How long the writer waits for more submits before it writes a group. It runs from the admission of the group's first submit ([ADR 0046](decisions/0046-linger-runs-from-the-first-submits-admission.md)). |
 | **Byte cap** | The largest encoded group body, in bytes, including its body header and record entries. It excludes the frame envelope. The writer writes the group when the next new submit would go over it. |
 | **Admission byte budget** | The limit on byte charges reserved for accepted, unanswered requests, including queued submits, writer groups and matched retry waiters. A reservation lasts until the request is answered ([ADR 0025](decisions/0025-admission-byte-reservations-live-until-the-answer.md)). |
@@ -35,6 +35,9 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Writer epoch** | A number that each opening writer gets: one more than the highest epoch in any segment ([ADR 0047](decisions/0047-writer-epoch-from-every-segment.md)). Every frame stores it, inside the span that the CRC covers. |
 | **Log id** | A random id that the log gets at creation. Every segment header stores it. |
 | **Footer** | A frame near the end of a sealed segment. It lists each stream in that segment: stream id, last revision, last log offset, last file position. |
+| **Key filter** | A frame that a roll writes before the footer (from M4). It answers "this key is certainly not in this segment" or "maybe" for an idempotency key's hash. A writable open of a log that is not sealed keeps every sealed segment's key filter in memory ([ADR 0048](decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). |
+| **Key index** | A frame that a roll writes after the key filter (from M4). It lists the segment's key hashes, sorted, each with the file position of the frame that holds its record. The writer reads one page of it after the key filter answers "maybe". |
+| **False hit** | A key filter "maybe", or a key index entry with the same hash, for a key that the record does not hold. The writer compares the key bytes, so a false hit is never a match. |
 | **Locator** | The last frame of a sealed segment (from M4). It holds the footer's file position, so that open can find the footer from the end of the file. |
 | **Log reader** | A read-only handle (`LogReader`) on a sealed log. It takes no lock and writes nothing. |
 | **Accept queue** | The bounded queue between callers and the writer thread. Its count limit and the admission byte budget can each cause a capacity refusal with `Full`. |
@@ -60,12 +63,14 @@ segment log = one directory
 └─ 00000000000000000977.seg      active segment   (newest, writer appends here)
 
 one segment:
-┌────────┬─────────┬─────────┬─────────┬─────────┬────────┬─────────┬─────────┐
-│ header │ frame   │ frame   │ frame   │ ...     │ footer │ seal    │ locator │
-│        │ (group) │ (group) │ (group) │         │        │ (log    │         │
-│log id  │ epoch   │ epoch   │ epoch   │         │streams │ only)   │→ footer │
-└────────┴─────────┴─────────┴─────────┴─────────┴────────┴─────────┴─────────┘
-                                                 └──── only in a sealed segment ┘
+┌────────┬─────────┬─────────┬─────┬────────┬────────┬────────┬─────────┐
+│ header │ frame   │ frame   │ ... │ key    │ key    │ footer │ locator │
+│        │ (group) │ (group) │     │ filter │ index  │        │         │
+│log id  │ epoch   │ epoch   │     │        │        │streams │→ footer │
+└────────┴─────────┴─────────┴─────┴────────┴────────┴────────┴─────────┘
+                                   └──── only in a sealed segment ───────┘
+the final segment of a sealed log ends: ... [ footer ][ seal ][ locator ]
+                                            (no key frames)
 frame = length + CRC + body.  File position = a byte spot inside this file.
 ```
 
@@ -124,10 +129,16 @@ cache = anything the log can rebuild by reading segments
 ┌───────────────────────────────────────────────────────────┐
 │ tail map: stream id → latest revision, log offset         │
 │ sparse index: some log offsets → file positions           │
+│ key filters: one per sealed segment, loaded at open       │
 └───────────────────────────────────────────────────────────┘
 
+writer looking for a key (from M4):
+  current group → active key map → key filter of each sealed segment,
+  newest first → on "maybe": one key index page → the record's frame
+  → compare the key bytes (a different key is a false hit)
+
 sealed segment, read from the end:
-  ... [ footer ][ seal ][ locator ] ◄── start here
+  ... [ footer ][ seal ][ locator ] ◄── start here (final segment)
           ▲                   │
           └───────────────────┘   locator holds the footer's file position
   footer lists every stream: last revision, last offset, last position
