@@ -18,27 +18,55 @@ pub(super) fn roll_run(
 ) -> [Vec<u8>; 4] {
     let codec::KeyFrames { filter, index } = codec::encode_key_frames(log_id, epoch, next, keys)
         .expect("the writer rolls before the key index passes the frame limit");
-    let footer = codec::encode_footer(
+    let footer = footer(
         log_id,
         epoch,
         next,
-        &codec::Footer {
-            key_filter_position: std::num::NonZeroU64::new(filter_at),
-            streams: tails
-                .iter()
-                .map(|(stream, tail)| codec::StreamTail {
-                    stream,
-                    last_revision: tail.revision,
-                    last_offset: tail.offset,
-                    last_position: tail.position,
-                })
-                .collect(),
-        },
-    )
-    .expect("the writer rolls before the footer passes the frame limit");
+        std::num::NonZeroU64::new(filter_at),
+        tails,
+    );
     let footer_at = filter_at + (filter.len() + index.len()) as u64;
     let locator = codec::encode_locator(log_id, epoch, next, footer_at);
     [filter, index, footer, locator]
+}
+
+/// No key frames: a sealed log never checks a key again (ADR 0048).
+pub(super) fn seal_run(
+    log_id: &codec::LogId,
+    epoch: u64,
+    next: u64,
+    footer_at: u64,
+    tails: &BTreeMap<Vec<u8>, Tail>,
+) -> [Vec<u8>; 3] {
+    [
+        footer(log_id, epoch, next, None, tails),
+        codec::encode_seal(log_id, epoch, next),
+        codec::encode_locator(log_id, epoch, next, footer_at),
+    ]
+}
+
+fn footer(
+    log_id: &codec::LogId,
+    epoch: u64,
+    next: u64,
+    key_filter_position: Option<std::num::NonZeroU64>,
+    tails: &BTreeMap<Vec<u8>, Tail>,
+) -> Vec<u8> {
+    let streams = tails
+        .iter()
+        .map(|(stream, tail)| codec::StreamTail {
+            stream,
+            last_revision: tail.revision,
+            last_offset: tail.offset,
+            last_position: tail.position,
+        })
+        .collect();
+    let footer = codec::Footer {
+        key_filter_position,
+        streams,
+    };
+    codec::encode_footer(log_id, epoch, next, &footer)
+        .expect("the writer rolls before the footer passes the frame limit")
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

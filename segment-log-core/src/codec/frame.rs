@@ -213,10 +213,6 @@ pub(crate) fn encode_footer(
     Ok(finish(log, out))
 }
 
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "seal writes the first seal frame")
-)]
 pub(crate) fn encode_seal(log: &LogId, epoch: u64, base_offset: u64) -> Vec<u8> {
     finish(
         log,
