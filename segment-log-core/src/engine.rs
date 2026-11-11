@@ -11,6 +11,7 @@ use std::{
     thread::{self, JoinHandle},
     time::Instant,
 };
+mod closing;
 mod keys;
 mod recovery;
 mod reply;

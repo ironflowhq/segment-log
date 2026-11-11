@@ -590,10 +590,10 @@ fn segment_keys(bytes: &[u8]) -> Vec<Vec<Vec<u8>>> {
                 crc = (crc >> 1) ^ if crc & 1 == 1 { 0x82f63b78 } else { 0 };
             }
         }
-        if !crc != u32::from_le_bytes(bytes[at + 4..at + 8].try_into().unwrap()) {
+        // A roll's closing frames follow the groups and hold no records.
+        if !crc != u32::from_le_bytes(bytes[at + 4..at + 8].try_into().unwrap()) || body[0] != 1 {
             break;
         }
-        assert_eq!(body[0], 1);
         let count = u32::from_le_bytes(body[20..24].try_into().unwrap());
         let mut pos = 24;
         let mut keys = vec![];

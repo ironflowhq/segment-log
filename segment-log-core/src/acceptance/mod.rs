@@ -28,4 +28,6 @@ mod model;
 
 mod roll;
 
+mod closing_runs;
+
 mod evidence;

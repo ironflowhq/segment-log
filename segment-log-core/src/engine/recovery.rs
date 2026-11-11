@@ -1,5 +1,5 @@
 use super::*;
-use survey::ReadOnly;
+use survey::{Ending, ReadOnly};
 pub(super) struct Recovered {
     pub active: Active,
     pub log_id: codec::LogId,
@@ -68,7 +68,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         bases.push(0);
     }
 
-    let found = survey::survey(&reader, dir, &bases)?;
+    let mut found = survey::survey(&reader, dir, &bases)?;
     let newest = *bases.last().unwrap();
     let epoch = if created {
         1
@@ -77,7 +77,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
     };
 
     let segment = segment_path(dir, newest);
-    if !found.newest.reached_end_of_file {
+    if let Ending::Stopped = found.newest.ending {
         call(
             storage,
             &segment,
@@ -85,7 +85,10 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
             Op::Truncate(found.newest.end),
         )?;
     }
-    let (position, bytes) = found.newest.last.unwrap_or((0, found.newest_header));
+    let (position, bytes) = match &found.newest.ending {
+        Ending::Rolled(run) => (run.start, run.frames.concat()),
+        _ => found.newest.last.unwrap_or((0, found.newest_header)),
+    };
     call(
         storage,
         &segment,
@@ -99,11 +102,30 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         .filter(|p| !p.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
     call(storage, parent, Purpose::Recovery, Op::SyncDir)?;
-    Ok(Recovered {
-        active: Active {
+    let active = if let Ending::Rolled(_) = found.newest.ending {
+        // A crash came after the roll's flush and before the next segment existed.
+        let next = found.published.watermark;
+        create_segment(
+            storage,
+            dir,
+            Purpose::Recovery,
+            &codec::Header {
+                log_id: *found.log_id.bytes(),
+                base_offset: next,
+                epoch,
+            },
+        )?;
+        found.published.roll();
+        Active::new(next)
+    } else {
+        Active {
             base: newest,
             length: found.newest.end,
-        },
+            tails: found.newest.tails,
+        }
+    };
+    Ok(Recovered {
+        active,
         log_id: found.log_id,
         lock,
         published: found.published,

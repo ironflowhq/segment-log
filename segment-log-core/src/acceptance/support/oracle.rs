@@ -364,8 +364,9 @@ pub(crate) fn observations(
 }
 
 /// The number of records that recovery must keep: the valid prefix across every segment. Each
-/// segment before the newest must be whole and start where the one before it ends. A newest file no
-/// longer than a header, whose header checksum does not match, holds no record.
+/// segment before the newest must be whole, end in its roll's closing run, and start where the one
+/// before it ends. A newest file no longer than a header, whose header checksum does not match,
+/// holds no record.
 pub(crate) fn valid_length(segments: &[(u64, Vec<u8>)]) -> usize {
     let mut count = 0;
     let mut epoch = 0;
@@ -404,10 +405,17 @@ pub(crate) fn valid_length(segments: &[(u64, Vec<u8>)]) -> usize {
             epoch = next_epoch;
             at += 8 + len;
         }
-        assert!(
-            newest || at == bytes.len(),
-            "sealed segment {base} is whole"
-        );
+        if !newest {
+            let run = &bytes[at..];
+            assert!(run.len() > 32, "sealed segment {base} has a closing run");
+            let run_epoch = u64::from_le_bytes(run[12..20].try_into().unwrap());
+            assert_eq!(
+                run,
+                raw::roll_run(&bytes[..at], run_epoch),
+                "sealed segment {base} ends in its roll's closing run"
+            );
+            epoch = run_epoch;
+        }
     }
     count
 }

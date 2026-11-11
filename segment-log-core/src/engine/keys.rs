@@ -45,6 +45,23 @@ impl Keys {
         }
     }
 
+    /// The key index entries of the segment whose records start at `base` and whose group frames
+    /// are `spans`.
+    pub(super) fn index_entries(&self, base: u64, spans: &[GroupSpan]) -> Vec<codec::KeyEntry> {
+        self.map
+            .iter()
+            .filter(|(_, position)| position.offset >= base)
+            .map(|(key, position)| {
+                let span = spans[spans.partition_point(|span| span.end() <= position.offset)];
+                codec::KeyEntry {
+                    hash: self.log.key_hash(key),
+                    position: span.position as u32,
+                    record: (position.offset - span.base) as u32,
+                }
+            })
+            .collect()
+    }
+
     pub(super) fn stage(&mut self, submit: &Submit, base: u64, revisions: &[RevisionSlot]) {
         for (record, (input, revision)) in submit.records.iter().zip(revisions).enumerate() {
             if let Some(key) = &input.key {

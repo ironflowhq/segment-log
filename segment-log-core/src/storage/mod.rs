@@ -16,15 +16,18 @@ pub(crate) enum Purpose {
     Recovery,
     Lookup,
     Roll,
+    /// Open's reads of a locator and the footer it names.
+    Summary,
 }
 impl Purpose {
     #[cfg(test)]
-    pub(crate) const ALL: [Purpose; 5] = [
+    pub(crate) const ALL: [Purpose; 6] = [
         Purpose::Open,
         Purpose::Group,
         Purpose::Recovery,
         Purpose::Lookup,
         Purpose::Roll,
+        Purpose::Summary,
     ];
 }
 #[derive(Clone, Debug, PartialEq, Eq)]

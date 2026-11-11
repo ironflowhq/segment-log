@@ -1,4 +1,5 @@
 use super::*;
+use closing::Tail;
 use keys::Classification;
 
 pub(super) struct Writer {
@@ -8,31 +9,62 @@ pub(super) struct Writer {
     pub active: Active,
 }
 
-/// The segment that takes new frames. Only the writer thread appends to it.
+/// The segment that takes new frames, and what its footer will hold. Only the writer thread
+/// appends to it.
 pub(super) struct Active {
     pub base: u64,
     pub length: u64,
+    /// Each stream's last durable record in this segment.
+    pub tails: BTreeMap<Vec<u8>, Tail>,
+}
+
+impl Active {
+    pub(super) fn new(base: u64) -> Self {
+        Self {
+            base,
+            length: codec::HEADER_LEN as u64,
+            tails: BTreeMap::new(),
+        }
+    }
 }
 
 impl Writer {
-    /// Starts a new active segment at `next`, the next log offset, if the active one has
-    /// reached the roll size.
-    fn roll(&mut self, view: &View, next: u64, options: &Options) -> io::Result<()> {
+    /// Whether the next group's first new submit, at log offset `next`, starts a new segment.
+    fn rolls_before(&self, next: u64, options: &Options) -> bool {
         // A segment with no record cannot roll: its successor would take its name.
-        if self.active.length < options.roll_bytes || next == self.active.base {
-            return Ok(());
+        self.active.length >= options.roll_bytes && next != self.active.base
+    }
+
+    /// Seals the active segment with its closing run, then starts a new active segment at `next`,
+    /// the next log offset. The writer never appends to a segment after its first closing frame.
+    fn roll(&mut self, view: &View, next: u64) -> io::Result<()> {
+        let storage = view.storage.as_ref();
+        let path = segment_path(&view.dir, self.active.base);
+        let mut keys = {
+            let published = view.published.lock().unwrap();
+            self.keys
+                .index_entries(self.active.base, &published.newest.spans)
+        };
+        let run = closing::roll_run(
+            &view.log_id,
+            self.epoch,
+            next,
+            self.active.length,
+            &self.active.tails,
+            &mut keys,
+        );
+        for frame in run {
+            call(storage, &path, Purpose::Roll, Op::Append(frame))?;
         }
+        call(storage, &path, Purpose::Roll, Op::SyncData)?;
         let header = codec::Header {
             log_id: *view.log_id.bytes(),
             base_offset: next,
             epoch: self.epoch,
         };
-        create_segment(view.storage.as_ref(), &view.dir, Purpose::Roll, &header)?;
+        create_segment(storage, &view.dir, Purpose::Roll, &header)?;
         view.published.lock().unwrap().roll();
-        self.active = Active {
-            base: next,
-            length: codec::HEADER_LEN as u64,
-        };
+        self.active = Active::new(next);
         Ok(())
     }
 }
@@ -47,7 +79,7 @@ const _: () = assert!(std::mem::size_of::<RevisionSlot>() <= std::mem::size_of::
 /// durable heads, which the group has not changed yet.
 fn revisions(
     submit: &Submit,
-    pending: &BTreeMap<Vec<u8>, u64>,
+    pending: &BTreeMap<Vec<u8>, Tail>,
     published: &Mutex<Published>,
 ) -> Result<Box<[RevisionSlot]>, CommitError> {
     let mut slots: Box<[_]> = (0..submit.records.len())
@@ -67,7 +99,7 @@ fn revisions(
         let stream = &submit.records[slots[cursor].index].stream;
         let mut actual = pending
             .get(stream)
-            .copied()
+            .map(|tail| tail.revision)
             .or_else(|| durable.heads.get(stream).map(|head| head.revision));
         while cursor < slots.len() && submit.records[slots[cursor].index].stream == *stream {
             let index = slots[cursor].index;
@@ -117,9 +149,9 @@ struct Draft {
     /// Request and record index of each staged record, by offset past `base`.
     origins: Vec<(usize, usize)>,
     assigned: Vec<Revision>,
-    /// The revision that each stream has after the submits staged so far. It overrides the
+    /// Each stream's last record among the submits staged so far. Its revision overrides the
     /// durable heads, which the group has not changed yet.
-    heads: BTreeMap<Vec<u8>, u64>,
+    tails: BTreeMap<Vec<u8>, Tail>,
     waiters: Vec<RetryWaiter>,
     size: usize,
 }
@@ -132,7 +164,7 @@ impl Draft {
             origins: Vec::new(),
             assigned: Vec::new(),
             // Copying every durable head here would make each group cost grow with the stream count.
-            heads: BTreeMap::new(),
+            tails: BTreeMap::new(),
             waiters: Vec::new(),
             size: codec::BODY_HEADER_LEN,
         }
@@ -148,17 +180,24 @@ impl Draft {
 }
 
 impl Writer {
-    /// Adds a new submit to the group.
+    /// Adds a new submit to the group, and its records to the key map and the footer's tails.
     fn stage(&mut self, draft: &mut Draft, request: Request, revisions: &[RevisionSlot]) {
         let submit = &request.submit;
-        self.keys
-            .stage(submit, draft.base + draft.assigned.len() as u64, revisions);
+        let first = draft.base + draft.assigned.len() as u64;
+        self.keys.stage(submit, first, revisions);
         draft
             .origins
             .extend((0..submit.records.len()).map(|record| (draft.requests.len(), record)));
         draft.size += body_size(submit).unwrap() - codec::BODY_HEADER_LEN;
-        for (record, revision) in submit.records.iter().zip(revisions) {
-            draft.heads.insert(record.stream.clone(), revision.revision);
+        for (i, (record, revision)) in submit.records.iter().zip(revisions).enumerate() {
+            draft.tails.insert(
+                record.stream.clone(),
+                Tail {
+                    revision: revision.revision,
+                    offset: first + i as u64,
+                    position: self.active.length,
+                },
+            );
         }
         draft
             .assigned
@@ -196,7 +235,7 @@ pub(super) fn run(
                 .classify(&view, &request.submit, &mut writer.lookup, &draft.staged())
             {
                 Classification::New => {
-                    match revisions(&request.submit, &draft.heads, &view.published) {
+                    match revisions(&request.submit, &draft.tails, &view.published) {
                         Err(error) => {
                             request.answer(Err(error));
                         }
@@ -220,7 +259,8 @@ pub(super) fn run(
                                 // The roll waits for the group's first new submit, so that a group
                                 // that appends nothing writes and flushes nothing.
                                 if draft.requests.is_empty()
-                                    && writer.roll(&view, draft.base, &options).is_err()
+                                    && writer.rolls_before(draft.base, &options)
+                                    && writer.roll(&view, draft.base).is_err()
                                 {
                                     poison(&poisoned, draft, Some(request), receiver);
                                     return;
@@ -337,6 +377,7 @@ impl Writer {
         result?;
         let span = GroupSpan::of(self.active.length, length, &group);
         self.active.length += length as u64;
+        self.active.tails.append(&mut draft.tails);
         view.published.lock().unwrap().publish(span, &group);
         #[cfg(test)]
         timeline.mark(4);

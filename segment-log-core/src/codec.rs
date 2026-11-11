@@ -22,7 +22,7 @@ pub(crate) use frame::{
     encode_locator, encode_seal,
 };
 pub(crate) use header::{FORMAT_VERSION, HEADER_LEN, Header, decode_header, encode_header};
-pub(crate) use index::{KeyEntry, decode_page, encode_key_frames};
+pub(crate) use index::{KeyEntry, KeyFrames, decode_page, encode_key_frames};
 
 pub(crate) const FRAME_BODY_LIMIT: usize = 16 * 1024 * 1024;
 pub(crate) const GROUP_BODY_LIMIT: usize = 8 * 1024 * 1024;

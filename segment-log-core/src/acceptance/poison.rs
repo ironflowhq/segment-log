@@ -412,6 +412,7 @@ fn short_valid_lookup_aborts_buffered_originals_and_waiters() {
                     ),
                 ],
             );
+            let intact = raw::bytes(&sim);
             sim.call(Call::new(
                 SEG,
                 Purpose::Open,
@@ -447,7 +448,7 @@ fn short_valid_lookup_aborts_buffered_originals_and_waiters() {
                 sim.count(Path::new(ANY_SEG), Purpose::Group, &Op::SyncData),
                 1
             );
-            sim.call(Call::new(SEG, Purpose::Open, Op::Write(64, original_frame)))
+            sim.call(Call::new(SEG, Purpose::Open, Op::Write(0, intact)))
                 .unwrap();
             let history = [
                 stored(b"z", Some(b"z"), b"original", 0, 0),
