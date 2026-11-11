@@ -38,8 +38,6 @@ mod read_only {
             }
         }
 
-        /// The bytes of the frame at `position`, read as its envelope and then the whole frame, if
-        /// its length is in range and it ends by `limit`. Its CRC is not checked here.
         pub(in crate::engine) fn frame(
             &self,
             path: &Path,
@@ -67,38 +65,28 @@ mod read_only {
 pub(super) struct Survey {
     pub log_id: codec::LogId,
     pub published: Published,
-    /// Every segment before the newest, oldest first.
     pub sealed: Vec<SealedSummary>,
-    /// The highest epoch in any segment header or kept frame (ADR 0047).
     pub epoch: u64,
     pub newest_header: Vec<u8>,
     pub newest: Scan,
 }
 
 pub(super) struct Scan {
-    /// Where the kept frames end.
     pub end: u64,
     pub ending: Ending,
-    /// Position and bytes of the last group frame.
     pub last: Option<(u64, Vec<u8>)>,
-    /// Each stream's last record in the segment.
     pub tails: BTreeMap<Vec<u8>, Tail>,
-    /// The segment's keys.
     pub keys: BTreeMap<Vec<u8>, ActiveKey>,
 }
 
 pub(super) enum Ending {
-    /// Group frames, or only the header, end the file.
     Groups,
-    /// The scan stopped at `Scan::end`, before the end of the file.
     Stopped,
-    /// A complete roll's closing run ends the file.
     Rolled(Run),
 }
 
 pub(super) struct Run {
     pub summary: SealedSummary,
-    /// The run's frames, in file order.
     pub frames: Vec<Vec<u8>>,
 }
 
@@ -229,8 +217,6 @@ fn header(
     }
 }
 
-/// Reads the frames of one segment of `length` bytes into `kept`, until a frame that does not
-/// continue the log or a roll's closing run that ends the segment.
 fn scan(
     storage: &ReadOnly<'_>,
     log: &codec::LogId,

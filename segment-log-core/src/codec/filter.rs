@@ -152,7 +152,6 @@ impl KeyFilter {
         self.count
     }
 
-    /// The hash of the first entry of key index page `page`.
     pub(crate) fn fence(&self, page: usize) -> u64 {
         self.fences[page]
     }

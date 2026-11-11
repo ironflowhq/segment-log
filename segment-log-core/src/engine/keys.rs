@@ -1,35 +1,26 @@
 use super::*;
 use survey::ReadOnly;
 
-/// Every retained key the writer can find, and how (ADR 0048 rules 1 to 3).
 pub(super) struct Keys {
     hash: KeyHash,
-    /// The active segment's exact map: its durable keys and the keys staged by the current group.
     active: BTreeMap<Vec<u8>, ActiveKey>,
-    /// One for each sealed segment, oldest first.
     sealed: Vec<SealedKeys>,
 }
 
-/// Where a key's record is in the active segment: the group frame's position and the record's index
-/// in it. A staged key's position is the current group's frame position, which no durable frame has.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct ActiveKey {
     pub position: u32,
     pub record: u32,
 }
 
-/// One sealed segment's key filter, and where its key index pages are.
 pub(super) struct SealedKeys {
     base: u64,
     next: u64,
-    /// The key filter's position. A key index entry must name a group frame before it.
     filter_at: u64,
-    /// The first key index page's position.
     pages_at: u64,
     filter: codec::KeyFilter,
 }
 
-/// What open learns from a sealed segment's closing run.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct SealedSummary {
     pub base: u64,
@@ -38,18 +29,14 @@ pub(super) struct SealedSummary {
     pub footer_at: u64,
 }
 
-/// SipHash-2-4 keyed by the log id (format.md). A test build can give chosen keys a chosen hash.
 pub(super) struct KeyHash {
     log_id: codec::LogId,
     #[cfg(test)]
     forced: BTreeMap<Vec<u8>, u64>,
 }
 
-/// The current group, as classification sees it.
 pub(super) struct Staged<'a> {
-    /// The group frame's position: the active segment's length.
     pub position: u64,
-    /// The log offset of the group's first record.
     pub base: u64,
     pub requests: &'a [Request],
     /// Request and record index of each staged record, by offset past `base`.
@@ -65,8 +52,6 @@ pub(super) enum Classification {
     LookupFailure,
 }
 
-/// A read error, short read, bad CRC, malformed frame or page, or an index entry that names no
-/// valid group frame.
 struct LookupFailure;
 
 impl From<io::Error> for LookupFailure {
@@ -81,11 +66,9 @@ impl From<codec::Error> for LookupFailure {
     }
 }
 
-/// The record that an incoming key already names.
 struct Original {
     position: Position,
     pending: bool,
-    /// Whether it has the incoming record's stream and payload.
     same: bool,
 }
 
@@ -113,7 +96,6 @@ impl KeyHash {
 }
 
 impl SealedKeys {
-    /// Open step 11: the key filter frame that a sealed segment's footer names.
     pub(super) fn load(
         storage: &ReadOnly<'_>,
         dir: &Path,
@@ -134,7 +116,6 @@ impl SealedKeys {
             )?
             .ok_or_else(corrupt)?;
         let keys = Self::decode(summary, log_id, &bytes).ok_or_else(corrupt)?;
-        // The key index frame fills the space between the key filter and the footer.
         let pages = (keys.filter.count() as usize).div_ceil(codec::PAGE_ENTRIES);
         if keys.pages_at + (codec::PAGE_SIZE * pages) as u64 != summary.footer_at {
             return Err(corrupt());
@@ -142,7 +123,6 @@ impl SealedKeys {
         Ok(keys)
     }
 
-    /// Roll step 4: the key filter frame that the roll just wrote.
     pub(super) fn written(summary: SealedSummary, log_id: &codec::LogId, filter: &[u8]) -> Self {
         Self::decode(summary, log_id, filter).expect("the writer encodes a valid key filter")
     }
@@ -161,8 +141,6 @@ impl SealedKeys {
         })
     }
 
-    /// Searches this segment's key index for every entry with `hash`, and reads the record that
-    /// each one names until one holds `key`. Another key there is a false hit (ADR 0048 rule 2).
     fn find(
         &self,
         storage: &dyn Storage,
@@ -201,7 +179,6 @@ impl SealedKeys {
     }
 }
 
-/// The record at `record` in `group`, compared with `incoming`. `None` if it holds another key.
 fn compare(
     group: &codec::Group<'_>,
     record: u32,
@@ -234,8 +211,6 @@ impl Keys {
         }
     }
 
-    /// Inserts each keyed record of a staged submit, whose first record is `first` in the group
-    /// frame at `position`.
     pub(super) fn stage(&mut self, submit: &Submit, position: u64, first: usize) {
         for (i, record) in submit.records.iter().enumerate() {
             if let Some(key) = &record.key {
@@ -250,12 +225,10 @@ impl Keys {
         }
     }
 
-    /// The keyed records of the active segment, staged ones included.
     pub(super) fn keyed(&self) -> usize {
         self.active.len()
     }
 
-    /// Roll step 1: the active segment's key index entries.
     pub(super) fn index_entries(&self) -> Vec<codec::KeyEntry> {
         self.active
             .iter()
@@ -267,7 +240,6 @@ impl Keys {
             .collect()
     }
 
-    /// Roll step 4: keeps the sealed segment's filter and starts an empty map.
     pub(super) fn roll(&mut self, sealed: SealedKeys) {
         self.sealed.push(sealed);
         self.active.clear();
@@ -286,7 +258,6 @@ impl Keys {
         }
     }
 
-    /// KeyConflict at the first conflicting record, then PartialRetry, else New or a retry.
     pub(super) fn classify(
         &self,
         view: &View,
@@ -323,8 +294,6 @@ impl Keys {
         }
     }
 
-    /// The lookup order of ADR 0048 rule 1: the staged keys and the active segment's map, then each
-    /// sealed segment's filter from the newest segment back.
     fn find(
         &self,
         view: &View,
@@ -347,7 +316,6 @@ impl Keys {
                     same: entry.stream == incoming.stream && entry.payload == incoming.payload,
                 }));
             }
-            // The exact map names this key's record, so another key there is a damaged file.
             return active_record(view, position, record, incoming)?
                 .map(Some)
                 .ok_or(LookupFailure);
@@ -373,8 +341,6 @@ impl Keys {
     }
 }
 
-/// Reads a durable record of the active segment in one read, whose length comes from the frame's
-/// published span.
 fn active_record(
     view: &View,
     position: u32,
@@ -397,7 +363,6 @@ fn active_record(
         span.position,
         length,
     )?;
-    // A short read can return a shorter frame that still decodes.
     if bytes.len() != length {
         return Err(LookupFailure);
     }

@@ -1,6 +1,3 @@
-//! Open and a roll's closing run: complete, cut short by a crash, damaged, or only imitated by the
-//! bytes of a record's payload. These scenarios set the default roll size, because they assert
-//! which file the next append lands in.
 use super::support::{bounded, fixtures::*, raw};
 use crate::{codec, storage::sim::Crash, *};
 use std::{path::Path, sync::Arc};
@@ -31,8 +28,6 @@ fn keyed(n: usize) -> NewRecord {
     }
 }
 
-/// A header, then one group of `KEYS` keyed records on their own streams, so that the key index of
-/// its closing run has two pages.
 fn keyed_segment(epoch: u64) -> Vec<u8> {
     let records: Vec<_> = (0..KEYS).map(keyed).collect();
     let group = codec::encode_group(
@@ -55,7 +50,6 @@ fn keyed_segment(epoch: u64) -> Vec<u8> {
     [raw::header(raw::VERSION, 0, epoch), group].concat()
 }
 
-/// The position and length of each frame of a closing run that starts at file position `start`.
 fn frames_at(run: &[u8], start: usize) -> Vec<(usize, usize)> {
     let mut at = 0;
     let mut out = vec![];
@@ -67,8 +61,6 @@ fn frames_at(run: &[u8], start: usize) -> Vec<(usize, usize)> {
     out
 }
 
-/// A complete roll's closing run under `log_id`, for a segment with one keyed record at position 64
-/// and next unused offset `next`, whose key filter sits at file position `filter_at`.
 fn closing_run_at(log_id: &codec::LogId, filter_at: usize, next: u64) -> Vec<u8> {
     let mut entries = [codec::KeyEntry {
         hash: log_id.key_hash(b"k"),
@@ -96,8 +88,6 @@ fn closing_run_at(log_id: &codec::LogId, filter_at: usize, next: u64) -> Vec<u8>
     [keys.filter, keys.index, footer, locator].concat()
 }
 
-/// Every record of `keyed_segment` is readable, and a retry of one of its keys returns the original
-/// position without an append.
 fn assert_keyed(log: &SegmentLog) {
     let records = log.read(0, KEYS).unwrap();
     assert_eq!(records.len(), KEYS);
@@ -131,8 +121,6 @@ fn append_new(log: &SegmentLog) -> u64 {
         .offset
 }
 
-/// Opens a log whose only segment is `bytes`, and checks that open cut it to `groups`, kept it as
-/// the segment that takes the next append, and that a power loss after open changes nothing.
 fn assert_cut_to(bytes: Vec<u8>, groups: &[u8], label: &str) {
     let sim = Sim::new(330);
     raw::install_segments(&sim, &[(0, bytes)]);
@@ -454,7 +442,6 @@ fn a_newest_segment_that_ends_in_a_closing_run_gets_its_successor() {
     });
 }
 
-/// Opens the log at `/log` with the default roll size and scaled closing-frame limits.
 fn open_limited(sim: &Sim, limits: crate::engine::Limits) -> SegmentLog {
     let before = raw::segments(sim);
     let log = SegmentLog::with_hooks(
@@ -482,7 +469,6 @@ fn on(stream: &[u8], key: Option<&[u8]>, revision: Option<u64>) -> Submit {
     }
 }
 
-/// The body length and `count` of each closing frame of a sealed segment image, in file order.
 fn closing_frames(segment: &[u8]) -> Vec<(usize, u32)> {
     let (groups, run) = raw::split_run(segment);
     frames_at(run, groups.len())
@@ -494,7 +480,6 @@ fn closing_frames(segment: &[u8]) -> Vec<(usize, u32)> {
         .collect()
 }
 
-/// Commits `first` while its group's flush is held, so that `queued` all gather in the next group.
 fn behind_a_held_flush(
     sim: &Sim,
     log: &SegmentLog,

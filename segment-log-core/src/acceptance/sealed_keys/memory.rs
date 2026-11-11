@@ -1,8 +1,6 @@
 use super::*;
 use crate::engine::KeyMemory;
 
-/// Filter bytes in memory for `n` keys, from format.md: 8 bytes for each of `ceil(n / 255)` key
-/// index pages, and 64 bytes for each of `ceil(n / 32)` filter blocks.
 fn filter_bytes(n: usize) -> usize {
     8 * n.div_ceil(255) + 64 * n.div_ceil(32)
 }

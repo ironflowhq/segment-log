@@ -363,10 +363,6 @@ pub(crate) fn observations(
     }
 }
 
-/// The number of records that recovery must keep: the valid prefix across every segment. Each
-/// segment before the newest must be whole, end in its roll's closing run, and start where the one
-/// before it ends. A newest file no longer than a header, whose header checksum does not match,
-/// holds no record.
 pub(crate) fn valid_length(segments: &[(u64, Vec<u8>)]) -> usize {
     let mut count = 0;
     let mut epoch = 0;

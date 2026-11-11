@@ -1,19 +1,13 @@
-//! A roll's closing run (format.md, rules for readers): the frames that seal a segment, and how a
-//! forward scan recognizes them.
 use super::*;
 use survey::ReadOnly;
 
-/// One stream's last record in a segment: a footer entry before encoding.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct Tail {
     pub revision: u64,
     pub offset: u64,
-    /// The file position of the group frame that holds the record.
     pub position: u64,
 }
 
-/// A roll's closing run for a segment whose frames end at `filter_at`, in write order: key filter,
-/// key index, footer and locator.
 pub(super) fn roll_run(
     log_id: &codec::LogId,
     epoch: u64,
@@ -47,40 +41,22 @@ pub(super) fn roll_run(
     [filter, index, footer, locator]
 }
 
-/// Where a forward scan is in a roll's closing run.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum RunState {
     Groups,
-    /// After a key filter at `start` for `count` keyed records.
-    Filter {
-        start: u64,
-        count: u32,
-    },
-    /// After the key index that matches the key filter at `start`.
-    Index {
-        start: u64,
-    },
-    /// After the footer at `footer`, which names the key filter at `start`.
-    Footer {
-        start: u64,
-        footer: u64,
-    },
+    Filter { start: u64, count: u32 },
+    Index { start: u64 },
+    Footer { start: u64, footer: u64 },
 }
 
 pub(super) enum Step {
-    /// A group frame continues the segment's groups.
     Group,
-    /// A closing frame continues a run.
     Run(RunState),
-    /// The log ends at `at`: the frame's position, or the start of a run that it cannot continue.
     Stop { at: u64 },
-    /// A complete roll's run from `start`, with its footer at `footer`, ends the segment.
     Closed { start: u64, footer: u64 },
 }
 
 impl RunState {
-    /// The step for a frame at `at` that ends at `end`, in a segment of `length` bytes. The caller
-    /// has checked the frame's offset and epoch continuity.
     pub(super) fn step(self, at: u64, end: u64, length: u64, body: &codec::Body<'_>) -> Step {
         use codec::Body;
         match (self, body) {
@@ -106,7 +82,6 @@ impl RunState {
         }
     }
 
-    /// Where the log ends when the frame at `at` is not valid, or the file ends at `at`.
     pub(super) fn stop(self, at: u64) -> u64 {
         match self {
             Self::Groups => at,
@@ -117,9 +92,6 @@ impl RunState {
     }
 }
 
-/// Open step 7, for a newest segment whose scan stopped at `at` before its end: whether the last
-/// 40 bytes are a valid locator that names a valid footer whose run starts after `at`. Then the
-/// segment is sealed and the frame at `at` is corruption, not a torn tail.
 pub(super) fn sealed_behind(
     storage: &ReadOnly<'_>,
     path: &Path,

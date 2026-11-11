@@ -166,9 +166,6 @@ pub(crate) fn last_frame(sim: &Sim) -> (String, u64, Vec<u8>) {
     let position = bytes.len() - last.len();
     (segment(base), position as u64, last)
 }
-/// The closing run that a roll writes after `segment`, an image of a header and whole group frames:
-/// a key filter, a key index, a footer and a locator, each under `epoch` (format.md, sealed segment
-/// layout).
 pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
     use crate::codec;
     let log_id = codec::LogId::new(header_fields(segment).0);
@@ -220,12 +217,10 @@ pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
     let locator = codec::encode_locator(&log_id, epoch, next, footer_position as u64);
     [key_frames.filter, key_frames.index, footer, locator].concat()
 }
-/// `segment` as a roll leaves it: its bytes, then its closing run under `epoch`.
 pub(crate) fn rolled(segment: Vec<u8>, epoch: u64) -> Vec<u8> {
     let run = roll_run(&segment, epoch);
     [segment, run].concat()
 }
-/// A segment image split where its group frames end: the header and group frames, then the rest.
 pub(crate) fn split_run(segment: &[u8]) -> (&[u8], &[u8]) {
     let mut at = 64;
     while at < segment.len() && segment[at + 8] == 1 {

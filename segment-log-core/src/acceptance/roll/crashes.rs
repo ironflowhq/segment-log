@@ -19,13 +19,10 @@ fn two_groups(sim: &Sim) -> SegmentLog {
     log
 }
 
-/// The closing run that the roll of segment 1 appends.
 fn closing_run(sim: &Sim) -> Vec<u8> {
     raw::roll_run(&raw::segments(sim)[1].1, 1)
 }
 
-/// The calls of the roll that the third group starts: the four closing frames of segment 1 and
-/// their flush, then the creation of segment 2.
 const ROLL_STEPS: usize = 9;
 const CLOSING_STEPS: usize = 5;
 fn roll_steps(sim: &Sim) -> Vec<Call> {

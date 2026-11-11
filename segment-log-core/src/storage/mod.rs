@@ -16,11 +16,8 @@ pub(crate) enum Purpose {
     Recovery,
     Lookup,
     Roll,
-    /// Open's reads of a locator and the footer it names.
     Summary,
-    /// Open's reads of a sealed segment's key filter frame.
     KeyFilter,
-    /// A writer key lookup's reads of a sealed segment's key index pages.
     KeyIndex,
 }
 impl Purpose {

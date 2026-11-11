@@ -9,7 +9,6 @@ fn sharing(keys: &[Vec<u8>]) -> Hooks {
     }
 }
 
-/// The hash of each key index entry of a sealed segment image, page by page.
 fn index_hashes(segment: &[u8]) -> Vec<Vec<u64>> {
     let (_, run) = raw::split_run(segment);
     let filter = u32::from_le_bytes(run[..4].try_into().unwrap()) as usize + 8;
@@ -41,7 +40,6 @@ fn new_record(log: &SegmentLog, stream: &[u8], key: &[u8], payload: &[u8]) -> Ne
     }
 }
 
-/// A submit of one record is appended at the watermark, as a new record.
 fn assert_appended(log: &SegmentLog, record: NewRecord) {
     let watermark = log.watermark();
     let answer = log

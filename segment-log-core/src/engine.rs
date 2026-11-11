@@ -66,21 +66,15 @@ impl Request {
         self.reply.store(result)
     }
 }
-/// Test-only overrides of the writer.
 #[cfg(test)]
 #[derive(Clone, Default)]
 pub(crate) struct Hooks {
-    /// KEY-COLLISION: these keys hash to the given value, at roll and at lookup alike.
     pub key_hashes: BTreeMap<Vec<u8>, u64>,
-    /// ROLL-FOOTER: smaller closing-frame limits, so that a test can fill them.
     pub limits: Limits,
 }
-/// The closing-frame limits that make the writer roll early (format.md, limits).
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Limits {
-    /// The largest footer body.
     pub footer_body: usize,
-    /// The most keyed records in one segment.
     pub keyed_records: usize,
 }
 impl Default for Limits {
@@ -91,11 +85,9 @@ impl Default for Limits {
         }
     }
 }
-/// Key-cache memory as rule 5 of ADR 0048 counts it.
 #[cfg(test)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct KeyMemory {
-    /// The fences and blocks of every sealed segment's key filter.
     pub filter_bytes: usize,
     pub sealed_keys: u64,
     pub active_keys: usize,
@@ -214,7 +206,6 @@ impl SegmentLog {
             memory,
         })
     }
-    /// The writer's key-cache memory as of its last answered group, or as open left it.
     #[cfg(test)]
     pub(crate) fn key_memory(&self) -> KeyMemory {
         *self.memory.lock().unwrap()

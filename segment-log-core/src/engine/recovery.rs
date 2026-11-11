@@ -7,9 +7,7 @@ pub(super) struct Recovered {
     pub lock: Box<dyn Lock>,
     pub published: Published,
     pub epoch: u64,
-    /// The active segment's keys.
     pub active_keys: BTreeMap<Vec<u8>, ActiveKey>,
-    /// Every sealed segment's key filter, oldest first.
     pub sealed_keys: Vec<SealedKeys>,
 }
 impl From<io::Error> for OpenError {
@@ -80,7 +78,6 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         found.epoch.checked_add(1).ok_or(OpenError::Exhausted)?
     };
 
-    // Step 11's reads come before any change, so that a bad key filter changes no file.
     let mut summaries = found.sealed.clone();
     if let Ending::Rolled(run) = &found.newest.ending {
         summaries.push(run.summary);
@@ -117,7 +114,6 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         .unwrap_or(Path::new("."));
     call(storage, parent, Purpose::Recovery, Op::SyncDir)?;
     let (active, active_keys) = if let Ending::Rolled(_) = found.newest.ending {
-        // A crash came after the roll's flush and before the next segment existed.
         let next = found.published.watermark;
         create_segment(
             storage,

@@ -11,14 +11,10 @@ pub(super) struct Writer {
     pub memory: Arc<Mutex<KeyMemory>>,
 }
 
-/// The segment that takes new frames, and what its footer will hold. Only the writer thread
-/// appends to it.
 pub(super) struct Active {
     pub base: u64,
     pub length: u64,
-    /// Each stream's last durable record in this segment.
     tails: BTreeMap<Vec<u8>, Tail>,
-    /// The body length of a footer for `tails`.
     footer_body: usize,
 }
 
@@ -46,8 +42,6 @@ fn footer_entry(stream: &[u8]) -> usize {
 }
 
 impl Writer {
-    /// Whether the active segment's closing frames, with the draft's submits and `submit` added,
-    /// stay within their limits.
     fn fits(&self, draft: &Draft, submit: &Submit) -> bool {
         let mut streams: Vec<&[u8]> = submit
             .records
@@ -65,14 +59,11 @@ impl Writer {
         footer <= self.limits.footer_body && self.keys.keyed() + keyed <= self.limits.keyed_records
     }
 
-    /// Whether the group's first new submit, at log offset `next`, starts a new segment.
     fn rolls_before(&self, next: u64, fits: bool, options: &Options) -> bool {
         // A segment with no record cannot roll: its successor would take its name.
         (self.active.length >= options.roll_bytes || !fits) && next != self.active.base
     }
 
-    /// Seals the active segment with its closing run, then starts a new active segment at `next`,
-    /// the next log offset. The writer never appends to a segment after its first closing frame.
     fn roll(&mut self, view: &View, next: u64) -> io::Result<()> {
         let storage = view.storage.as_ref();
         let path = segment_path(&view.dir, self.active.base);
@@ -182,18 +173,13 @@ fn revisions(
     Ok(slots)
 }
 
-/// The group being gathered.
 struct Draft {
-    /// The log offset of the group's first record.
     base: u64,
     requests: Vec<Request>,
     /// Request and record index of each staged record, by offset past `base`.
     origins: Vec<(usize, usize)>,
     assigned: Vec<Revision>,
-    /// Each stream's last record among the submits staged so far. Its revision overrides the
-    /// durable heads, which the group has not changed yet.
     tails: BTreeMap<Vec<u8>, Tail>,
-    /// What those streams add to the active segment's footer body.
     footer_growth: usize,
     waiters: Vec<RetryWaiter>,
     size: usize,
@@ -214,7 +200,6 @@ impl Draft {
         }
     }
 
-    /// The group as classification sees it, whose frame would start at `position`.
     fn staged(&self, position: u64) -> keys::Staged<'_> {
         keys::Staged {
             position,
@@ -227,7 +212,6 @@ impl Draft {
 }
 
 impl Writer {
-    /// Adds a new submit to the group, and its records to the key map and the footer's tails.
     fn stage(&mut self, draft: &mut Draft, request: Request, revisions: &[RevisionSlot]) {
         let submit = &request.submit;
         let first = draft.base + draft.assigned.len() as u64;
@@ -296,8 +280,6 @@ pub(super) fn run(
                             let added =
                                 body_size(&request.submit).unwrap() - codec::BODY_HEADER_LEN;
                             let fits = writer.fits(&draft, &request.submit);
-                            // The next group rolls before a submit that does not fit the
-                            // closing frames (overview, write path step 2).
                             if draft.size + added > options.group_byte_cap
                                 || (!fits && !draft.requests.is_empty())
                             {
@@ -391,8 +373,6 @@ pub(super) fn run(
 }
 
 impl Writer {
-    /// Writes the group as one frame, flushes it, publishes it and answers its callers. A failed
-    /// write or flush leaves every request of the draft unanswered.
     fn commit(&mut self, view: &View, draft: &mut Draft) -> io::Result<()> {
         let base = draft.base;
         #[cfg(test)]

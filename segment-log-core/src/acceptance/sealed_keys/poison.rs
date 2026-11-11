@@ -19,8 +19,6 @@ fn rewrite(sim: &Sim, bytes: Vec<u8>) {
         .unwrap();
 }
 
-/// Where the lookup of `z`, the record at position 64 of sealed segment 0, reads: its first key
-/// index page, then the envelope and the whole of its group frame.
 struct Reads {
     page: (usize, Call),
     envelope: Call,
@@ -41,15 +39,11 @@ fn reads_of(segment: &[u8]) -> Reads {
     }
 }
 
-/// Whatever fails the held read: an injected fault, or bytes of segment 0 replaced while it is held.
 enum Damage {
     Fault(Fault),
     Bytes(Vec<u8>),
 }
 
-/// A retry of `z` whose lookup fails at `target`, alone in its group or behind a buffered new
-/// submit. Checks the poison rule, then that a reopen with the damage gone, a power loss and
-/// another reopen keep every record and let the retry match.
 fn poisoned_lookup(target: &Call, damage: impl Fn(&[u8]) -> Damage, label: &str) {
     for buffered in [false, true] {
         let label = format!("{label}, buffered {buffered}");

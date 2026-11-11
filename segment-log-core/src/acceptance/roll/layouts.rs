@@ -15,7 +15,6 @@ fn groups(base: u64, epoch: u64, payloads: &[&[u8]]) -> Vec<u8> {
     .concat()
 }
 
-/// A segment that a roll sealed: one group, then its closing run.
 fn sealed(base: u64, epoch: u64, payloads: &[&[u8]]) -> Vec<u8> {
     raw::rolled(groups(base, epoch, payloads), epoch)
 }

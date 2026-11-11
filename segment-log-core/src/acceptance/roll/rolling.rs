@@ -2,7 +2,6 @@ use super::*;
 use crate::acceptance::support::{bounded, oracle};
 use crate::storage::{Call, Op, Purpose};
 
-/// The record count of each group frame in a segment image.
 fn frame_counts(segment: &[u8]) -> Vec<usize> {
     let (log_id, _, _) = raw::header_fields(segment);
     raw::frames(raw::split_run(segment).0)
