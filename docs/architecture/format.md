@@ -37,7 +37,7 @@ Open ignores any other file.
 | Offset | Size | Field |
 | --- | --- | --- |
 | 0 | 4 | `magic` — the bytes `S G L G` (`0x53 0x47 0x4C 0x47`) |
-| 4 | 2 | `format_version` — `0` |
+| 4 | 2 | `format_version` — `1` from M4. M1–M3 wrote `0`: their sealed segments have no closing frames, so M4 cannot open them. |
 | 6 | 2 | `header_len` — `64` |
 | 8 | 16 | `log_id` — 128 random bits, chosen when the log is created. The same in every segment of a log. |
 | 24 | 8 | `base_offset` — the log offset of the first record in this segment. Equal to the file name. |
