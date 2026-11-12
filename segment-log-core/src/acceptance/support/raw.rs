@@ -168,7 +168,6 @@ pub(crate) fn last_frame(sim: &Sim) -> (String, u64, Vec<u8>) {
 }
 type Tails<'a> = std::collections::BTreeMap<&'a [u8], (u64, u64, u64)>;
 
-/// The facts about a segment's group frames that its closing run records.
 struct Groups<'a> {
     log_id: crate::codec::LogId,
     next: u64,
