@@ -57,11 +57,17 @@ impl LogId {
     }
 }
 
+/// One cache line, so that a probe reads one line, not the two that a block across a line
+/// boundary would cost.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[repr(align(64))]
+struct Block([u8; BLOCK_BYTES]);
+
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct KeyFilter {
     count: u32,
     fences: Vec<u64>,
-    blocks: Vec<[u8; BLOCK_BYTES]>,
+    blocks: Vec<Block>,
 }
 
 impl KeyFilter {
@@ -73,7 +79,7 @@ impl KeyFilter {
                 .step_by(PAGE_ENTRIES)
                 .map(|entry| entry.hash)
                 .collect(),
-            blocks: vec![[0; BLOCK_BYTES]; entries.len().div_ceil(KEYS_PER_BLOCK)],
+            blocks: vec![Block([0; BLOCK_BYTES]); entries.len().div_ceil(KEYS_PER_BLOCK)],
         };
         for entry in entries {
             filter.insert(entry.hash);
@@ -100,7 +106,12 @@ impl KeyFilter {
         Ok(Self {
             count,
             fences,
-            blocks: blocks.as_chunks().0.to_vec(),
+            blocks: blocks
+                .as_chunks()
+                .0
+                .iter()
+                .map(|&block| Block(block))
+                .collect(),
         })
     }
 
@@ -109,7 +120,7 @@ impl KeyFilter {
             out.extend_from_slice(&fence.to_le_bytes());
         }
         for block in &self.blocks {
-            out.extend_from_slice(block);
+            out.extend_from_slice(&block.0);
         }
     }
 
@@ -125,7 +136,7 @@ impl KeyFilter {
     fn insert(&mut self, hash: u64) {
         let (block, bits) = self.probes(hash);
         for bit in bits {
-            self.blocks[block][bit / 8] |= 1 << (bit % 8);
+            self.blocks[block].0[bit / 8] |= 1 << (bit % 8);
         }
     }
 
@@ -134,8 +145,9 @@ impl KeyFilter {
             return false;
         }
         let (block, bits) = self.probes(hash);
+        let block = &self.blocks[block].0;
         bits.into_iter()
-            .all(|bit| self.blocks[block][bit / 8] & (1 << (bit % 8)) != 0)
+            .all(|bit| block[bit / 8] & (1 << (bit % 8)) != 0)
     }
 
     pub(crate) fn index_pages(&self, hash: u64) -> Range<usize> {
