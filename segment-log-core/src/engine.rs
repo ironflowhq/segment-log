@@ -396,6 +396,22 @@ fn read_bytes(
         _ => Err(io::Error::other("storage did not return bytes")),
     }
 }
+/// `read_bytes` stops at the end of the file, which ends a scan. A lookup that needs every byte
+/// it asks for uses this instead.
+fn read_exact(
+    storage: &dyn Storage,
+    path: &Path,
+    purpose: Purpose,
+    position: u64,
+    length: usize,
+) -> io::Result<Vec<u8>> {
+    let bytes = read_bytes(storage, path, purpose, position, length)?;
+    if bytes.len() == length {
+        Ok(bytes)
+    } else {
+        Err(io::ErrorKind::UnexpectedEof.into())
+    }
+}
 /// Creates a segment that holds only its header. Returns after the file and its directory
 /// entry are durable, so that a frame is never appended to a segment that a crash can remove.
 fn create_segment(
