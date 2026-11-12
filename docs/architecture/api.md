@@ -265,7 +265,7 @@ From M3, `open` recovers a directory with any number of segment files. In M3, it
 
 Key classification keeps its existing precedence. For new records, expected-revision and revision-exhaustion checks run in request order. The first failing check decides the result. After those checks and the group-cap decision, the writer checks whether the entire new submit fits the remaining offset space. A refused submit leaves no pending changes. A later smaller submit may still fit.
 
-The last representable stream revision is `u64::MAX`. The watermark must remain representable, so the last assignable record offset is `u64::MAX - 1`. A writer epoch may equal `u64::MAX`, but a later open cannot increment it. If the highest epoch in the valid kept prefix cannot be incremented, `open` returns `OpenError::Exhausted` before truncation, tail rewrite or recovery syncs. Lock acquisition and layout validation still precede the recovery scan.
+The last representable stream revision is `u64::MAX`. The watermark must remain representable, so the last assignable record offset is `u64::MAX - 1`. A writer epoch may equal `u64::MAX`, but a later open cannot increment it. If the highest epoch in the valid kept prefix cannot be incremented, `open` returns `OpenError::Exhausted` before truncation, tail rewrite or recovery syncs. A sealed log is the exception: it starts no writer and needs no next epoch, so `open` opens it read-only at any epoch. Lock acquisition and layout validation still precede the recovery scan.
 
 ## Admission charge
 
