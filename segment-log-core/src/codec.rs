@@ -9,14 +9,9 @@ mod index;
 
 pub(crate) use crc::crc32c;
 pub(crate) use filter::KeyFilter;
-#[cfg_attr(
-    not(test),
-    expect(unused_imports, reason = "seal writes the first seal frame")
-)]
-pub(crate) use frame::encode_seal;
 pub(crate) use frame::{
     Body, Entry, Footer, Frame, Group, StreamTail, decode, encode_footer, encode_group,
-    encode_locator,
+    encode_locator, encode_seal,
 };
 pub(crate) use header::{FORMAT_VERSION, HEADER_LEN, Header, decode_header, encode_header};
 pub(crate) use index::{KeyEntry, KeyFrames, decode_page, encode_key_frames};

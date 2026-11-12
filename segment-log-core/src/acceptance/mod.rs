@@ -34,4 +34,6 @@ mod sealed_keys;
 
 mod summary_open;
 
+mod seal;
+
 mod evidence;

@@ -133,3 +133,102 @@ fn a_log_of_many_segments_runs_under_a_small_open_file_limit() {
     let _ = std::fs::remove_dir_all(&dir);
     assert!(status.success(), "child under a 32-file limit: {status}");
 }
+
+fn record(i: u64) -> NewRecord {
+    NewRecord {
+        stream: format!("s{}", i % 2).into_bytes(),
+        expected: if i < 2 {
+            ExpectedRevision::Empty
+        } else {
+            ExpectedRevision::At(i / 2 - 1)
+        },
+        key: Some(format!("k{i}").into_bytes()),
+        payload: i.to_le_bytes().to_vec(),
+    }
+}
+
+/// Given a log on real storage in a fresh directory, whose records span several segments
+/// When it is sealed and dropped, and `LogReader::open` opens the directory
+/// Then the reader gives the watermark, the records and the stream heads that the sealed log gave
+/// And `SegmentLog::open` on the sealed log refuses an append with `Sealed`
+/// And `LogReader::open` on a log that was dropped without a seal fails with `NotSealed`
+///
+/// Cases: READER, HISTORY
+#[test]
+fn a_sealed_log_reads_back_through_a_log_reader() {
+    let _deadline = deadline::Deadline::new(Duration::from_secs(10), || {});
+    let (sender, receiver) = mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        let result = std::panic::catch_unwind(|| {
+            let root =
+                std::env::temp_dir().join(format!("segment-log-sealed-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&root);
+            std::fs::create_dir(&root).unwrap();
+            let options = || Options {
+                linger: Duration::ZERO,
+                roll_bytes: 1,
+                ..Options::default()
+            };
+            let log = SegmentLog::open(root.join("sealed"), options()).unwrap();
+            for i in 0..6 {
+                let answer = log
+                    .append(Submit {
+                        records: vec![record(i)],
+                    })
+                    .unwrap()
+                    .wait()
+                    .unwrap();
+                assert_eq!(answer.records[0].offset, i);
+            }
+            log.seal().unwrap();
+            let sealed = (
+                log.watermark(),
+                format!("{:?}", log.read(0, 100).unwrap()),
+                format!("{:?}", [log.stream_head(b"s0"), log.stream_head(b"s1")]),
+            );
+            drop(log);
+
+            let reader = LogReader::open(root.join("sealed")).unwrap();
+            let read = (
+                reader.watermark(),
+                format!("{:?}", reader.read(0, 100).unwrap()),
+                format!(
+                    "{:?}",
+                    [reader.stream_head(b"s0"), reader.stream_head(b"s1")]
+                ),
+            );
+            assert_eq!(read, sealed);
+            assert_eq!(read.0, 6);
+            let reopened = SegmentLog::open(root.join("sealed"), options()).unwrap();
+            assert!(matches!(
+                reopened.append(Submit {
+                    records: vec![record(6)],
+                }),
+                Err(AppendError::Sealed)
+            ));
+
+            let unsealed = SegmentLog::open(root.join("unsealed"), options()).unwrap();
+            unsealed
+                .append(Submit {
+                    records: vec![record(0)],
+                })
+                .unwrap()
+                .wait()
+                .unwrap();
+            drop(unsealed);
+            assert!(matches!(
+                LogReader::open(root.join("unsealed")),
+                Err(OpenError::NotSealed)
+            ));
+            std::fs::remove_dir_all(root).unwrap();
+        });
+        sender.send(result).unwrap();
+    });
+    let result = receiver
+        .recv_timeout(Duration::from_secs(10))
+        .expect("scenario watchdog");
+    worker.join().unwrap();
+    if let Err(panic) = result {
+        std::panic::resume_unwind(panic);
+    }
+}

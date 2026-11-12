@@ -7,18 +7,20 @@ use std::{
     collections::BTreeMap,
     io,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, mpsc},
+    sync::{Arc, Mutex, RwLock, mpsc},
     thread::{self, JoinHandle},
     time::Instant,
 };
 mod closing;
 mod keys;
+mod reader;
 mod recovery;
 mod reply;
 mod survey;
 mod view;
 mod writer;
 use keys::{KeyHash, Keys};
+pub use reader::LogReader;
 pub use reply::Pending;
 use view::{GroupSpan, Published, View};
 use writer::{Active, Writer, run};
@@ -94,12 +96,11 @@ pub(crate) struct KeyMemory {
 }
 pub struct SegmentLog {
     view: Arc<View>,
-    sender: Option<mpsc::SyncSender<Request>>,
-    writer: Option<JoinHandle<()>>,
+    gate: RwLock<Gate>,
+    lifecycle: Mutex<Lifecycle>,
     poisoned: Arc<std::sync::atomic::AtomicBool>,
     options: Arc<Options>,
     used: Arc<std::sync::atomic::AtomicUsize>,
-    _lock: Mutex<Box<dyn Lock>>,
     #[cfg(test)]
     peak: std::sync::atomic::AtomicUsize,
     #[cfg(test)]
@@ -107,6 +108,32 @@ pub struct SegmentLog {
     #[cfg(test)]
     memory: Arc<Mutex<KeyMemory>>,
 }
+/// The queue's only sender. `append` holds the read lock across its state check and `try_send`,
+/// and `seal` takes the sender out under the write lock. So seal starts at one point in queue
+/// order: every admitted request is ahead of the seal marker, and none is behind it.
+enum Gate {
+    Open(mpsc::SyncSender<Message>),
+    Closed,
+}
+
+enum Lifecycle {
+    Writing {
+        writer: JoinHandle<()>,
+        lock: Box<dyn Lock>,
+    },
+    Stopped {
+        _lock: Box<dyn Lock>,
+    },
+    Sealed,
+}
+
+enum Message {
+    Append(Request),
+    /// The writer answers after the seal's closing run is durable, and drops it unanswered if
+    /// the seal fails.
+    Seal(mpsc::Sender<()>),
+}
+
 impl SegmentLog {
     pub fn open(dir: impl AsRef<Path>, options: Options) -> Result<Self, OpenError> {
         Self::with_storage(
@@ -150,54 +177,68 @@ impl SegmentLog {
             return Err(OpenError::InvalidOptions("roll bytes outside limits"));
         }
         let options = Arc::new(options);
-        let recovered = recovery::open(storage.as_ref(), dir)?;
-        let keys = Keys::new(
-            hash(recovered.log_id.clone()),
-            recovered.active_keys,
-            recovered.sealed_keys,
-        );
-        #[cfg(test)]
-        let memory = Arc::new(Mutex::new(keys.memory()));
+        let recovery::Recovered {
+            log_id,
+            published,
+            writable,
+        } = recovery::open(storage.as_ref(), dir)?;
         let view = Arc::new(View {
             storage,
             dir: dir.to_owned(),
-            log_id: recovered.log_id,
-            published: Mutex::new(recovered.published),
+            log_id,
+            published: Mutex::new(published),
         });
         let poisoned = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let (sender, receiver) = mpsc::sync_channel(options.queue_capacity);
-        let writer_view = view.clone();
-        let writer_poisoned = poisoned.clone();
-        let writer_options = options.clone();
         #[cfg(test)]
-        let writer_memory = memory.clone();
-        let writer = thread::Builder::new()
-            .name("segment-log-writer".into())
-            .spawn(move || {
-                run(
-                    writer_view,
-                    writer_poisoned,
-                    receiver,
-                    Writer {
-                        epoch: recovered.epoch,
-                        keys,
-                        active: recovered.active,
-                        limits,
-                        #[cfg(test)]
-                        memory: writer_memory,
-                    },
-                    writer_options,
+        let memory = Arc::new(Mutex::new(KeyMemory::default()));
+        let (gate, lifecycle) = match writable {
+            None => (Gate::Closed, Lifecycle::Sealed),
+            Some(writable) => {
+                let keys = Keys::new(
+                    hash(view.log_id.clone()),
+                    writable.active_keys,
+                    writable.sealed_keys,
                 );
-            })
-            .map_err(OpenError::Io)?;
+                #[cfg(test)]
+                {
+                    *memory.lock().unwrap() = keys.memory();
+                }
+                let (sender, receiver) = mpsc::sync_channel(options.queue_capacity);
+                let writer_view = view.clone();
+                let writer_poisoned = poisoned.clone();
+                let writer_options = options.clone();
+                #[cfg(test)]
+                let writer_memory = memory.clone();
+                let writer = thread::Builder::new()
+                    .name("segment-log-writer".into())
+                    .spawn(move || {
+                        run(
+                            writer_view,
+                            writer_poisoned,
+                            receiver,
+                            Writer {
+                                epoch: writable.epoch,
+                                keys,
+                                active: writable.active,
+                                limits,
+                                #[cfg(test)]
+                                memory: writer_memory,
+                            },
+                            writer_options,
+                        );
+                    })
+                    .map_err(OpenError::Io)?;
+                let lock = writable.lock;
+                (Gate::Open(sender), Lifecycle::Writing { writer, lock })
+            }
+        };
         Ok(Self {
             view,
-            sender: Some(sender),
-            writer: Some(writer),
+            gate: RwLock::new(gate),
+            lifecycle: Mutex::new(lifecycle),
             poisoned,
             options,
             used: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
-            _lock: Mutex::new(recovered.lock),
             #[cfg(test)]
             peak: std::sync::atomic::AtomicUsize::new(0),
             #[cfg(test)]
@@ -245,6 +286,10 @@ impl SegmentLog {
         if self.poisoned.load(std::sync::atomic::Ordering::Acquire) {
             return Err(AppendError::Poisoned);
         }
+        let gate = self.gate.read().unwrap();
+        let Gate::Open(sender) = &*gate else {
+            return Err(AppendError::Sealed);
+        };
         let _previous = self
             .used
             .try_update(
@@ -266,15 +311,47 @@ impl SegmentLog {
         let (reply, pending) = reply::pair();
         #[cfg(test)]
         crate::pipeline::request(&submit, crate::pipeline::ENQUEUE);
-        match self.sender.as_ref().unwrap().try_send(Request {
+        match sender.try_send(Message::Append(Request {
             submit,
             reply,
             reservation,
             admitted: Instant::now(),
-        }) {
+        })) {
             Ok(()) => Ok(pending),
             Err(mpsc::TrySendError::Full(_)) => Err(AppendError::Full),
             Err(mpsc::TrySendError::Disconnected(_)) => Err(AppendError::Poisoned),
+        }
+    }
+
+    pub fn seal(&self) -> Result<(), SealError> {
+        let mut lifecycle = self.lifecycle.lock().unwrap();
+        let (writer, lock) = match std::mem::replace(&mut *lifecycle, Lifecycle::Sealed) {
+            Lifecycle::Sealed => return Ok(()),
+            stopped @ Lifecycle::Stopped { .. } => {
+                *lifecycle = stopped;
+                return Err(SealError::Poisoned);
+            }
+            Lifecycle::Writing { writer, lock } => (writer, lock),
+        };
+        // The write lock ends with this statement, before the send, which can wait for queue room
+        // that `append` must never wait for.
+        let gate = std::mem::replace(&mut *self.gate.write().unwrap(), Gate::Closed);
+        let Gate::Open(sender) = gate else {
+            unreachable!("a running writer's gate is open")
+        };
+        let (reply, sealed) = mpsc::channel();
+        let sent = sender.send(Message::Seal(reply)).is_ok();
+        drop(sender);
+        let sealed = sent && sealed.recv().is_ok();
+        let _ = writer.join();
+        if sealed {
+            drop(lock);
+            Ok(())
+        } else {
+            self.poisoned
+                .store(true, std::sync::atomic::Ordering::Release);
+            *lifecycle = Lifecycle::Stopped { _lock: lock };
+            Err(SealError::Poisoned)
         }
     }
     pub fn watermark(&self) -> LogOffset {
@@ -289,13 +366,15 @@ impl SegmentLog {
 }
 impl Drop for SegmentLog {
     fn drop(&mut self) {
-        self.sender.take();
+        *self.gate.get_mut().unwrap() = Gate::Closed;
         #[cfg(test)]
         if let Some(observer) = self.drop_closed.take() {
             let _ = observer.send(());
         }
-        if let Some(writer) = self.writer.take() {
+        let lifecycle = std::mem::replace(self.lifecycle.get_mut().unwrap(), Lifecycle::Sealed);
+        if let Lifecycle::Writing { writer, lock } = lifecycle {
             let _ = writer.join();
+            drop(lock);
         }
     }
 }
@@ -397,9 +476,14 @@ pub(crate) mod admission_support {
     }
     pub(crate) fn finish(log: &mut SegmentLog, panicked: bool) {
         if !panicked {
-            log.sender.take();
+            *log.gate.get_mut().unwrap() = Gate::Closed;
         }
-        assert_eq!(log.writer.take().unwrap().join().is_err(), panicked);
+        let lifecycle = std::mem::replace(log.lifecycle.get_mut().unwrap(), Lifecycle::Sealed);
+        let Lifecycle::Writing { writer, lock } = lifecycle else {
+            panic!("the writer runs")
+        };
+        assert_eq!(writer.join().is_err(), panicked);
+        *log.lifecycle.get_mut().unwrap() = Lifecycle::Stopped { _lock: lock };
     }
     pub(crate) fn base(capacity: usize, count: usize) -> Option<usize> {
         charge_base(capacity, count)

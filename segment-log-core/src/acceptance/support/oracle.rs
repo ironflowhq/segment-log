@@ -504,7 +504,11 @@ pub(crate) fn flush_contract(
             Event::Call(c, fault, result)
                 if matches!(
                     c.purpose,
-                    Purpose::Group | Purpose::Lookup | Purpose::KeyIndex | Purpose::Roll
+                    Purpose::Group
+                        | Purpose::Lookup
+                        | Purpose::KeyIndex
+                        | Purpose::Roll
+                        | Purpose::Seal
                 ) =>
             {
                 if !matches!(c.op, Op::Read(..)) {

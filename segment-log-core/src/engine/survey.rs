@@ -82,11 +82,12 @@ pub(super) struct Scan {
 pub(super) enum Ending {
     Groups,
     Stopped,
-    Rolled(Run),
+    Rolled { run: Run, summary: SealedSummary },
+    Sealed(Run),
 }
 
 pub(super) struct Run {
-    pub summary: SealedSummary,
+    pub start: u64,
     pub frames: Vec<Vec<u8>>,
 }
 
@@ -379,7 +380,7 @@ fn scan(
                 run.push(bytes);
             }
             Step::Stop { at } => return Ok(end(at, Ending::Stopped, last, tails, keys)),
-            Step::Closed { start, footer } => {
+            Step::Rolled { start, footer } => {
                 kept.epoch = epoch;
                 run.push(bytes);
                 let summary = SealedSummary {
@@ -388,11 +389,15 @@ fn scan(
                     filter_at: start,
                     footer_at: footer,
                 };
-                let rolled = Ending::Rolled(Run {
-                    summary,
-                    frames: run,
-                });
+                let run = Run { start, frames: run };
+                let rolled = Ending::Rolled { run, summary };
                 return Ok(end(length, rolled, last, tails, keys));
+            }
+            Step::Sealed { start } => {
+                kept.epoch = epoch;
+                run.push(bytes);
+                let sealed = Ending::Sealed(Run { start, frames: run });
+                return Ok(end(length, sealed, last, tails, keys));
             }
         }
         position = next;

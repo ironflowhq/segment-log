@@ -109,3 +109,9 @@ pub enum ReadError {
     Corrupt { segment: LogOffset, position: u64 },
     Io(std::io::Error),
 }
+
+#[derive(Debug)]
+pub enum SealError {
+    Poisoned,
+    Io(std::io::Error),
+}
