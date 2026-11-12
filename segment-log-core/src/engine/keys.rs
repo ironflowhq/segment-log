@@ -97,7 +97,51 @@ impl KeyHash {
 }
 
 impl SealedKeys {
-    pub(super) fn load(
+    /// Loads the filters on up to one thread per processor. Each thread loads a run of
+    /// consecutive segments in order and stops at its first failure, so the first failure in
+    /// segment order is the answer that a load in one thread would give.
+    pub(super) fn load_all(
+        storage: &ReadOnly<'_>,
+        dir: &Path,
+        log_id: &codec::LogId,
+        summaries: &[SealedSummary],
+    ) -> Result<Vec<Self>, OpenError> {
+        let load_run = |run: &[SealedSummary]| {
+            run.iter()
+                .map(|&summary| Self::load(storage, dir, log_id, summary))
+                .collect::<Result<Vec<_>, _>>()
+        };
+        let threads = thread::available_parallelism()
+            .map_or(1, |n| n.get())
+            .min(summaries.len());
+        if threads <= 1 {
+            return load_run(summaries);
+        }
+        thread::scope(|scope| {
+            let loads: Vec<_> = summaries
+                .chunks(summaries.len().div_ceil(threads))
+                .map(|run| {
+                    thread::Builder::new()
+                        .name("segment-log-open".into())
+                        .spawn_scoped(scope, move || load_run(run))
+                })
+                .collect();
+            let finished: Vec<_> = loads
+                .into_iter()
+                .map(|load| load.map(|handle| handle.join()))
+                .collect();
+            let mut keys = Vec::with_capacity(summaries.len());
+            for run in finished {
+                match run? {
+                    Ok(run) => keys.extend(run?),
+                    Err(panic) => std::panic::resume_unwind(panic),
+                }
+            }
+            Ok(keys)
+        })
+    }
+
+    fn load(
         storage: &ReadOnly<'_>,
         dir: &Path,
         log_id: &codec::LogId,
