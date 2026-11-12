@@ -1,4 +1,4 @@
-# Byte layout v0
+# Byte layout
 
 Status: provisional ([ADR 0013](../decisions/0013-provisional-v0-byte-layout.md)). The format can change in any way until M5 freezes it. A change before M5 increments `format_version`. It needs no migration and no reader for older versions.
 
@@ -8,7 +8,7 @@ This file is the only source for field widths, offsets and size limits. Other do
 
 - All integers are little-endian and unsigned.
 - There is no alignment and no padding, except reserved fields.
-- Reserved fields are written as zero. In v0, a reader rejects a nonzero reserved field.
+- Reserved fields are written as zero. A reader rejects a nonzero reserved field.
 - CRC is CRC-32C (Castagnoli): reflected polynomial `0x82F63B78`, initial value `0xFFFFFFFF`, final XOR `0xFFFFFFFF`. Check value: `crc32c(b"123456789") == 0xE3069283`.
 
 ## Directory
@@ -17,7 +17,7 @@ This file is the only source for field widths, offsets and size limits. Other do
 | --- | --- |
 | `LOCK` | Empty. The writer holds an exclusive OS lock on it ([ADR 0018](../decisions/0018-writer-epoch-from-the-segments.md)). |
 | `NNNNNNNNNNNNNNNNNNNN.seg` | A segment. The name is its base offset as 20 decimal digits, with leading zeros. |
-| `NNNNNNNNNNNNNNNNNNNN.idx` | The sparse index for that segment (not in M1). A cache. |
+| `NNNNNNNNNNNNNNNNNNNN.idx` | The sparse index for that segment. Not written yet. A cache. |
 
 Open ignores any other file.
 
@@ -68,7 +68,7 @@ Check value: with `log_id` bytes `00 01 02 … 0f`, a seal frame with epoch 1 an
 | Offset in body | Size | Field |
 | --- | --- | --- |
 | 0 | 1 | `kind` — `1` group, `2` footer, `3` seal, `4` locator, `5` key filter, `6` key index |
-| 1 | 1 | `flags` — `0` in v0 |
+| 1 | 1 | `flags` — `0` |
 | 2 | 2 | reserved |
 | 4 | 8 | `epoch` — the writer epoch that wrote this frame |
 | 12 | 8 | `base_offset` — for a group, the log offset of its first record. For any other kind, the next unused log offset. |
@@ -206,7 +206,7 @@ The whole frame is 40 bytes. It uses no log offset. Open reads the last 40 bytes
 
 A segment that a roll sealed holds, in order: the header, its group frames, the key filter, the key index, the footer and the locator. A roll writes both key frames even when the segment has no keyed record. The final segment of a sealed log holds the header, its group frames, the footer, the seal frame and the locator. It has no key frames, because a sealed log never checks a key again ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). Before M4, a sealed segment holds only the header and group frames. Seal ships in M4, so a seal frame always has a locator after it.
 
-## Sparse index (after M1)
+## Sparse index (not written yet)
 
 A file of fixed 8-byte entries with no header and no CRC. The log rebuilds it from the segment if it is missing, short or wrong.
 
