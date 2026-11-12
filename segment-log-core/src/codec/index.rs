@@ -19,7 +19,7 @@ pub(crate) struct KeyFrames {
     pub index: Vec<u8>,
 }
 
-pub(super) fn page_count(count: u32) -> usize {
+pub(crate) fn page_count(count: u32) -> usize {
     (count as usize).div_ceil(PAGE_ENTRIES)
 }
 

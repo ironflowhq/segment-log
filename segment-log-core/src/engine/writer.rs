@@ -299,6 +299,7 @@ pub(super) fn run(
     let mut deferred = None;
     let mut seal: Option<mpsc::Sender<()>> = None;
     loop {
+        writer.keys.refresh();
         let first = match deferred.take() {
             Some(request) => request,
             None => {
@@ -363,6 +364,7 @@ pub(super) fn run(
                                     && writer.rolls_before(draft.base, fits, &options)
                                 {
                                     if writer.roll(&view, draft.base).is_err() {
+                                        writer.keys.stop_building();
                                         poison(&poisoned, draft, Some(request), receiver);
                                         return;
                                     }
@@ -390,6 +392,7 @@ pub(super) fn run(
                 }
                 Classification::LookupFailure => {
                     draft.requests.push(request);
+                    writer.keys.stop_building();
                     poison(&poisoned, draft, deferred.take(), receiver);
                     return;
                 }
@@ -428,6 +431,7 @@ pub(super) fn run(
             continue;
         }
         if writer.commit(&view, &mut draft).is_err() {
+            writer.keys.stop_building();
             poison(&poisoned, draft, deferred.take(), receiver);
             return;
         }
