@@ -28,11 +28,9 @@ pub(super) struct Newest {
     pub spans: Vec<GroupSpan>,
 }
 
-/// What a walk needs to rebuild a sealed segment's frame table.
 pub(super) struct SealedSegment {
     pub base: u64,
     pub next: u64,
-    /// The key filter's position, where the group frames end.
     groups_end: u64,
     epochs: RangeInclusive<u64>,
 }
@@ -166,8 +164,6 @@ impl Published {
         self.newest.spans.push(span);
     }
 
-    /// Seals the newest segment, whose closing run carries `epoch`, and starts its successor,
-    /// whose header carries `next_epoch`. Returns the sealed segment's frame table.
     pub(super) fn roll(&mut self, epoch: u64, next_epoch: u64) -> Arc<[GroupSpan]> {
         let spans: Arc<[GroupSpan]> = std::mem::take(&mut self.newest.spans).into();
         let groups_end = spans.last().map_or(codec::HEADER_LEN as u64, |last| {

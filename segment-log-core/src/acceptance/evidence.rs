@@ -214,8 +214,6 @@ fn due(epoch: Instant, interval: Duration, caller: usize, callers: usize, round:
 struct Files {
     segments: usize,
     bytes: u64,
-    /// The bytes of group frames: every file's size less its header, and less the closing run
-    /// of each segment but the newest.
     group_bytes: u64,
 }
 fn files(path: &Path) -> Files {
@@ -242,7 +240,6 @@ fn files(path: &Path) -> Files {
     }
     files
 }
-/// Follows a sealed segment's locator to its footer, which names where the closing run starts.
 fn closing_run_start(name: &Path, length: u64) -> u64 {
     use crate::codec::{self, Body, LOCATOR_LEN};
     use std::io::{Read, Seek, SeekFrom};
