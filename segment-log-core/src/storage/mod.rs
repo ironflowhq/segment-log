@@ -21,20 +21,6 @@ pub(crate) enum Purpose {
     KeyIndex,
     Seal,
 }
-impl Purpose {
-    #[cfg(test)]
-    pub(crate) const ALL: [Purpose; 9] = [
-        Purpose::Open,
-        Purpose::Group,
-        Purpose::Recovery,
-        Purpose::Lookup,
-        Purpose::Roll,
-        Purpose::Summary,
-        Purpose::KeyFilter,
-        Purpose::KeyIndex,
-        Purpose::Seal,
-    ];
-}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Op {
     CreateDir,
