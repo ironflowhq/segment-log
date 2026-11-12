@@ -164,6 +164,7 @@ pub(super) fn survey(
         return Err(OpenError::Gap { segment: base });
     }
     kept.epoch = kept.epoch.max(header.epoch);
+    kept.published.newest.epoch_floor = kept.epoch;
     let path = segment_path(dir, base);
     let length = storage.length(&path, Purpose::Recovery)?;
     let newest = scan(storage, &log_id, base, &path, length, &mut kept)?;

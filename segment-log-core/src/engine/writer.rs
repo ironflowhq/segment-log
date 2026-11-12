@@ -96,7 +96,8 @@ impl Writer {
         };
         create_segment(storage, &view.dir, Purpose::Roll, &header)?;
         self.keys.roll(sealed);
-        view.published.lock().unwrap().roll();
+        let spans = view.published.lock().unwrap().roll(self.epoch, self.epoch);
+        view.tables.lock().unwrap().keep(self.active.base, spans);
         self.active = Active::new(next);
         Ok(())
     }
