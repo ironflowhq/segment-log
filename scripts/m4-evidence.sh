@@ -31,6 +31,9 @@ rounds="${M4_ROUNDS:-1000}"
 pairs="${M4_PAIRS:-5}"
 # 1,000 callers each sending once per 20 ms offer 50,000 records/s, the throughput target.
 interval_us="${M4_INTERVAL_US:-20000}"
+# Each timed append run waits this long after open, so that the log key filter's background build
+# (ADR 0051) is outside it. 0 times the build too.
+export SEALED_PROBE_SETTLE_MS="${M4_SETTLE_MS:-0}"
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
 root="$(git rev-parse --show-toplevel)"
@@ -71,7 +74,7 @@ fi
     echo "base=$base"
     echo "checkout=$(git -C "$root" rev-parse HEAD)"
     sha "$probe_src" | sed "s|$root/||"
-    echo "sealed=$sealed roll_bytes=$roll_bytes active_bytes=$active_bytes open_runs=$open_runs callers=$callers rounds=$rounds pairs=$pairs interval_us=$interval_us small=${M4_EVIDENCE_SMALL:-0}"
+    echo "sealed=$sealed roll_bytes=$roll_bytes active_bytes=$active_bytes open_runs=$open_runs callers=$callers rounds=$rounds pairs=$pairs interval_us=$interval_us settle_ms=$SEALED_PROBE_SETTLE_MS small=${M4_EVIDENCE_SMALL:-0}"
     echo "cold_opens=$cold${cold_reason:+ ($cold_reason)}"
     rustc -Vv
     cargo -V

@@ -80,12 +80,23 @@ fn open_counted(sim: &Sim) -> (SegmentLog, Vec<(u64, Calls)>) {
     let start = sim.trace().1.len();
     let log = try_open(sim).unwrap();
     let trace = sim.trace().1;
+    // Tests build the log key filter inside open. Its reads have their own purpose and come
+    // after every read of open's own, so they are not part of what open reads (ADR 0051 rule 7).
+    let build = |event: &Event| matches!(event, Event::Call(call, _, _) if call.purpose == Purpose::LogFilter);
+    let opened = &trace[start..];
+    if let Some(first) = opened.iter().position(build) {
+        assert!(
+            opened[first..].iter().all(build),
+            "open read after the build began"
+        );
+    }
     let calls = before[..before.len() - 1]
         .iter()
         .map(|(base, _)| {
             let path = raw::segment(*base);
-            let calls = trace[start..]
+            let calls = opened
                 .iter()
+                .filter(|event| !build(event))
                 .filter_map(|event| match event {
                     Event::Call(call, _, _) if call.path == Path::new(&path) => {
                         Some((call.purpose, call.op.clone()))

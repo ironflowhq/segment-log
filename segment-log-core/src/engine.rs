@@ -19,6 +19,7 @@ mod reply;
 mod survey;
 mod view;
 mod writer;
+pub(crate) use keys::LogFilterMode;
 use keys::{KeyHash, Keys};
 pub use reader::LogReader;
 pub use reply::Pending;
@@ -75,6 +76,9 @@ impl Request {
 pub(crate) struct Hooks {
     pub key_hashes: BTreeMap<Vec<u8>, u64>,
     pub limits: Limits,
+    /// Tests build the log key filter on the writer thread by default, so that traces stay the
+    /// same from run to run.
+    pub log_filter: LogFilterMode,
 }
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Limits {
@@ -95,6 +99,8 @@ pub(crate) struct KeyMemory {
     pub filter_bytes: usize,
     pub sealed_keys: u64,
     pub active_keys: usize,
+    pub log_filter_bytes: usize,
+    pub log_filter_covered: usize,
 }
 pub struct SegmentLog {
     view: Arc<View>,
@@ -138,18 +144,22 @@ enum Message {
 
 impl SegmentLog {
     pub fn open(dir: impl AsRef<Path>, options: Options) -> Result<Self, OpenError> {
-        Self::with_storage(
+        Self::start(
             dir.as_ref(),
             options,
             Arc::new(storage::real::Real::default()),
+            KeyHash::new,
+            Limits::default(),
+            LogFilterMode::Background,
         )
     }
+    #[cfg(test)]
     pub(crate) fn with_storage(
         dir: &Path,
         options: Options,
         storage: Arc<dyn Storage>,
     ) -> Result<Self, OpenError> {
-        Self::start(dir, options, storage, KeyHash::new, Limits::default())
+        Self::with_hooks(dir, options, storage, Hooks::default())
     }
     #[cfg(test)]
     pub(crate) fn with_hooks(
@@ -158,9 +168,13 @@ impl SegmentLog {
         storage: Arc<dyn Storage>,
         hooks: Hooks,
     ) -> Result<Self, OpenError> {
-        let Hooks { key_hashes, limits } = hooks;
+        let Hooks {
+            key_hashes,
+            limits,
+            log_filter,
+        } = hooks;
         let hash = |log_id| KeyHash::new(log_id).forcing(key_hashes);
-        Self::start(dir, options, storage, hash, limits)
+        Self::start(dir, options, storage, hash, limits, log_filter)
     }
     fn start(
         dir: &Path,
@@ -168,6 +182,7 @@ impl SegmentLog {
         storage: Arc<dyn Storage>,
         hash: impl FnOnce(codec::LogId) -> KeyHash,
         limits: Limits,
+        log_filter: LogFilterMode,
     ) -> Result<Self, OpenError> {
         if options.queue_capacity == 0 || options.pending_byte_budget == 0 {
             return Err(OpenError::InvalidOptions("capacities must be positive"));
@@ -197,11 +212,13 @@ impl SegmentLog {
         let (gate, lifecycle) = match state {
             recovery::State::Sealed => (Gate::Closed, Lifecycle::Sealed),
             recovery::State::Writable(writable) => {
-                let keys = Keys::new(
+                let mut keys = Keys::new(
                     hash(view.log_id.clone()),
                     writable.active_keys,
                     writable.sealed_keys,
                 );
+                // Open's own reads are done, so the build's reads come after them.
+                keys.start_building(&view, log_filter);
                 #[cfg(test)]
                 {
                     *memory.lock().unwrap() = keys.memory();

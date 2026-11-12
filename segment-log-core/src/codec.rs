@@ -8,13 +8,13 @@ mod header;
 mod index;
 
 pub(crate) use crc::crc32c;
-pub(crate) use filter::KeyFilter;
+pub(crate) use filter::{KeyFilter, probes as filter_probes};
 pub(crate) use frame::{
     Body, Entry, Footer, Frame, Group, StreamTail, decode, encode_footer, encode_group,
     encode_locator, encode_seal,
 };
 pub(crate) use header::{FORMAT_VERSION, HEADER_LEN, Header, decode_header, encode_header};
-pub(crate) use index::{KeyEntry, KeyFrames, decode_page, encode_key_frames};
+pub(crate) use index::{KeyEntry, KeyFrames, decode_page, encode_key_frames, page_count};
 
 pub(crate) const FRAME_BODY_LIMIT: usize = 16 * 1024 * 1024;
 pub(crate) const GROUP_BODY_LIMIT: usize = 8 * 1024 * 1024;

@@ -57,6 +57,16 @@ impl LogId {
     }
 }
 
+/// The block, and the bits in it, that a hash sets in a blocked Bloom filter of `blocks` blocks
+/// (format.md). The log key filter in memory uses the same probes (ADR 0051).
+pub(crate) fn probes(hash: u64, blocks: usize) -> (usize, [usize; SALTS.len()]) {
+    let low = hash as u32;
+    (
+        (((hash >> 32) * blocks as u64) >> 32) as usize,
+        SALTS.map(|salt| (low.wrapping_mul(salt) >> 23) as usize),
+    )
+}
+
 /// One cache line, so that a probe reads one line, not the two that a block across a line
 /// boundary would cost.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -124,20 +134,8 @@ impl KeyFilter {
         }
     }
 
-    fn block(&self, hash: u64) -> usize {
-        (((hash >> 32) * self.blocks.len() as u64) >> 32) as usize
-    }
-
-    fn probes(&self, hash: u64) -> (usize, [usize; SALTS.len()]) {
-        let low = hash as u32;
-        (
-            self.block(hash),
-            SALTS.map(|salt| (low.wrapping_mul(salt) >> 23) as usize),
-        )
-    }
-
     fn insert(&mut self, hash: u64) {
-        let (block, bits) = self.probes(hash);
+        let (block, bits) = probes(hash, self.blocks.len());
         for bit in bits {
             self.blocks[block].0[bit / 8] |= 1 << (bit % 8);
         }
@@ -145,7 +143,7 @@ impl KeyFilter {
 
     pub(crate) fn touch(&self, hash: u64) -> u8 {
         self.blocks
-            .get(self.block(hash))
+            .get(probes(hash, self.blocks.len()).0)
             .map_or(0, |block| block.0[0])
     }
 
@@ -153,7 +151,7 @@ impl KeyFilter {
         if self.blocks.is_empty() {
             return false;
         }
-        let (block, bits) = self.probes(hash);
+        let (block, bits) = probes(hash, self.blocks.len());
         let block = &self.blocks[block].0;
         bits.into_iter()
             .all(|bit| block[bit / 8] & (1 << (bit % 8)) != 0)

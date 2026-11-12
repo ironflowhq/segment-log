@@ -61,6 +61,7 @@ fn purpose(w: &mut impl Write, purpose: Purpose) -> io::Result<()> {
         Purpose::KeyFilter => 6,
         Purpose::KeyIndex => 7,
         Purpose::Seal => 8,
+        Purpose::LogFilter => 9,
     };
     number(w, tag)
 }
@@ -75,6 +76,7 @@ fn read_purpose(r: &mut impl Read) -> io::Result<Purpose> {
         6 => Purpose::KeyFilter,
         7 => Purpose::KeyIndex,
         8 => Purpose::Seal,
+        9 => Purpose::LogFilter,
         _ => return Err(invalid()),
     })
 }

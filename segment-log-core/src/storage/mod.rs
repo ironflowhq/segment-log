@@ -20,6 +20,8 @@ pub(crate) enum Purpose {
     KeyFilter,
     KeyIndex,
     Seal,
+    /// The log key filter's builder reads key index frames after open (ADR 0051).
+    LogFilter,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Op {
