@@ -4,7 +4,10 @@
 //! usage:
 //!   sealed_probe build NEW_FIXTURE keyed|unkeyed SEALED_SEGMENTS ROLL_BYTES ACTIVE_BYTES
 //!   sealed_probe open FIXTURE cold|warm RUNS
-//!   sealed_probe append FIXTURE CALLERS ROUNDS [INTERVAL_US]
+//!   sealed_probe append FIXTURE keyed|unkeyed CALLERS ROUNDS [INTERVAL_US]
+//!
+//! Unkeyed appends on a keyed fixture keep the history and drop only the key lookup, so the
+//! gap to keyed appends on the same code is what the lookup costs (ADR 0051).
 //!
 //! A fixture is a directory holding `log/` and `manifest`, the facts that `open` checks.
 use segment_log_core::*;
@@ -118,7 +121,7 @@ fn fixture_record(keyed: bool, i: u64) -> NewRecord {
         payload: vec![(i % 251) as u8; PAYLOAD],
     }
 }
-fn workload_record(caller: u64, round: u64) -> NewRecord {
+fn workload_record(keyed: bool, caller: u64, round: u64) -> NewRecord {
     let mut key = caller.to_le_bytes().to_vec();
     key.extend_from_slice(&round.to_le_bytes());
     let mut payload = vec![0x5a; PAYLOAD];
@@ -126,7 +129,7 @@ fn workload_record(caller: u64, round: u64) -> NewRecord {
     NewRecord {
         stream: caller.to_le_bytes().to_vec(),
         expected: expected(round),
-        key: Some(key),
+        key: keyed.then_some(key),
         payload,
     }
 }
@@ -376,6 +379,7 @@ struct Caller {
 
 fn run_caller(
     log: &SegmentLog,
+    keyed: bool,
     caller: u64,
     rounds: u64,
     pace: Option<(Instant, Duration, f64)>,
@@ -393,7 +397,7 @@ fn run_caller(
         };
         let pending = loop {
             match log.append(Submit {
-                records: vec![workload_record(caller, round)],
+                records: vec![workload_record(keyed, caller, round)],
             }) {
                 Ok(p) => break p,
                 Err(AppendError::Full) => {
@@ -420,14 +424,16 @@ fn run_caller(
     out
 }
 
-fn append(fixture: &Path, callers: u64, rounds: u64, interval: Option<Duration>) {
+fn append(fixture: &Path, keyed: bool, callers: u64, rounds: u64, interval: Option<Duration>) {
     assert!(callers > 0 && rounds > 0);
     let manifest = Manifest::read(fixture);
     let log_dir = fixture.join("log");
     let start_segments = Segments::scan(&log_dir).files.len();
     let options = manifest.options();
     println!(
-        "CONFIG callers={callers} rounds={rounds} payload={PAYLOAD} key_bytes=16 records_per_submit=1 interval_us={} offered_records_per_second={} linger_ns={} group_byte_cap={} roll_bytes={} queue_capacity={} pending_byte_budget={} start_records={} start_segments={start_segments}",
+        "CONFIG callers={callers} rounds={rounds} payload={PAYLOAD} appends_keyed={} key_bytes={} records_per_submit=1 interval_us={} offered_records_per_second={} linger_ns={} group_byte_cap={} roll_bytes={} queue_capacity={} pending_byte_budget={} start_records={} start_segments={start_segments}",
+        u8::from(keyed),
+        if keyed { 16 } else { 0 },
         interval.map_or_else(|| "closed_loop".into(), |i| i.as_micros().to_string()),
         interval.map_or_else(
             || "closed_loop".into(),
@@ -456,7 +462,7 @@ fn append(fixture: &Path, callers: u64, rounds: u64, interval: Option<Duration>)
                         start.wait();
                         let epoch = *EPOCH.get().unwrap();
                         let pace = interval.map(|i| (epoch, i, caller as f64 / callers as f64));
-                        run_caller(log, caller, rounds, pace)
+                        run_caller(log, keyed, caller, rounds, pace)
                     })
                     .unwrap()
             })
@@ -488,7 +494,7 @@ fn append(fixture: &Path, callers: u64, rounds: u64, interval: Option<Duration>)
     );
     correctness_errors += usize::from(log.watermark() != manifest.records + records);
     for caller in 0..callers {
-        let new = workload_record(caller, rounds - 1);
+        let new = workload_record(keyed, caller, rounds - 1);
         let ok = log.stream_head(&new.stream).is_some_and(|h| {
             h.revision == rounds - 1
                 && log
@@ -548,14 +554,19 @@ fn main() {
             },
             number(4) as usize,
         ),
-        (Some("append"), 5 | 6) => append(
+        (Some("append"), 6 | 7) => append(
             path(2),
-            number(3),
+            match args[3].as_str() {
+                "keyed" => true,
+                "unkeyed" => false,
+                other => panic!("keyed or unkeyed, not {other}"),
+            },
             number(4),
-            (args.len() == 6).then(|| Duration::from_micros(number(5))),
+            number(5),
+            (args.len() == 7).then(|| Duration::from_micros(number(6))),
         ),
         _ => panic!(
-            "usage: sealed_probe build NEW_FIXTURE keyed|unkeyed SEALED_SEGMENTS ROLL_BYTES ACTIVE_BYTES\n       sealed_probe open FIXTURE cold|warm RUNS\n       sealed_probe append FIXTURE CALLERS ROUNDS [INTERVAL_US]"
+            "usage: sealed_probe build NEW_FIXTURE keyed|unkeyed SEALED_SEGMENTS ROLL_BYTES ACTIVE_BYTES\n       sealed_probe open FIXTURE cold|warm RUNS\n       sealed_probe append FIXTURE keyed|unkeyed CALLERS ROUNDS [INTERVAL_US]"
         ),
     }
 }

@@ -1,6 +1,8 @@
 #!/bin/bash
 # Captures the M4 gate measurements (docs/prd.md, M4 row): open time cold and warm with every
 # record keyed, key-cache memory, and keyed append throughput and p99 latency beside the M3 code.
+# A closed loop of unkeyed appends on the same keyed history measures what the key lookup costs on
+# each side (ADR 0051).
 # usage: scripts/m4-evidence.sh OUTPUT_DIRECTORY [HEAD [BASE]]
 #
 # HEAD defaults to the checked-out commit, BASE to the M3 code (main at 0ffc772). Each side is
@@ -154,11 +156,15 @@ files "$data/before-keyed" > "$work/before-keyed.files"
 files "$data/after-keyed" > "$work/after-keyed.files"
 for side in before after; do
     prepare "$data/$side-keyed" "$data/run"
-    probe "$side" append "$data/run" "$callers" 20 > "$out/warmup-$side.log" 2>&1
+    probe "$side" append "$data/run" keyed "$callers" 20 > "$out/warmup-$side.log" 2>&1
     rm -rf "$data/run"
 done
-for mode in closed paced; do
+# closed-unkeyed sends unkeyed records on the same keyed fixture, so that against closed it
+# isolates the lookup on each side.
+for mode in closed closed-unkeyed paced; do
     mkdir -p "$out/append/$mode"
+    keys=keyed
+    [ "$mode" = closed-unkeyed ] && keys=unkeyed
     extra=""
     [ "$mode" = paced ] && extra="$interval_us"
     for pair in $(seq 1 "$pairs"); do
@@ -168,7 +174,7 @@ for mode in closed paced; do
             binary="$after"
             [ "$side" = before ] && binary="$before"
             # shellcheck disable=SC2086 # extra is empty for the closed loop
-            ${timer[@]+"${timer[@]}"} "$binary" append "$data/run" "$callers" "$rounds" $extra \
+            ${timer[@]+"${timer[@]}"} "$binary" append "$data/run" "$keys" "$callers" "$rounds" $extra \
                 > "$out/append/$mode/$side-$pair.log" 2>&1
             rm -rf "$data/run"
         done
