@@ -143,39 +143,37 @@ pub(super) fn survey(
         published: Published::default(),
         epoch: 0,
     };
-    let newest = *bases.last().unwrap();
     let mut sealed = vec![];
-    let mut tail = None;
-    for (&base, (header, bytes)) in bases.iter().zip(headers) {
+    let mut headers = headers.into_iter();
+    for (pair, (header, _)) in bases.windows(2).zip(headers.by_ref()) {
+        let [base, successor] = *pair else {
+            unreachable!()
+        };
         if kept.published.watermark != base {
             return Err(OpenError::Gap { segment: base });
         }
         kept.epoch = kept.epoch.max(header.epoch);
-        let path = segment_path(dir, base);
-        let length = storage.length(&path, Purpose::Recovery)?;
-        let scan = scan(storage, &log_id, base, &path, length, &mut kept)?;
-        if base == newest {
-            if matches!(scan.ending, Ending::Stopped)
-                && closing::sealed_behind(storage, &path, &log_id, length, scan.end)?
-            {
-                return Err(OpenError::Corrupt {
-                    segment: base,
-                    position: scan.end,
-                });
-            }
-            tail = Some((scan, bytes));
-        } else if let Ending::Rolled(run) = scan.ending {
-            sealed.push(run.summary);
-            kept.published.roll();
-        } else {
-            // Every segment with a successor is sealed, and recovery never truncates one (I7).
-            return Err(OpenError::Corrupt {
-                segment: base,
-                position: scan.end,
-            });
-        }
+        sealed.push(summarize(
+            storage, &log_id, dir, base, successor, &mut kept,
+        )?);
     }
-    let (newest, newest_header) = tail.unwrap();
+    let (header, newest_header) = headers.next().unwrap();
+    let base = *bases.last().unwrap();
+    if kept.published.watermark != base {
+        return Err(OpenError::Gap { segment: base });
+    }
+    kept.epoch = kept.epoch.max(header.epoch);
+    let path = segment_path(dir, base);
+    let length = storage.length(&path, Purpose::Recovery)?;
+    let newest = scan(storage, &log_id, base, &path, length, &mut kept)?;
+    if matches!(newest.ending, Ending::Stopped)
+        && closing::sealed_behind(storage, &path, &log_id, length, newest.end)?
+    {
+        return Err(OpenError::Corrupt {
+            segment: base,
+            position: newest.end,
+        });
+    }
     Ok(Survey {
         log_id,
         published: kept.published,
@@ -184,6 +182,91 @@ pub(super) fn survey(
         newest_header,
         newest,
     })
+}
+
+/// Step 5 for a segment with a successor, which proves that its locator is its last frame. Reads
+/// only the locator and the footer it names, so that open time does not grow with the history
+/// (ORACLE-13). Recovery never truncates a sealed segment (I7), so a bad byte is `Corrupt`.
+fn summarize(
+    storage: &ReadOnly<'_>,
+    log: &codec::LogId,
+    dir: &Path,
+    base: u64,
+    successor: u64,
+    kept: &mut Kept,
+) -> Result<SealedSummary, OpenError> {
+    let corrupt = |position| OpenError::Corrupt {
+        segment: base,
+        position,
+    };
+    let path = segment_path(dir, base);
+    let length = storage.length(&path, Purpose::Summary)?;
+    let header_end = codec::HEADER_LEN as u64;
+    let locator_at = length
+        .saturating_sub(codec::LOCATOR_LEN as u64)
+        .max(header_end);
+    if locator_at + codec::LOCATOR_LEN as u64 != length {
+        return Err(corrupt(locator_at));
+    }
+    let bytes = storage.read(&path, Purpose::Summary, locator_at, codec::LOCATOR_LEN)?;
+    let Ok(codec::Frame {
+        epoch,
+        base_offset: next,
+        body: codec::Body::Locator {
+            footer_position: footer_at,
+        },
+    }) = codec::decode(log, &bytes)
+    else {
+        return Err(corrupt(locator_at));
+    };
+    let footer_len = locator_at
+        .checked_sub(footer_at)
+        .filter(|len| {
+            footer_at >= header_end
+                && (8 + codec::FOOTER_HEADER_LEN as u64..=8 + codec::FRAME_BODY_LIMIT as u64)
+                    .contains(len)
+        })
+        .ok_or(corrupt(locator_at))?;
+    let bytes = storage.read(&path, Purpose::Summary, footer_at, footer_len as usize)?;
+    let Ok(codec::Frame {
+        epoch: footer_epoch,
+        base_offset: footer_next,
+        body: codec::Body::Footer(footer),
+    }) = codec::decode(log, &bytes)
+    else {
+        return Err(corrupt(footer_at));
+    };
+    let filter_at = footer
+        .key_filter_position
+        .map(u64::from)
+        .filter(|at| (header_end + 1..footer_at).contains(at))
+        .ok_or(corrupt(footer_at))?;
+    if footer_next != successor || next != successor {
+        return Err(OpenError::Gap { segment: successor });
+    }
+    if footer_epoch < kept.epoch {
+        return Err(corrupt(footer_at));
+    }
+    if epoch < footer_epoch {
+        return Err(corrupt(locator_at));
+    }
+    if footer.streams.iter().any(|tail| {
+        !(base..next).contains(&tail.last_offset)
+            || !(header_end..filter_at).contains(&tail.last_position)
+    }) {
+        return Err(corrupt(footer_at));
+    }
+    let summary = SealedSummary {
+        base,
+        next,
+        filter_at,
+        footer_at,
+    };
+    kept.published
+        .opened(&summary, &footer, kept.epoch..=footer_epoch);
+    // The locator is the segment's last frame, and epochs never decrease within a segment.
+    kept.epoch = epoch;
+    Ok(summary)
 }
 
 fn header(

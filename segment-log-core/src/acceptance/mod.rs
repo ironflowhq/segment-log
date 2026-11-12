@@ -32,4 +32,6 @@ mod closing_runs;
 
 mod sealed_keys;
 
+mod summary_open;
+
 mod evidence;
