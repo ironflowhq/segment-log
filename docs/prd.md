@@ -195,7 +195,7 @@ Unresolved items name the milestone that they block. Resolved items keep their n
 ## Documents
 
 - [Architecture overview](architecture/overview.md): placement, components, invariants, commit protocol, recovery.
-- [Byte layout v0](architecture/format.md).
+- [Byte layout](architecture/format.md).
 - [API sketch](architecture/api.md).
 - [Testing and benchmarks](architecture/testing.md).
 - [Volume requirements](architecture/volume-requirements.md): what the storage under the log must guarantee, and how to test it.

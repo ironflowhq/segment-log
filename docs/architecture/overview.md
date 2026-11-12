@@ -40,7 +40,7 @@ callers (threads, or a socket server in M6)
 - **Writer thread.** The only thread that writes segment files. It owns the tail map and the key map, and it assigns log offsets and revisions. Because one thread does every check, a check is atomic with respect to other appends.
 - **Segments.** Append-only files. The active segment takes new frames. Sealed segments never change.
 - **Watermark.** An atomic value that readers load. Only the writer stores it.
-- **Caches.** The tail map, the key map, the sparse index and, from M4, the key filters that open loads from sealed segments. The log can rebuild each one from the segments.
+- **Caches.** The tail map, the key map, the frame table of each sealed segment that a `read` has needed, and, from M4, the key filters that open loads from sealed segments. The log can rebuild each one from the segments. The sparse index file in [format.md](format.md#sparse-index-not-written-yet) is not written yet.
 
 ## Storage contract
 
@@ -180,7 +180,7 @@ Seal ships in M4, together with the footer and the locator. A seal frame is neve
 1. Stop admission. New submits get `Sealed`.
 2. Commit the submits that are already in the queue, as usual. If a write or an `fsync` fails, the writer is poisoned, `seal` returns `Poisoned`, and step 3 does not run.
 3. Write the footer, the seal frame and the locator, with no key frames ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). `fsync`. If a write or the `fsync` fails, the writer is poisoned and `seal` returns `Poisoned`.
-4. Stop the writer thread and release the lock. The handle keeps the segment files open, so `read`, `watermark` and `stream_head` keep working until it is dropped. The process can exit.
+4. Stop the writer thread and release the lock. `read`, `watermark` and `stream_head` keep working until the handle is dropped. The process can exit.
 
 ## Read-only reader
 
@@ -203,6 +203,6 @@ M6 implements Unix socket first, followed by vsock with the same protocol ([ADR 
 These are targets that nobody has measured yet:
 
 - the build is small enough for a microVM,
-- open time after M4 meets its target, including the key filters that [ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md) adds to it,
+- open time with a cold page cache on the deployed guest stack. The [M4 report](../evidence/m4/completion.md) measured warm open within the target on a hosted runner, and cold open above it ([ADR 0050](../decisions/0050-m4-open-time-gate-uses-a-warm-page-cache.md)),
 - a snapshot's dirty set is only the written segment pages plus the caches, the accept queue and the key map,
 - startup and seal time fit the [footprint targets](../prd.md#footprint-and-performance-targets).
