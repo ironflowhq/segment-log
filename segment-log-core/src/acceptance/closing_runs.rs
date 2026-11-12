@@ -3,6 +3,7 @@ use crate::{codec, storage::sim::Crash, *};
 use std::{path::Path, sync::Arc};
 
 const KEYS: usize = 300;
+const _: () = assert!(KEYS.div_ceil(codec::PAGE_ENTRIES) == 2);
 
 fn unrolled() -> Options {
     Options {

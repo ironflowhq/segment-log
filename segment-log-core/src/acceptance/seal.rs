@@ -81,7 +81,18 @@ fn key_filter_reads(sim: &Sim) -> usize {
     sim.count(Path::new(ANY_SEG), Purpose::KeyFilter, &Op::Read(0, 0))
 }
 
-type Observed = (u64, Vec<(Vec<u8>, Option<(u64, u64)>)>, String);
+#[derive(Debug, PartialEq)]
+struct Observed {
+    watermark: u64,
+    heads: Vec<Head>,
+    records: String,
+}
+
+#[derive(Debug, PartialEq)]
+struct Head {
+    stream: Vec<u8>,
+    at: Option<(u64, u64)>,
+}
 
 fn observe(
     watermark: u64,
@@ -93,12 +104,16 @@ fn observe(
     streams.dedup();
     let heads = streams
         .into_iter()
-        .map(|s| {
-            let at = head(&s).map(|h| (h.offset, h.revision));
-            (s, at)
+        .map(|stream| Head {
+            at: head(&stream).map(|h| (h.offset, h.revision)),
+            stream,
         })
         .collect();
-    (watermark, heads, format!("{records:?}"))
+    Observed {
+        watermark,
+        heads,
+        records: format!("{records:?}"),
+    }
 }
 
 fn observe_log(log: &SegmentLog) -> Observed {

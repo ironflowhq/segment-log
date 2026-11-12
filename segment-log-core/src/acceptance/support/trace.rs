@@ -51,19 +51,32 @@ fn read_kind(r: &mut impl Read) -> io::Result<io::ErrorKind> {
         .ok_or_else(invalid)
 }
 fn purpose(w: &mut impl Write, purpose: Purpose) -> io::Result<()> {
-    number(
-        w,
-        Purpose::ALL
-            .iter()
-            .position(|x| *x == purpose)
-            .ok_or_else(invalid)? as u64,
-    )
+    let tag = match purpose {
+        Purpose::Open => 0,
+        Purpose::Group => 1,
+        Purpose::Recovery => 2,
+        Purpose::Lookup => 3,
+        Purpose::Roll => 4,
+        Purpose::Summary => 5,
+        Purpose::KeyFilter => 6,
+        Purpose::KeyIndex => 7,
+        Purpose::Seal => 8,
+    };
+    number(w, tag)
 }
 fn read_purpose(r: &mut impl Read) -> io::Result<Purpose> {
-    Purpose::ALL
-        .get(read_number(r)? as usize)
-        .copied()
-        .ok_or_else(invalid)
+    Ok(match read_number(r)? {
+        0 => Purpose::Open,
+        1 => Purpose::Group,
+        2 => Purpose::Recovery,
+        3 => Purpose::Lookup,
+        4 => Purpose::Roll,
+        5 => Purpose::Summary,
+        6 => Purpose::KeyFilter,
+        7 => Purpose::KeyIndex,
+        8 => Purpose::Seal,
+        _ => return Err(invalid()),
+    })
 }
 fn op(w: &mut impl Write, op: &Op) -> io::Result<()> {
     let tag = match op {

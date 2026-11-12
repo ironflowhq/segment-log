@@ -46,7 +46,11 @@ fn key_index_reads(sim: &Sim) -> usize {
     sim.count(Path::new(ANY_SEG), Purpose::KeyIndex, &Op::Read(0, 0))
 }
 
-type Seen = (Observed, Vec<String>);
+#[derive(Debug, PartialEq)]
+struct Seen {
+    log: Observed,
+    reads: Vec<String>,
+}
 
 fn seen(
     watermark: u64,
@@ -56,7 +60,10 @@ fn seen(
     let reads = (0..=watermark)
         .map(|from| format!("{:?}", read(from, 3)))
         .collect();
-    (observe(watermark, read(0, usize::MAX), head), reads)
+    Seen {
+        log: observe(watermark, read(0, usize::MAX), head),
+        reads,
+    }
 }
 
 fn seen_by(reader: &LogReader) -> Seen {
@@ -122,7 +129,11 @@ fn readers_on_a_read_only_volume_read_a_sealed_log() {
     });
 }
 
-type Layout = (&'static str, Vec<(u64, Vec<u8>)>, usize);
+struct Layout {
+    label: &'static str,
+    segments: Vec<(u64, Vec<u8>)>,
+    kept: usize,
+}
 
 /// Given a log whose newest segment ends in its groups, in a torn group, in a roll's closing run,
 /// or in a seal's run that lost its seal frame, or whose newest file is a header that a crash tore,
@@ -151,23 +162,33 @@ fn a_reader_refuses_a_log_that_is_not_sealed() {
         let seal_at = lost_seal.len() - crate::codec::LOCATOR_LEN - seal_len;
         lost_seal[seal_at..seal_at + seal_len].fill(0);
         let torn_header = raw::header(raw::VERSION, 3, 1)[..30].to_vec();
-        let layouts: [Layout; 6] = [
-            ("groups", vec![(0, groups.clone())], 3),
-            (
+        let layout = |label, segments, kept| Layout {
+            label,
+            segments,
+            kept,
+        };
+        let layouts = [
+            layout("groups", vec![(0, groups.clone())], 3),
+            layout(
                 "torn group",
                 vec![(0, [groups.clone(), torn_group[..20].to_vec()].concat())],
                 3,
             ),
-            ("roll's run", vec![(0, raw::rolled(groups.clone(), 1))], 3),
-            ("lost seal frame", vec![(0, lost_seal)], 3),
-            (
+            layout("roll's run", vec![(0, raw::rolled(groups.clone(), 1))], 3),
+            layout("lost seal frame", vec![(0, lost_seal)], 3),
+            layout(
                 "torn header",
                 vec![(0, raw::rolled(groups.clone(), 1)), (3, torn_header)],
                 3,
             ),
-            ("no segment", vec![], 0),
+            layout("no segment", vec![], 0),
         ];
-        for (label, segments, kept) in layouts {
+        for Layout {
+            label,
+            segments,
+            kept,
+        } in layouts
+        {
             let sim = Sim::new(861);
             raw::install_segments(&sim, &segments);
             let before = sim.image();

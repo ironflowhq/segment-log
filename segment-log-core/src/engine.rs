@@ -182,7 +182,7 @@ impl SegmentLog {
         let recovery::Recovered {
             log_id,
             published,
-            writable,
+            state,
         } = recovery::open(storage.as_ref(), dir)?;
         let view = Arc::new(View {
             storage,
@@ -194,9 +194,9 @@ impl SegmentLog {
         let poisoned = Arc::new(std::sync::atomic::AtomicBool::new(false));
         #[cfg(test)]
         let memory = Arc::new(Mutex::new(KeyMemory::default()));
-        let (gate, lifecycle) = match writable {
-            None => (Gate::Closed, Lifecycle::Sealed),
-            Some(writable) => {
+        let (gate, lifecycle) = match state {
+            recovery::State::Sealed => (Gate::Closed, Lifecycle::Sealed),
+            recovery::State::Writable(writable) => {
                 let keys = Keys::new(
                     hash(view.log_id.clone()),
                     writable.active_keys,
@@ -394,6 +394,22 @@ fn read_bytes(
     match call(storage, path, purpose, Op::Read(position, length))? {
         Value::Bytes(bytes) => Ok(bytes),
         _ => Err(io::Error::other("storage did not return bytes")),
+    }
+}
+/// `read_bytes` stops at the end of the file, which ends a scan. A lookup that needs every byte
+/// it asks for uses this instead.
+fn read_exact(
+    storage: &dyn Storage,
+    path: &Path,
+    purpose: Purpose,
+    position: u64,
+    length: usize,
+) -> io::Result<Vec<u8>> {
+    let bytes = read_bytes(storage, path, purpose, position, length)?;
+    if bytes.len() == length {
+        Ok(bytes)
+    } else {
+        Err(io::ErrorKind::UnexpectedEof.into())
     }
 }
 /// Creates a segment that holds only its header. Returns after the file and its directory
