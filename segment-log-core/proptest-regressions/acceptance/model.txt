@@ -4,3 +4,5 @@
 #
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
+cc a91228a975a2192024c2b3f0074493f46513733c03567a02b1f75d9007255909 # shrinks to Case { steps: [Group([])], erase: Erase { mask: [false], fallback: 0 } }
+cc a91228a975a2192024c2b3f0074493f46513733c03567a02b1f75d9007255909 # shrinks to Case { steps: [Group([])], erase: Erase { mask: [false], fallback: 0 } }

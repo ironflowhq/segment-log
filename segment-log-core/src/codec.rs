@@ -1,13 +1,5 @@
 //! The v1 byte layout of [format.md](../../docs/architecture/format.md). Every width, limit and
 //! check value comes from that file.
-#![cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        unused_imports,
-        reason = "closing frames and key lookup have no callers until later slices"
-    )
-)]
 
 mod crc;
 mod filter;
@@ -17,12 +9,17 @@ mod index;
 
 pub(crate) use crc::crc32c;
 pub(crate) use filter::KeyFilter;
+#[cfg_attr(
+    not(test),
+    expect(unused_imports, reason = "seal writes the first seal frame")
+)]
+pub(crate) use frame::encode_seal;
 pub(crate) use frame::{
     Body, Entry, Footer, Frame, Group, StreamTail, decode, encode_footer, encode_group,
-    encode_locator, encode_seal,
+    encode_locator,
 };
 pub(crate) use header::{FORMAT_VERSION, HEADER_LEN, Header, decode_header, encode_header};
-pub(crate) use index::{KeyEntry, decode_page, encode_key_frames};
+pub(crate) use index::{KeyEntry, KeyFrames, decode_page, encode_key_frames};
 
 pub(crate) const FRAME_BODY_LIMIT: usize = 16 * 1024 * 1024;
 pub(crate) const GROUP_BODY_LIMIT: usize = 8 * 1024 * 1024;
@@ -36,6 +33,8 @@ pub(crate) const LOCATOR_LEN: usize = 40;
 
 const ENVELOPE_LEN: usize = 8;
 pub(crate) const BODY_HEADER_LEN: usize = 24;
+pub(crate) const FOOTER_HEADER_LEN: usize = BODY_HEADER_LEN + 8;
+pub(crate) const FOOTER_ENTRY_LEN: usize = 28;
 
 const _: () = assert!(
     BODY_HEADER_LEN + PAGE_SIZE * KEYED_RECORD_LIMIT.div_ceil(PAGE_ENTRIES) <= FRAME_BODY_LIMIT

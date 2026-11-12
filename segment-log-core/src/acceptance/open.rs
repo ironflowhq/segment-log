@@ -177,11 +177,12 @@ fn invalid_options_precede_locks_missing_ancestors_and_permissions() {
     });
 }
 
-/// Given two segment files, where one is valid and the other is empty, shorter than a header,
-/// Or longer than a header, with a header that does not match its name or with bytes after
-/// its frames that are not a frame
+/// Given two segment files, where one is a segment that a roll sealed and the other is empty,
+/// shorter than a header, or longer than a header, with a header that does not match its name or
+/// with bytes after its closing run that are not a frame
 /// When the damaged file is the newest and no longer than a header
-/// Then open removes it and recovers the records of the valid segment
+/// Then open replaces it with the segment that the roll would have created, and recovers the
+/// records of the sealed segment
 /// When the damaged file is older, or is longer than a header
 /// Then open fails with `Corrupt` and names that file, and no byte or directory entry changes
 /// Cases: OPEN-LAYOUT, RECOVERY-FIXTURES
@@ -189,11 +190,12 @@ fn invalid_options_precede_locks_missing_ancestors_and_permissions() {
 fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
     bounded(|| {
         use super::support::raw;
-        let valid = [
+        let groups = [
             raw::header(raw::VERSION, 0, 1),
             raw::group(1, 0, &[b"kept"]),
         ]
         .concat();
+        let valid = raw::rolled(groups.clone(), 1);
         let trailing = [valid.clone(), vec![0; 33]].concat();
         for (segments, corrupt) in [
             (vec![(0, valid.clone()), (1, vec![])], None),
@@ -212,7 +214,7 @@ fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
             ),
             (
                 vec![(0, trailing), (1, raw::header(raw::VERSION, 1, 1))],
-                Some((0, valid.len() as u64)),
+                Some((0, groups.len() as u64)),
             ),
         ] {
             let sim = Sim::new(802);
@@ -225,7 +227,10 @@ fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
                     let log = result.unwrap();
                     assert_eq!(log.watermark(), 1);
                     assert_eq!(log.read(0, 10).unwrap()[0].payload, b"kept");
-                    assert_eq!(raw::segments(&sim), [(0, valid.clone())]);
+                    assert_eq!(
+                        raw::segments(&sim),
+                        [(0, valid.clone()), (1, raw::header(raw::VERSION, 1, 2))]
+                    );
                 }
                 Some(expected) => {
                     assert!(

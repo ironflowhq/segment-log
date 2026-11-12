@@ -7,12 +7,16 @@ fn try_open(sim: &Sim) -> Result<SegmentLog, OpenError> {
     SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone()))
 }
 
-fn sealed(base: u64, epoch: u64, payloads: &[&[u8]]) -> Vec<u8> {
+fn groups(base: u64, epoch: u64, payloads: &[&[u8]]) -> Vec<u8> {
     [
         raw::header(raw::VERSION, base, epoch),
         raw::group(epoch, base, payloads),
     ]
     .concat()
+}
+
+fn sealed(base: u64, epoch: u64, payloads: &[&[u8]]) -> Vec<u8> {
+    raw::rolled(groups(base, epoch, payloads), epoch)
 }
 
 fn next(log: &SegmentLog, revision: u64, payload: &[u8]) -> Position {
@@ -31,7 +35,7 @@ fn next(log: &SegmentLog, revision: u64, payload: &[u8]) -> Position {
     .remove(0)
 }
 
-/// Given three hand-made segments, where the two older ones hold only valid groups
+/// Given three hand-made segments, where the two older ones hold valid groups and a closing run
 /// And the newest one ends in half a frame
 /// When the log opens
 /// Then `read` returns every record across the files in offset order with its revision
@@ -44,13 +48,19 @@ fn next(log: &SegmentLog, revision: u64, payload: &[u8]) -> Position {
 fn recovery_reads_every_record_across_segments() {
     bounded(|| {
         let sim = Sim::new(301);
-        let first = [
-            raw::header(raw::VERSION, 0, 1),
-            raw::group(1, 0, &[b"a", b"b"]),
-            raw::group(1, 2, &[b"c"]),
-        ]
-        .concat();
-        let second = [raw::header(raw::VERSION, 3, 1), raw::group(2, 3, &[b"d"])].concat();
+        let first = raw::rolled(
+            [
+                raw::header(raw::VERSION, 0, 1),
+                raw::group(1, 0, &[b"a", b"b"]),
+                raw::group(1, 2, &[b"c"]),
+            ]
+            .concat(),
+            1,
+        );
+        let second = raw::rolled(
+            [raw::header(raw::VERSION, 3, 1), raw::group(2, 3, &[b"d"])].concat(),
+            2,
+        );
         let kept = [
             raw::header(raw::VERSION, 4, 2),
             raw::group(2, 4, &[b"e", b"f"]),
@@ -183,7 +193,7 @@ fn a_segment_from_another_log_fails_open_without_deletion() {
 #[test]
 fn a_bad_frame_in_a_sealed_segment_fails_open_and_changes_nothing() {
     bounded(|| {
-        let valid = sealed(0, 2, &[b"a", b"b"]);
+        let valid = groups(0, 2, &[b"a", b"b"]);
         let mut bad_crc = raw::group(2, 2, &[b"c"]);
         bad_crc[4] ^= 1;
         for bad in [
@@ -219,10 +229,12 @@ fn a_bad_frame_in_a_sealed_segment_fails_open_and_changes_nothing() {
     });
 }
 
-/// Given a valid segment and a newer file no longer than a header whose header checksum does not match
+/// Given a segment sealed by a roll and a newer file no longer than a header whose header checksum
+/// does not match
 /// When the log opens
-/// Then the newer file is gone and the records of the valid segment are readable
-/// And the file stays gone after a power loss, and the next append takes the next offset
+/// Then the newer file is replaced by a whole header-only segment under the next writer epoch, as
+/// the roll would have written it, and the records of the sealed segment are readable
+/// And that state survives a power loss, and the next append takes the next offset
 ///
 /// Cases: RECOVERY-FIXTURES, OPEN-LAYOUT
 #[test]
@@ -231,15 +243,16 @@ fn a_torn_newest_segment_no_longer_than_a_header_is_deleted() {
         let first = sealed(0, 1, &[b"a", b"b"]);
         let mut bad_crc = raw::header(raw::VERSION, 2, 1);
         bad_crc[60] ^= 1;
+        let replaced = [(0, first.clone()), (2, raw::header(raw::VERSION, 2, 2))];
         for torn in [vec![], vec![0; 1], vec![0; 63], vec![0; 64], bad_crc] {
             let sim = Sim::new(305);
             raw::install_segments(&sim, &[(0, first.clone()), (2, torn)]);
             let log = open(&sim);
             assert_eq!(log.watermark(), 2);
-            assert_eq!(raw::segments(&sim), [(0, first.clone())]);
+            assert_eq!(raw::segments(&sim), replaced);
             drop(log);
             sim.crash(Crash::PowerLoss, 2);
-            assert_eq!(raw::segments(&sim), [(0, first.clone())]);
+            assert_eq!(raw::segments(&sim), replaced);
             let log = open(&sim);
             let payloads: Vec<_> = log
                 .read(0, 100)
@@ -327,7 +340,7 @@ fn a_crash_at_each_step_of_a_multi_segment_recovery_keeps_the_valid_prefix() {
         let torn = raw::group(1, 4, &[b"never acknowledged"]);
         for (newest, kept) in [
             (
-                [sealed(3, 1, &[b"d"]), torn[..torn.len() / 2].to_vec()].concat(),
+                [groups(3, 1, &[b"d"]), torn[..torn.len() / 2].to_vec()].concat(),
                 4,
             ),
             (vec![0xff; 40], 3),

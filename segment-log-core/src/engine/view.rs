@@ -82,18 +82,6 @@ impl Published {
         }));
         self.newest.base = self.watermark;
     }
-
-    pub(super) fn span_at(&self, offset: u64) -> Option<(u64, GroupSpan)> {
-        let (base, spans) = if offset >= self.newest.base {
-            (self.newest.base, self.newest.spans.as_slice())
-        } else {
-            let at = self.sealed.partition_point(|s| s.next <= offset);
-            let segment = self.sealed.get(at)?;
-            (segment.base, segment.spans())
-        };
-        let at = spans.partition_point(|span| span.end() <= offset);
-        Some((base, *spans.get(at)?))
-    }
 }
 
 fn overlapping(spans: &[GroupSpan], from: u64, end: u64) -> &[GroupSpan] {
