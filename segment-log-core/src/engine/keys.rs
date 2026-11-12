@@ -196,7 +196,7 @@ impl SealedKeys {
         let path = segment_path(dir, self.base);
         for page in self.filter.index_pages(hash) {
             let at = self.pages_at + (codec::PAGE_SIZE * page) as u64;
-            let bytes = read_bytes(storage, &path, Purpose::KeyIndex, at, codec::PAGE_SIZE)?;
+            let bytes = read_exact(storage, &path, Purpose::KeyIndex, at, codec::PAGE_SIZE)?;
             let entries =
                 codec::decode_page(&bytes, page, self.filter.count(), self.filter.fence(page))?;
             for entry in entries.iter().filter(|entry| entry.hash == hash) {
@@ -408,18 +408,13 @@ fn active_record(
             .map_err(|_| LookupFailure)?;
         (published.newest.base, spans[at])
     };
-    let length = span.length as usize;
-    let bytes = read_bytes(
+    let bytes = read_exact(
         view.storage.as_ref(),
         &segment_path(&view.dir, base),
         Purpose::Lookup,
         span.position,
-        length,
+        span.length as usize,
     )?;
-    // A short read can return a shorter frame that still decodes.
-    if bytes.len() != length {
-        return Err(LookupFailure);
-    }
     let group = codec::decode(&view.log_id, &bytes)?
         .into_group()
         .filter(|group| {
