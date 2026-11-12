@@ -4,6 +4,7 @@ use std::{path::Path, sync::Arc};
 
 mod collisions;
 mod lifetime;
+mod log_filter;
 mod memory;
 mod poison;
 

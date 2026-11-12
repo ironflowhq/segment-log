@@ -15,6 +15,8 @@ fn keys(prefix: &str, n: usize) -> Vec<NewRecord> {
 /// When the key memory is counted, before and after a reopen
 /// Then the filters and fences in memory take 656, 0 and 72 bytes, as format.md sizes them
 /// And there are 332 sealed keys beside 5 keys in the active segment's map
+/// And the log key filter covers the 3 sealed segments with room for twice the keys it was
+/// sized for, at 8 bits per key: 300 keys at the first roll, 332 at the reopen (ADR 0051)
 ///
 /// Cases: KEY-MEMORY
 #[test]
@@ -40,14 +42,23 @@ fn key_memory_is_the_filters_and_fences_of_sealed_keys_beside_the_active_map() {
         commit(&log, keys("third", 32));
         commit(&log, keys("active", 5));
         assert_eq!(raw::segments(&sim).len(), 4);
+        let log_filter_bytes = |keys: usize| 64 * (2 * keys).div_ceil(64);
         let expected = KeyMemory {
             filter_bytes: 728,
             sealed_keys: 332,
             active_keys: 5,
+            log_filter_bytes: log_filter_bytes(300),
+            log_filter_covered: 3,
         };
         assert_eq!(log.key_memory(), expected);
         drop(log);
         log = open_hooked(&sim, &hooks);
-        assert_eq!(log.key_memory(), expected);
+        assert_eq!(
+            log.key_memory(),
+            KeyMemory {
+                log_filter_bytes: log_filter_bytes(332),
+                ..expected
+            }
+        );
     });
 }

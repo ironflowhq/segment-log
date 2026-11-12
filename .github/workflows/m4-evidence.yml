@@ -20,6 +20,10 @@ on:
         description: Roll size of the fixtures, in bytes
         required: false
         default: "67108864"
+      settle_ms:
+        description: Wait after open before each timed append run, in milliseconds
+        required: false
+        default: "0"
   pull_request:
     types: [labeled]
 
@@ -55,6 +59,7 @@ jobs:
           SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
           M4_SEALED: ${{ inputs.sealed || '100' }}
           M4_ROLL_BYTES: ${{ inputs.roll_bytes || '67108864' }}
+          M4_SETTLE_MS: ${{ inputs.settle_ms || '0' }}
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:

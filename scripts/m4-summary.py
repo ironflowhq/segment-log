@@ -114,7 +114,8 @@ def appends(root):
             runs[side].append((int(run), a, m, c, o, max_rss_kib(path)))
         c = runs["after"][0][3]
         keys = "keyed" if c.get("appends_keyed", "1") == "1" else "unkeyed"
-        print(f"### {mode}: {keys} appends, {c['callers']} callers, {c['rounds']} rounds, interval {c['interval_us']} µs, offered {c['offered_records_per_second']} records/s, roll_bytes {c['roll_bytes']}, start {c['start_records']} records in {c['start_segments']} segments\n")
+        settle = f", settle {c['settle_ms']} ms" if c.get("settle_ms", "0") != "0" else ""
+        print(f"### {mode}: {keys} appends{settle}, {c['callers']} callers, {c['rounds']} rounds, interval {c['interval_us']} µs, offered {c['offered_records_per_second']} records/s, roll_bytes {c['roll_bytes']}, start {c['start_records']} records in {c['start_segments']} segments\n")
         print("| Side | Run | Records/s | p50 ms | p99 ms | p999 ms | Max ms | Full | Segments | Open ms | Max RSS KiB |")
         print("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
         for side in ["before", "after"]:

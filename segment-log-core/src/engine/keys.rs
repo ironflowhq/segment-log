@@ -1,10 +1,15 @@
 use super::*;
 use survey::ReadOnly;
+mod log_filter;
+pub(crate) use log_filter::Mode as LogFilterMode;
+use log_filter::{Builder, LogFilter};
 
 pub(super) struct Keys {
     hash: KeyHash,
     active: BTreeMap<Vec<u8>, ActiveKey>,
-    sealed: Vec<SealedKeys>,
+    sealed: Vec<Arc<SealedKeys>>,
+    log: Option<Arc<LogFilter>>,
+    builder: Option<Builder>,
 }
 
 /// A staged key's position is the current group's frame position, which no durable frame has.
@@ -251,8 +256,34 @@ impl Keys {
         Self {
             hash,
             active,
-            sealed,
+            sealed: sealed.into_iter().map(Arc::new).collect(),
+            log: None,
+            builder: None,
         }
+    }
+
+    /// Starts the log key filter's build over the sealed segments known now (ADR 0051).
+    pub(super) fn start_building(&mut self, view: &View, mode: LogFilterMode) {
+        self.builder = Builder::start(
+            mode,
+            view.storage.clone(),
+            view.dir.clone(),
+            self.sealed.clone(),
+        );
+        self.refresh();
+    }
+
+    /// Takes the builder's newest filter. Any filter it hands over gives the same answers, so the
+    /// writer takes it whenever it is between lookups.
+    pub(super) fn refresh(&mut self) {
+        if let Some(filter) = self.builder.as_mut().and_then(Builder::ready) {
+            self.log = Some(filter);
+        }
+    }
+
+    /// A poisoned writer looks up no key again, so its builder has nothing left to serve.
+    pub(super) fn stop_building(&mut self) {
+        self.builder = None;
     }
 
     pub(super) fn stage(&mut self, submit: &Submit, position: u64, first: usize) {
@@ -285,8 +316,13 @@ impl Keys {
     }
 
     pub(super) fn roll(&mut self, sealed: SealedKeys) {
+        let sealed = Arc::new(sealed);
+        if let Some(builder) = &mut self.builder {
+            builder.rolled(sealed.clone());
+        }
         self.sealed.push(sealed);
         self.active.clear();
+        self.refresh();
     }
 
     #[cfg(test)]
@@ -299,6 +335,8 @@ impl Keys {
                 .map(|s| u64::from(s.filter.count()))
                 .sum(),
             active_keys: self.active.len(),
+            log_filter_bytes: self.log.as_ref().map_or(0, |log| log.memory_bytes()),
+            log_filter_covered: self.log.as_ref().map_or(0, |log| log.covered()),
         }
     }
 
@@ -369,15 +407,24 @@ impl Keys {
             return Ok(None);
         }
         let hash = self.hash.of(key);
+        // The log filter answers for the oldest segments it covers. A "no" there skips their
+        // segment filters, which a Bloom filter's lack of false negatives makes safe (ADR 0051).
+        let covered = self.log.as_ref().map_or(0, |log| log.covered());
+        let skip = if covered > 0 && !self.log.as_ref().unwrap().may_contain(hash) {
+            covered
+        } else {
+            0
+        };
+        let probed = &self.sealed[skip..];
         // Each probe below misses the caches, because the filters together are far larger, and
         // its early exit would take those misses one after another. Loading every filter's line
         // first lets the misses overlap. `black_box` keeps the loads, whose values nothing uses.
         std::hint::black_box(
-            self.sealed
+            probed
                 .iter()
                 .fold(0, |lines, segment| lines ^ segment.filter.touch(hash)),
         );
-        for segment in self.sealed.iter().rev() {
+        for segment in probed.iter().rev() {
             if segment.filter.may_contain(hash)
                 && let Some(original) = segment.find(
                     view.storage.as_ref(),
