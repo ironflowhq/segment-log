@@ -1,0 +1,13 @@
+FIXTURE keyed=0 records=24015000 roll_bytes=67108864 streams=1000 payload=256 key_bytes=0 record_entry_bytes=280 sealed_segments=100 min_records_per_sealed=240000 max_records_per_sealed=240000 sealed_bytes=6724388800 active_bytes=4200544 active_records=15000 active_keys=0 dir_bytes=6728589344
+FILTERS sealed_keys=0 expected_filter_bytes=0 filter_bytes_per_key=0.000 key_index_bytes=0
+OPEN run=1 cache=warm ns=19777784 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=2416 rss_after_kib=3772 page_cache_before_kib=311172 correctness_errors=0
+OPEN run=2 cache=warm ns=17803237 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=4044 rss_after_kib=4072 page_cache_before_kib=311172 correctness_errors=0
+OPEN run=3 cache=warm ns=17831233 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=4072 rss_after_kib=4072 page_cache_before_kib=311172 correctness_errors=0
+OPEN run=4 cache=warm ns=17979680 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=4072 rss_after_kib=4072 page_cache_before_kib=311172 correctness_errors=0
+OPEN run=5 cache=warm ns=18644854 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=4072 rss_after_kib=4072 page_cache_before_kib=311232 correctness_errors=0
+OPEN run=6 cache=warm ns=18107923 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=4072 rss_after_kib=4072 page_cache_before_kib=311232 correctness_errors=0
+OPEN run=7 cache=warm ns=18705207 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=4072 rss_after_kib=4072 page_cache_before_kib=311232 correctness_errors=0
+OPEN run=8 cache=warm ns=17912529 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=4072 rss_after_kib=4076 page_cache_before_kib=311232 correctness_errors=0
+OPEN run=9 cache=warm ns=19108348 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=4076 rss_after_kib=4076 page_cache_before_kib=311240 correctness_errors=0
+OPEN run=10 cache=warm ns=19094762 watermark=24015000 heap_retained_bytes=479934 heap_peak_bytes=803480 rss_before_kib=4076 rss_after_kib=4076 page_cache_before_kib=311232 correctness_errors=0
+OPEN_SUMMARY cache=warm runs=10 min_ns=17803237 p50_ns=18107923 max_ns=19777784 target_ns=50000000 correctness_errors=0

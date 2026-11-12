@@ -1,0 +1,54 @@
+name: M4 evidence capture
+# Captures the M4 gate measurements on one hosted Linux runner: open time cold and warm with every
+# record keyed, key-cache memory, and keyed append throughput and p99 latency beside the M3 code
+# (ADR 0048). Dispatch it, or put the `m4-evidence` label on a pull request to measure its head.
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Commit or ref of the M3 code to measure as "before"
+        required: false
+        default: 0ffc77259ade423091eea503b282f28bf674745c
+      head:
+        description: Commit or ref to measure as "after" (default is the dispatched ref)
+        required: false
+  pull_request:
+    types: [labeled]
+
+# A repeated pull request event replaces the run still in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+jobs:
+  linux:
+    name: Linux open, memory and append capture
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'm4-evidence' }}
+    timeout-minutes: 150
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends time
+      # The fixtures, about 20 GB, go to the runner's local disk under /mnt, not to the workspace.
+      # Cold opens drop the page cache through passwordless sudo.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          scripts/m4-evidence.sh "$RUNNER_TEMP/m4-evidence" "$HEAD" "$BASE"
+        env:
+          BASE: ${{ inputs.base || '0ffc77259ade423091eea503b282f28bf674745c' }}
+          HEAD: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
+          SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: m4-evidence-linux
+          path: ${{ runner.temp }}/m4-evidence
+          retention-days: 3
+          compression-level: 9
