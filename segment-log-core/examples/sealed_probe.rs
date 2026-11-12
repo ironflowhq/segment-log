@@ -8,6 +8,8 @@
 //!
 //! Unkeyed appends on a keyed fixture keep the history and drop only the key lookup, so the
 //! gap to keyed appends on the same code is what the lookup costs (ADR 0051).
+//! `SEALED_PROBE_SETTLE_MS` waits that long between open and the first append, so that work
+//! that open starts in the background has finished before the timed run.
 //!
 //! A fixture is a directory holding `log/` and `manifest`, the facts that `open` checks.
 use segment_log_core::*;
@@ -430,8 +432,10 @@ fn append(fixture: &Path, keyed: bool, callers: u64, rounds: u64, interval: Opti
     let log_dir = fixture.join("log");
     let start_segments = Segments::scan(&log_dir).files.len();
     let options = manifest.options();
+    let settle_ms: u64 =
+        std::env::var("SEALED_PROBE_SETTLE_MS").map_or(0, |ms| ms.parse().unwrap());
     println!(
-        "CONFIG callers={callers} rounds={rounds} payload={PAYLOAD} appends_keyed={} key_bytes={} records_per_submit=1 interval_us={} offered_records_per_second={} linger_ns={} group_byte_cap={} roll_bytes={} queue_capacity={} pending_byte_budget={} start_records={} start_segments={start_segments}",
+        "CONFIG callers={callers} rounds={rounds} payload={PAYLOAD} appends_keyed={} key_bytes={} settle_ms={settle_ms} records_per_submit=1 interval_us={} offered_records_per_second={} linger_ns={} group_byte_cap={} roll_bytes={} queue_capacity={} pending_byte_budget={} start_records={} start_segments={start_segments}",
         u8::from(keyed),
         if keyed { 16 } else { 0 },
         interval.map_or_else(|| "closed_loop".into(), |i| i.as_micros().to_string()),
@@ -450,6 +454,7 @@ fn append(fixture: &Path, keyed: bool, callers: u64, rounds: u64, interval: Opti
     let log = SegmentLog::open(&log_dir, options).unwrap();
     println!("OPEN ns={}", started.elapsed().as_nanos());
     assert_eq!(log.watermark(), manifest.records);
+    thread::sleep(Duration::from_millis(settle_ms));
     let start = Barrier::new(callers as usize + 1);
     static EPOCH: OnceLock<Instant> = OnceLock::new();
     let results: Vec<Caller> = thread::scope(|scope| {
