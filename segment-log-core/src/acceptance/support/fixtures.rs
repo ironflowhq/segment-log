@@ -4,6 +4,7 @@ use std::{path::Path, sync::Arc, time::Duration};
 pub(crate) const SEG: &str = "/log/00000000000000000000.seg";
 /// Any segment file of the log, for a held, injected or counted call of a group.
 pub(crate) const ANY_SEG: &str = "/log/*.seg";
+pub(crate) const EVERY_GROUP: u64 = crate::codec::HEADER_LEN as u64 + 1;
 pub(crate) fn options() -> Options {
     Options {
         linger: Duration::ZERO,

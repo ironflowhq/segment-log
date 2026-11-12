@@ -502,9 +502,9 @@ fn patched(mut segment: Vec<u8>, back: usize, at: usize, bytes: &[u8]) -> Vec<u8
 
 const LOCATOR: usize = 1;
 const FOOTER: usize = 2;
-const EPOCH: usize = 12;
-const NEXT: usize = 20;
-const POSITION: usize = 32;
+const EPOCH_AT: usize = crate::codec::ENVELOPE_LEN + 4;
+const NEXT_AT: usize = crate::codec::ENVELOPE_LEN + 12;
+const POSITION_AT: usize = crate::codec::ENVELOPE_LEN + crate::codec::BODY_HEADER_LEN;
 
 fn sealed(base: u64, epoch: u64, payloads: &[&[u8]]) -> Vec<u8> {
     raw::rolled(
@@ -532,7 +532,10 @@ fn a_summary_that_disagrees_with_the_next_base_is_a_gap() {
         for (segments, gap) in [
             (
                 vec![
-                    (0, patched(first.clone(), FOOTER, NEXT, &3u64.to_le_bytes())),
+                    (
+                        0,
+                        patched(first.clone(), FOOTER, NEXT_AT, &3u64.to_le_bytes()),
+                    ),
                     (2, sealed(2, 1, &[b"c"])),
                     (3, newest.clone()),
                 ],
@@ -542,7 +545,7 @@ fn a_summary_that_disagrees_with_the_next_base_is_a_gap() {
                 vec![
                     (
                         0,
-                        patched(first.clone(), LOCATOR, NEXT, &3u64.to_le_bytes()),
+                        patched(first.clone(), LOCATOR, NEXT_AT, &3u64.to_le_bytes()),
                     ),
                     (2, sealed(2, 1, &[b"c"])),
                     (3, newest.clone()),
@@ -597,34 +600,34 @@ fn a_bad_summary_in_a_segment_with_a_successor_fails_open_and_changes_nothing() 
                 patched(
                     first.clone(),
                     LOCATOR,
-                    POSITION,
+                    POSITION_AT,
                     &at.filter_at.to_le_bytes(),
                 ),
                 at.filter_at,
             ),
             (
-                patched(first.clone(), LOCATOR, POSITION, &1u64.to_le_bytes()),
+                patched(first.clone(), LOCATOR, POSITION_AT, &1u64.to_le_bytes()),
                 at.locator_at,
             ),
             (
-                patched(first.clone(), FOOTER, POSITION, &[0; 8]),
+                patched(first.clone(), FOOTER, POSITION_AT, &[0; 8]),
                 at.footer_at,
             ),
             (
                 patched(
                     first.clone(),
                     FOOTER,
-                    POSITION,
+                    POSITION_AT,
                     &(at.filter_at + 8).to_le_bytes(),
                 ),
                 at.filter_at + 8,
             ),
             (
-                patched(first.clone(), FOOTER, EPOCH, &1u64.to_le_bytes()),
+                patched(first.clone(), FOOTER, EPOCH_AT, &1u64.to_le_bytes()),
                 at.footer_at,
             ),
             (
-                patched(first.clone(), LOCATOR, EPOCH, &1u64.to_le_bytes()),
+                patched(first.clone(), LOCATOR, EPOCH_AT, &1u64.to_le_bytes()),
                 at.locator_at,
             ),
         ] {
