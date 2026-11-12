@@ -97,9 +97,8 @@ impl KeyHash {
 }
 
 impl SealedKeys {
-    /// Loads the filters on up to one thread per processor. Each thread loads a run of
-    /// consecutive segments in order and stops at its first failure, so the first failure in
-    /// segment order is the answer that a load in one thread would give.
+    /// Runs are consecutive and joined in order, so the first failure in segment order is the
+    /// error that a load in one thread would give.
     pub(super) fn load_all(
         storage: &ReadOnly<'_>,
         dir: &Path,
