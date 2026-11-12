@@ -17,6 +17,16 @@ pub(crate) enum Purpose {
     Lookup,
     Roll,
 }
+impl Purpose {
+    #[cfg(test)]
+    pub(crate) const ALL: [Purpose; 5] = [
+        Purpose::Open,
+        Purpose::Group,
+        Purpose::Recovery,
+        Purpose::Lookup,
+        Purpose::Roll,
+    ];
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Op {
     CreateDir,
