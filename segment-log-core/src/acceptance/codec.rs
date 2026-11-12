@@ -272,7 +272,7 @@ fn checksums_and_frames_match_the_bitwise_fixture() {
     }
 }
 
-/// Given byte strings and group frames of every length across eight eight-byte checksum steps
+/// Given byte strings and group frames of every length across four sixteen-byte checksum steps
 /// When CRC32C and complete frames are compared with the independent bitwise fixture
 /// Then every checksum and every durable byte match, whatever remainder follows the last step
 /// Cases: CODEC-GROUP
@@ -306,7 +306,31 @@ fn checksums_match_the_bitwise_fixture_at_every_step_remainder() {
     }
 }
 
-/// Given valid group frames whose lengths take every remainder of an eight-byte checksum step
+/// Given byte strings and group frames that end on, before and after each 4 KiB checksum round
+/// When CRC32C and complete frames are compared with the independent bitwise fixture
+/// Then every checksum and every durable byte match, however many rounds the bytes fill
+/// Cases: CODEC-GROUP
+#[test]
+fn checksums_match_the_bitwise_fixture_across_checksum_rounds() {
+    let bytes: Vec<u8> = (0..4 * 4096 + 1040)
+        .map(|n| ((n * 151 + n / 4093 + 13) % 256) as u8)
+        .collect();
+    for rounds in 0..=4 {
+        for remainder in [0, 1, 15, 16, 17, 1023, 1024, 1025, 4095] {
+            let len = (rounds * 4096 + remainder).min(bytes.len());
+            let payload = &bytes[..len];
+            assert_eq!(codec::crc32c(payload), raw::crc(payload), "length {len}");
+            let expected = raw::group(3, 5, &[payload]);
+            assert_eq!(
+                group_of(codec::decode(&raw_log(), &expected).unwrap()).entries[0].payload,
+                payload,
+                "length {len}"
+            );
+        }
+    }
+}
+
+/// Given valid group frames whose lengths take every remainder of an eight-byte word
 /// When any one bit of a frame changes
 /// Then the decoder rejects the frame: a size change by its length, any other change by its checksum
 /// Cases: CODEC-GROUP
