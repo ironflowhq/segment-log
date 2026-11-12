@@ -21,7 +21,7 @@ fn two_groups(sim: &Sim) -> SegmentLog {
 
 fn roll_steps(sim: &Sim) -> [Call; 4] {
     let (log_id, _, _) = raw::header_fields(&raw::segments(sim)[0].1);
-    let header = raw::with_log_id(raw::header(0, 2, 1), log_id);
+    let header = raw::with_log_id(raw::header(raw::VERSION, 2, 1), log_id);
     [
         Call::new(raw::segment(2), Purpose::Roll, Op::Create),
         Call::new(raw::segment(2), Purpose::Roll, Op::Write(0, header)),
@@ -30,8 +30,8 @@ fn roll_steps(sim: &Sim) -> [Call; 4] {
     ]
 }
 
-fn first_group_steps() -> [Call; 2] {
-    let frame = raw::group(1, 2, &[b"c", b"d"]);
+fn first_group_steps(sim: &Sim) -> [Call; 2] {
+    let frame = raw::group_in(&raw::log_id(sim), 1, 2, &[b"c", b"d"]);
     [
         Call::new(raw::segment(2), Purpose::Group, Op::Append(frame)),
         Call::new(raw::segment(2), Purpose::Group, Op::SyncData),
@@ -78,7 +78,7 @@ fn a_crash_at_each_step_of_a_roll_keeps_every_acknowledged_record() {
                     let sealed = raw::segments(&sim);
                     let call = roll_steps(&sim)
                         .into_iter()
-                        .chain(first_group_steps())
+                        .chain(first_group_steps(&sim))
                         .nth(step)
                         .unwrap();
                     let hold = sim.hold(call);

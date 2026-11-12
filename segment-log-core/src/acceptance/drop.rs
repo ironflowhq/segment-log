@@ -39,24 +39,27 @@ fn positions(answer: Committed, offsets: &[u64], retry: bool) {
 fn flush() -> Call {
     Call::new(ANY_SEG, Purpose::Group, Op::SyncData)
 }
-fn group_write(base: u64, streams: &[u8]) -> Call {
+fn group_write(sim: &Sim, base: u64, streams: &[u8]) -> Call {
     Call::new(
         ANY_SEG,
         Purpose::Group,
         Op::Append(
-            crate::codec::encode(&crate::codec::Group {
-                epoch: 1,
-                base_offset: base,
-                entries: streams
-                    .iter()
-                    .map(|s| crate::codec::Entry {
-                        stream: std::slice::from_ref(s),
-                        key: Some(std::slice::from_ref(s)),
-                        payload: b"",
-                        revision: 0,
-                    })
-                    .collect(),
-            })
+            crate::codec::encode_group(
+                &log_id(sim),
+                &crate::codec::Group {
+                    epoch: 1,
+                    base_offset: base,
+                    entries: streams
+                        .iter()
+                        .map(|s| crate::codec::Entry {
+                            stream: std::slice::from_ref(s),
+                            key: Some(std::slice::from_ref(s)),
+                            payload: b"",
+                            revision: 0,
+                        })
+                        .collect(),
+                },
+            )
             .unwrap(),
         ),
     )
@@ -92,7 +95,7 @@ fn drop_holds_the_lock_until_its_drain_finishes() {
             let held = sim.hold(if at_flush {
                 flush()
             } else {
-                group_write(0, b"abc")
+                group_write(&sim, 0, b"abc")
             });
             let first = send(&log, b"ab");
             let second = send(&log, b"c");
@@ -192,7 +195,7 @@ fn failure_after_drop_closes_admission_poisons_deferred_and_queued_work() {
             let next = sim.hold(if at_flush {
                 flush()
             } else {
-                group_write(1, b"ab")
+                group_write(&sim, 1, b"ab")
             });
             held.release(None);
             positions(boot.wait().unwrap(), &[0], false);

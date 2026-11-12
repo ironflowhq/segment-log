@@ -95,16 +95,19 @@ fn unknown_regrouped_retry_can_have_only_a_subset_of_matches() {
                     record(b"s", Some(b"k"), b"one"),
                 ],
             );
-            let bytes = crate::codec::encode(&crate::codec::Group {
-                epoch: 1,
-                base_offset: 1,
-                entries: vec![crate::codec::Entry {
-                    stream: b"t",
-                    key: Some(b"t"),
-                    payload: b"two",
-                    revision: 0,
-                }],
-            })
+            let bytes = crate::codec::encode_group(
+                &log_id(&sim),
+                &crate::codec::Group {
+                    epoch: 1,
+                    base_offset: 1,
+                    entries: vec![crate::codec::Entry {
+                        stream: b"t",
+                        key: Some(b"t"),
+                        payload: b"two",
+                        revision: 0,
+                    }],
+                },
+            )
             .unwrap();
             let next = sim.hold(Call::new(ANY_SEG, Purpose::Group, Op::Append(bytes)));
             held.release(None);

@@ -575,6 +575,7 @@ fn written_keys(dir: &Path) -> Vec<Vec<Vec<u8>>> {
 
 fn segment_keys(bytes: &[u8]) -> Vec<Vec<Vec<u8>>> {
     let mut frames = vec![];
+    let log_id = bytes.get(8..24).unwrap_or_default();
     let mut at = 64;
     while at + 8 <= bytes.len() {
         let len = u32::from_le_bytes(bytes[at..at + 4].try_into().unwrap()) as usize;
@@ -583,7 +584,7 @@ fn segment_keys(bytes: &[u8]) -> Vec<Vec<Vec<u8>>> {
         }
         let body = &bytes[at + 8..at + 8 + len];
         let mut crc = u32::MAX;
-        for b in bytes[at..at + 4].iter().chain(body) {
+        for b in log_id.iter().chain(&bytes[at..at + 4]).chain(body) {
             crc ^= u32::from(*b);
             for _ in 0..8 {
                 crc = (crc >> 1) ^ if crc & 1 == 1 { 0x82f63b78 } else { 0 };

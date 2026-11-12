@@ -11,7 +11,7 @@ use std::{path::Path, sync::Arc};
 fn handmade_invalid_tails_stop_at_the_first_bad_frame() {
     bounded(|| {
         let prefix = [
-            raw::header(0, 0, 1),
+            raw::header(raw::VERSION, 0, 1),
             raw::group(2, 0, &[b"first", b"second"]),
         ]
         .concat();
@@ -56,6 +56,53 @@ fn handmade_invalid_tails_stop_at_the_first_bad_frame() {
     });
 }
 
+/// Given valid groups followed by a frame of a closing kind, an unknown kind, or another log's
+/// group, each with a checksum that is right for its writer, and then a valid group
+/// When recovery scans the active segment
+/// Then the frame ends the valid prefix, because this scan reads only group frames
+/// And recovery truncates there and keeps the records before it
+/// Cases: RECOVERY-FIXTURES, ORACLE-2, ORACLE-5
+#[test]
+fn frames_that_are_not_groups_of_this_log_end_the_valid_prefix() {
+    bounded(|| {
+        let prefix = [
+            raw::header(raw::VERSION, 0, 1),
+            raw::group(2, 0, &[b"first", b"second"]),
+        ]
+        .concat();
+        let header = |kind: u8, count: u32| {
+            let mut body = vec![kind, 0, 0, 0];
+            body.extend(2u64.to_le_bytes());
+            body.extend(2u64.to_le_bytes());
+            body.extend(count.to_le_bytes());
+            body
+        };
+        let mut locator = header(4, 0);
+        locator.extend(64u64.to_le_bytes());
+        let mut footer = header(2, 0);
+        footer.extend(0u64.to_le_bytes());
+        let id = raw::LOG_ID;
+        for tail in [
+            raw::frame(&id, &header(3, 0)),
+            raw::frame(&id, &locator),
+            raw::frame(&id, &footer),
+            raw::frame(&id, &header(5, 0)),
+            raw::frame(&id, &header(6, 0)),
+            raw::frame(&id, &header(7, 0)),
+            raw::group_in(&[9; 16], 2, 2, &[b"another log"]),
+        ] {
+            let sim = Sim::new(205);
+            raw::install(
+                &sim,
+                [prefix.clone(), tail, raw::group(3, 2, &[b"must not skip"])].concat(),
+            );
+            let log = open(&sim);
+            assert_eq!(log.watermark(), 2);
+            assert_eq!(raw::bytes(&sim), prefix);
+        }
+    });
+}
+
 /// Given a segment longer than 64 bytes with a damaged header, or a valid header with a mismatched filename
 /// When open validates the header
 /// Then it refuses without deleting or changing any bytes
@@ -63,26 +110,32 @@ fn handmade_invalid_tails_stop_at_the_first_bad_frame() {
 #[test]
 fn invalid_complete_headers_are_never_repaired() {
     bounded(|| {
-        let mut bad_crc = raw::header(0, 0, 1);
+        let mut bad_crc = raw::header(raw::VERSION, 0, 1);
         bad_crc[60] ^= 1;
-        let mut bad_magic = raw::header(0, 0, 1);
+        let mut bad_magic = raw::header(raw::VERSION, 0, 1);
         bad_magic[0] ^= 1;
-        for (header, extra) in [
-            (bad_crc, 17),
-            (bad_magic, 17),
-            (raw::header(0, 1, 1), 17),
-            (raw::header(1, 0, 1), 0),
-            (raw::header(1, 0, 1), 17),
+        for (header, extra, version) in [
+            (bad_crc, 17, None),
+            (bad_magic, 17, None),
+            (raw::header(raw::VERSION, 1, 1), 17, None),
+            (raw::header(0, 0, 1), 0, Some(0)),
+            (raw::header(0, 0, 1), 17, Some(0)),
+            (
+                raw::header(raw::VERSION + 1, 0, 1),
+                0,
+                Some(raw::VERSION + 1),
+            ),
         ] {
             let sim = Sim::new(202);
             raw::install(&sim, [header.clone(), vec![0; extra]].concat());
             let image = sim.image();
             let result =
                 SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone()));
-            if header[4] == 1 {
-                assert!(matches!(result, Err(OpenError::UnsupportedVersion(1))));
-            } else {
-                assert!(matches!(result, Err(OpenError::Corrupt { .. })));
+            match version {
+                Some(version) => assert!(
+                    matches!(result, Err(OpenError::UnsupportedVersion(found)) if found == version)
+                ),
+                None => assert!(matches!(result, Err(OpenError::Corrupt { .. }))),
             }
             assert_eq!(sim.image(), image);
         }
@@ -119,7 +172,7 @@ fn recovery_rewrites_a_readable_group_after_failed_writeback() {
         let sim = Sim::new(204);
         drop(open(&sim));
         let payload = vec![0xa5; 5000];
-        let suffix = raw::group(1, 0, &[&payload, b"last"]);
+        let suffix = raw::group_in(&raw::log_id(&sim), 1, 0, &[&payload, b"last"]);
         sim.call(Call::new(SEG, Purpose::Group, Op::Append(suffix)))
             .unwrap();
         sim.inject(

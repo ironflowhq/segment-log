@@ -15,20 +15,36 @@ pub(crate) fn crc(bytes: &[u8]) -> u32 {
     }
     state ^ u32::MAX
 }
+pub(crate) const LOG_ID: [u8; 16] = [7; 16];
+pub(crate) const VERSION: u16 = 1;
 pub(crate) fn header(version: u16, base: u64, epoch: u64) -> Vec<u8> {
     assert_eq!(crc(b"123456789"), 0xe3069283);
     let mut bytes = vec![0; 64];
     bytes[..4].copy_from_slice(b"SGLG");
     bytes[4..6].copy_from_slice(&version.to_le_bytes());
     bytes[6..8].copy_from_slice(&64u16.to_le_bytes());
-    bytes[8..24].fill(7);
+    bytes[8..24].copy_from_slice(&LOG_ID);
     bytes[24..32].copy_from_slice(&base.to_le_bytes());
     bytes[32..40].copy_from_slice(&epoch.to_le_bytes());
     let checksum = crc(&bytes[..60]);
     bytes[60..64].copy_from_slice(&checksum.to_le_bytes());
     bytes
 }
-pub(crate) fn group(epoch: u64, base: u64, payloads: &[&[u8]]) -> Vec<u8> {
+pub(crate) fn frame_crc(log_id: &[u8; 16], frame: &[u8]) -> u32 {
+    crc(&[log_id.as_slice(), &frame[..4], &frame[8..]].concat())
+}
+pub(crate) fn rechecksum(log_id: &[u8; 16], frame: &mut [u8]) {
+    let checksum = frame_crc(log_id, frame);
+    frame[4..8].copy_from_slice(&checksum.to_le_bytes());
+}
+pub(crate) fn frame(log_id: &[u8; 16], body: &[u8]) -> Vec<u8> {
+    let mut frame = (body.len() as u32).to_le_bytes().to_vec();
+    frame.extend([0; 4]);
+    frame.extend(body);
+    rechecksum(log_id, &mut frame);
+    frame
+}
+pub(crate) fn group_in(log_id: &[u8; 16], epoch: u64, base: u64, payloads: &[&[u8]]) -> Vec<u8> {
     let mut body = vec![1, 0, 0, 0];
     body.extend(epoch.to_le_bytes());
     body.extend(base.to_le_bytes());
@@ -41,12 +57,13 @@ pub(crate) fn group(epoch: u64, base: u64, payloads: &[&[u8]]) -> Vec<u8> {
         body.push(b's');
         body.extend(*payload);
     }
-    let mut input = (body.len() as u32).to_le_bytes().to_vec();
-    input.extend(&body);
-    let mut frame = input[..4].to_vec();
-    frame.extend(crc(&input).to_le_bytes());
-    frame.extend(body);
-    frame
+    frame(log_id, &body)
+}
+pub(crate) fn group(epoch: u64, base: u64, payloads: &[&[u8]]) -> Vec<u8> {
+    group_in(&LOG_ID, epoch, base, payloads)
+}
+pub(crate) fn log_id(sim: &Sim) -> [u8; 16] {
+    header_fields(&segments(sim)[0].1).0
 }
 pub(crate) fn install(sim: &Sim, bytes: Vec<u8>) {
     drop(open(sim));

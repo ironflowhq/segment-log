@@ -189,7 +189,11 @@ fn invalid_options_precede_locks_missing_ancestors_and_permissions() {
 fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
     bounded(|| {
         use super::support::raw;
-        let valid = [raw::header(0, 0, 1), raw::group(1, 0, &[b"kept"])].concat();
+        let valid = [
+            raw::header(raw::VERSION, 0, 1),
+            raw::group(1, 0, &[b"kept"]),
+        ]
+        .concat();
         let trailing = [valid.clone(), vec![0; 33]].concat();
         for (segments, corrupt) in [
             (vec![(0, valid.clone()), (1, vec![])], None),
@@ -198,13 +202,16 @@ fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
                 vec![(0, valid.clone()), (1, trailing.clone())],
                 Some((1, 0)),
             ),
-            (vec![(0, vec![]), (1, raw::header(0, 1, 1))], Some((0, 0))),
             (
-                vec![(0, vec![0; 63]), (1, raw::header(0, 1, 1))],
+                vec![(0, vec![]), (1, raw::header(raw::VERSION, 1, 1))],
                 Some((0, 0)),
             ),
             (
-                vec![(0, trailing), (1, raw::header(0, 1, 1))],
+                vec![(0, vec![0; 63]), (1, raw::header(raw::VERSION, 1, 1))],
+                Some((0, 0)),
+            ),
+            (
+                vec![(0, trailing), (1, raw::header(raw::VERSION, 1, 1))],
                 Some((0, valid.len() as u64)),
             ),
         ] {

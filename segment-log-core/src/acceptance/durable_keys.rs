@@ -287,8 +287,7 @@ fn malformed_lookup_frame_is_not_a_cached_success() {
         send(&log, vec![original()]).wait().unwrap();
         let mut bytes = raw::bytes(&sim)[64..].to_vec();
         bytes[9] = 1;
-        let input = [&bytes[..4], &bytes[8..]].concat();
-        bytes[4..8].copy_from_slice(&raw::crc(&input).to_le_bytes());
+        raw::rechecksum(&raw::log_id(&sim), &mut bytes);
         sim.call(Call::new(SEG, Purpose::Open, Op::Write(64, bytes)))
             .unwrap();
         let answer = send(&log, vec![original()]).wait();
@@ -738,16 +737,19 @@ fn recovery_does_not_index_keys_from_a_discarded_frame() {
         let sim = Sim::new(415);
         let log = open(&sim);
         send(&log, vec![original()]).wait().unwrap();
-        let bytes = crate::codec::encode(&crate::codec::Group {
-            epoch: 1,
-            base_offset: 1,
-            entries: vec![crate::codec::Entry {
-                stream: b"t",
-                key: Some(b"t"),
-                payload: b"two",
-                revision: 0,
-            }],
-        })
+        let bytes = crate::codec::encode_group(
+            &log_id(&sim),
+            &crate::codec::Group {
+                epoch: 1,
+                base_offset: 1,
+                entries: vec![crate::codec::Entry {
+                    stream: b"t",
+                    key: Some(b"t"),
+                    payload: b"two",
+                    revision: 0,
+                }],
+            },
+        )
         .unwrap();
         sim.inject(
             Call::new(ANY_SEG, Purpose::Group, Op::Append(bytes)),
@@ -786,20 +788,23 @@ fn lookup_compares_stored_stream_and_payload_not_cached_contents() {
             let sim = Sim::new(416);
             let log = open(&sim);
             send(&log, vec![original()]).wait().unwrap();
-            let bytes = crate::codec::encode(&crate::codec::Group {
-                epoch: 1,
-                base_offset: 0,
-                entries: vec![crate::codec::Entry {
-                    stream: if change_stream { b"t" } else { b"s" },
-                    key: Some(b"k"),
-                    payload: if change_stream {
-                        b"original"
-                    } else {
-                        b"modified"
-                    },
-                    revision: 0,
-                }],
-            })
+            let bytes = crate::codec::encode_group(
+                &log_id(&sim),
+                &crate::codec::Group {
+                    epoch: 1,
+                    base_offset: 0,
+                    entries: vec![crate::codec::Entry {
+                        stream: if change_stream { b"t" } else { b"s" },
+                        key: Some(b"k"),
+                        payload: if change_stream {
+                            b"original"
+                        } else {
+                            b"modified"
+                        },
+                        revision: 0,
+                    }],
+                },
+            )
             .unwrap();
             sim.call(Call::new(SEG, Purpose::Open, Op::Write(64, bytes)))
                 .unwrap();
@@ -879,8 +884,7 @@ fn malformed_lookup_also_aborts_the_unwritten_group() {
         let len = u32::from_le_bytes(all_bytes[64..68].try_into().unwrap()) as usize + 8;
         let mut frame = all_bytes[64..64 + len].to_vec();
         frame[9] = 1;
-        let input = [&frame[..4], &frame[8..]].concat();
-        frame[4..8].copy_from_slice(&raw::crc(&input).to_le_bytes());
+        raw::rechecksum(&raw::log_id(&sim), &mut frame);
         sim.call(Call::new(SEG, Purpose::Open, Op::Write(64, frame)))
             .unwrap();
         held_lookup.release(None);
@@ -958,8 +962,7 @@ fn a_short_valid_lookup_frame_cannot_ack_or_reject_a_retry() {
             bytes.truncate(bytes.len() - 3);
             let body_length = (bytes.len() - 8) as u32;
             bytes[..4].copy_from_slice(&body_length.to_le_bytes());
-            let checksum = raw::crc(&[&bytes[..4], &bytes[8..]].concat());
-            bytes[4..8].copy_from_slice(&checksum.to_le_bytes());
+            raw::rechecksum(&raw::log_id(&sim), &mut bytes);
             let end = 64 + bytes.len() as u64;
             sim.call(Call::new(SEG, Purpose::Open, Op::Write(64, bytes)))
                 .unwrap();
