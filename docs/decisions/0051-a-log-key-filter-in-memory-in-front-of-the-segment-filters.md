@@ -1,7 +1,7 @@
 ---
 id: "0051"
 title: "A log key filter kept only in memory, in front of the segment key filters"
-status: proposed
+status: accepted
 date: 2026-11-12
 deciders: [Altug Sahin]
 supersedes: null
@@ -89,13 +89,13 @@ Before this ADR is accepted, the `m4-evidence` workflow measures on the same com
 1. Keyed and unkeyed closed-loop appends on the keyed PRD fixture, on the M3 and the M4 code. If M4 is also slow without keys, the lookup is not the main cost, and this decision is wrong. **Done** at `15dd21d`: the lookup is the cost (see Context).
 2. Keyed against unkeyed closed-loop appends with option C, at 100 sealed segments and at 1,000. The second fixture uses a smaller `roll_bytes` and keeps about the same number of keys, so that it fits on the runner's disk.
 
-Option C passes if keyed closed-loop throughput is within 10% of unkeyed at both sizes, with open time, `ORACLE-13` and the key-cache memory formula still met.
+Option C passes if keyed closed-loop throughput is within 10% of unkeyed at both sizes, with open time, `ORACLE-13` and the key-cache memory formula still met. The owner replaced this criterion on 2026-11-12, after the result below.
 
 **Result of step 2** ([evidence](../evidence/issue70/README.md#with-the-log-key-filter-adr-0051), pull request 75):
 
-- The criterion above fails: keyed/unkeyed is 0.64 to 0.73. It also fails for M3, whose exact map gives 0.66 to 0.68 in the same captures. So keyed against unkeyed measures more than the lookup: the key bytes in each record, the active segment's key map and, on M4, the key index that each roll writes. The criterion was the wrong measure, and it needs the owner's decision.
+- The criterion above fails: keyed/unkeyed is 0.64 to 0.73. It also fails for M3, whose exact map gives 0.66 to 0.68 in the same captures. So keyed against unkeyed measures more than the lookup: the key bytes in each record, the active segment's key map and, on M4, the key index that each roll writes. The criterion was the wrong measure.
 - The lookup cost (keyed minus unkeyed time per record) no longer grows with history. With the builder finished, it is 2.52 µs at 100 sealed segments and 1.18 µs at 1,000, against 2.13 µs and 1.31 µs for M3's exact map. Keyed closed-loop throughput is 0.896 and 0.933 of M3 at the two sizes, with overlapping ranges. Before the filter it was 0.605 and 0.140.
-- Proposed replacement: the lookup cost does not grow from 100 to 1,000 sealed segments and stays within 1 µs of M3's, and keyed closed-loop throughput is within 10% of M3, once the build has finished. These captures meet it.
+- **Replacement criterion, accepted by the owner on 2026-11-12:** the lookup cost does not grow from 100 to 1,000 sealed segments and stays within 1 µs of M3's, and keyed closed-loop throughput is within 10% of M3, once the build has finished. These captures meet it, and the owner accepted this ADR on that result.
 - Warm open time is unchanged: 38.6 ms at 100 sealed segments, as at the M4 gate. `ORACLE-13` and `KEY-MEMORY` pass.
 
 ## Consequences

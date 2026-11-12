@@ -79,7 +79,7 @@ The rules that follow from it:
 
 ## Consequences
 
-- [ADR 0051](0051-a-log-key-filter-in-memory-in-front-of-the-segment-filters.md), proposed, puts a log key filter kept only in memory in front of the segment filters, and adds it to the memory in rule 5.
+- [ADR 0051](0051-a-log-key-filter-in-memory-in-front-of-the-segment-filters.md) puts a log key filter kept only in memory in front of the segment filters, and adds it to the memory in rule 5.
 - PRD open item 1 is resolved. M4 can start.
 - R21 and ORACLE-13 change. From each sealed segment except the newest, open reads the header, the locator, the footer and the key filter frame.
 - format.md gains the key filter frame, the key index frame, the footer field for their position, and the hash. They stay provisional until M5. The sentence "The footer does not hold idempotency keys" stays true. The keys stay out of the footer.
