@@ -1,14 +1,14 @@
 ---
 id: "0017"
 title: "Footer locator, last log offset, and footer size"
-status: proposed
+status: accepted
 date: 2026-11-07
-deciders: []
+deciders: [Altug Sahin]
 supersedes: null
 superseded_by: null
 tags: [format, recovery]
 touches: [docs/architecture/format.md]
-enforced_by: none
+enforced_by: test
 ---
 
 # 0017. Footer locator, last log offset, and footer size
@@ -72,7 +72,7 @@ This extends the footer contents in ADR 0011. The layout and the limits are in [
 
 ## Enforcement
 
-None yet. From M4, oracle check 13 in [testing.md](../architecture/testing.md#the-oracle) will count the bytes that open reads. The early-roll test in [testing.md](../architecture/testing.md#property-and-unit-tests) will check that the footer stays inside one frame.
+The `ORACLE-13` scenario in `segment-log-core/src/acceptance/summary_open.rs` checks the exact reads of open, including the locator and the footer. The `ROLL-FOOTER` scenarios check that the writer rolls before a footer or a key index passes the frame limit.
 
 ## Revisit if
 

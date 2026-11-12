@@ -1,14 +1,14 @@
 ---
 id: "0016"
 title: "A read-only reader for sealed logs that takes no lock"
-status: proposed
+status: accepted
 date: 2026-11-07
-deciders: []
+deciders: [Altug Sahin]
 supersedes: null
 superseded_by: null
 tags: [api, read-path]
 touches: [docs/architecture/api.md]
-enforced_by: none
+enforced_by: test
 ---
 
 # 0016. A read-only reader for sealed logs that takes no lock
@@ -56,7 +56,7 @@ We will add a separate `LogReader` type for sealed logs only, with no lock and n
 
 ## Enforcement
 
-None yet. The `LogReader` tests in [testing.md](../architecture/testing.md#property-and-unit-tests) will open a reader on storage that refuses every write, open two readers at once, and expect `NotSealed` on an unsealed log.
+The `READER` scenarios in `segment-log-core/src/acceptance/seal/reader.rs` open a reader on storage that refuses every write, open two readers at once, and expect `NotSealed` on an unsealed log. `segment-log-core/tests/real_storage.rs` reads a sealed log back with `LogReader::open`.
 
 ## Revisit if
 

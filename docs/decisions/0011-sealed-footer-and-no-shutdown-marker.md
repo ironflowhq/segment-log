@@ -1,14 +1,14 @@
 ---
 id: "0011"
 title: "Sealed-segment footer, caches that the log can rebuild, and no clean-shutdown marker"
-status: proposed
+status: accepted
 date: 2026-11-07
-deciders: []
+deciders: [Altug Sahin]
 supersedes: null
 superseded_by: null
 tags: [format, recovery]
 touches: [docs/architecture/format.md]
-enforced_by: none
+enforced_by: test
 ---
 
 # 0011. Sealed-segment footer, caches that the log can rebuild, and no clean-shutdown marker
@@ -57,7 +57,7 @@ The layout is in [format.md](../architecture/format.md#footer-entry-m4).
 
 ## Enforcement
 
-None yet. Oracle check 12 in [testing.md](../architecture/testing.md#the-oracle) will check that every cache can be rebuilt. From M4, oracle check 13 will check that open reads only the summary of each sealed segment.
+The scenarios for `ORACLE-12` and `ORACLE-13` in `segment-log-core/src/acceptance/summary_open.rs` check that a reopen rebuilds every cache and that open reads only the summary of each sealed segment. The seal scenarios in `segment-log-core/src/acceptance/seal/` check the seal frame and its closing run.
 
 ## Revisit if
 
