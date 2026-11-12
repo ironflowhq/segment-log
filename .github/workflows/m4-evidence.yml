@@ -12,6 +12,14 @@ on:
       head:
         description: Commit or ref to measure as "after" (default is the dispatched ref)
         required: false
+      sealed:
+        description: Sealed segments in each fixture (a changed size is a named variant, ADR 0036)
+        required: false
+        default: "100"
+      roll_bytes:
+        description: Roll size of the fixtures, in bytes
+        required: false
+        default: "67108864"
   pull_request:
     types: [labeled]
 
@@ -45,6 +53,8 @@ jobs:
           BASE: ${{ inputs.base || '0ffc77259ade423091eea503b282f28bf674745c' }}
           HEAD: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
           SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
+          M4_SEALED: ${{ inputs.sealed || '100' }}
+          M4_ROLL_BYTES: ${{ inputs.roll_bytes || '67108864' }}
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:

@@ -10,7 +10,7 @@ Three files produce the report:
 
 ## Capture on a hosted runner
 
-Dispatch the `m4-evidence` workflow, or put the `m4-evidence` label on a pull request. The workflow measures the pull request's head, or the dispatched ref, against the M3 code at `0ffc772`. It uploads the `m4-evidence-linux` artifact, which GitHub keeps for 3 days. A capture writes about 20 GB of fixtures under `/mnt`. The job's time limit is 150 minutes. No full capture has run yet, so its real duration is unknown.
+Dispatch the `m4-evidence` workflow, or put the `m4-evidence` label on a pull request. A dispatch can set `sealed` and `roll_bytes` to measure a named variant. The workflow measures the pull request's head, or the dispatched ref, against the M3 code at `0ffc772`. It uploads the `m4-evidence-linux` artifact, which GitHub keeps for 3 days. A capture writes about 20 GB of fixtures under `/mnt`. The job's time limit is 150 minutes. No full capture has run yet, so its real duration is unknown.
 
 To capture on another Linux host, run this from the repository root:
 
@@ -38,7 +38,7 @@ The unkeyed fixture has the same roll size, stream count and stop rule, with no 
 
 The M3 code cannot gain new code, and its in-library benchmark has no setting for the roll size or for sealed history. The script therefore copies this checkout's `sealed_probe.rs` into a worktree of each side and builds it there. Both binaries run the same workload source. Only the library under it differs.
 
-Each side builds its own keyed fixture, because the M3 code does not read M4 key frames. Each run starts from that fixture. It hard-links the sealed segments, copies the active segment, then appends 1,000 callers × 1,000 rounds of keyed single-record submits. That is 1,000,000 new keys per run, which roll about four more segments. Every new key misses, so M4 asks each sealed segment's filter, newest first, and M3 asks its in-memory map. The closed loop measures throughput. The paced run, at 20 ms per caller, offers 50,000 records/s and measures the latency target ([ADR 0045](../../decisions/0045-latency-target-is-measured-at-a-paced-rate.md)). Runs alternate, before then after, for 5 pairs of each mode, after one warm-up per side. At the end, the script checks that no run changed a fixture file.
+Each side builds its own keyed fixture, because the M3 code does not read M4 key frames. Each run starts from that fixture. It hard-links the sealed segments, copies the active segment, then appends 1,000 callers × 1,000 rounds of keyed single-record submits. That is 1,000,000 new keys per run, which roll about four more segments. Every new key misses, so M4 asks each sealed segment's filter, newest first, and M3 asks its in-memory map. The closed loop measures throughput. A second closed loop, `closed-unkeyed`, sends the same records without keys to the same keyed fixture. It skips the key lookup and keeps everything else, so the gap between the two closed loops on one side is what the lookup costs on that side ([ADR 0051](../../decisions/0051-a-log-key-filter-in-memory-in-front-of-the-segment-filters.md)). The paced run, at 20 ms per caller, offers 50,000 records/s and measures the latency target ([ADR 0045](../../decisions/0045-latency-target-is-measured-at-a-paced-rate.md)). Runs alternate, before then after, for 5 pairs of each of the three modes, after one warm-up per side. At the end, the script checks that no run changed a fixture file.
 
 ## Output files
 
@@ -50,8 +50,8 @@ Each side builds its own keyed fixture, because the M3 code does not read M4 key
 | `open/<keyed\|unkeyed>-<cold\|warm>.log` | One `OPEN` line for each run: time, watermark, heap held after open, peak heap, resident set before and after, page cache before, check failures. Then `OPEN_SUMMARY` with min, p50 and max |
 | `open/cold-not-applicable.txt` | The reason that the cold runs did not run, if they did not |
 | `warmup-<side>.log` | The unreported warm-up run of each side |
-| `append/<closed\|paced>/<side>-<n>.log` | `CONFIG` with every active option, `OPEN` time, `APPEND` throughput, refusals and check failures, `METRIC append_ns` with p50, p99 and p999, then `/usr/bin/time -v` output |
-| `append/<closed\|paced>/load-<side>-<n>.txt` | Load and processor idleness before each run |
+| `append/<closed\|closed-unkeyed\|paced>/<side>-<n>.log` | `CONFIG` with every active option, `OPEN` time, `APPEND` throughput, refusals and check failures, `METRIC append_ns` with p50, p99 and p999, then `/usr/bin/time -v` output |
+| `append/<closed\|closed-unkeyed\|paced>/load-<side>-<n>.txt` | Load and processor idleness before each run |
 | `fixture-<side>-keyed-changes.txt` | Empty when no run changed that fixture |
 | `summary.md` | Tables of all of the above, with the median and range for each side |
 | `exit-status.txt` | The script's exit status |

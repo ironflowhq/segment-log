@@ -99,9 +99,12 @@ def memory(root):
 
 
 def appends(root):
-    print("## Keyed appends, M3 (before) and M4 (after)\n")
-    for mode in ["closed", "paced"]:
+    print("## Appends, M3 (before) and M4 (after)\n")
+    medians = {}
+    for mode in ["closed", "closed-unkeyed", "paced"]:
         directory = root / "append" / mode
+        if not directory.exists():
+            continue
         runs = {"before": [], "after": []}
         for path in sorted(directory.glob("*-*.log")):
             side, run = path.stem.split("-")
@@ -110,7 +113,8 @@ def appends(root):
             assert m["count"] == a["records"], path
             runs[side].append((int(run), a, m, c, o, max_rss_kib(path)))
         c = runs["after"][0][3]
-        print(f"### {mode}: {c['callers']} callers, {c['rounds']} rounds, interval {c['interval_us']} µs, offered {c['offered_records_per_second']} records/s, roll_bytes {c['roll_bytes']}, start {c['start_records']} records in {c['start_segments']} segments\n")
+        keys = "keyed" if c.get("appends_keyed", "1") == "1" else "unkeyed"
+        print(f"### {mode}: {keys} appends, {c['callers']} callers, {c['rounds']} rounds, interval {c['interval_us']} µs, offered {c['offered_records_per_second']} records/s, roll_bytes {c['roll_bytes']}, start {c['start_records']} records in {c['start_segments']} segments\n")
         print("| Side | Run | Records/s | p50 ms | p99 ms | p999 ms | Max ms | Full | Segments | Open ms | Max RSS KiB |")
         print("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
         for side in ["before", "after"]:
@@ -123,6 +127,16 @@ def appends(root):
             overlap = max(min(before), min(after)) <= min(max(before), max(after))
             ratio = statistics.median(after) / statistics.median(before)
             print(f"{label}: before {spread(before)}; after {spread(after)}; after/before medians {ratio:.3f}; ranges overlap: {'yes' if overlap else 'no'}.\n")
+            if label == "Records/s":
+                medians[mode] = {"before": statistics.median(before), "after": statistics.median(after)}
+    if "closed" in medians and "closed-unkeyed" in medians:
+        print("### Key lookup cost on each side\n")
+        print("Both modes append to the same keyed fixture. Unkeyed appends skip the key lookup, so the gap is what the lookup costs on that side (ADR 0051).\n")
+        for side in ["before", "after"]:
+            keyed, unkeyed = medians["closed"][side], medians["closed-unkeyed"][side]
+            extra_us = (1 / keyed - 1 / unkeyed) * 1e6
+            print(f"- {side}: keyed/unkeyed medians {keyed / unkeyed:.3f}; keyed minus unkeyed time per record {extra_us:.2f} µs.")
+        print()
 
 
 def main(root):
