@@ -49,17 +49,24 @@ pub(crate) fn assert_record(log: &SegmentLog) {
     assert_eq!((head.offset, head.revision), (0, 0));
 }
 
-pub(crate) fn first_frame() -> Vec<u8> {
-    crate::codec::encode(&crate::codec::Group {
-        epoch: 1,
-        base_offset: 0,
-        entries: vec![crate::codec::Entry {
-            stream: b"s",
-            key: Some(b"key"),
-            payload: &[0, 255, 7],
-            revision: 0,
-        }],
-    })
+pub(crate) fn log_id(sim: &Sim) -> crate::codec::LogId {
+    crate::codec::LogId::new(super::raw::log_id(sim))
+}
+
+pub(crate) fn first_frame(sim: &Sim) -> Vec<u8> {
+    crate::codec::encode_group(
+        &log_id(sim),
+        &crate::codec::Group {
+            epoch: 1,
+            base_offset: 0,
+            entries: vec![crate::codec::Entry {
+                stream: b"s",
+                key: Some(b"key"),
+                payload: &[0, 255, 7],
+                revision: 0,
+            }],
+        },
+    )
     .unwrap()
 }
 
@@ -72,23 +79,26 @@ pub(crate) fn epoch_fixture(
     use crate::storage::{Call, Op, Purpose, Storage};
     drop(open(sim));
     let mut bytes = crate::codec::encode_header(&crate::codec::Header {
-        log_id: [7; 16],
+        log_id: super::raw::LOG_ID,
         base_offset: 0,
         epoch: header_epoch,
     })
     .to_vec();
     if let Some(epoch) = group_epoch {
         bytes.extend(
-            crate::codec::encode(&crate::codec::Group {
-                epoch,
-                base_offset: 0,
-                entries: vec![crate::codec::Entry {
-                    stream: b"s",
-                    key: None,
-                    payload: b"",
-                    revision: 0,
-                }],
-            })
+            crate::codec::encode_group(
+                &crate::codec::LogId::new(super::raw::LOG_ID),
+                &crate::codec::Group {
+                    epoch,
+                    base_offset: 0,
+                    entries: vec![crate::codec::Entry {
+                        stream: b"s",
+                        key: None,
+                        payload: b"",
+                        revision: 0,
+                    }],
+                },
+            )
             .unwrap(),
         );
     }

@@ -53,15 +53,20 @@ fn failed_flush_hides_the_group_and_stops_the_writer() {
 #[test]
 fn failed_writes_never_ack_and_recovery_keeps_only_complete_frames() {
     bounded(|| {
+        let first_frame_len = {
+            let sim = Sim::new(11);
+            drop(open(&sim));
+            first_frame(&sim).len()
+        };
         for (fault, kept) in [
             (storage::sim::Fault::NoSpace, false),
             (storage::sim::Fault::Partial(12), false),
-            (storage::sim::Fault::Partial(first_frame().len()), true),
+            (storage::sim::Fault::Partial(first_frame_len), true),
         ] {
             let sim = Sim::new(11);
             let log = open(&sim);
             sim.inject(
-                Call::new(ANY_SEG, Purpose::Group, Op::Append(first_frame())),
+                Call::new(ANY_SEG, Purpose::Group, Op::Append(first_frame(&sim))),
                 fault,
             );
             assert!(matches!(
@@ -127,7 +132,7 @@ fn flush() -> Call {
     Call::new(ANY_SEG, Purpose::Group, Op::SyncData)
 }
 
-fn frame(base: u64, records: &[NewRecord]) -> Vec<u8> {
+fn frame(log_id: &[u8; 16], base: u64, records: &[NewRecord]) -> Vec<u8> {
     let mut body = vec![1, 0, 0, 0];
     body.extend(1u64.to_le_bytes());
     body.extend(base.to_le_bytes());
@@ -142,9 +147,7 @@ fn frame(base: u64, records: &[NewRecord]) -> Vec<u8> {
         body.extend(key);
         body.extend(&r.payload);
     }
-    let len = (body.len() as u32).to_le_bytes();
-    let checksum = raw::crc(&[len.as_slice(), &body].concat());
-    [len.as_slice(), &checksum.to_le_bytes(), &body].concat()
+    raw::frame(log_id, &body)
 }
 
 /// Given acknowledged history, two new atomic originals, exact and regrouped waiters,
@@ -168,23 +171,27 @@ fn poisoned_groups_recover_durably_before_unknown_keys_are_retried() {
                     let sim = Sim::new(701);
                     let payload = vec![0xa7; 5000];
                     let originals = || vec![keyed(b'a', &payload), keyed(b'b', &payload)];
-                    let group = frame(
-                        1,
-                        &[
-                            keyed(b'a', &payload),
-                            keyed(b'b', &payload),
-                            keyed(b'c', b"third"),
-                        ],
-                    );
+                    let group = |log_id: &[u8; 16]| {
+                        frame(
+                            log_id,
+                            1,
+                            &[
+                                keyed(b'a', &payload),
+                                keyed(b'b', &payload),
+                                keyed(b'c', b"third"),
+                            ],
+                        )
+                    };
                     let log = SegmentLog::with_storage(
                         Path::new("/log"),
                         Options {
-                            group_byte_cap: group.len() - 8,
+                            group_byte_cap: group(&[0; 16]).len() - 8,
                             ..options()
                         },
                         Arc::new(sim.clone()),
                     )
                     .unwrap();
+                    let group = group(&raw::log_id(&sim));
                     let held = sim.hold(flush());
                     let boot = send(&log, vec![keyed(b'z', b"durable")]);
                     held.wait();
@@ -363,7 +370,7 @@ fn short_valid_lookup_aborts_buffered_originals_and_waiters() {
             let sim = Sim::new(702);
             let log = open(&sim);
             let originals = || vec![keyed(b'z', b"original"), keyed(b'y', b"longtail")];
-            let original_frame = frame(0, &originals());
+            let original_frame = frame(&raw::log_id(&sim), 0, &originals());
             let held = sim.hold(flush());
             let boot = send(&log, originals());
             held.wait();
@@ -384,6 +391,7 @@ fn short_valid_lookup_aborts_buffered_originals_and_waiters() {
                 .iter()
                 .all(|p| p.probe().is_none());
             let shorter = frame(
+                &raw::log_id(&sim),
                 0,
                 &[
                     keyed(
@@ -473,7 +481,7 @@ fn lookup_failure_without_new_records_poisons_both_kinds_of_queued_work() {
             let sim = Sim::new(705);
             let log = open(&sim);
             let original = || vec![keyed(b'z', b"original")];
-            let original_frame = frame(0, &original());
+            let original_frame = frame(&raw::log_id(&sim), 0, &original());
             send(&log, original()).wait().unwrap();
             let history = [stored(b"z", Some(b"z"), b"original", 0, 0)];
             assert_records(&log.read(0, 10).unwrap(), &history);
@@ -494,12 +502,11 @@ fn lookup_failure_without_new_records_poisons_both_kinds_of_queued_work() {
                     let mut damaged = if fault_index == 3 {
                         original_frame.clone()
                     } else {
-                        frame(0, &[keyed(b'z', b"short")])
+                        frame(&raw::log_id(&sim), 0, &[keyed(b'z', b"short")])
                     };
                     if fault_index == 3 {
                         damaged[9] = 1;
-                        let crc = raw::crc(&[&damaged[..4], &damaged[8..]].concat());
-                        damaged[4..8].copy_from_slice(&crc.to_le_bytes());
+                        raw::rechecksum(&raw::log_id(&sim), &mut damaged);
                     }
                     sim.call(Call::new(
                         SEG,

@@ -1,5 +1,17 @@
-use super::support::bounded;
-use crate::codec::{self, Entry, Group};
+mod closing;
+
+use super::support::{bounded, raw};
+use crate::codec::{self, Entry, Group, LogId};
+const CHECK_ID: [u8; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+fn log() -> LogId {
+    LogId::new(CHECK_ID)
+}
+fn raw_log() -> LogId {
+    LogId::new(raw::LOG_ID)
+}
+fn group_of(frame: codec::Frame<'_>) -> Group<'_> {
+    frame.into_group().expect("a group frame")
+}
 /// Given the Castagnoli check string and a keyed binary group
 /// When they are encoded and decoded
 /// Then the check value and hand-built bytes match and all fields round trip
@@ -18,19 +30,18 @@ fn group_bytes_follow_the_provisional_format() {
                 revision: 4,
             }],
         };
-        let bytes = codec::encode(&group).unwrap();
+        let bytes = codec::encode_group(&log(), &group).unwrap();
         let expected = [
-            44, 0, 0, 0, 0x48, 0x3b, 0x11, 0xa2, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0,
+            44, 0, 0, 0, 0xf0, 0x85, 0xc8, 0x87, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0,
             0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 2, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, b's', b'k', 0,
             255,
         ];
         assert_eq!(bytes, expected);
-        assert_eq!(codec::decode(&bytes).unwrap(), group);
+        assert_eq!(group_of(codec::decode(&log(), &bytes).unwrap()), group);
     });
 }
 fn checksum(bytes: &mut [u8]) {
-    let input: Vec<_> = bytes[..4].iter().chain(&bytes[8..]).copied().collect();
-    bytes[4..8].copy_from_slice(&codec::crc32c(&input).to_le_bytes());
+    raw::rechecksum(&CHECK_ID, bytes);
 }
 /// Given a valid group frame and malformed variants of each envelope and entry field
 /// When the plain byte decoder reads them
@@ -50,12 +61,13 @@ fn malformed_groups_are_rejected_without_panicking() {
                 revision: 0,
             }],
         };
-        let valid = codec::encode(&group).unwrap();
+        let valid = codec::encode_group(&log(), &group).unwrap();
         for end in 0..valid.len() {
-            assert!(codec::decode(&valid[..end]).is_err());
+            assert!(codec::decode(&log(), &valid[..end]).is_err());
         }
         for (pos, value, error) in [
-            (8, 2, Error::Kind),
+            (8, 0, Error::Kind),
+            (8, 7, Error::Kind),
             (9, 1, Error::Reserved),
             (10, 1, Error::Reserved),
             (11, 1, Error::Reserved),
@@ -69,15 +81,15 @@ fn malformed_groups_are_rejected_without_panicking() {
             let mut bytes = valid.clone();
             bytes[pos] = value;
             checksum(&mut bytes);
-            assert_eq!(codec::decode(&bytes), Err(error), "byte {pos}");
+            assert_eq!(codec::decode(&log(), &bytes), Err(error), "byte {pos}");
         }
         let mut bytes = valid.clone();
         bytes[20..28].fill(255);
         checksum(&mut bytes);
-        assert_eq!(codec::decode(&bytes), Err(Error::Offset));
+        assert_eq!(codec::decode(&log(), &bytes), Err(Error::Offset));
         let mut bytes = valid.clone();
         bytes[12] ^= 1;
-        assert_eq!(codec::decode(&bytes), Err(Error::Crc));
+        assert_eq!(codec::decode(&log(), &bytes), Err(Error::Crc));
         for len in [
             0u32,
             23,
@@ -87,14 +99,14 @@ fn malformed_groups_are_rejected_without_panicking() {
         ] {
             let mut bytes = valid.clone();
             bytes[..4].copy_from_slice(&len.to_le_bytes());
-            assert_eq!(codec::decode(&bytes), Err(Error::Length));
+            assert_eq!(codec::decode(&log(), &bytes), Err(Error::Length));
         }
         let mut extra = valid.clone();
         extra.push(0);
         let len = (extra.len() - 8) as u32;
         extra[..4].copy_from_slice(&len.to_le_bytes());
         checksum(&mut extra);
-        assert_eq!(codec::decode(&extra), Err(Error::Length));
+        assert_eq!(codec::decode(&log(), &extra), Err(Error::Length));
     });
 }
 /// Given binary records with absent and maximum length keys and stream ids
@@ -127,7 +139,8 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
                     },
                 ],
             };
-            assert_eq!(codec::decode(&codec::encode(&g).unwrap()).unwrap(), g);
+            let bytes = codec::encode_group(&log(), &g).unwrap();
+            assert_eq!(group_of(codec::decode(&log(), &bytes).unwrap()), g);
         }
         for (stream, key, error) in [
             (&[][..], None, Error::Stream),
@@ -145,14 +158,14 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
                     revision: 0,
                 }],
             };
-            assert_eq!(codec::encode(&g), Err(error));
+            assert_eq!(codec::encode_group(&log(), &g), Err(error));
         }
         let mut g = Group {
             epoch: 0,
             base_offset: 0,
             entries: vec![],
         };
-        assert_eq!(codec::encode(&g), Err(Error::Count));
+        assert_eq!(codec::encode_group(&log(), &g), Err(Error::Count));
         let payload = vec![0; 8 * 1024 * 1024 - 41];
         g.entries.push(Entry {
             stream: b"s",
@@ -160,14 +173,17 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
             payload: &payload,
             revision: 0,
         });
-        assert_eq!(codec::encode(&g).unwrap().len(), 8 * 1024 * 1024 + 8);
+        assert_eq!(
+            codec::encode_group(&log(), &g).unwrap().len(),
+            8 * 1024 * 1024 + 8
+        );
         g.entries.push(Entry {
             stream: b"x",
             key: None,
             payload: &[],
             revision: 0,
         });
-        assert_eq!(codec::encode(&g), Err(Error::Length));
+        assert_eq!(codec::encode_group(&log(), &g), Err(Error::Length));
     });
 }
 
@@ -179,8 +195,8 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
 fn header_bytes_and_validation_follow_the_format() {
     bounded(|| {
         let mut expected = [0; 64];
-        expected[..8].copy_from_slice(b"SGLG\0\0\x40\0");
-        expected[8..24].copy_from_slice(&[7; 16]);
+        expected[..8].copy_from_slice(b"SGLG\x01\0\x40\0");
+        expected[8..24].copy_from_slice(&raw::LOG_ID);
         expected[24] = 3;
         expected[32] = 2;
         fn crc(bytes: &[u8]) -> u32 {
@@ -199,7 +215,7 @@ fn header_bytes_and_validation_follow_the_format() {
         let sum = crc(&expected[..60]);
         expected[60..].copy_from_slice(&sum.to_le_bytes());
         let header = codec::Header {
-            log_id: [7; 16],
+            log_id: raw::LOG_ID,
             base_offset: 3,
             epoch: 2,
         };
@@ -226,7 +242,6 @@ fn header_bytes_and_validation_follow_the_format() {
 /// Cases: CODEC-GROUP
 #[test]
 fn checksums_and_frames_match_the_bitwise_fixture() {
-    use super::support::raw;
     assert_eq!(codec::crc32c(&[]), 0);
     for word in 0..=u16::MAX {
         let bytes = word.to_le_bytes();
@@ -249,8 +264,11 @@ fn checksums_and_frames_match_the_bitwise_fixture() {
             }],
         };
         let expected = raw::group(3, 5, &[bytes]);
-        assert_eq!(codec::encode(&group).unwrap(), expected);
-        assert_eq!(codec::decode(&expected).unwrap(), group);
+        assert_eq!(codec::encode_group(&raw_log(), &group).unwrap(), expected);
+        assert_eq!(
+            group_of(codec::decode(&raw_log(), &expected).unwrap()),
+            group
+        );
     }
 }
 
@@ -260,7 +278,6 @@ fn checksums_and_frames_match_the_bitwise_fixture() {
 /// Cases: CODEC-GROUP
 #[test]
 fn checksums_match_the_bitwise_fixture_at_every_step_remainder() {
-    use super::support::raw;
     let bytes: Vec<u8> = (0..64).map(|n| ((n * 151 + 13) % 256) as u8).collect();
     for len in 0..=bytes.len() {
         let payload = &bytes[..len];
@@ -276,8 +293,16 @@ fn checksums_match_the_bitwise_fixture_at_every_step_remainder() {
             }],
         };
         let expected = raw::group(3, 5, &[payload]);
-        assert_eq!(codec::encode(&group).unwrap(), expected, "length {len}");
-        assert_eq!(codec::decode(&expected).unwrap(), group, "length {len}");
+        assert_eq!(
+            codec::encode_group(&raw_log(), &group).unwrap(),
+            expected,
+            "length {len}"
+        );
+        assert_eq!(
+            group_of(codec::decode(&raw_log(), &expected).unwrap()),
+            group,
+            "length {len}"
+        );
     }
 }
 
@@ -287,17 +312,16 @@ fn checksums_match_the_bitwise_fixture_at_every_step_remainder() {
 /// Cases: CODEC-GROUP
 #[test]
 fn every_single_bit_change_in_a_frame_is_rejected() {
-    use super::support::raw;
     use codec::Error;
     for len in 0..8 {
         let frame = raw::group(3, 5, &[&[0xa5; 8][..len]]);
-        assert!(codec::decode(&frame).is_ok());
+        assert!(codec::decode(&raw_log(), &frame).is_ok());
         for bit in 0..frame.len() * 8 {
             let mut changed = frame.clone();
             changed[bit / 8] ^= 1 << (bit % 8);
             let expected = if bit < 32 { Error::Length } else { Error::Crc };
             assert_eq!(
-                codec::decode(&changed),
+                codec::decode(&raw_log(), &changed),
                 Err(expected),
                 "length {len} bit {bit}"
             );

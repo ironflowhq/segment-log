@@ -50,6 +50,7 @@ pub(super) fn workload(sim: &Sim, shared: &Arc<Mutex<Ledger>>, variant: usize) {
     oracle::predict(&boot, &mut predicted);
     let (boot_segment, boot_position, boot_frame) =
         crate::acceptance::support::raw::last_frame(sim);
+    let raw_log_id = crate::acceptance::support::raw::log_id(sim);
     let mut callers = vec![];
     let mut planned = vec![];
     for inputs in &originals {
@@ -124,7 +125,7 @@ pub(super) fn workload(sim: &Sim, shared: &Arc<Mutex<Ledger>>, variant: usize) {
         Call::new(
             ANY_SEG,
             Purpose::Group,
-            Op::Append(frame(2, &all, &predicted[..2])),
+            Op::Append(frame(&raw_log_id, 2, &all, &predicted[..2])),
         )
     } else {
         flush()
@@ -165,7 +166,7 @@ pub(super) fn workload(sim: &Sim, shared: &Arc<Mutex<Ledger>>, variant: usize) {
             next.release(None);
         }
         4 => next.release(Some(Fault::Partial(
-            1 + rng.pick(frame(2, &all, &predicted[..2]).len()),
+            1 + rng.pick(frame(&raw_log_id, 2, &all, &predicted[..2]).len()),
         ))),
         5 => next.release(Some(Fault::NoSpace)),
         6 => next.release(Some(Fault::error(std::io::ErrorKind::Other).unwrap())),

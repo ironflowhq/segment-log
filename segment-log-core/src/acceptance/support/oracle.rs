@@ -184,12 +184,12 @@ pub(crate) fn predict(inputs: &[Input], history: &mut Vec<Record>) -> Answer {
 }
 
 type Identity = (Vec<u8>, Option<Vec<u8>>, Vec<u8>);
-pub(crate) fn frame_inputs(frame: &[u8]) -> Vec<Identity> {
+pub(crate) fn frame_inputs(log_id: &[u8; 16], frame: &[u8]) -> Vec<Identity> {
     assert!(frame.len() >= 32);
     let length = u32::from_le_bytes(frame[..4].try_into().unwrap()) as usize;
     assert_eq!(length + 8, frame.len());
     assert_eq!(
-        raw::crc(&[&frame[..4], &frame[8..]].concat()),
+        raw::frame_crc(log_id, frame),
         u32::from_le_bytes(frame[4..8].try_into().unwrap())
     );
     assert_eq!(frame[8], 1);
@@ -213,11 +213,28 @@ pub(crate) fn frame_inputs(frame: &[u8]) -> Vec<Identity> {
     out
 }
 
+fn trace_log_id(trace: &[crate::storage::sim::Event]) -> [u8; 16] {
+    use crate::storage::{Op, sim::Event};
+    trace
+        .iter()
+        .find_map(|event| match event {
+            Event::Call(c, _, _) => match &c.op {
+                Op::Write(0, bytes) if bytes.len() == 64 && bytes.starts_with(b"SGLG") => {
+                    Some(bytes[8..24].try_into().unwrap())
+                }
+                _ => None,
+            },
+            _ => None,
+        })
+        .expect("the trace writes a segment header")
+}
+
 pub(crate) fn written(
     trace: &[crate::storage::sim::Event],
     requests: &[Request],
 ) -> (Vec<Record>, Vec<usize>) {
     use crate::storage::{Op, Purpose, sim::Event};
+    let log_id = trace_log_id(trace);
     let mut history = vec![];
     let mut ends = vec![0];
     let mut seen = BTreeSet::new();
@@ -229,7 +246,7 @@ pub(crate) fn written(
         if c.purpose != Purpose::Group {
             continue;
         }
-        let entries = frame_inputs(bytes);
+        let entries = frame_inputs(&log_id, bytes);
         let mut at = 0;
         while at < entries.len() {
             let (id, request) = requests
@@ -365,6 +382,7 @@ pub(crate) fn valid_length(segments: &[(u64, Vec<u8>)]) -> usize {
             "segment {base} starts where the one before ends"
         );
         epoch = epoch.max(u64::from_le_bytes(bytes[32..40].try_into().unwrap()));
+        let log_id: [u8; 16] = bytes[8..24].try_into().unwrap();
         let mut at = 64;
         while at + 32 <= bytes.len() {
             let len = u32::from_le_bytes(bytes[at..at + 4].try_into().unwrap()) as usize;
@@ -375,14 +393,14 @@ pub(crate) fn valid_length(segments: &[(u64, Vec<u8>)]) -> usize {
             let crc = u32::from_le_bytes(frame[4..8].try_into().unwrap());
             let next_epoch = u64::from_le_bytes(frame[12..20].try_into().unwrap());
             let frame_base = u64::from_le_bytes(frame[20..28].try_into().unwrap());
-            if raw::crc(&[&frame[..4], &frame[8..]].concat()) != crc
+            if raw::frame_crc(&log_id, frame) != crc
                 || frame[8..12] != [1, 0, 0, 0]
                 || next_epoch < epoch
                 || frame_base != count as u64
             {
                 break;
             }
-            count += frame_inputs(frame).len();
+            count += frame_inputs(&log_id, frame).len();
             epoch = next_epoch;
             at += 8 + len;
         }
@@ -472,6 +490,7 @@ pub(crate) fn flush_contract(
         Op, Purpose, Value,
         sim::{Event, Outcome},
     };
+    let log_id = trace_log_id(events);
     let mut attempted_end = 0;
     let mut durable_end = 0;
     let mut failed = false;
@@ -486,7 +505,7 @@ pub(crate) fn flush_contract(
                 }
                 match (c.purpose, &c.op, result) {
                     (Purpose::Group, Op::Append(bytes), _) => {
-                        attempted_end += frame_inputs(bytes).len()
+                        attempted_end += frame_inputs(&log_id, bytes).len()
                     }
                     (Purpose::Group, Op::SyncData, Outcome::Ok(Value::Unit)) => {
                         durable_end = attempted_end

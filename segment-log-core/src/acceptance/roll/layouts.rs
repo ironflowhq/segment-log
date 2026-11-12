@@ -9,7 +9,7 @@ fn try_open(sim: &Sim) -> Result<SegmentLog, OpenError> {
 
 fn sealed(base: u64, epoch: u64, payloads: &[&[u8]]) -> Vec<u8> {
     [
-        raw::header(0, base, epoch),
+        raw::header(raw::VERSION, base, epoch),
         raw::group(epoch, base, payloads),
     ]
     .concat()
@@ -45,13 +45,17 @@ fn recovery_reads_every_record_across_segments() {
     bounded(|| {
         let sim = Sim::new(301);
         let first = [
-            raw::header(0, 0, 1),
+            raw::header(raw::VERSION, 0, 1),
             raw::group(1, 0, &[b"a", b"b"]),
             raw::group(1, 2, &[b"c"]),
         ]
         .concat();
-        let second = [raw::header(0, 3, 1), raw::group(2, 3, &[b"d"])].concat();
-        let kept = [raw::header(0, 4, 2), raw::group(2, 4, &[b"e", b"f"])].concat();
+        let second = [raw::header(raw::VERSION, 3, 1), raw::group(2, 3, &[b"d"])].concat();
+        let kept = [
+            raw::header(raw::VERSION, 4, 2),
+            raw::group(2, 4, &[b"e", b"f"]),
+        ]
+        .concat();
         let torn = raw::group(2, 6, &[b"never acknowledged"]);
         raw::install_segments(
             &sim,
@@ -109,7 +113,10 @@ fn a_missing_segment_or_a_mismatched_base_is_a_gap() {
         for (segments, gap) in [
             (vec![(0, first.clone()), (5, sealed(5, 1, &[b"f"]))], 5),
             (vec![(0, first.clone()), (1, sealed(1, 1, &[b"b"]))], 1),
-            (vec![(0, first.clone()), (3, raw::header(0, 3, 1))], 3),
+            (
+                vec![(0, first.clone()), (3, raw::header(raw::VERSION, 3, 1))],
+                3,
+            ),
             (vec![(2, sealed(2, 1, &[b"c"]))], 2),
         ] {
             let sim = Sim::new(302);
@@ -148,7 +155,10 @@ fn a_segment_from_another_log_fails_open_without_deletion() {
                 (3, sealed(3, 1, &[b"d"])),
             ],
             vec![(0, first.clone()), (2, foreign(sealed(2, 1, &[b"c"])))],
-            vec![(0, first.clone()), (2, foreign(raw::header(0, 2, 1)))],
+            vec![
+                (0, first.clone()),
+                (2, foreign(raw::header(raw::VERSION, 2, 1))),
+            ],
         ] {
             let sim = Sim::new(303);
             raw::install_segments(&sim, &segments);
@@ -219,7 +229,7 @@ fn a_bad_frame_in_a_sealed_segment_fails_open_and_changes_nothing() {
 fn a_torn_newest_segment_no_longer_than_a_header_is_deleted() {
     bounded(|| {
         let first = sealed(0, 1, &[b"a", b"b"]);
-        let mut bad_crc = raw::header(0, 2, 1);
+        let mut bad_crc = raw::header(raw::VERSION, 2, 1);
         bad_crc[60] ^= 1;
         for torn in [vec![], vec![0; 1], vec![0; 63], vec![0; 64], bad_crc] {
             let sim = Sim::new(305);
@@ -257,14 +267,18 @@ fn a_torn_newest_segment_no_longer_than_a_header_is_deleted() {
 fn a_lower_epoch_than_the_segment_before_ends_the_log() {
     bounded(|| {
         let first = sealed(0, 3, &[b"a", b"b"]);
-        let stale = [raw::header(0, 2, 1), raw::group(2, 2, &[b"stale"])].concat();
+        let stale = [
+            raw::header(raw::VERSION, 2, 1),
+            raw::group(2, 2, &[b"stale"]),
+        ]
+        .concat();
         let sim = Sim::new(306);
         raw::install_segments(&sim, &[(0, first.clone()), (2, stale.clone())]);
         let log = open(&sim);
         assert_eq!(log.watermark(), 2);
         assert_eq!(
             raw::segments(&sim),
-            [(0, first.clone()), (2, raw::header(0, 2, 1))]
+            [(0, first.clone()), (2, raw::header(raw::VERSION, 2, 1))]
         );
         let position = next(&log, 1, b"c");
         assert_eq!((position.offset, position.revision), (2, 2));
@@ -283,7 +297,10 @@ fn a_lower_epoch_than_the_segment_before_ends_the_log() {
         }
 
         let sim = Sim::new(306);
-        raw::install_segments(&sim, &[(0, first), (2, stale), (3, raw::header(0, 3, 3))]);
+        raw::install_segments(
+            &sim,
+            &[(0, first), (2, stale), (3, raw::header(raw::VERSION, 3, 3))],
+        );
         let before = sim.image();
         assert!(matches!(
             try_open(&sim),

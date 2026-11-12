@@ -1,4 +1,4 @@
-use super::support::{bounded, fixtures::*};
+use super::support::{bounded, fixtures::*, raw};
 use crate::storage;
 use crate::storage::{Call, Op, Purpose};
 use crate::*;
@@ -115,26 +115,17 @@ fn unsupported_header_version_is_reported_without_repair() {
         use crate::storage::Storage;
         let sim = Sim::new(14);
         drop(open(&sim));
-        let mut bytes = crate::codec::encode_header(&crate::codec::Header {
-            log_id: [7; 16],
-            base_offset: 0,
-            epoch: 1,
-        });
-        bytes[4..6].copy_from_slice(&1u16.to_le_bytes());
-        let crc = crate::codec::crc32c(&bytes[..60]);
-        bytes[60..].copy_from_slice(&crc.to_le_bytes());
-        sim.call(Call::new(
-            SEG,
-            Purpose::Recovery,
-            Op::Write(0, bytes.to_vec()),
-        ))
-        .unwrap();
-        let image = sim.image();
-        assert!(matches!(
-            SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone())),
-            Err(OpenError::UnsupportedVersion(1))
-        ));
-        assert_eq!(sim.image(), image);
+        for version in [0, raw::VERSION + 1, u16::MAX] {
+            let bytes = raw::header(version, 0, 1);
+            sim.call(Call::new(SEG, Purpose::Recovery, Op::Write(0, bytes)))
+                .unwrap();
+            let image = sim.image();
+            assert!(matches!(
+                SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone())),
+                Err(OpenError::UnsupportedVersion(found)) if found == version
+            ));
+            assert_eq!(sim.image(), image);
+        }
     });
 }
 

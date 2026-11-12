@@ -1,7 +1,7 @@
 use super::*;
 pub(super) struct Recovered {
     pub active: Active,
-    pub log_id: [u8; 16],
+    pub log_id: codec::LogId,
     pub lock: Box<dyn Lock>,
     pub published: Published,
     pub epoch: u64,
@@ -14,7 +14,6 @@ impl From<io::Error> for OpenError {
 }
 
 /// What the scan has kept so far, across the segments it has read.
-#[derive(Default)]
 struct Kept {
     published: Published,
     keys: Keys,
@@ -104,14 +103,18 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         .iter()
         .map(|&base| header(storage, dir, base))
         .collect::<Result<Vec<_>, _>>()?;
-    let log_id = headers[0].0.log_id;
+    let log_id = codec::LogId::new(headers[0].0.log_id);
     for (&base, (header, _)) in bases.iter().zip(&headers) {
-        if header.log_id != log_id {
+        if header.log_id != *log_id.bytes() {
             return Err(OpenError::LogIdMismatch { segment: base });
         }
     }
 
-    let mut kept = Kept::default();
+    let mut kept = Kept {
+        published: Published::default(),
+        keys: Keys::new(log_id.clone()),
+        epoch: 0,
+    };
     let newest = *bases.last().unwrap();
     let mut tail = None;
     for (&base, (header, bytes)) in bases.iter().zip(headers) {
@@ -119,7 +122,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
             return Err(OpenError::Gap { segment: base });
         }
         kept.epoch = kept.epoch.max(header.epoch);
-        let scan = scan(storage, &segment_path(dir, base), base, &mut kept)?;
+        let scan = scan(storage, &log_id, &segment_path(dir, base), base, &mut kept)?;
         if base == newest {
             tail = Some((scan, bytes));
         } else if !scan.reached_end_of_file {
@@ -187,7 +190,7 @@ fn header(
         && codec::crc32c(&bytes[..60]) == u32::from_le_bytes(bytes[60..].try_into().unwrap())
     {
         let version = u16::from_le_bytes(bytes[4..6].try_into().unwrap());
-        if version != 0 {
+        if version != codec::FORMAT_VERSION {
             return Err(OpenError::UnsupportedVersion(version));
         }
     }
@@ -201,7 +204,13 @@ fn header(
 }
 
 /// Reads the frames of one segment into `kept` and stops at the first frame that is not valid.
-fn scan(storage: &dyn Storage, path: &Path, segment: u64, kept: &mut Kept) -> io::Result<Scan> {
+fn scan(
+    storage: &dyn Storage,
+    log: &codec::LogId,
+    path: &Path,
+    segment: u64,
+    kept: &mut Kept,
+) -> io::Result<Scan> {
     let mut position = codec::HEADER_LEN as u64;
     let mut last = None;
     loop {
@@ -215,7 +224,7 @@ fn scan(storage: &dyn Storage, path: &Path, segment: u64, kept: &mut Kept) -> io
         }
         let frame = if envelope.len() == 8 {
             let length = u32::from_le_bytes(envelope[..4].try_into().unwrap()) as usize;
-            if (24..=8 * 1024 * 1024).contains(&length) {
+            if (codec::BODY_HEADER_LEN..=codec::GROUP_BODY_LIMIT).contains(&length) {
                 Some(read_bytes(
                     storage,
                     path,
@@ -231,7 +240,8 @@ fn scan(storage: &dyn Storage, path: &Path, segment: u64, kept: &mut Kept) -> io
         };
         let valid = frame
             .as_deref()
-            .and_then(|b| codec::decode(b).ok())
+            .and_then(|b| codec::decode(log, b).ok())
+            .and_then(codec::Frame::into_group)
             .filter(|g| g.base_offset == kept.published.watermark && g.epoch >= kept.epoch);
         let Some(group) = valid else {
             return Ok(Scan {
