@@ -207,7 +207,7 @@ Keep earlier scenarios as regression tests, and extend them when a later milesto
 
 From M3, rerun the M1 scenarios through their fixtures with a small `roll_bytes`, so that retries, recovery and crash cases also run across rolls. From M4, extend them with sealing where it applies.
 
-`SEGMENT_LOG_TEST_ROLL_BYTES` sets the roll size of the shared fixtures, of the even trace seeds, and of the process and read-range tests. CI reruns `cargo test --workspace` with 65 bytes, so that every group after the first starts a segment, and with 256 bytes, so that a segment holds a few groups. A scenario names a group's held, injected or counted write or flush on `/log/*.seg`, and it finds a written frame in whichever segment holds it, so it does not depend on the active segment. A scenario sets its own roll size only when the file names or frame placement that it asserts follow from that size: the roll scenarios, the option boundaries and the odd trace seeds.
+`SEGMENT_LOG_TEST_ROLL_BYTES` sets the roll size of the shared fixtures, of the even trace seeds, of the process and read-range tests, and of the in-library append benchmark. CI reruns `cargo test --workspace` with 65 bytes, so that every group after the first starts a segment, and with 256 bytes, so that a segment holds a few groups. A scenario names a group's held, injected or counted write or flush on `/log/*.seg`, and it finds a written frame in whichever segment holds it, so it does not depend on the active segment. A scenario sets its own roll size only when the file names or frame placement that it asserts follow from that size: the roll scenarios, the option boundaries and the odd trace seeds.
 
 ## Boundary outcomes
 

@@ -210,10 +210,63 @@ fn distribution(name: &str, mut values: Vec<u64>) {
 fn due(epoch: Instant, interval: Duration, caller: usize, callers: usize, round: usize) -> Instant {
     epoch + interval.mul_f64(caller as f64 / callers as f64) + interval * round as u32
 }
-fn size(path: &Path) -> u64 {
-    fs::metadata(path.join("00000000000000000000.seg"))
+#[derive(PartialEq, Eq, Debug)]
+struct Files {
+    segments: usize,
+    bytes: u64,
+    /// The bytes of group frames: every file's size less its header, and less the closing run
+    /// of each segment but the newest.
+    group_bytes: u64,
+}
+fn files(path: &Path) -> Files {
+    let mut names: Vec<PathBuf> = fs::read_dir(path)
         .unwrap()
-        .len()
+        .map(|entry| entry.unwrap().path())
+        .filter(|name| name.extension().is_some_and(|ext| ext == "seg"))
+        .collect();
+    names.sort();
+    let mut files = Files {
+        segments: names.len(),
+        bytes: 0,
+        group_bytes: 0,
+    };
+    for (index, name) in names.iter().enumerate() {
+        let length = fs::metadata(name).unwrap().len();
+        let groups_end = if index + 1 == names.len() {
+            length
+        } else {
+            closing_run_start(name, length)
+        };
+        files.bytes += length;
+        files.group_bytes += groups_end - crate::codec::HEADER_LEN as u64;
+    }
+    files
+}
+/// Follows a sealed segment's locator to its footer, which names where the closing run starts.
+fn closing_run_start(name: &Path, length: u64) -> u64 {
+    use crate::codec::{self, Body, LOCATOR_LEN};
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = fs::File::open(name).unwrap();
+    let mut read = |position: u64, length: usize| {
+        let mut bytes = vec![0; length];
+        file.seek(SeekFrom::Start(position)).unwrap();
+        file.read_exact(&mut bytes).unwrap();
+        bytes
+    };
+    let header = codec::decode_header(&read(0, codec::HEADER_LEN)).unwrap();
+    let log_id = codec::LogId::new(header.log_id);
+    let locator_at = length - LOCATOR_LEN as u64;
+    let locator = read(locator_at, LOCATOR_LEN);
+    let Body::Locator { footer_position } = codec::decode(&log_id, &locator).unwrap().body else {
+        panic!("{name:?} does not end in a locator")
+    };
+    let footer = read(footer_position, (locator_at - footer_position) as usize);
+    let Body::Footer(footer) = codec::decode(&log_id, &footer).unwrap().body else {
+        panic!("{name:?}'s locator does not name a footer")
+    };
+    footer
+        .key_filter_position
+        .map_or(footer_position, u64::from)
 }
 
 /// Given literal keyed records, default options and actual storage
@@ -248,14 +301,18 @@ fn measured_appends_survive_reopen() {
         );
     }
     println!("DIAGNOSTIC measured_storage={measured} phase_cpu={profile_cpu}");
-    let options = Options::default();
+    let options = || Options {
+        roll_bytes: super::support::roll_size::roll_bytes(Options::default().roll_bytes),
+        ..Options::default()
+    };
+    let config = options();
     println!(
         "CONFIG callers={callers} rounds={rounds} payload=256 records_per_submit=1 seed=none_literal_formula linger_ns={} group_byte_cap={} roll_bytes={} queue_capacity={} pending_byte_budget={}",
-        options.linger.as_nanos(),
-        options.group_byte_cap,
-        options.roll_bytes,
-        options.queue_capacity,
-        options.pending_byte_budget
+        config.linger.as_nanos(),
+        config.group_byte_cap,
+        config.roll_bytes,
+        config.queue_capacity,
+        config.pending_byte_budget
     );
     let real = Real::default();
     let device = workspace.0.join("device");
@@ -287,11 +344,14 @@ fn measured_appends_survive_reopen() {
     } else {
         Arc::new(Real::default())
     };
-    let log = Arc::new(SegmentLog::with_storage(&path, Options::default(), backend).unwrap());
+    let log = Arc::new(SegmentLog::with_storage(&path, options(), backend).unwrap());
+    let opened = now.elapsed();
+    let initial = files(&path);
     println!(
-        "OPEN initial_ns={} records=0 segments=1 bytes={}",
-        now.elapsed().as_nanos(),
-        size(&path)
+        "OPEN initial_ns={} records=0 segments={} bytes={}",
+        opened.as_nanos(),
+        initial.segments,
+        initial.bytes
     );
     let (latencies, positions, refusals, admission_ns, elapsed) = thread::scope(|scope| {
         let (ready_tx, ready_rx) = mpsc::channel();
@@ -410,7 +470,10 @@ fn measured_appends_survive_reopen() {
             groups.iter().map(|g| g.0).sum::<u64>(),
             (callers * rounds) as u64
         );
-        assert_eq!(64 + groups.iter().map(|g| g.1).sum::<u64>(), size(&path));
+        assert_eq!(
+            groups.iter().map(|g| g.1).sum::<u64>(),
+            files(&path).group_bytes
+        );
     }
     println!(
         "APPEND records={} elapsed_ns={} records_per_second={:.3} full={} other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes={peak} admission_call_sum_ns={admission_ns}",
@@ -436,24 +499,29 @@ fn measured_appends_survive_reopen() {
             }
         }
     }
+    let before = files(&path);
     println!(
-        "END records={} segments=1 bytes={}",
+        "END records={} segments={} bytes={}",
         log.watermark(),
-        size(&path)
+        before.segments,
+        before.bytes
     );
     drop(log);
     crate::pipeline::report();
-    let before = size(&path);
     let now = Instant::now();
-    let log = SegmentLog::open(&path, Options::default()).unwrap();
+    let log = SegmentLog::open(&path, options()).unwrap();
     let open_ns = now.elapsed().as_nanos();
     validate(&log, &positions);
-    assert_eq!(before, size(&path));
+    let after = files(&path);
+    assert_eq!(before, after);
     println!(
-        "REOPEN ns={open_ns} start_records={} end_records={} start_segments=1 end_segments=1 start_bytes={before} end_bytes={} correctness_errors=0",
+        "REOPEN ns={open_ns} start_records={} end_records={} start_segments={} end_segments={} start_bytes={} end_bytes={} correctness_errors=0",
         callers * rounds,
         log.watermark(),
-        size(&path)
+        before.segments,
+        after.segments,
+        before.bytes,
+        after.bytes
     );
     drop(log);
 }
