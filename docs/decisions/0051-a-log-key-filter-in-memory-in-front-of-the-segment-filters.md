@@ -91,11 +91,18 @@ Before this ADR is accepted, the `m4-evidence` workflow measures on the same com
 
 Option C passes if keyed closed-loop throughput is within 10% of unkeyed at both sizes, with open time, `ORACLE-13` and the key-cache memory formula still met.
 
+**Result of step 2** ([evidence](../evidence/issue70/README.md#with-the-log-key-filter-adr-0051), pull request 75):
+
+- The criterion above fails: keyed/unkeyed is 0.64 to 0.73. It also fails for M3, whose exact map gives 0.66 to 0.68 in the same captures. So keyed against unkeyed measures more than the lookup: the key bytes in each record, the active segment's key map and, on M4, the key index that each roll writes. The criterion was the wrong measure, and it needs the owner's decision.
+- The lookup cost (keyed minus unkeyed time per record) no longer grows with history. With the builder finished, it is 2.52 µs at 100 sealed segments and 1.18 µs at 1,000, against 2.13 µs and 1.31 µs for M3's exact map. Keyed closed-loop throughput is 0.896 and 0.933 of M3 at the two sizes, with overlapping ranges. Before the filter it was 0.605 and 0.140.
+- Proposed replacement: the lookup cost does not grow from 100 to 1,000 sealed segments and stays within 1 µs of M3's, and keyed closed-loop throughput is within 10% of M3, once the build has finished. These captures meet it.
+- Warm open time is unchanged: 38.6 ms at 100 sealed segments, as at the M4 gate. `ORACLE-13` and `KEY-MEMORY` pass.
+
 ## Consequences
 
 - Up to 1,000 sealed segments, the writer cost per new key no longer depends on history. That becomes a stated operating limit.
 - ADR 0048 rule 5 changes. Key-cache memory adds the log filter: between 1 and 2 bytes for each sealed key.
-- Open time does not change. After open, the builder reads about 16 bytes per sealed key. Until it finishes, appends run at today's speed.
+- Open time does not change. After open, the builder reads about 16 bytes per sealed key. Until it finishes, lookups run at today's speed, and the builder competes with appends for processors: on a 4-processor runner, appends right after open ran at 0.82 to 0.85 of M3 against 0.90 to 0.93 after a 15 s wait. How long the build takes is not measured yet.
 - A second thread runs beside the writer. It never writes a file. Tests can run the build synchronously, so that simulated traces stay deterministic.
 - The issue no longer blocks M5. Issue #70 tracks the work.
 
