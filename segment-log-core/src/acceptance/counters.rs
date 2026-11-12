@@ -298,3 +298,34 @@ fn maximum_writer_epoch_can_commit_but_cannot_reopen() {
         }
     });
 }
+
+/// Given a writer at the maximum epoch that commits a record and seals the log
+/// When the log opens again, after each crash mode
+/// Then open succeeds, because a sealed log starts no writer and needs no next epoch
+/// And the record reads back, `append` gets `Sealed`, and `LogReader` reads the same record
+/// Cases: COUNTER-EXHAUSTION
+#[test]
+fn a_sealed_log_at_the_maximum_epoch_opens() {
+    bounded(|| {
+        for mode in [
+            crate::storage::sim::Crash::Kill,
+            crate::storage::sim::Crash::PowerLoss,
+            crate::storage::sim::Crash::PowerLossTorn,
+        ] {
+            let sim = Sim::new(47);
+            epoch_fixture(&sim, u64::MAX - 1, None, false);
+            let log = open(&sim);
+            assert_eq!(append(&log, b"s").wait().unwrap().records[0].offset, 0);
+            log.seal().unwrap();
+            sim.crash(mode, 47);
+            drop(log);
+            let log = open(&sim);
+            assert_record(&log);
+            assert!(matches!(log.append(submit(b"s")), Err(AppendError::Sealed)));
+            let records = log.read(0, 100).unwrap();
+            drop(log);
+            let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone())).unwrap();
+            assert_records(&reader.read(0, 100).unwrap(), &records);
+        }
+    });
+}

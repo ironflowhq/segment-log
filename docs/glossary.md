@@ -43,7 +43,7 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Accept queue** | The bounded queue between callers and the writer thread. Its count limit and the admission byte budget can each cause a capacity refusal with `Full`. |
 | **Full** | An immediate refusal when a size-eligible request lacks current queue capacity or admission byte budget. It retains no reservation and appends nothing. |
 | **Tail map** | The in-memory map from stream id to the stream's latest revision and log offset. A cache. |
-| **Frame table** | The in-memory list of one sealed segment's group frames, with their positions and offsets. The first `read` that needs the segment builds it. A cache. |
+| **Frame table** | The in-memory list of one sealed segment's group frames, with their positions and offsets. The first `read` that needs the segment builds it. The log keeps a [bounded number](architecture/api.md#opening-a-directory) of them and drops the least recently used. A cache. |
 | **Sparse index** | A file that maps some log offsets to file positions in one segment. A cache. Not written yet. |
 | **Cache** | Any state that the log can rebuild by reading segments. A cache is never the only copy of a fact. |
 | **Volume** | Every layer that holds one log directory: the guest filesystem, the guest block device, the VMM, the host storage and the durable media. Its requirements are in [volume-requirements.md](architecture/volume-requirements.md). |
@@ -129,7 +129,7 @@ mixed or unkeyed original: follow the API's limited retry guarantees
 cache = anything the log can rebuild by reading segments
 ┌───────────────────────────────────────────────────────────┐
 │ tail map: stream id → latest revision, log offset         │
-│ frame table: one per sealed segment, built on first read  │
+│ frame table: per sealed segment, built on read, bounded   │
 │ key filters: one per sealed segment, loaded at open       │
 └───────────────────────────────────────────────────────────┘
 

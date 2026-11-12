@@ -31,6 +31,7 @@ impl LogReader {
                 dir: dir.to_owned(),
                 log_id: found.log_id,
                 published: Mutex::new(found.published),
+                tables: Mutex::default(),
             },
         })
     }

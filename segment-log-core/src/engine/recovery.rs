@@ -76,10 +76,11 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
 
     let mut found = survey::survey(&reader, dir, &bases)?;
     let newest = *bases.last().unwrap();
-    let epoch = if created {
-        1
-    } else {
-        found.epoch.checked_add(1).ok_or(OpenError::Exhausted)?
+    let epoch = match found.newest.ending {
+        // A sealed log starts no writer, so it needs no next epoch.
+        Ending::Sealed(_) => None,
+        _ if created => Some(1),
+        _ => Some(found.epoch.checked_add(1).ok_or(OpenError::Exhausted)?),
     };
 
     let summaries = match &found.newest.ending {
@@ -117,8 +118,8 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         .filter(|p| !p.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
     call(storage, parent, Purpose::Recovery, Op::SyncDir)?;
-    let (active, active_keys) = match found.newest.ending {
-        Ending::Sealed(_) => {
+    let (epoch, active, active_keys) = match (found.newest.ending, epoch) {
+        (Ending::Sealed(_), _) | (_, None) => {
             drop(lock);
             return Ok(Recovered {
                 log_id: found.log_id,
@@ -126,7 +127,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
                 writable: None,
             });
         }
-        Ending::Rolled { .. } => {
+        (Ending::Rolled { .. }, Some(epoch)) => {
             let next = found.published.watermark;
             create_segment(
                 storage,
@@ -138,12 +139,12 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
                     epoch,
                 },
             )?;
-            found.published.roll();
-            (Active::new(next), BTreeMap::new())
+            found.published.roll(found.epoch, epoch);
+            (epoch, Active::new(next), BTreeMap::new())
         }
-        Ending::Groups | Ending::Stopped => {
+        (Ending::Groups | Ending::Stopped, Some(epoch)) => {
             let active = Active::recovered(newest, found.newest.end, found.newest.tails);
-            (active, found.newest.keys)
+            (epoch, active, found.newest.keys)
         }
     };
     Ok(Recovered {

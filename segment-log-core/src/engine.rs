@@ -22,6 +22,8 @@ mod writer;
 use keys::{KeyHash, Keys};
 pub use reader::LogReader;
 pub use reply::Pending;
+#[cfg(test)]
+pub(crate) use view::FRAME_TABLES;
 use view::{GroupSpan, Published, View};
 use writer::{Active, Writer, run};
 
@@ -187,6 +189,7 @@ impl SegmentLog {
             dir: dir.to_owned(),
             log_id,
             published: Mutex::new(published),
+            tables: Mutex::default(),
         });
         let poisoned = Arc::new(std::sync::atomic::AtomicBool::new(false));
         #[cfg(test)]

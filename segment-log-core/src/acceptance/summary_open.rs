@@ -424,6 +424,73 @@ fn a_sealed_segment_larger_than_one_walk_read_is_read_in_full() {
     });
 }
 
+/// Given a log with more sealed segments than the frame tables a log keeps, rolled in this process
+/// or found by a reopen
+/// When reads need each sealed segment in turn
+/// Then every record comes back as it was appended
+/// And a later read of the segment whose table was used least recently walks that segment again
+/// And a read of a segment whose table is still kept reads only the frame it needs
+///
+/// Cases: READ-BOUNDED, ORACLE-12
+#[test]
+fn reads_keep_a_bounded_number_of_frame_tables() {
+    bounded(|| {
+        let sim = Sim::new(406);
+        let options = || Options {
+            roll_bytes: 65,
+            ..options()
+        };
+        let sealed = crate::engine::FRAME_TABLES as u64 + 3;
+        let log = open_with(&sim, options());
+        let mut expected = vec![];
+        for offset in 0..=sealed {
+            let payload = offset.to_le_bytes();
+            let submit = Submit {
+                records: vec![NewRecord {
+                    stream: b"s".to_vec(),
+                    key: None,
+                    payload: payload.to_vec(),
+                    expected: offset
+                        .checked_sub(1)
+                        .map_or(ExpectedRevision::Empty, ExpectedRevision::At),
+                }],
+            };
+            log.append(submit).unwrap().wait().unwrap();
+            expected.push(stored(b"s", None, &payload, offset, offset));
+        }
+        assert_eq!(raw::segments(&sim).len() as u64, sealed + 1);
+        let reads = |log: &SegmentLog, base: u64| {
+            let lookups = || {
+                sim.count(
+                    Path::new(&raw::segment(base)),
+                    Purpose::Lookup,
+                    &Op::Read(0, 0),
+                )
+            };
+            let before = lookups();
+            let at = base as usize;
+            assert_records(&log.read(base, 1).unwrap(), &expected[at..=at]);
+            lookups() - before
+        };
+        let check = |log: &SegmentLog| {
+            assert_records(&log.read(0, usize::MAX).unwrap(), &expected);
+            assert!(
+                reads(log, 0) > 1,
+                "the least recently used table is walked again"
+            );
+            assert_eq!(reads(log, sealed - 1), 1, "a kept table is not walked");
+        };
+        assert!(
+            reads(&log, 0) > 1,
+            "the first rolled segment's table is walked again"
+        );
+        assert_eq!(reads(&log, sealed - 1), 1, "the last roll keeps its table");
+        check(&log);
+        drop(log);
+        check(&open_with(&sim, options()));
+    });
+}
+
 fn patched(mut segment: Vec<u8>, back: usize, at: usize, bytes: &[u8]) -> Vec<u8> {
     let frames: Vec<usize> = raw::frames(&segment).iter().map(|f| f.len()).collect();
     let end = segment.len() - frames[frames.len() - back + 1..].iter().sum::<usize>();
