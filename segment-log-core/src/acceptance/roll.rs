@@ -7,9 +7,6 @@ mod crashes;
 mod layouts;
 mod rolling;
 
-/// A roll size that every segment with a frame has reached, so each group starts a segment.
-const EVERY_GROUP: u64 = 65;
-
 fn open_rolling(sim: &Sim, roll_bytes: u64) -> SegmentLog {
     open_with(
         sim,

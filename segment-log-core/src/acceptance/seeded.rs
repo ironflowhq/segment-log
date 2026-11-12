@@ -1,5 +1,5 @@
 use super::support::{
-    fixtures::{ANY_SEG, SEG, Sim, options},
+    fixtures::{ANY_SEG, EVERY_GROUP, SEG, Sim, options},
     oracle::{self, Answer, Input, Observation, Request},
     trace,
 };
@@ -338,9 +338,6 @@ fn run(seed: u64, mode: Crash, variant: usize, keep: bool, drill: bool) -> PathB
     }
     path
 }
-/// The roll size of odd seeds. Every segment that holds a frame has reached it, so each group
-/// starts a new segment.
-const EVERY_GROUP: u64 = 65;
 fn setting(name: &str, default: u64) -> u64 {
     std::env::var(name).map_or(default, |v| v.parse().expect("numeric trace setting"))
 }

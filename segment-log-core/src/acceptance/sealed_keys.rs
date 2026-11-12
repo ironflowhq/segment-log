@@ -7,8 +7,6 @@ mod lifetime;
 mod memory;
 mod poison;
 
-const EVERY_GROUP: u64 = 65;
-
 fn rolling() -> Options {
     Options {
         roll_bytes: EVERY_GROUP,
