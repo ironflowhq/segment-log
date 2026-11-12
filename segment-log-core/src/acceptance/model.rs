@@ -122,6 +122,72 @@ fn rejections_erase(case: &Case) -> Result<(), TestCaseError> {
     .map_err(TestCaseError::fail)
 }
 
+/// The M1 trace oracle classifies submits with its own sequential rules. Fed one submit at a time,
+/// with a flush after each, the model must give the same answer, so the two copies of the contract
+/// cannot drift apart (issue 53).
+fn oracle_agrees(case: &Case) -> Result<(), TestCaseError> {
+    use super::support::oracle;
+    let script = expect(case).script;
+    let mut model = Model::default();
+    let mut history = Vec::new();
+    for step in script.steps() {
+        for sub in step.submits().iter().chain([step.closer()]) {
+            let inputs: Vec<oracle::Input> = sub
+                .0
+                .iter()
+                .map(|r| oracle::Input {
+                    stream: r.stream.0.clone(),
+                    key: r.key.as_ref().map(|k| k.0.clone()),
+                    payload: r.payload.0.clone(),
+                    expected: match r.expected {
+                        Empty => None,
+                        At(n) => Some(n),
+                    },
+                    spare: 0,
+                })
+                .collect();
+            let predicted = oracle::predict(&inputs, &mut history);
+            let (outcome, _) = model.submit(sub);
+            model.flush();
+            let answer = match outcome {
+                Outcome::Refused => oracle::Answer::Refused("Invalid".into()),
+                Outcome::AtClassification(answer) | Outcome::AfterFlush(answer) => match answer {
+                    Ok(done) => oracle::Answer::Ack(
+                        done.deduplicated,
+                        done.positions
+                            .iter()
+                            .map(|p| (p.offset, p.revision))
+                            .collect(),
+                    ),
+                    Err(Reject::KeyConflict { index }) => {
+                        oracle::Answer::Refused(format!("KeyConflict {{ index: {index} }}"))
+                    }
+                    Err(Reject::PartialRetry) => oracle::Answer::Refused("PartialRetry".into()),
+                    Err(Reject::WrongRevision { index, actual }) => oracle::Answer::Refused(
+                        format!("WrongRevision {{ index: {index}, actual: {actual:?} }}"),
+                    ),
+                },
+            };
+            if predicted != answer {
+                return Err(TestCaseError::fail(format!(
+                    "submit {sub:?}\nthe oracle: {predicted:?}\nthe model: {answer:?}\nscript:\n{script}"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Given random groups of submits, resolved by the model alone
+/// When each submit goes to the M1 trace oracle and to the model, with a flush after every submit
+/// Then both give the same answer to every submit
+///
+/// Cases: ORACLE-MODEL
+#[test]
+fn the_trace_oracle_agrees_with_the_model() {
+    check("ORACLE-MODEL", 512, oracle_agrees);
+}
+
 /// Given random groups of submits, each queued behind a held flush, and random reopens
 /// When the same submits go to the model and to a log on simulated storage
 /// Then every answer, its timing against its group's flush, and every durable view are equal
