@@ -2,7 +2,9 @@ use super::support::{bounded, fixtures::*, raw};
 use crate::{codec, storage::sim::Crash, *};
 use std::{path::Path, sync::Arc};
 
+/// Enough keyed records for a key index of two pages.
 const KEYS: usize = 300;
+const _: () = assert!(KEYS.div_ceil(codec::PAGE_ENTRIES) == 2);
 
 fn unrolled() -> Options {
     Options {

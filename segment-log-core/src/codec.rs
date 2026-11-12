@@ -26,7 +26,7 @@ pub(crate) const PAGE_ENTRIES: usize = 255;
 pub(crate) const KEYED_RECORD_LIMIT: usize = 4095 * PAGE_ENTRIES;
 pub(crate) const LOCATOR_LEN: usize = 40;
 
-const ENVELOPE_LEN: usize = 8;
+pub(crate) const ENVELOPE_LEN: usize = 8;
 pub(crate) const BODY_HEADER_LEN: usize = 24;
 pub(crate) const FOOTER_HEADER_LEN: usize = BODY_HEADER_LEN + 8;
 pub(crate) const FOOTER_ENTRY_LEN: usize = 28;

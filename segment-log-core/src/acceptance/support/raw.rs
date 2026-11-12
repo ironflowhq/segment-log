@@ -168,14 +168,15 @@ pub(crate) fn last_frame(sim: &Sim) -> (String, u64, Vec<u8>) {
 }
 type Tails<'a> = std::collections::BTreeMap<&'a [u8], (u64, u64, u64)>;
 
-fn groups(
-    segment: &[u8],
-) -> (
-    crate::codec::LogId,
-    u64,
-    Vec<crate::codec::KeyEntry>,
-    Tails<'_>,
-) {
+/// The facts about a segment's group frames that its closing run records.
+struct Groups<'a> {
+    log_id: crate::codec::LogId,
+    next: u64,
+    keys: Vec<crate::codec::KeyEntry>,
+    tails: Tails<'a>,
+}
+
+fn groups(segment: &[u8]) -> Groups<'_> {
     use crate::codec;
     let log_id = codec::LogId::new(header_fields(segment).0);
     let mut next = header_fields(segment).1;
@@ -201,7 +202,12 @@ fn groups(
         next = group.base_offset + group.entries.len() as u64;
         position += frame.len();
     }
-    (log_id, next, keys, tails)
+    Groups {
+        log_id,
+        next,
+        keys,
+        tails,
+    }
 }
 
 fn footer(
@@ -236,7 +242,12 @@ fn footer(
 
 pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
     use crate::codec;
-    let (log_id, next, mut keys, tails) = groups(segment);
+    let Groups {
+        log_id,
+        next,
+        mut keys,
+        tails,
+    } = groups(segment);
     let key_frames = codec::encode_key_frames(&log_id, epoch, next, &mut keys).unwrap();
     let footer = footer(&log_id, epoch, next, segment.len() as u64, tails);
     let footer_position = segment.len() + key_frames.filter.len() + key_frames.index.len();
@@ -246,7 +257,12 @@ pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
 
 pub(crate) fn seal_run(segment: &[u8], epoch: u64) -> Vec<u8> {
     use crate::codec;
-    let (log_id, next, _, tails) = groups(segment);
+    let Groups {
+        log_id,
+        next,
+        tails,
+        ..
+    } = groups(segment);
     let footer = footer(&log_id, epoch, next, 0, tails);
     let seal = codec::encode_seal(&log_id, epoch, next);
     let locator = codec::encode_locator(&log_id, epoch, next, segment.len() as u64);
