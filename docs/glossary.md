@@ -9,7 +9,7 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Active segment** | The segment the writer appends to: the newest segment, unless that segment is sealed. It is the only segment recovery can truncate. |
 | **Sealed segment** | A segment that the writer no longer appends to. It is immutable. Recovery never truncates it. |
 | **Roll** | Stop appending to the active segment and create a new active segment. The old one becomes sealed. |
-| **Seal (the log)** | The dispose path: stop admission, commit the last submits, write the seal frame, make it durable, close. A sealed log opens read-only. Different from a roll, which seals one segment and keeps the log open. |
+| **Seal (the log)** | The dispose path: stop admission, commit the last submits, write the footer, the seal frame and the locator, make them durable, close. A sealed log opens read-only. Different from a roll, which seals one segment and keeps the log open. |
 | **Record** | One event: stream id, stream revision, optional idempotency key, payload. |
 | **Submit** | One `append` call from a caller, holding one or more records. It is the atomic unit for new writes. A fully deduplicated retry confirms existing durable records and appends nothing ([ADR 0024](decisions/0024-fully-matching-retries-ignore-original-grouping.md)). |
 | **Group** | The records of one or more submits that the writer writes as one frame and makes durable with one `fsync`. A group is not a transaction. |
@@ -43,7 +43,8 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Accept queue** | The bounded queue between callers and the writer thread. Its count limit and the admission byte budget can each cause a capacity refusal with `Full`. |
 | **Full** | An immediate refusal when a size-eligible request lacks current queue capacity or admission byte budget. It retains no reservation and appends nothing. |
 | **Tail map** | The in-memory map from stream id to the stream's latest revision and log offset. A cache. |
-| **Sparse index** | A file that maps some log offsets to file positions in one segment. A cache. Not needed in M1. |
+| **Frame table** | The in-memory list of one sealed segment's group frames, with their positions and offsets. The first `read` that needs the segment builds it. A cache. |
+| **Sparse index** | A file that maps some log offsets to file positions in one segment. A cache. Not written yet. |
 | **Cache** | Any state that the log can rebuild by reading segments. A cache is never the only copy of a fact. |
 | **Volume** | Every layer that holds one log directory: the guest filesystem, the guest block device, the VMM, the host storage and the durable media. Its requirements are in [volume-requirements.md](architecture/volume-requirements.md). |
 | **Failure domain** | The failure events after which a volume still holds every acknowledged record. [ADR 0040](decisions/0040-volumes-meet-testable-minimum-requirements.md) sets the minimum, and each deployment declares the rest. |
@@ -128,7 +129,7 @@ mixed or unkeyed original: follow the API's limited retry guarantees
 cache = anything the log can rebuild by reading segments
 ┌───────────────────────────────────────────────────────────┐
 │ tail map: stream id → latest revision, log offset         │
-│ sparse index: some log offsets → file positions           │
+│ frame table: one per sealed segment, built on first read  │
 │ key filters: one per sealed segment, loaded at open       │
 └───────────────────────────────────────────────────────────┘
 

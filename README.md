@@ -2,8 +2,8 @@
 
 An embedded, append-only event log in Rust, for short-lived processes that need a durable history.
 
-> **Status: early design. Nothing is built yet.**
-> The repository holds the requirements, architecture and decision records. There is no working code, and both crates are placeholders. Some decision records are still proposed. The on-disk format is provisional until milestone M5, and the API can change. Do not depend on this yet. See the [milestones](docs/prd.md#milestones) for the plan.
+> **Status: pre-release. Milestones M0–M4 have passed.**
+> `segment-log-core` appends, rolls, seals and reads logs, and recovers them after a crash. `segment-log-server` is a placeholder until milestone M6. Some decision records are still proposed. The on-disk format is provisional until milestone M5, and the API can change. Do not depend on this yet. See the [milestones](docs/prd.md#milestones) for the plan.
 
 - Many callers append to many streams in one directory.
 - One writer thread packs their appends into groups. One `fsync` makes a group durable, and only then does the caller get an acknowledgment.
@@ -16,7 +16,7 @@ An embedded, append-only event log in Rust, for short-lived processes that need 
 
 - [Product requirements](docs/prd.md)
 - [Architecture overview](docs/architecture/overview.md)
-- [Byte layout v0](docs/architecture/format.md) · [API sketch](docs/architecture/api.md) · [Testing](docs/architecture/testing.md) · [Prior art](docs/architecture/prior-art.md)
+- [Byte layout](docs/architecture/format.md) · [API sketch](docs/architecture/api.md) · [Testing](docs/architecture/testing.md) · [Prior art](docs/architecture/prior-art.md)
 - [Volume requirements](docs/architecture/volume-requirements.md): what the storage under the log must guarantee, and how to test it
 - [Implement a behavior with acceptance tests](docs/acceptance-tests.md)
 - [Glossary](docs/glossary.md)
