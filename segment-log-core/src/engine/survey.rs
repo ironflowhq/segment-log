@@ -1,4 +1,6 @@
 use super::*;
+use closing::{RunState, Step, Tail};
+use keys::{ActiveKey, SealedSummary};
 
 pub(super) use read_only::ReadOnly;
 
@@ -12,7 +14,7 @@ mod read_only {
             Self(storage)
         }
 
-        pub(super) fn read(
+        pub(in crate::engine) fn read(
             &self,
             path: &Path,
             purpose: Purpose,
@@ -35,30 +37,62 @@ mod read_only {
                 _ => Err(io::Error::other("storage did not list directory")),
             }
         }
+
+        pub(in crate::engine) fn frame(
+            &self,
+            path: &Path,
+            purpose: Purpose,
+            position: u64,
+            limit: u64,
+        ) -> io::Result<Option<Vec<u8>>> {
+            let envelope = self.read(path, purpose, position, 8)?;
+            let Ok(envelope) = <[u8; 8]>::try_from(envelope) else {
+                return Ok(None);
+            };
+            let body = u32::from_le_bytes(envelope[..4].try_into().unwrap()) as usize;
+            let length = (body + 8) as u64;
+            if !(codec::BODY_HEADER_LEN..=codec::FRAME_BODY_LIMIT).contains(&body)
+                || position.checked_add(length).is_none_or(|end| end > limit)
+            {
+                return Ok(None);
+            }
+            let frame = self.read(path, purpose, position, body + 8)?;
+            Ok((frame.len() == body + 8).then_some(frame))
+        }
     }
 }
 
 pub(super) struct Survey {
     pub log_id: codec::LogId,
     pub published: Published,
-    pub keys: Keys,
+    pub sealed: Vec<SealedSummary>,
     pub epoch: u64,
     pub newest_header: Vec<u8>,
     pub newest: Scan,
 }
 
 pub(super) struct Scan {
-    /// The file position after the last valid frame.
     pub end: u64,
-    pub reached_end_of_file: bool,
-    /// Position and bytes of the last valid frame.
+    pub ending: Ending,
     pub last: Option<(u64, Vec<u8>)>,
+    pub tails: BTreeMap<Vec<u8>, Tail>,
+    pub keys: BTreeMap<Vec<u8>, ActiveKey>,
+}
+
+pub(super) enum Ending {
+    Groups,
+    Stopped,
+    Rolled(Run),
+}
+
+pub(super) struct Run {
+    pub summary: SealedSummary,
+    pub frames: Vec<Vec<u8>>,
 }
 
 /// What the scan has kept so far, across the segments it has read.
 struct Kept {
     published: Published,
-    keys: Keys,
     /// The epoch that the next frame must not be lower than.
     epoch: u64,
 }
@@ -107,34 +141,45 @@ pub(super) fn survey(
 
     let mut kept = Kept {
         published: Published::default(),
-        keys: Keys::new(log_id.clone()),
         epoch: 0,
     };
     let newest = *bases.last().unwrap();
+    let mut sealed = vec![];
     let mut tail = None;
     for (&base, (header, bytes)) in bases.iter().zip(headers) {
         if kept.published.watermark != base {
             return Err(OpenError::Gap { segment: base });
         }
         kept.epoch = kept.epoch.max(header.epoch);
-        let scan = scan(storage, &log_id, &segment_path(dir, base), &mut kept)?;
+        let path = segment_path(dir, base);
+        let length = storage.length(&path, Purpose::Recovery)?;
+        let scan = scan(storage, &log_id, base, &path, length, &mut kept)?;
         if base == newest {
+            if matches!(scan.ending, Ending::Stopped)
+                && closing::sealed_behind(storage, &path, &log_id, length, scan.end)?
+            {
+                return Err(OpenError::Corrupt {
+                    segment: base,
+                    position: scan.end,
+                });
+            }
             tail = Some((scan, bytes));
-        } else if !scan.reached_end_of_file {
+        } else if let Ending::Rolled(run) = scan.ending {
+            sealed.push(run.summary);
+            kept.published.roll();
+        } else {
             // Every segment with a successor is sealed, and recovery never truncates one (I7).
             return Err(OpenError::Corrupt {
                 segment: base,
                 position: scan.end,
             });
-        } else {
-            kept.published.roll();
         }
     }
     let (newest, newest_header) = tail.unwrap();
     Ok(Survey {
         log_id,
         published: kept.published,
-        keys: kept.keys,
+        sealed,
         epoch: kept.epoch,
         newest_header,
         newest,
@@ -172,52 +217,101 @@ fn header(
     }
 }
 
-/// Reads the frames of one segment into `kept` and stops at the first frame that is not valid.
 fn scan(
     storage: &ReadOnly<'_>,
     log: &codec::LogId,
+    base: u64,
     path: &Path,
+    length: u64,
     kept: &mut Kept,
 ) -> io::Result<Scan> {
     let mut position = codec::HEADER_LEN as u64;
+    let mut state = RunState::Groups;
+    let mut epoch = kept.epoch;
+    let mut run = vec![];
     let mut last = None;
+    let mut tails = BTreeMap::new();
+    let mut keys = BTreeMap::new();
+    let end = |at, ending, last, tails, keys| Scan {
+        end: at,
+        ending,
+        last,
+        tails,
+        keys,
+    };
     loop {
-        let envelope = storage.read(path, Purpose::Recovery, position, 8)?;
-        if envelope.is_empty() {
-            return Ok(Scan {
-                end: position,
-                reached_end_of_file: true,
-                last,
-            });
+        if position == length && state == RunState::Groups {
+            return Ok(end(position, Ending::Groups, last, tails, keys));
         }
-        let frame = if envelope.len() == 8 {
-            let length = u32::from_le_bytes(envelope[..4].try_into().unwrap()) as usize;
-            if (codec::BODY_HEADER_LEN..=codec::GROUP_BODY_LIMIT).contains(&length) {
-                Some(storage.read(path, Purpose::Recovery, position, length + 8)?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let valid = frame
-            .as_deref()
-            .and_then(|b| codec::decode(log, b).ok())
-            .and_then(codec::Frame::into_group)
-            .filter(|g| g.base_offset == kept.published.watermark && g.epoch >= kept.epoch);
-        let Some(group) = valid else {
-            return Ok(Scan {
-                end: position,
-                reached_end_of_file: false,
+        let Some(bytes) = storage.frame(path, Purpose::Recovery, position, length)? else {
+            return Ok(end(
+                state.stop(position),
+                Ending::Stopped,
                 last,
-            });
+                tails,
+                keys,
+            ));
         };
-        kept.epoch = group.epoch;
-        let length = frame.as_ref().unwrap().len();
-        kept.keys.recover(&group);
-        kept.published
-            .publish(GroupSpan::of(position, length, &group), &group);
-        last = Some((position, frame.unwrap()));
-        position += length as u64;
+        let frame = codec::decode(log, &bytes)
+            .ok()
+            .filter(|f| f.base_offset == kept.published.watermark && f.epoch >= epoch);
+        let Some(frame) = frame else {
+            return Ok(end(
+                state.stop(position),
+                Ending::Stopped,
+                last,
+                tails,
+                keys,
+            ));
+        };
+        let next = position + bytes.len() as u64;
+        epoch = frame.epoch;
+        match state.step(position, next, length, &frame.body) {
+            Step::Group => {
+                let group = frame.into_group().expect("a group step has a group body");
+                kept.epoch = group.epoch;
+                for (i, entry) in group.entries.iter().enumerate() {
+                    if let Some(key) = entry.key {
+                        let at = ActiveKey {
+                            position: position as u32,
+                            record: i as u32,
+                        };
+                        keys.insert(key.to_vec(), at);
+                    }
+                    tails.insert(
+                        entry.stream.to_vec(),
+                        Tail {
+                            revision: entry.revision,
+                            offset: group.base_offset + i as u64,
+                            position,
+                        },
+                    );
+                }
+                kept.published
+                    .publish(GroupSpan::of(position, bytes.len(), &group), &group);
+                last = Some((position, bytes));
+            }
+            Step::Run(next) => {
+                state = next;
+                run.push(bytes);
+            }
+            Step::Stop { at } => return Ok(end(at, Ending::Stopped, last, tails, keys)),
+            Step::Closed { start, footer } => {
+                kept.epoch = epoch;
+                run.push(bytes);
+                let summary = SealedSummary {
+                    base,
+                    next: kept.published.watermark,
+                    filter_at: start,
+                    footer_at: footer,
+                };
+                let rolled = Ending::Rolled(Run {
+                    summary,
+                    frames: run,
+                });
+                return Ok(end(length, rolled, last, tails, keys));
+            }
+        }
+        position = next;
     }
 }

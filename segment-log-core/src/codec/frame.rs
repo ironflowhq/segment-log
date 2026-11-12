@@ -1,6 +1,7 @@
 use super::{
-    BODY_HEADER_LEN, ENVELOPE_LEN, Error, FRAME_BODY_LIMIT, GROUP_BODY_LIMIT, KEY_LEN_MAX,
-    KEYED_RECORD_LIMIT, KeyFilter, LOCATOR_LEN, LogId, PAGE_SIZE, STREAM_LEN_MAX, crc, index,
+    BODY_HEADER_LEN, ENVELOPE_LEN, Error, FOOTER_ENTRY_LEN, FOOTER_HEADER_LEN, FRAME_BODY_LIMIT,
+    GROUP_BODY_LIMIT, KEY_LEN_MAX, KEYED_RECORD_LIMIT, KeyFilter, LOCATOR_LEN, LogId, PAGE_SIZE,
+    STREAM_LEN_MAX, crc, index,
 };
 
 #[derive(Clone, Copy)]
@@ -180,10 +181,10 @@ pub(crate) fn encode_footer(
     base_offset: u64,
     footer: &Footer<'_>,
 ) -> Result<Vec<u8>, Error> {
-    let mut size = BODY_HEADER_LEN + 8;
+    let mut size = FOOTER_HEADER_LEN;
     for tail in &footer.streams {
         check_stream(tail.stream)?;
-        size += 28 + tail.stream.len();
+        size += FOOTER_ENTRY_LEN + tail.stream.len();
         if size > FRAME_BODY_LIMIT {
             return Err(Error::Length);
         }
@@ -212,6 +213,10 @@ pub(crate) fn encode_footer(
     Ok(finish(log, out))
 }
 
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "seal writes the first seal frame")
+)]
 pub(crate) fn encode_seal(log: &LogId, epoch: u64, base_offset: u64) -> Vec<u8> {
     finish(
         log,
@@ -375,7 +380,7 @@ fn decode_group<'a>(
 fn decode_footer<'a>(c: &mut Cursor<'a>, size: usize, count: u32) -> Result<Footer<'a>, Error> {
     let key_filter_position = std::num::NonZeroU64::new(c.u64()?);
     let count = count as usize;
-    if count > (size - BODY_HEADER_LEN - 8) / 29 {
+    if count > (size - FOOTER_HEADER_LEN) / (FOOTER_ENTRY_LEN + 1) {
         return Err(Error::Count);
     }
     let mut streams = Vec::with_capacity(count);

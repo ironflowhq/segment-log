@@ -4,7 +4,7 @@ use crate::storage::{Call, Op, Purpose};
 
 fn frame_counts(segment: &[u8]) -> Vec<usize> {
     let (log_id, _, _) = raw::header_fields(segment);
-    raw::frames(segment)
+    raw::frames(raw::split_run(segment).0)
         .into_iter()
         .map(|frame| oracle::frame_inputs(&log_id, frame).len())
         .collect()
@@ -15,9 +15,11 @@ fn frame_counts(segment: &[u8]) -> Vec<usize> {
 /// Then each group starts a file named by the next log offset
 /// And each header has that base offset, the id of the log and the writer epoch
 /// And every group frame sits wholly in one file, with the queued submits in one frame
+/// And each file before the newest ends in its roll's closing run, under the writer epoch
 /// And `read` and `stream_head` span the files
 /// When the log reopens and appends again
-/// Then the new segment's header has the next writer epoch
+/// Then the new segment's header and the closing run of the segment before it have the next
+/// writer epoch
 ///
 /// Cases: GROUP-FORMATION, READ-BOUNDED, HISTORY
 #[test]
@@ -64,6 +66,14 @@ fn each_roll_starts_a_segment_named_by_the_next_offset() {
             .map(|(_, bytes)| frame_counts(bytes))
             .collect();
         assert_eq!(counts, [vec![1], vec![2], vec![3], vec![1]]);
+        for (index, (_, bytes)) in segments.iter().enumerate() {
+            let (groups, run) = raw::split_run(bytes);
+            if index + 1 < segments.len() {
+                assert_eq!(run, raw::roll_run(groups, 1), "segment {index}");
+            } else {
+                assert!(run.is_empty(), "the newest segment holds only groups");
+            }
+        }
 
         let expected = [
             stored(b"a", None, b"a0", 0, 0),
@@ -95,6 +105,8 @@ fn each_roll_starts_a_segment_named_by_the_next_offset() {
         let segments = raw::segments(&sim);
         assert_eq!(bases(&sim), [0, 1, 3, 6, 7]);
         assert_eq!(raw::header_fields(&segments[4].1), (log_id, 7, 2));
+        let (groups, run) = raw::split_run(&segments[3].1);
+        assert_eq!(run, raw::roll_run(groups, 2));
         assert_eq!(log.read(7, 1).unwrap()[0].payload, b"d1");
     });
 }

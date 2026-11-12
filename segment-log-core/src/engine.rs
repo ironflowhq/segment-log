@@ -11,16 +11,17 @@ use std::{
     thread::{self, JoinHandle},
     time::Instant,
 };
+mod closing;
 mod keys;
 mod recovery;
 mod reply;
 mod survey;
 mod view;
 mod writer;
-use keys::Keys;
+use keys::{KeyHash, Keys};
 pub use reply::Pending;
 use view::{GroupSpan, Published, View};
-use writer::{Active, RevisionSlot, Writer, run};
+use writer::{Active, Writer, run};
 
 fn segment_path(dir: &Path, base: u64) -> PathBuf {
     dir.join(format!("{base:020}.seg"))
@@ -65,6 +66,32 @@ impl Request {
         self.reply.store(result)
     }
 }
+#[cfg(test)]
+#[derive(Clone, Default)]
+pub(crate) struct Hooks {
+    pub key_hashes: BTreeMap<Vec<u8>, u64>,
+    pub limits: Limits,
+}
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Limits {
+    pub footer_body: usize,
+    pub keyed_records: usize,
+}
+impl Default for Limits {
+    fn default() -> Self {
+        Self {
+            footer_body: codec::FRAME_BODY_LIMIT,
+            keyed_records: codec::KEYED_RECORD_LIMIT,
+        }
+    }
+}
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct KeyMemory {
+    pub filter_bytes: usize,
+    pub sealed_keys: u64,
+    pub active_keys: usize,
+}
 pub struct SegmentLog {
     view: Arc<View>,
     sender: Option<mpsc::SyncSender<Request>>,
@@ -77,6 +104,8 @@ pub struct SegmentLog {
     peak: std::sync::atomic::AtomicUsize,
     #[cfg(test)]
     drop_closed: Option<mpsc::Sender<()>>,
+    #[cfg(test)]
+    memory: Arc<Mutex<KeyMemory>>,
 }
 impl SegmentLog {
     pub fn open(dir: impl AsRef<Path>, options: Options) -> Result<Self, OpenError> {
@@ -91,6 +120,26 @@ impl SegmentLog {
         options: Options,
         storage: Arc<dyn Storage>,
     ) -> Result<Self, OpenError> {
+        Self::start(dir, options, storage, KeyHash::new, Limits::default())
+    }
+    #[cfg(test)]
+    pub(crate) fn with_hooks(
+        dir: &Path,
+        options: Options,
+        storage: Arc<dyn Storage>,
+        hooks: Hooks,
+    ) -> Result<Self, OpenError> {
+        let Hooks { key_hashes, limits } = hooks;
+        let hash = |log_id| KeyHash::new(log_id).forcing(key_hashes);
+        Self::start(dir, options, storage, hash, limits)
+    }
+    fn start(
+        dir: &Path,
+        options: Options,
+        storage: Arc<dyn Storage>,
+        hash: impl FnOnce(codec::LogId) -> KeyHash,
+        limits: Limits,
+    ) -> Result<Self, OpenError> {
         if options.queue_capacity == 0 || options.pending_byte_budget == 0 {
             return Err(OpenError::InvalidOptions("capacities must be positive"));
         }
@@ -102,6 +151,13 @@ impl SegmentLog {
         }
         let options = Arc::new(options);
         let recovered = recovery::open(storage.as_ref(), dir)?;
+        let keys = Keys::new(
+            hash(recovered.log_id.clone()),
+            recovered.active_keys,
+            recovered.sealed_keys,
+        );
+        #[cfg(test)]
+        let memory = Arc::new(Mutex::new(keys.memory()));
         let view = Arc::new(View {
             storage,
             dir: dir.to_owned(),
@@ -113,6 +169,8 @@ impl SegmentLog {
         let writer_view = view.clone();
         let writer_poisoned = poisoned.clone();
         let writer_options = options.clone();
+        #[cfg(test)]
+        let writer_memory = memory.clone();
         let writer = thread::Builder::new()
             .name("segment-log-writer".into())
             .spawn(move || {
@@ -122,9 +180,11 @@ impl SegmentLog {
                     receiver,
                     Writer {
                         epoch: recovered.epoch,
-                        keys: recovered.keys,
-                        lookup: Vec::new(),
+                        keys,
                         active: recovered.active,
+                        limits,
+                        #[cfg(test)]
+                        memory: writer_memory,
                     },
                     writer_options,
                 );
@@ -142,7 +202,13 @@ impl SegmentLog {
             peak: std::sync::atomic::AtomicUsize::new(0),
             #[cfg(test)]
             drop_closed: None,
+            #[cfg(test)]
+            memory,
         })
+    }
+    #[cfg(test)]
+    pub(crate) fn key_memory(&self) -> KeyMemory {
+        *self.memory.lock().unwrap()
     }
     #[cfg(test)]
     pub(crate) fn observe_drop(&mut self) -> mpsc::Receiver<()> {

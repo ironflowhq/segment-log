@@ -16,15 +16,21 @@ pub(crate) enum Purpose {
     Recovery,
     Lookup,
     Roll,
+    Summary,
+    KeyFilter,
+    KeyIndex,
 }
 impl Purpose {
     #[cfg(test)]
-    pub(crate) const ALL: [Purpose; 5] = [
+    pub(crate) const ALL: [Purpose; 8] = [
         Purpose::Open,
         Purpose::Group,
         Purpose::Recovery,
         Purpose::Lookup,
         Purpose::Roll,
+        Purpose::Summary,
+        Purpose::KeyFilter,
+        Purpose::KeyIndex,
     ];
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
