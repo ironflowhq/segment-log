@@ -1,12 +1,13 @@
 use super::*;
 use keys::SealedSummary;
-use std::{ops::RangeInclusive, sync::OnceLock};
+use std::ops::RangeInclusive;
 
 pub(super) struct View {
     pub storage: Arc<dyn Storage>,
     pub dir: PathBuf,
     pub log_id: codec::LogId,
     pub published: Mutex<Published>,
+    pub tables: Mutex<Tables>,
 }
 
 #[derive(Default)]
@@ -21,62 +22,62 @@ pub(super) struct Published {
 #[derive(Default)]
 pub(super) struct Newest {
     pub base: u64,
+    /// The lowest epoch that a group frame here may carry: the highest epoch of the segment before,
+    /// or this segment's header epoch if that is higher.
+    pub epoch_floor: u64,
     pub spans: Vec<GroupSpan>,
 }
 
+/// What a walk needs to rebuild a sealed segment's frame table.
 pub(super) struct SealedSegment {
     pub base: u64,
     pub next: u64,
-    spans: Spans,
+    /// The key filter's position, where the group frames end.
+    groups_end: u64,
+    epochs: RangeInclusive<u64>,
 }
 
-enum Spans {
-    Rolled(Arc<[GroupSpan]>),
-    /// The table is a function of sealed bytes, so a second reader that builds it at the same time
-    /// is harmless.
-    Lazy {
-        groups_end: u64,
-        epochs: RangeInclusive<u64>,
-        built: OnceLock<Arc<[GroupSpan]>>,
-    },
+/// One reader that moves forward needs one table at a time. Sixteen let that many readers at
+/// different sealed segments keep theirs, and bound the tables to the frame headers of sixteen
+/// segments.
+pub(crate) const FRAME_TABLES: usize = 16;
+
+/// The frame tables of sealed segments that reads built or rolls left, least recently used first.
+#[derive(Default)]
+pub(super) struct Tables(Vec<(u64, Arc<[GroupSpan]>)>);
+
+impl Tables {
+    fn get(&mut self, base: u64) -> Option<Arc<[GroupSpan]>> {
+        let at = self.0.iter().position(|(kept, _)| *kept == base)?;
+        let entry = self.0.remove(at);
+        let spans = entry.1.clone();
+        self.0.push(entry);
+        Some(spans)
+    }
+
+    pub(super) fn keep(&mut self, base: u64, spans: Arc<[GroupSpan]>) {
+        self.0.retain(|(kept, _)| *kept != base);
+        if self.0.len() == FRAME_TABLES {
+            self.0.remove(0);
+        }
+        self.0.push((base, spans));
+    }
 }
 
 const WALK_CHUNK: u64 = 64 * 1024;
 
 impl SealedSegment {
-    fn spans(&self, storage: &dyn Storage, dir: &Path) -> Result<Arc<[GroupSpan]>, ReadError> {
-        match &self.spans {
-            Spans::Rolled(spans) => Ok(spans.clone()),
-            Spans::Lazy {
-                groups_end,
-                epochs,
-                built,
-            } => {
-                if let Some(spans) = built.get() {
-                    return Ok(spans.clone());
-                }
-                let spans = self.walk(storage, dir, *groups_end, epochs)?;
-                Ok(built.get_or_init(|| spans).clone())
-            }
-        }
-    }
-
     /// `read` checks each frame's checksum when it decodes the frame.
-    fn walk(
-        &self,
-        storage: &dyn Storage,
-        dir: &Path,
-        groups_end: u64,
-        epochs: &RangeInclusive<u64>,
-    ) -> Result<Arc<[GroupSpan]>, ReadError> {
+    fn walk(&self, storage: &dyn Storage, dir: &Path) -> Result<Arc<[GroupSpan]>, ReadError> {
         const PREFIX: usize = 8 + codec::BODY_HEADER_LEN;
+        let groups_end = self.groups_end;
         let path = segment_path(dir, self.base);
         let mut spans = vec![];
         let mut chunk: Vec<u8> = vec![];
         let mut chunk_at = codec::HEADER_LEN as u64;
         let mut position = chunk_at;
         let mut next = self.base;
-        let mut floor = *epochs.start();
+        let mut floor = *self.epochs.start();
         while position < groups_end {
             let corrupt = || ReadError::Corrupt {
                 segment: self.base,
@@ -101,7 +102,7 @@ impl SealedSegment {
             let valid = (codec::BODY_HEADER_LEN..=codec::GROUP_BODY_LIMIT).contains(&body)
                 && end <= groups_end
                 && prefix[8] == 1
-                && (floor..=*epochs.end()).contains(&epoch)
+                && (floor..=*self.epochs.end()).contains(&epoch)
                 && base == next
                 && count > 0;
             next = match base.checked_add(u64::from(count)) {
@@ -165,14 +166,22 @@ impl Published {
         self.newest.spans.push(span);
     }
 
-    pub(super) fn roll(&mut self) {
-        let spans = std::mem::take(&mut self.newest.spans).into();
+    /// Seals the newest segment, whose closing run carries `epoch`, and starts its successor,
+    /// whose header carries `next_epoch`. Returns the sealed segment's frame table.
+    pub(super) fn roll(&mut self, epoch: u64, next_epoch: u64) -> Arc<[GroupSpan]> {
+        let spans: Arc<[GroupSpan]> = std::mem::take(&mut self.newest.spans).into();
+        let groups_end = spans.last().map_or(codec::HEADER_LEN as u64, |last| {
+            last.position + u64::from(last.length)
+        });
         self.sealed.push(Arc::new(SealedSegment {
             base: self.newest.base,
             next: self.watermark,
-            spans: Spans::Rolled(spans),
+            groups_end,
+            epochs: self.newest.epoch_floor..=epoch,
         }));
         self.newest.base = self.watermark;
+        self.newest.epoch_floor = next_epoch;
+        spans
     }
 
     pub(super) fn opened(
@@ -196,11 +205,8 @@ impl Published {
         self.sealed.push(Arc::new(SealedSegment {
             base: summary.base,
             next: summary.next,
-            spans: Spans::Lazy {
-                groups_end: summary.filter_at,
-                epochs,
-                built: OnceLock::new(),
-            },
+            groups_end: summary.filter_at,
+            epochs,
         }));
         self.watermark = summary.next;
         self.newest.base = summary.next;
@@ -247,7 +253,7 @@ impl View {
         };
         let mut records = Vec::new();
         for segment in &sealed {
-            let spans = segment.spans(self.storage.as_ref(), &self.dir)?;
+            let spans = self.spans(segment)?;
             for span in overlapping(&spans, from, end) {
                 if self.collect(segment.base, span, from, max, &mut records)? {
                     return Ok(records);
@@ -260,6 +266,20 @@ impl View {
             }
         }
         Ok(records)
+    }
+
+    fn spans(&self, segment: &SealedSegment) -> Result<Arc<[GroupSpan]>, ReadError> {
+        if let Some(spans) = self.tables.lock().unwrap().get(segment.base) {
+            return Ok(spans);
+        }
+        // The table is a function of sealed bytes, so two readers that both walk build the same
+        // table.
+        let spans = segment.walk(self.storage.as_ref(), &self.dir)?;
+        self.tables
+            .lock()
+            .unwrap()
+            .keep(segment.base, spans.clone());
+        Ok(spans)
     }
 
     fn collect(

@@ -139,7 +139,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
                     epoch,
                 },
             )?;
-            found.published.roll();
+            found.published.roll(found.epoch, epoch);
             (epoch, Active::new(next), BTreeMap::new())
         }
         (Ending::Groups | Ending::Stopped, Some(epoch)) => {
