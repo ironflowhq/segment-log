@@ -362,14 +362,17 @@ fn scan(
                         };
                         keys.insert(key.to_vec(), at);
                     }
-                    tails.insert(
-                        entry.stream.to_vec(),
-                        Tail {
-                            revision: entry.revision,
-                            offset: group.base_offset + i as u64,
-                            position,
-                        },
-                    );
+                    let tail = Tail {
+                        revision: entry.revision,
+                        offset: group.base_offset + i as u64,
+                        position,
+                    };
+                    match tails.get_mut(entry.stream) {
+                        Some(known) => *known = tail,
+                        None => {
+                            tails.insert(entry.stream.to_vec(), tail);
+                        }
+                    }
                 }
                 kept.published
                     .publish(GroupSpan::of(position, bytes.len(), &group), &group);
