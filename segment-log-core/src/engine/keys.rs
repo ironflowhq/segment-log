@@ -370,6 +370,14 @@ impl Keys {
             return Ok(None);
         }
         let hash = self.hash.of(key);
+        // Each probe below misses the caches, because the filters together are far larger, and
+        // its early exit would take those misses one after another. Loading every filter's line
+        // first lets the misses overlap. `black_box` keeps the loads, whose values nothing uses.
+        std::hint::black_box(
+            self.sealed
+                .iter()
+                .fold(0, |lines, segment| lines ^ segment.filter.touch(hash)),
+        );
         for segment in self.sealed.iter().rev() {
             if segment.filter.may_contain(hash)
                 && let Some(original) = segment.find(

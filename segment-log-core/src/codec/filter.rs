@@ -124,11 +124,14 @@ impl KeyFilter {
         }
     }
 
+    fn block(&self, hash: u64) -> usize {
+        (((hash >> 32) * self.blocks.len() as u64) >> 32) as usize
+    }
+
     fn probes(&self, hash: u64) -> (usize, [usize; SALTS.len()]) {
-        let block = (((hash >> 32) * self.blocks.len() as u64) >> 32) as usize;
         let low = hash as u32;
         (
-            block,
+            self.block(hash),
             SALTS.map(|salt| (low.wrapping_mul(salt) >> 23) as usize),
         )
     }
@@ -138,6 +141,12 @@ impl KeyFilter {
         for bit in bits {
             self.blocks[block].0[bit / 8] |= 1 << (bit % 8);
         }
+    }
+
+    pub(crate) fn touch(&self, hash: u64) -> u8 {
+        self.blocks
+            .get(self.block(hash))
+            .map_or(0, |block| block.0[0])
     }
 
     pub(crate) fn may_contain(&self, hash: u64) -> bool {
