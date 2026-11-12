@@ -502,9 +502,6 @@ fn patched(mut segment: Vec<u8>, back: usize, at: usize, bytes: &[u8]) -> Vec<u8
 
 const LOCATOR: usize = 1;
 const FOOTER: usize = 2;
-/// Frame offsets of the fields that a summary check reads, from format.md: the body header's
-/// `epoch` and `base_offset`, the next unused offset, and the footer's `key_filter_position` or
-/// the locator's `footer_position`, which follow the body header.
 const EPOCH_AT: usize = crate::codec::ENVELOPE_LEN + 4;
 const NEXT_AT: usize = crate::codec::ENVELOPE_LEN + 12;
 const POSITION_AT: usize = crate::codec::ENVELOPE_LEN + crate::codec::BODY_HEADER_LEN;

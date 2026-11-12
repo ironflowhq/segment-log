@@ -8,7 +8,6 @@ pub(super) struct Recovered {
 }
 
 pub(super) enum State {
-    /// Open has released the lock, because a sealed log starts no writer.
     Sealed,
     Writable(Writable),
 }

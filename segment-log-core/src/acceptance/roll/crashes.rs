@@ -23,11 +23,8 @@ fn closing_run(sim: &Sim) -> Vec<u8> {
     raw::roll_run(&raw::segments(sim)[1].1, 1)
 }
 
-/// A roll's closing run: the key filter, the key index, the footer and the locator.
 const CLOSING_FRAMES: usize = 4;
-/// The closing frames' appends and their flush.
 const CLOSING_STEPS: usize = CLOSING_FRAMES + 1;
-/// Then the next segment's create, header write, flush and directory sync.
 const ROLL_STEPS: usize = CLOSING_STEPS + 4;
 fn roll_steps(sim: &Sim) -> Vec<Call> {
     let (log_id, _, _) = raw::header_fields(&raw::segments(sim)[0].1);

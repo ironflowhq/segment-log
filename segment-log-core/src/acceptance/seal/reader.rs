@@ -132,7 +132,6 @@ fn readers_on_a_read_only_volume_read_a_sealed_log() {
 struct Layout {
     label: &'static str,
     segments: Vec<(u64, Vec<u8>)>,
-    /// The records that recovery keeps.
     kept: usize,
 }
 
