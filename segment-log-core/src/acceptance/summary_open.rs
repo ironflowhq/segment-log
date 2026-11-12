@@ -179,6 +179,58 @@ fn open_reads_only_the_summary_of_each_sealed_segment() {
     });
 }
 
+/// Given a log with several sealed segments, where an early segment's key filter reads back
+/// damaged and the last sealed segment's key filter read fails, reads back damaged or panics
+/// When the log opens, many times
+/// Then every open fails with `Corrupt` at the early segment's key filter, the answer of a load
+/// that reads one segment after another
+/// And no file changes
+///
+/// Cases: ORACLE-13, OPEN-LAYOUT, ORACLE-6
+#[test]
+fn open_reports_the_lowest_segment_with_a_bad_key_filter() {
+    bounded(|| {
+        let sim = Sim::new(402);
+        fill(&open_rolling(&sim), 0..24);
+        let segments = raw::segments(&sim);
+        let sealed = &segments[..segments.len() - 1];
+        let filter_read = |(base, bytes): &(u64, Vec<u8>)| {
+            let at = closing(bytes);
+            let call = Call::new(
+                raw::segment(*base),
+                Purpose::KeyFilter,
+                Op::Read(at.filter_at, at.filter_len),
+            );
+            (call, at.filter_at)
+        };
+        let (low, low_at) = filter_read(&sealed[1]);
+        let (high, _) = filter_read(&sealed[sealed.len() - 1]);
+        let before = sim.image();
+        let later = [
+            Fault::error(std::io::ErrorKind::Other).unwrap(),
+            Fault::Corrupt(9, 1),
+            Fault::Panic,
+        ];
+        for fault in later {
+            for _ in 0..16 {
+                sim.inject(low.clone(), Fault::Corrupt(9, 1));
+                sim.inject(high.clone(), fault.clone());
+                let result = try_open(&sim);
+                assert!(
+                    matches!(
+                        result,
+                        Err(OpenError::Corrupt { segment, position })
+                            if segment == sealed[1].0 && position == low_at
+                    ),
+                    "{fault:?}: {:?}",
+                    result.err()
+                );
+            }
+        }
+        assert_eq!(sim.image(), before);
+    });
+}
+
 /// Given a log that rolls every few groups, where each round's first stream appears only in the
 /// segment that holds it and one stream appends throughout, with keyed and unkeyed records
 /// When the log reopens

@@ -89,10 +89,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         Ending::Groups | Ending::Stopped => found.sealed.clone(),
     };
     // Step 11's reads come before any change, so that a bad key filter changes no file.
-    let sealed_keys = summaries
-        .into_iter()
-        .map(|summary| SealedKeys::load(&reader, dir, &found.log_id, summary))
-        .collect::<Result<Vec<_>, _>>()?;
+    let sealed_keys = SealedKeys::load_all(&reader, dir, &found.log_id, &summaries)?;
 
     let segment = segment_path(dir, newest);
     if let Ending::Stopped = found.newest.ending {

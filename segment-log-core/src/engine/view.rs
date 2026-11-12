@@ -182,13 +182,16 @@ impl Published {
         epochs: RangeInclusive<u64>,
     ) {
         for tail in &footer.streams {
-            self.heads.insert(
-                tail.stream.to_vec(),
-                StreamHead {
-                    revision: tail.last_revision,
-                    offset: tail.last_offset,
-                },
-            );
+            let head = StreamHead {
+                revision: tail.last_revision,
+                offset: tail.last_offset,
+            };
+            match self.heads.get_mut(tail.stream) {
+                Some(known) => *known = head,
+                None => {
+                    self.heads.insert(tail.stream.to_vec(), head);
+                }
+            }
         }
         self.sealed.push(Arc::new(SealedSegment {
             base: summary.base,
