@@ -22,9 +22,9 @@ The [M4 Linux report](../evidence/m4/completion.md) measured closed-loop keyed a
 These facts are fixed:
 
 - The writer classifies a group's submits, then writes and flushes the group, on one thread. Classification does not overlap the flush. So each microsecond of writer time per record comes off closed-loop throughput directly.
-- From the medians, the closed loop spends about 9.2 µs per record on M4 and about 5.0 µs on M3, a gap of about 4.2 µs (inferred: it assumes the writer is busy for the whole run).
-- Timers on the writer thread, on a development machine and not on the hosted runner, put about 1.5 to 2 µs per new key in the filter probes, one cache miss each, and about 0.85 µs in false-positive index reads (about 9% of new keys read a key index page, about 7 µs each). That explains about 2.6 µs of the 4.2 µs gap. M3 also paid for lookups, in an exact map of 22.7 million keys. No run yet measures M4 appends without keys on the same history, so the share that the lookup causes is not measured.
-- Extrapolated from those timers, the writer cost per new key reaches the 20 µs budget at about 400 to 500 sealed segments of 64 MiB (inferred).
+- Timers on the writer thread, on a development machine and not on the hosted runner, put about 1.5 to 2 µs per new key in the filter probes, one cache miss each, and about 0.85 µs in false-positive index reads (about 9% of new keys read a key index page, about 7 µs each).
+- [Two captures](../evidence/issue70/README.md) compare keyed and unkeyed appends on the same keyed history. At 100 sealed segments, unkeyed appends on M4 run at 0.971 of M3, and the ranges overlap. So the gap between M3 and M4 is in the key lookup: keyed appends cost 4.65 µs more per record than unkeyed on M4, and 1.78 µs on M3.
+- With 1,000 sealed segments and about the same number of keys, the lookup costs 30.86 µs per record on M4 and 1.56 µs on M3. Keyed appends on M4 reach 29,105 records/s, which misses the 50,000 records/s target, and a paced run at 50,000 records/s cannot keep up.
 - M5 freezes the byte layout. After M5, a format change needs a new version and a reader for the older one ([ADR 0013](0013-provisional-v0-byte-layout.md)).
 - A cache is never the only copy of a fact (I9). Sealed segments never change (I7). Only the writer thread writes segment files.
 
@@ -33,7 +33,7 @@ These facts are fixed:
 ### Option A - keep ADR 0048 alone and state a history limit
 
 - **For:** no code. The target is met at the PRD fixture.
-- **Against:** the cost per new key still grows with history, and the limit (about 400 segments, inferred) is low for logs that are never trimmed.
+- **Against:** the cost per new key still grows with history. At 1,000 sealed segments, keyed appends already miss the throughput target, and logs are never trimmed.
 
 ### Option B - a persisted log filter (ADR 0048, option D)
 
@@ -86,7 +86,7 @@ Option C keeps the lookup that ADR 0048 chose and adds a cache in front of it, s
 
 Before this ADR is accepted, the `m4-evidence` workflow measures on the same commit:
 
-1. Keyed and unkeyed closed-loop appends on the keyed PRD fixture, on the M3 and the M4 code. If M4 is also slow without keys, the lookup is not the main cost, and this decision is wrong.
+1. Keyed and unkeyed closed-loop appends on the keyed PRD fixture, on the M3 and the M4 code. If M4 is also slow without keys, the lookup is not the main cost, and this decision is wrong. **Done** at `15dd21d`: the lookup is the cost (see Context).
 2. Keyed against unkeyed closed-loop appends with option C, at 100 sealed segments and at 1,000. The second fixture uses a smaller `roll_bytes` and keeps about the same number of keys, so that it fits on the runner's disk.
 
 Option C passes if keyed closed-loop throughput is within 10% of unkeyed at both sizes, with open time, `ORACLE-13` and the key-cache memory formula still met.
