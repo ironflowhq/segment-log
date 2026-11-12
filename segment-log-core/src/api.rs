@@ -113,5 +113,4 @@ pub enum ReadError {
 #[derive(Debug)]
 pub enum SealError {
     Poisoned,
-    Io(std::io::Error),
 }
