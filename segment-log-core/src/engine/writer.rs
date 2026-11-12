@@ -100,6 +100,23 @@ impl Writer {
         self.active = Active::new(next);
         Ok(())
     }
+
+    fn seal(&mut self, view: &View) -> io::Result<()> {
+        let storage = view.storage.as_ref();
+        let path = segment_path(&view.dir, self.active.base);
+        let run = closing::seal_run(
+            &view.log_id,
+            self.epoch,
+            view.watermark(),
+            self.active.length,
+            &self.active.tails,
+        );
+        for frame in run {
+            call(storage, &path, Purpose::Seal, Op::Append(frame))?;
+        }
+        call(storage, &path, Purpose::Seal, Op::SyncData)?;
+        Ok(())
+    }
 }
 
 pub(super) struct RevisionSlot {
@@ -246,18 +263,60 @@ impl Writer {
     }
 }
 
+/// A dequeued seal marker ends the gather, because nothing is queued behind it.
+fn dequeued(message: Option<Message>, seal: &mut Option<mpsc::Sender<()>>) -> Option<Request> {
+    match message? {
+        Message::Append(request) => Some(request),
+        Message::Seal(reply) => {
+            *seal = Some(reply);
+            None
+        }
+    }
+}
+
+/// Marks the writer poisoned when its thread panics (api.md, admission step 3).
+struct PoisonOnPanic<'a>(&'a std::sync::atomic::AtomicBool);
+
+impl Drop for PoisonOnPanic<'_> {
+    fn drop(&mut self) {
+        if std::thread::panicking() {
+            self.0.store(true, std::sync::atomic::Ordering::Release);
+        }
+    }
+}
+
 pub(super) fn run(
     view: Arc<View>,
     poisoned: Arc<std::sync::atomic::AtomicBool>,
-    receiver: mpsc::Receiver<Request>,
+    receiver: mpsc::Receiver<Message>,
     mut writer: Writer,
     options: Arc<Options>,
 ) {
+    // A local, so that unwinding drops it before `receiver`: admission sees the flag before it
+    // can see the disconnected queue.
+    let _panic = PoisonOnPanic(&poisoned);
     let mut deferred = None;
+    let mut seal: Option<mpsc::Sender<()>> = None;
     loop {
-        let first = match deferred.take().or_else(|| receiver.recv().ok()) {
-            Some(r) => r,
-            None => return,
+        let first = match deferred.take() {
+            Some(request) => request,
+            None => {
+                if let Some(reply) = seal.take() {
+                    if writer.seal(&view).is_ok() {
+                        let _ = reply.send(());
+                    } else {
+                        poisoned.store(true, std::sync::atomic::Ordering::Release);
+                    }
+                    return;
+                }
+                let Ok(message) = receiver.recv() else {
+                    return;
+                };
+                let Some(request) = dequeued(Some(message), &mut seal) else {
+                    continue;
+                };
+                request
+            }
         };
         #[cfg(test)]
         crate::pipeline::request(&first.submit, crate::pipeline::DEQUEUE);
@@ -335,8 +394,9 @@ pub(super) fn run(
                 }
             }
             next = match draft.requests.first() {
+                _ if seal.is_some() => None,
                 // No new submit has joined yet, so no linger runs.
-                None => receiver.try_recv().ok(),
+                None => dequeued(receiver.try_recv().ok(), &mut seal),
                 Some(first) => {
                     // The linger runs from the admission of the group's first submit, so the time
                     // that submit spent queued behind the previous flush counts (ADR 0046).
@@ -346,7 +406,7 @@ pub(super) fn run(
                         // linger over. Without that limit, steady arrivals keep one group
                         // gathering until the byte cap.
                         let limit = *gathered.get_or_insert_with(Instant::now);
-                        match receiver.try_recv().ok() {
+                        match dequeued(receiver.try_recv().ok(), &mut seal) {
                             Some(late) if late.admitted > limit => {
                                 deferred = Some(late);
                                 None
@@ -354,7 +414,7 @@ pub(super) fn run(
                             queued => queued,
                         }
                     } else {
-                        receiver.recv_timeout(remaining).ok()
+                        dequeued(receiver.recv_timeout(remaining).ok(), &mut seal)
                     }
                 }
             };
@@ -468,7 +528,7 @@ fn poison(
     poisoned: &std::sync::atomic::AtomicBool,
     draft: Draft,
     current: Option<Request>,
-    receiver: mpsc::Receiver<Request>,
+    receiver: mpsc::Receiver<Message>,
 ) {
     poisoned.store(true, std::sync::atomic::Ordering::Release);
     for request in draft.requests {
@@ -480,7 +540,9 @@ fn poison(
     if let Some(request) = current {
         request.answer(Err(CommitError::Poisoned));
     }
-    for request in receiver {
-        request.answer(Err(CommitError::Poisoned));
+    for message in receiver {
+        if let Message::Append(request) = message {
+            request.answer(Err(CommitError::Poisoned));
+        }
     }
 }

@@ -19,10 +19,11 @@ pub(crate) enum Purpose {
     Summary,
     KeyFilter,
     KeyIndex,
+    Seal,
 }
 impl Purpose {
     #[cfg(test)]
-    pub(crate) const ALL: [Purpose; 8] = [
+    pub(crate) const ALL: [Purpose; 9] = [
         Purpose::Open,
         Purpose::Group,
         Purpose::Recovery,
@@ -31,6 +32,7 @@ impl Purpose {
         Purpose::Summary,
         Purpose::KeyFilter,
         Purpose::KeyIndex,
+        Purpose::Seal,
     ];
 }
 #[derive(Clone, Debug, PartialEq, Eq)]

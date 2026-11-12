@@ -9,7 +9,7 @@ mod acceptance;
 mod api;
 pub use api::*;
 mod engine;
-pub use engine::{Pending, SegmentLog};
+pub use engine::{LogReader, Pending, SegmentLog};
 
 #[cfg(test)]
 mod pipeline;
