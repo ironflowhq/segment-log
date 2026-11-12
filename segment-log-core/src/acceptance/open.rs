@@ -195,7 +195,7 @@ fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
             raw::group(1, 0, &[b"kept"]),
         ]
         .concat();
-        let valid = raw::rolled(groups.clone(), 1);
+        let valid = raw::rolled(groups, 1);
         let trailing = [valid.clone(), vec![0; 33]].concat();
         for (segments, corrupt) in [
             (vec![(0, valid.clone()), (1, vec![])], None),
@@ -213,8 +213,8 @@ fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
                 Some((0, 0)),
             ),
             (
-                vec![(0, trailing), (1, raw::header(raw::VERSION, 1, 1))],
-                Some((0, groups.len() as u64)),
+                vec![(0, trailing.clone()), (1, raw::header(raw::VERSION, 1, 1))],
+                Some((0, trailing.len() as u64 - 40)),
             ),
         ] {
             let sim = Sim::new(802);

@@ -184,47 +184,55 @@ fn a_segment_from_another_log_fails_open_without_deletion() {
     });
 }
 
-/// Given a segment with a successor that holds a frame that is not valid, or bytes after its last frame
+/// Given a segment with a successor and a valid closing run, where one group frame has a bad
+/// checksum, an epoch below the frame before it, a base that does not follow the frame before it,
+/// or zeros in place of its bytes
 /// When the log opens
-/// Then open fails with `Corrupt`, with that segment and the position where its scan stopped
-/// And every file keeps its bytes
+/// Then open succeeds, because it reads no group frame of that segment, and changes no file
+/// And a read of that segment fails with `ReadError::Corrupt` at that frame's position
+/// And a read from the next segment returns its records
 ///
-/// Cases: RECOVERY-FIXTURES, OPEN-LAYOUT, ORACLE-6
+/// Cases: RECOVERY-FIXTURES, OPEN-LAYOUT, ORACLE-6, ORACLE-13
 #[test]
-fn a_bad_frame_in_a_sealed_segment_fails_open_and_changes_nothing() {
+fn a_bad_frame_in_a_sealed_segment_fails_its_read_and_changes_nothing() {
     bounded(|| {
         let valid = groups(0, 2, &[b"a", b"b"]);
-        let mut bad_crc = raw::group(2, 2, &[b"c"]);
+        let good = raw::group(2, 2, &[b"c"]);
+        let mut bad_crc = good.clone();
         bad_crc[4] ^= 1;
+        let sealed_first = raw::rolled([valid.clone(), good.clone()].concat(), 2);
+        let at = valid.len();
         for bad in [
             bad_crc,
-            vec![0; 600],
-            raw::group(1, 2, &[b"lower epoch"]),
-            raw::group(2, 3, &[b"wrong base"]),
-            vec![0xff; 5],
+            raw::group(1, 2, &[b"c"]),
+            raw::group(2, 3, &[b"c"]),
+            vec![0; good.len()],
         ] {
-            for tail in [vec![], raw::group(2, 2, &[b"c"])] {
-                let sim = Sim::new(304);
-                raw::install_segments(
-                    &sim,
-                    &[
-                        (0, [valid.clone(), bad.clone(), tail].concat()),
-                        (2, sealed(2, 2, &[b"c"])),
-                    ],
-                );
-                let before = sim.image();
-                let result = try_open(&sim);
-                assert!(
-                    matches!(
-                        result,
-                        Err(OpenError::Corrupt { segment: 0, position })
-                            if position == valid.len() as u64
-                    ),
-                    "{:?}",
-                    result.err()
-                );
-                assert_eq!(sim.image(), before);
-            }
+            let mut damaged = sealed_first.clone();
+            damaged[at..at + good.len()].copy_from_slice(&bad);
+            let sim = Sim::new(304);
+            raw::install_segments(
+                &sim,
+                &[
+                    (0, damaged),
+                    (3, sealed(3, 2, &[b"d"])),
+                    (4, raw::header(raw::VERSION, 4, 2)),
+                ],
+            );
+            let before = raw::segments(&sim);
+            let log = try_open(&sim).unwrap();
+            let result = log.read(0, 10);
+            assert!(
+                matches!(
+                    result,
+                    Err(ReadError::Corrupt { segment: 0, position })
+                        if position == at as u64
+                ),
+                "{result:?}"
+            );
+            assert_eq!(log.read(3, 10).unwrap()[0].payload, b"d");
+            drop(log);
+            assert_eq!(raw::segments(&sim), before);
         }
     });
 }
@@ -272,8 +280,10 @@ fn a_torn_newest_segment_no_longer_than_a_header_is_deleted() {
 /// Then it ends the log, and recovery cuts it and keeps every record before it
 /// And the next append survives a reopen and a power loss, because the writer epoch is above every
 /// epoch in the files and not only above the newest segment's
-/// When that frame opens a segment that has a successor
-/// Then open fails with `Corrupt` at that frame and changes no file
+/// When that frame opens a segment that has a successor, whose closing run has the same epoch
+/// Then open fails with `Corrupt` at that segment's footer and changes no file
+/// When that closing run has the epoch of the segment before
+/// Then open succeeds, and a read of that segment fails with `ReadError::Corrupt` at that frame
 ///
 /// Cases: RECOVERY-FIXTURES, ORACLE-1
 #[test]
@@ -309,20 +319,45 @@ fn a_lower_epoch_than_the_segment_before_ends_the_log() {
             assert_eq!(payloads, [b"a", b"b", b"c"], "after {crash:?}");
         }
 
-        let sim = Sim::new(306);
-        raw::install_segments(
-            &sim,
-            &[(0, first), (2, stale), (3, raw::header(raw::VERSION, 3, 3))],
-        );
-        let before = sim.image();
-        assert!(matches!(
-            try_open(&sim),
-            Err(OpenError::Corrupt {
-                segment: 2,
-                position: 64
-            })
-        ));
-        assert_eq!(sim.image(), before);
+        let footer_at = |segment: &[u8]| {
+            let frames = raw::frames(segment);
+            (segment.len() - frames[frames.len() - 2..].concat().len()) as u64
+        };
+        for run_epoch in [2, 3] {
+            let sim = Sim::new(306);
+            let stale = raw::rolled(stale.clone(), run_epoch);
+            raw::install_segments(
+                &sim,
+                &[
+                    (0, first.clone()),
+                    (2, stale.clone()),
+                    (3, raw::header(raw::VERSION, 3, 3)),
+                ],
+            );
+            let before = sim.image();
+            let result = try_open(&sim);
+            if run_epoch == 2 {
+                assert!(
+                    matches!(
+                        result,
+                        Err(OpenError::Corrupt { segment: 2, position })
+                            if position == footer_at(&stale)
+                    ),
+                    "{:?}",
+                    result.err()
+                );
+                assert_eq!(sim.image(), before);
+            } else {
+                let log = result.unwrap();
+                assert!(matches!(
+                    log.read(2, 10),
+                    Err(ReadError::Corrupt {
+                        segment: 2,
+                        position: 64
+                    })
+                ));
+            }
+        }
     });
 }
 
