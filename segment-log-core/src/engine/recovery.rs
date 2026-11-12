@@ -4,7 +4,13 @@ use survey::{Ending, ReadOnly};
 pub(super) struct Recovered {
     pub log_id: codec::LogId,
     pub published: Published,
-    pub writable: Option<Writable>,
+    pub state: State,
+}
+
+pub(super) enum State {
+    /// Open has released the lock, because a sealed log starts no writer.
+    Sealed,
+    Writable(Writable),
 }
 
 pub(super) struct Writable {
@@ -124,7 +130,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
             return Ok(Recovered {
                 log_id: found.log_id,
                 published: found.published,
-                writable: None,
+                state: State::Sealed,
             });
         }
         (Ending::Rolled { .. }, Some(epoch)) => {
@@ -150,7 +156,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
     Ok(Recovered {
         log_id: found.log_id,
         published: found.published,
-        writable: Some(Writable {
+        state: State::Writable(Writable {
             lock,
             epoch,
             active,

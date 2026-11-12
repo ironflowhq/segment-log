@@ -182,7 +182,7 @@ impl SegmentLog {
         let recovery::Recovered {
             log_id,
             published,
-            writable,
+            state,
         } = recovery::open(storage.as_ref(), dir)?;
         let view = Arc::new(View {
             storage,
@@ -194,9 +194,9 @@ impl SegmentLog {
         let poisoned = Arc::new(std::sync::atomic::AtomicBool::new(false));
         #[cfg(test)]
         let memory = Arc::new(Mutex::new(KeyMemory::default()));
-        let (gate, lifecycle) = match writable {
-            None => (Gate::Closed, Lifecycle::Sealed),
-            Some(writable) => {
+        let (gate, lifecycle) = match state {
+            recovery::State::Sealed => (Gate::Closed, Lifecycle::Sealed),
+            recovery::State::Writable(writable) => {
                 let keys = Keys::new(
                     hash(view.log_id.clone()),
                     writable.active_keys,
