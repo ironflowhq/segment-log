@@ -12,6 +12,8 @@ const LOG_ID: [u8; 16] = [7; 16];
 
 /// `FUZZ-DECODER`: the header decoder and the frame decoder on arbitrary bytes. A header or frame
 /// that decodes must encode back to the same bytes.
+///
+/// Cases: FUZZ-DECODER
 pub fn decode_frame(data: &[u8]) {
     let Some((&mode, bytes)) = data.split_first() else {
         return;
@@ -63,6 +65,8 @@ pub fn decode_frame(data: &[u8]) {
 /// `FUZZ-RECOVERY`: open on a log whose only segment is a valid header followed by arbitrary
 /// bytes. Open either fails with an error or keeps a valid prefix. In raw mode, a second open of
 /// what the first one left finds the same records, and changes nothing.
+///
+/// Cases: FUZZ-RECOVERY
 pub fn recover_active_segment(data: &[u8]) {
     let Some((&mode, rest)) = data.split_first() else {
         return;
