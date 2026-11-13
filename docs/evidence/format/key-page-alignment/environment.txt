@@ -1,0 +1,7 @@
+kernel 7.0.0-1017-azure
+device nvme0n1p1
+filesystem ext4
+read_ahead_kb 128
+file_bytes 8589934592
+cpus 4
+Python 3.12.3
