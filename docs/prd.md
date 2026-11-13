@@ -151,6 +151,8 @@ M3 passed on 2026-11-10. The [completion record](evidence/m3/completion.md) link
 
 M4 passed on 2026-11-11. The [completion record](evidence/m4/completion.md) links the green CI run and the Linux report: keyed open in 38.6 ms warm and 122.8 ms cold, 47.2 MB of key-cache memory, and keyed appends beside M3.
 
+M5 passed on 2026-11-13. The [completion record](evidence/m5/completion.md) links [ADR 0052](decisions/0052-freeze-format-version-1.md), which freezes the layout at `format_version` 1, and a one-hour CI fuzz run of both targets with no crash.
+
 | # | Scope | Done when |
 | --- | --- | --- |
 | ✅ M0 | Repository ready: edition 2024, pinned toolchain, CI, docs. | CI is green on Linux and macOS. |
@@ -158,7 +160,7 @@ M4 passed on 2026-11-11. The [completion record](evidence/m4/completion.md) link
 | ✅ M2 | Full model-based verification of revisions and keys. | Property tests for R10–R12 pass against the model. A rejected revision uses no offset. |
 | ✅ M3 | Segment roll. | No submit crosses a roll in the crash tests. A crash at each step of a roll recovers. A Linux syscall trace verifies directory sync during roll ([ADR 0029](decisions/0029-m1-completion-requires-correctness-and-measurement-evidence.md)). |
 | ✅ M4 | Sealed footer and locator, `seal`, read-only open, `LogReader`. A key filter and a key index in each sealed segment for [retained-key lookup](#open-items) under [ADR 0031](decisions/0031-keys-live-with-retained-segments.md) and [ADR 0048](decisions/0048-sealed-segments-carry-a-key-filter-and-index.md). | Open time for M4 conditions meets the target. From each sealed segment except the newest, open reads only the header, the locator, the footer and the key filter, counted through the storage trait. Retained-key retry and cache-rebuild tests pass, and key-cache memory matches the formula in ADR 0048. A Linux report gives open time cold and warm, key-cache memory, and the effect on append throughput and p99 latency. |
-| M5 | Freeze the byte layout. Fuzz the recovery parser. | A format ADR is Accepted. Fuzzing runs for 1 hour in CI with no crash. |
+| ✅ M5 | Freeze the byte layout. Fuzz the recovery parser. | A format ADR is Accepted. Fuzzing runs for 1 hour in CI with no crash. |
 | M6 | `segment-log-server` over Unix socket first, then vsock using the same protocol ([ADR 0034](decisions/0034-m6-builds-unix-socket-before-vsock.md)). Benchmark against the targets. | A Go test client appends and reads over both transports, with shared protocol conformance cases for retries, revisions and admission outcomes. The benchmark report is in `docs/` and identifies the actual guest stack with its required storage-qualification record ([ADR 0032](decisions/0032-qualify-deployment-storage-before-m6.md)). Qualification is required before the guest benchmark and production durability claims. The deployment record identifies mount paths, the reader component and verified post-guest handoff under [ADR 0033](decisions/0033-deployment-owns-volumes-and-reader-handoff.md). |
 
 `segment-log-server` stays a placeholder until M6 ([ADR 0001](decisions/0001-rust-library-first-socket-boundary-later.md)).
