@@ -63,8 +63,8 @@ pub fn decode_frame(data: &[u8]) {
 }
 
 /// `FUZZ-RECOVERY`: open on a log whose only segment is a valid header followed by arbitrary
-/// bytes. Open either fails with an error or keeps a valid prefix. In raw mode, a second open of
-/// what the first one left finds the same records, and changes nothing.
+/// bytes. Open either fails with an error or keeps a valid prefix. A second open of what the first
+/// one left finds the same records, and changes nothing.
 ///
 /// Cases: FUZZ-RECOVERY
 pub fn recover_active_segment(data: &[u8]) {
@@ -94,7 +94,7 @@ pub fn recover_active_segment(data: &[u8]) {
     ] {
         call(&sim, path, Purpose::Open, op).unwrap();
     }
-    let first = match recovery::open(&sim, dir) {
+    let first = match recovery::open(&sim, dir, keys::KeyHash::new) {
         Ok(recovered) => summary(recovered),
         // A frame epoch at the top of the range leaves no epoch for the next writer.
         Err(OpenError::Corrupt { .. } | OpenError::Exhausted) => return,
@@ -105,13 +105,8 @@ pub fn recover_active_segment(data: &[u8]) {
         files[0].len() <= segment.len() && segment.starts_with(&files[0]),
         "open kept bytes that were not in the segment"
     );
-    // Checksummed mode forges frames that pass their CRC but disagree with each other, such as a
-    // footer that names other streams than the groups. Reopen reads such a footer in place of the
-    // groups, so it can see other heads. Forging needs the log id, which no caller has (ADR 0049).
-    if mode & 1 == 1 {
-        return;
-    }
-    let second = summary(recovery::open(&sim, dir).expect("a second open fails"));
+    let second =
+        summary(recovery::open(&sim, dir, keys::KeyHash::new).expect("a second open fails"));
     assert_eq!(first, second, "a second open finds other records");
     assert_eq!(
         files,

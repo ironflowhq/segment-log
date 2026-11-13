@@ -615,3 +615,67 @@ fn a_submit_whose_keys_would_pass_the_key_index_limit_rolls_first() {
         }
     });
 }
+
+fn assert_corrupt_unchanged(sim: &Sim, position: usize, label: &str) {
+    let before = sim.image();
+    let result = try_open(sim);
+    assert!(
+        matches!(result, Err(OpenError::Corrupt { segment: 0, position: p }) if p == position as u64),
+        "{label}: {:?}",
+        result.err()
+    );
+    assert!(sim.image() == before, "{label}: open changed a file");
+}
+
+/// Given a newest segment of keyed groups that ends in a roll's complete closing run, whose frames
+/// all pass their CRCs
+/// When its footer names a stream that its groups do not have
+/// Or its key index misses one keyed record
+/// Then open fails with `Corrupt` at the start of the run, and changes no file
+///
+/// Cases: RECOVERY-FIXTURES, ORACLE-6
+#[test]
+fn a_closing_run_that_disagrees_with_its_groups_fails_open() {
+    bounded(|| {
+        let groups = keyed_segment(1);
+        let extra_stream = raw::roll_run_with(&groups, 1, |_, tails| {
+            tails.insert(b"not-in-any-group", (7, 0, 64));
+        });
+        let missing_key = raw::roll_run_with(&groups, 1, |keys, _| {
+            keys.pop();
+        });
+        for (label, run) in [("extra stream", extra_stream), ("missing key", missing_key)] {
+            let sim = Sim::new(340);
+            raw::install_segments(&sim, &[(0, [groups.clone(), run].concat())]);
+            assert_corrupt_unchanged(&sim, groups.len(), label);
+        }
+    });
+}
+
+/// Given a sealed log whose final segment ends in a seal's complete closing run, whose frames all
+/// pass their CRCs
+/// When its footer gives a stream another last revision than its groups do
+/// Then a writable open and a `LogReader` both fail with `Corrupt` at the start of the run, and
+/// neither changes a file
+///
+/// Cases: RECOVERY-FIXTURES, READER
+#[test]
+fn a_seal_run_that_disagrees_with_its_groups_fails_open_and_the_reader() {
+    bounded(|| {
+        let groups = keyed_segment(1);
+        let run = raw::seal_run_with(&groups, 1, |tails| {
+            tails.values_mut().next().unwrap().0 += 1;
+        });
+        let sim = Sim::new(341);
+        raw::install_segments(&sim, &[(0, [groups.clone(), run].concat())]);
+        assert_corrupt_unchanged(&sim, groups.len(), "writable open");
+        let before = sim.image();
+        let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone()));
+        assert!(
+            matches!(reader, Err(OpenError::Corrupt { segment: 0, position: p }) if p == groups.len() as u64),
+            "reader: {:?}",
+            reader.err()
+        );
+        assert!(sim.image() == before, "the reader changed a file");
+    });
+}

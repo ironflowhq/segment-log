@@ -92,6 +92,17 @@ impl KeyHash {
         Self { forced, ..self }
     }
 
+    /// The key index entries of a segment's keyed records, as a roll writes them.
+    pub(super) fn entries(&self, keys: &BTreeMap<Vec<u8>, ActiveKey>) -> Vec<codec::KeyEntry> {
+        keys.iter()
+            .map(|(key, at)| codec::KeyEntry {
+                hash: self.of(key),
+                position: at.position,
+                record: at.record,
+            })
+            .collect()
+    }
+
     fn of(&self, key: &[u8]) -> u64 {
         #[cfg(test)]
         if let Some(&hash) = self.forced.get(key) {
@@ -305,14 +316,7 @@ impl Keys {
     }
 
     pub(super) fn index_entries(&self) -> Vec<codec::KeyEntry> {
-        self.active
-            .iter()
-            .map(|(key, at)| codec::KeyEntry {
-                hash: self.hash.of(key),
-                position: at.position,
-                record: at.record,
-            })
-            .collect()
+        self.hash.entries(&self.active)
     }
 
     pub(super) fn roll(&mut self, sealed: SealedKeys) {
