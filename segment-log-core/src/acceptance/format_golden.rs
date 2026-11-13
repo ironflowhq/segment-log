@@ -113,7 +113,7 @@ fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)]) {
         assert!(
             actual == fixture,
             "segment {base} differs from the format v1 fixture at byte {:?} (lengths {} and {}); \
-             a layout change needs a new format_version (ADR 0052)",
+             a layout change increments format_version and replaces this fixture (ADR 0053)",
             first,
             actual.len(),
             fixture.len(),
