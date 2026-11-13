@@ -1,6 +1,6 @@
 # Byte layout
 
-Status: frozen at `format_version` 1 ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). A change to the bytes of a segment file increments `format_version`, and a build reads every frozen version from 1 up to its own. Version 0 (M1–M3) is not frozen, and no build reads it. The sparse index is not frozen.
+Status: `format_version` 1, reviewed at M5 ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). Until the first production release, a change to the bytes of a segment file increments `format_version`, and a build reads only its own version ([ADR 0053](../decisions/0053-format-changes-need-no-older-reader-before-production.md)). Version 0 (M1–M3) is not frozen, and no build reads it. The sparse index is not frozen.
 
 This file is the only source for field widths, offsets and size limits. Other docs link here and do not copy them.
 
