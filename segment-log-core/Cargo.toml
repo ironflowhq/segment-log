@@ -1,6 +1,6 @@
 [package]
 name = "segment-log-core"
-description = "Embedded append-only segment log for Ironflow (pre-release; format provisional until M5)."
+description = "Embedded append-only segment log for Ironflow (pre-release; format frozen at version 1)."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

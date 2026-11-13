@@ -1,0 +1,30 @@
+[package]
+name = "segment-log-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "=0.4.13"
+segment-log-core = { path = "../segment-log-core" }
+
+# Its own workspace, so that the nightly-only fuzz build stays out of the pinned workspace.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "decoder"
+path = "fuzz_targets/decoder.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "recovery"
+path = "fuzz_targets/recovery.rs"
+test = false
+doc = false
+bench = false
