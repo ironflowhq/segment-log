@@ -74,6 +74,7 @@ A changes nothing that has been tested, and B and C fix costs that no measuremen
 
 ## Consequences
 
+- [ADR 0055](0055-format-version-2-aligns-key-index-pages.md), proposed, makes format version 2: key index pages start on a 4 KiB boundary (this ADR's option B, after a measurement), and format.md drops the sparse index.
 - [ADR 0053](0053-format-changes-need-no-older-reader-before-production.md), proposed, replaces the rule for later changes until the first production release: a change increments `format_version` and replaces the `FORMAT-GOLDEN` fixture, and no build keeps a reader for older versions. The field choices and the scope here stand.
 - format.md drops the "provisional" status, links this ADR, and marks the sparse index as not frozen. The `log_id` note "M5 reviews it" goes.
 - [ADR 0013](0013-provisional-v0-byte-layout.md) is fulfilled and stays accepted: it planned this ADR. It gains a bullet that links here.

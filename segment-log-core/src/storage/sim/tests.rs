@@ -171,7 +171,8 @@ fn unsynced_removal_can_restore_the_durable_file() {
 }
 /// Given chosen read, write and sync fault boundaries
 /// When each fault is injected once
-/// Then partial bytes, disk full, corruption, EOF, errors and panic are observable and traced
+/// Then partial bytes, disk full, corruption, EOF, errors, panic and given random bytes are
+/// observable and traced, and a saved trace replays them
 /// Cases: SIM-MODEL
 #[test]
 fn injected_faults_have_observable_results_and_replay() {
@@ -202,6 +203,9 @@ fn injected_faults_have_observable_results_and_replay() {
         assert!(s.call(read_call.clone()).is_err());
         s.inject(read_call.clone(), Fault::Panic);
         assert!(std::panic::catch_unwind(|| s.call(read_call)).is_err());
+        let random = Call::new("/log", Purpose::Open, Op::Random(4));
+        s.inject(random.clone(), Fault::Random(vec![9, 8, 7, 6]));
+        assert_eq!(s.call(random).unwrap(), Value::Bytes(vec![9, 8, 7, 6]));
         for op in [Op::SyncAll, Op::SyncData, Op::SyncDir] {
             let path = if op == Op::SyncDir { "/log" } else { "/log/a" };
             let c = Call::new(path, Purpose::Recovery, op);

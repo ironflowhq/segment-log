@@ -40,7 +40,7 @@ callers (threads, or a socket server in M6)
 - **Writer thread.** The only thread that writes segment files. It owns the tail map and the key map, and it assigns log offsets and revisions. Because one thread does every check, a check is atomic with respect to other appends.
 - **Segments.** Append-only files. The active segment takes new frames. Sealed segments never change.
 - **Watermark.** An atomic value that readers load. Only the writer stores it.
-- **Caches.** The tail map, the key map, the frame tables of the sealed segments that reads used most recently, up to the [bound in api.md](api.md#opening-a-directory), and, from M4, the key filters that open loads from sealed segments. The log can rebuild each one from the segments. The sparse index file in [format.md](format.md#sparse-index-not-written-yet-not-frozen) is not written yet.
+- **Caches.** The tail map, the key map, the frame tables of the sealed segments that reads used most recently, up to the [bound in api.md](api.md#opening-a-directory), and, from M4, the key filters that open loads from sealed segments. The log can rebuild each one from the segments.
 
 ## Storage contract
 

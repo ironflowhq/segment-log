@@ -1,23 +1,37 @@
 use super::support::{fixtures::*, raw};
+use crate::storage::{Call, Op, Purpose, sim::Fault};
 use crate::*;
 use std::{path::Path, sync::Arc};
 
-// The fixed log id goes in through a header-only first segment, so the writer runs at epoch 2.
+/// The log id of format.md's check values.
+const LOG_ID: [u8; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+/// Submits that the first writer appends before the log reopens.
+const FIRST: usize = 3;
+
+fn rolling() -> Options {
+    Options {
+        roll_bytes: 300,
+        ..options()
+    }
+}
+
+/// Creates the log at epoch 1, appends the first submits, reopens it at epoch 2 and appends the
+/// rest, so the fixture holds a creation, an epoch change and rolls, as a real history does.
 fn write(sim: &Sim) -> SegmentLog {
-    raw::install_segments(sim, &[(0, raw::header(raw::VERSION, 0, 1))]);
-    let log = open_with(
-        sim,
-        Options {
-            roll_bytes: 300,
-            ..options()
-        },
-    );
-    for submit in submits() {
+    let random = Call::new("/log", Purpose::Open, Op::Random(16));
+    sim.inject(random, Fault::Random(LOG_ID.to_vec()));
+    let mut submits = submits().into_iter();
+    let append = |log: &SegmentLog, submit| {
         log.append(Submit { records: submit })
             .unwrap()
             .wait()
             .unwrap();
-    }
+    };
+    let log = open_with(sim, rolling());
+    submits.by_ref().take(FIRST).for_each(|s| append(&log, s));
+    drop(log);
+    let log = open_with(sim, rolling());
+    submits.for_each(|s| append(&log, s));
     log
 }
 
@@ -88,7 +102,7 @@ macro_rules! fixture {
         vec![$((
             $base,
             include_bytes!(concat!(
-                "../../tests/fixtures/format-v1/", $dir, "/", $file, ".seg"
+                "../../tests/fixtures/format-v2/", $dir, "/", $file, ".seg"
             ))
             .to_vec(),
         )),+]
@@ -112,7 +126,7 @@ fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)]) {
         let first = actual.iter().zip(fixture).position(|(a, f)| a != f);
         assert!(
             actual == fixture,
-            "segment {base} differs from the format v1 fixture at byte {:?} (lengths {} and {}); \
+            "segment {base} differs from the format v2 fixture at byte {:?} (lengths {} and {}); \
              a layout change increments format_version and replaces this fixture (ADR 0053)",
             first,
             actual.len(),
@@ -121,7 +135,7 @@ fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)]) {
     }
 }
 
-/// Given the committed format v1 fixture: two rolled segments and an active one
+/// Given the committed format v2 fixture: two rolled segments and an active one
 /// When a writable log opens it
 /// Then it reads every record at its offset and revision
 /// And a retry of each keyed record returns the original position without appending
@@ -129,7 +143,7 @@ fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)]) {
 ///
 /// Cases: FORMAT-GOLDEN
 #[test]
-fn a_writable_log_opens_the_format_v1_fixture() {
+fn a_writable_log_opens_the_format_v2_fixture() {
     let sim = Sim::new(0);
     raw::install_segments(&sim, &open_fixture());
     let log = open_with(&sim, options());
@@ -171,13 +185,13 @@ fn a_writable_log_opens_the_format_v1_fixture() {
     assert_eq!(log.watermark(), expected.len() as u64);
 }
 
-/// Given the committed format v1 fixture of a sealed log
+/// Given the committed format v2 fixture of a sealed log
 /// When a `LogReader` opens it
 /// Then it reads every record at its offset and revision
 ///
 /// Cases: FORMAT-GOLDEN
 #[test]
-fn a_log_reader_opens_the_sealed_format_v1_fixture() {
+fn a_log_reader_opens_the_sealed_format_v2_fixture() {
     let sim = Sim::new(0);
     raw::install_segments(&sim, &sealed_fixture());
     let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone())).unwrap();
@@ -186,13 +200,14 @@ fn a_log_reader_opens_the_sealed_format_v1_fixture() {
     assert_eq!(reader.watermark(), expected.len() as u64);
 }
 
-/// Given a log with the fixture's log id
-/// When it appends the fixture's records one submit at a time, and then seals
-/// Then its segment files equal the committed format v1 fixture byte for byte, before and after the seal
+/// Given a new log created with the fixture's log id
+/// When it appends the first submits, reopens, appends the rest one submit at a time, and seals
+/// Then its segment files equal the committed format v2 fixture byte for byte, before and after the
+/// seal
 ///
 /// Cases: FORMAT-GOLDEN
 #[test]
-fn the_writer_still_writes_format_v1() {
+fn the_writer_still_writes_format_v2() {
     let sim = Sim::new(0);
     let log = write(&sim);
     assert_same(&raw::segments(&sim), &open_fixture());

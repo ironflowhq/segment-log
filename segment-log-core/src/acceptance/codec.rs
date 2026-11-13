@@ -195,7 +195,7 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
 fn header_bytes_and_validation_follow_the_format() {
     bounded(|| {
         let mut expected = [0; 64];
-        expected[..8].copy_from_slice(b"SGLG\x01\0\x40\0");
+        expected[..8].copy_from_slice(b"SGLG\x02\0\x40\0");
         expected[8..24].copy_from_slice(&raw::LOG_ID);
         expected[24] = 3;
         expected[32] = 2;
