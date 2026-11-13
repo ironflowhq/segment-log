@@ -1,7 +1,7 @@
 use super::{Error, crc32c};
 
 pub(crate) const HEADER_LEN: usize = 64;
-pub(crate) const FORMAT_VERSION: u16 = 1;
+pub(crate) const FORMAT_VERSION: u16 = 2;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Header {

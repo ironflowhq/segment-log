@@ -16,8 +16,9 @@ pub(super) fn roll_run(
     tails: &BTreeMap<Vec<u8>, Tail>,
     keys: &mut [codec::KeyEntry],
 ) -> [Vec<u8>; 4] {
-    let codec::KeyFrames { filter, index } = codec::encode_key_frames(log_id, epoch, next, keys)
-        .expect("the writer rolls before the key index passes the frame limit");
+    let codec::KeyFrames { filter, index } =
+        codec::encode_key_frames(log_id, epoch, next, filter_at, keys)
+            .expect("the writer rolls before the key index passes the frame limit");
     let footer = footer(
         log_id,
         epoch,

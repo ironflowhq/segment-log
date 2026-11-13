@@ -1,4 +1,4 @@
-"""Writes seed inputs for the fuzz targets from the format v1 fixture.
+"""Writes seed inputs for the fuzz targets from the format fixture.
 
 Each seed starts with the mode byte that the target reads. Mode 0 keeps the bytes as they are.
 """
@@ -7,7 +7,7 @@ import pathlib
 import struct
 
 FUZZ = pathlib.Path(__file__).parent
-FIXTURE = FUZZ.parent / "segment-log-core/tests/fixtures/format-v1"
+FIXTURE = FUZZ.parent / "segment-log-core/tests/fixtures/format-v2"
 HEADER_LEN = 64
 
 

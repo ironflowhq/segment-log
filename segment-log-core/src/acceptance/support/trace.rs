@@ -150,6 +150,10 @@ fn fault(w: &mut impl Write, f: &Option<Fault>) -> io::Result<()> {
         }
         Some(Fault::Eof) => number(w, 5),
         Some(Fault::Panic) => number(w, 6),
+        Some(Fault::Random(b)) => {
+            number(w, 7)?;
+            bytes(w, b)
+        }
     }
 }
 fn read_fault(r: &mut impl Read) -> io::Result<Option<Fault>> {
@@ -164,6 +168,7 @@ fn read_fault(r: &mut impl Read) -> io::Result<Option<Fault>> {
         )),
         5 => Some(Fault::Eof),
         6 => Some(Fault::Panic),
+        7 => Some(Fault::Random(read_bytes(r)?)),
         _ => return Err(invalid()),
     })
 }

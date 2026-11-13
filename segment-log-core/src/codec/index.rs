@@ -1,5 +1,6 @@
 use super::{
-    BODY_HEADER_LEN, Error, KEYED_RECORD_LIMIT, KeyFilter, LogId, PAGE_ENTRIES, PAGE_SIZE, crc32c,
+    BODY_HEADER_LEN, ENVELOPE_LEN, Error, KEYED_RECORD_LIMIT, KeyFilter, LogId, PAGE_ENTRIES,
+    PAGE_SIZE, crc32c,
     frame::{Kind, begin, finish},
 };
 
@@ -37,10 +38,22 @@ fn write_page(out: &mut Vec<u8>, entries: &[KeyEntry]) {
     out.extend_from_slice(&crc.to_le_bytes());
 }
 
+/// The zero bytes that end a key filter frame at `filter_at`, so that the key index pages after it
+/// start on a 4 KiB boundary and a lookup reads one OS page (ADR 0055). A frame with no keyed
+/// record has no pages, and no padding.
+fn key_filter_padding(filter_at: u64, count: u32, filter_bytes: usize) -> usize {
+    if count == 0 {
+        return 0;
+    }
+    let pages_at = filter_at as usize + 2 * (ENVELOPE_LEN + BODY_HEADER_LEN) + filter_bytes;
+    (PAGE_SIZE - pages_at % PAGE_SIZE) % PAGE_SIZE
+}
+
 pub(crate) fn encode_key_frames(
     log: &LogId,
     epoch: u64,
     base_offset: u64,
+    filter_at: u64,
     entries: &mut [KeyEntry],
 ) -> Result<KeyFrames, Error> {
     if entries.len() > KEYED_RECORD_LIMIT {
@@ -52,14 +65,16 @@ pub(crate) fn encode_key_frames(
     }
     let count = entries.len() as u32;
     let filter = KeyFilter::build(entries);
+    let padding = key_filter_padding(filter_at, count, filter.memory_bytes());
     let mut out = begin(
         Kind::KeyFilter,
         epoch,
         base_offset,
         count,
-        BODY_HEADER_LEN + filter.memory_bytes(),
+        BODY_HEADER_LEN + filter.memory_bytes() + padding,
     );
     filter.write_body(&mut out);
+    out.resize(out.len() + padding, 0);
     let filter = finish(log, out);
     let mut out = begin(
         Kind::KeyIndex,

@@ -1,6 +1,6 @@
 # Byte layout
 
-Status: `format_version` 1, reviewed at M5 ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). Until the first production release, a change to the bytes of a segment file increments `format_version`, and a build reads only its own version ([ADR 0053](../decisions/0053-format-changes-need-no-older-reader-before-production.md)). Version 0 (M1–M3) is not frozen, and no build reads it. The sparse index is not frozen.
+Status: `format_version` 2 ([ADR 0055](../decisions/0055-format-version-2-aligns-key-index-pages.md)), from version 1, which M5 reviewed ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). Until the first production release, a change to the bytes of a segment file increments `format_version`, and a build reads only its own version ([ADR 0053](../decisions/0053-format-changes-need-no-older-reader-before-production.md)). No build reads version 0 (M1–M3) or version 1 (M4–M5).
 
 This file is the only source for field widths, offsets and size limits. Other docs link here and do not copy them.
 
@@ -17,7 +17,6 @@ This file is the only source for field widths, offsets and size limits. Other do
 | --- | --- |
 | `LOCK` | Empty. The writer holds an exclusive OS lock on it ([ADR 0018](../decisions/0018-writer-epoch-from-the-segments.md)). |
 | `NNNNNNNNNNNNNNNNNNNN.seg` | A segment. The name is its base offset as 20 decimal digits, with leading zeros. |
-| `NNNNNNNNNNNNNNNNNNNN.idx` | The sparse index for that segment. Not written yet, and not frozen. A cache. |
 
 Open ignores any other file.
 
@@ -27,7 +26,7 @@ Open ignores any other file.
 | --- | --- | --- |
 | Frame body (`body_len`) | at most 16 MiB (`16 * 1024 * 1024`) | Bounds the memory that one frame needs. |
 | Group body | at most 8 MiB | A group's footer entries are less than twice its size, so they always fit in one footer ([ADR 0017](../decisions/0017-footer-locator-offset-and-size.md)). |
-| Segment roll size | at most 4,000 MiB | Sparse-index and key-index positions are 4 bytes. A segment can pass the roll size by one group frame and its closing frames. |
+| Segment roll size | at most 4,000 MiB | Key-index positions are 4 bytes. A segment can pass the roll size by one group frame and its closing frames. |
 | Keyed records in one segment | at most 1,044,225 | The key index frame body must fit the frame body limit: 4,095 pages of 255 entries. The writer rolls before a group whose keys would pass it ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). |
 | Stream id | 1 to 1,024 bytes | |
 | Idempotency key | 1 to 256 bytes | |
@@ -37,7 +36,7 @@ Open ignores any other file.
 | Offset | Size | Field |
 | --- | --- | --- |
 | 0 | 4 | `magic` — the bytes `S G L G` (`0x53 0x47 0x4C 0x47`) |
-| 4 | 2 | `format_version` — `1` from M4. M1–M3 wrote `0`: their sealed segments have no closing frames, so M4 cannot open them. |
+| 4 | 2 | `format_version` — `2`. Version 1 (M4–M5) did not align key index pages. Version 0 (M1–M3) had no closing frames. |
 | 6 | 2 | `header_len` — `64` |
 | 8 | 16 | `log_id` — 128 random bits, chosen when the log is created. The same in every segment of a log. |
 | 24 | 8 | `base_offset` — the log offset of the first record in this segment. Equal to the file name. |
@@ -143,8 +142,9 @@ A body header with `kind = 5` and `count = n`, the number of keyed records in th
 | --- | --- | --- |
 | 24 | `8 * P` | `fences` — the hash of the first entry of each key index page, in page order. They never decrease. |
 | `24 + 8 * P` | `64 * B` | `blocks` — the filter |
+| `24 + 8 * P + 64 * B` | `pad` | `padding` — zero bytes |
 
-`body_len` is exactly `24 + 8 * P + 64 * B`. With `n = 0`, the body is the body header alone, and the filter holds no key.
+`body_len` is exactly `24 + 8 * P + 64 * B + pad`. The padding makes the key index pages that follow start on a 4 KiB boundary, so that a lookup reads one OS page ([ADR 0055](../decisions/0055-format-version-2-aligns-key-index-pages.md)). With the key filter frame at file position `f`, the pages start at `f + 8 + 24 + 8 * P + 64 * B + pad + 8 + 24`, and `pad` is the smallest number of bytes, from 0 to 4,095, that makes that position a multiple of 4,096. With `n = 0`, there are no pages and `pad` is 0, so the body is the body header alone, and the filter holds no key.
 
 The filter is a blocked Bloom filter with 16 bits for each key. To add a hash `h` or test for it:
 
@@ -163,7 +163,7 @@ Eleven probes is `round(16 * ln 2)`. The [prototype](../evidence/m4/key-lookup/R
 
 ### Key index frame (M4)
 
-A body header with `kind = 6` and the same `count = n` as the key filter frame, followed by `P` pages of 4,096 bytes. `body_len` is exactly `24 + 4096 * P`.
+A body header with `kind = 6` and the same `count = n` as the key filter frame, followed by `P` pages of 4,096 bytes. `body_len` is exactly `24 + 4096 * P`. Each page starts at a file position that is a multiple of 4,096, through the key filter's padding.
 
 Each page:
 
@@ -204,19 +204,6 @@ The whole frame is 40 bytes. It uses no log offset. Open reads the last 40 bytes
 
 A segment that a roll sealed holds, in order: the header, its group frames, the key filter, the key index, the footer and the locator. A roll writes both key frames even when the segment has no keyed record. The final segment of a sealed log holds the header, its group frames, the footer, the seal frame and the locator. It has no key frames, because a sealed log never checks a key again ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). Before M4, a sealed segment holds only the header and group frames. Seal ships in M4, so a seal frame always has a locator after it.
 
-## Sparse index (not written yet, not frozen)
-
-This section is not part of `format_version` 1. A sparse index gets its own decision and its own version header before any code writes it ([ADR 0052](../decisions/0052-freeze-format-version-1.md)).
-
-A file of fixed 8-byte entries with no header and no CRC. The log rebuilds it from the segment if it is missing, short or wrong.
-
-| Offset | Size | Field |
-| --- | --- | --- |
-| 0 | 4 | `relative_offset` — log offset minus the segment's base offset |
-| 4 | 4 | `position` — file position of the frame that holds that offset |
-
-The writer adds one entry about every 4 KiB of frames. The 4-byte fields limit a segment to 2^32 bytes and 2^32 records. The segment roll size limit keeps every segment below that. A guest's index fits in a few pages, so a binary search over the whole file is enough.
-
 ## Rules for readers
 
 - A header is valid only if its magic, version, length and CRC match, its reserved bytes are zero, its `log_id` equals the first segment's `log_id`, and its `base_offset` equals its file name.
@@ -229,5 +216,6 @@ The writer adds one entry about every 4 KiB of frames. The 4-byte fields limit a
   In both, the locator points to the footer and ends at the end of the file. The run's bytes must equal the run that a writer builds from the segment's group frames, with the run's epoch and start position: the footer names each stream's last record in the segment, and the key frames name every keyed record ([ADR 0054](../decisions/0054-a-closing-run-must-match-its-groups.md)). A forward scan that ends through a complete run shows a sealed segment. If a run is not complete and valid, the scan stops where the run starts. A closing frame anywhere else ends the log. The last bytes of a file never decide this alone, because a payload can end with bytes that look like a locator.
 - In the active segment, the first frame that is not valid ends the log. Recovery truncates there.
 - In a sealed segment, a frame that is not valid is corruption. Recovery stops with an error.
+- A key filter frame is valid only if its padding is zero and shorter than 4,096 bytes, and is empty when `count` is 0. A reader that knows the frame's file position also checks that the key index pages start on a 4 KiB boundary. A decoder that does not know it cannot, because the padding's length depends on the position.
 - A key index page that a lookup reads is valid only if its CRC matches, its `entry_count` is right for its place in the frame, its reserved bytes and unused slots are zero, its entries ascend, and its first entry's hash equals its fence. An entry that a lookup follows is valid only if its `position` names a valid group frame before the key filter frame and its `record` is less than that frame's `count`. A page or an entry that is not valid is a lookup failure.
 - Compression: none. A compressed group cannot be sliced to one record. Add it only when a measurement shows that groups are large enough to gain from it.

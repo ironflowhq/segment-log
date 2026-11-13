@@ -94,6 +94,9 @@ pub(crate) enum Fault {
     Corrupt(usize, u8),
     Eof,
     Panic,
+    /// The bytes that a random-bytes call returns, so that a fixture can name its log id. The
+    /// trace keeps the fault, so a replay returns them too.
+    Random(Vec<u8>),
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Outcome {
@@ -401,7 +404,12 @@ fn execute(
             file_id(image, path).ok_or_else(|| error(io::ErrorKind::NotFound))?;
             image.dirs.get_mut(parent).unwrap().volatile.remove(path);
         }
-        Op::Random(len) => return Ok(Value::Bytes((0..*len).map(|_| next(rng) as u8).collect())),
+        Op::Random(len) => {
+            return Ok(Value::Bytes(match fault {
+                Some(Fault::Random(bytes)) => bytes.clone(),
+                _ => (0..*len).map(|_| next(rng) as u8).collect(),
+            }));
+        }
         op => {
             let id = file_id(image, path).ok_or_else(|| error(io::ErrorKind::NotFound))?;
             let file = image.files.get_mut(&id).unwrap();
