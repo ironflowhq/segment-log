@@ -83,7 +83,7 @@ All file I/O in `segment-log-core` goes through one small trait. It has two impl
 
 The trait needs only the calls the log makes: create, open, append, write at a position, read at a position, `sync_data`, `sync_all`, `sync_dir`, truncate, remove, list, lock, and random bytes. Keep it that small. The random bytes are for the log id, so that the simulated storage can derive them from its seed.
 
-The trait and both implementations stay private to the crate. `SegmentLog` holds its storage as a trait object, so the public type has no storage type parameter. `SegmentLog::open` passes real storage. A private constructor takes any storage, and the simulated tests use it. Both paths run the same writer and recovery code. The simulated storage currently compiles only for tests (`cfg(test)`). M5 will add an exercised fuzzing adapter and its build configuration. It is never part of a release build. Keep the frame decoder and the recovery scan callable on plain bytes, so that the M5 fuzz targets can reuse them without a public testing API.
+The trait and both implementations stay private to the crate. `SegmentLog` holds its storage as a trait object, so the public type has no storage type parameter. `SegmentLog::open` passes real storage. A private constructor takes any storage, and the simulated tests use it. Both paths run the same writer and recovery code. The simulated storage compiles for tests and for fuzz builds (`cfg(any(test, fuzzing))`). It is never part of a release build. The fuzz targets reach the decoder and recovery through `segment_log_core::fuzzing`, which exists only under `cfg(fuzzing)`, so there is no public testing API.
 
 ## Crash model of the simulated storage
 
@@ -225,10 +225,20 @@ Cases apply from M1 unless they name another milestone. Mixed bullets identify t
 
 ## Fuzzing (M5)
 
-- `FUZZ-DECODER`. A `cargo fuzz` target for the frame decoder.
-- `FUZZ-RECOVERY`. A `cargo fuzz` target for recovery on an arbitrary active segment.
+- `FUZZ-DECODER`. A `cargo fuzz` target for the header decoder and the frame decoder. A header or frame that decodes must encode back to the same bytes.
+- `FUZZ-RECOVERY`. A `cargo fuzz` target for open on a log whose only segment is a valid header followed by arbitrary bytes. Open either fails with `Corrupt` or `Exhausted`, or keeps a prefix of the segment.
 
-A target must never panic. It must either return the valid prefix or return an error. `cargo fuzz` needs a nightly toolchain beside the pinned one, and its targets are a separate crate. They reach the decoder and recovery scan through items compiled under `cfg(fuzzing)`, as the [storage trait](#storage-trait) section describes.
+A target must never panic. The targets are the separate crate `fuzz/`, built with a pinned nightly toolchain beside the pinned stable one. They call `segment_log_core::fuzzing`, which compiles only under `cfg(fuzzing)` and runs recovery on the simulated storage.
+
+The first input byte picks a mode. Raw mode keeps the bytes. Checksummed mode rewrites each frame CRC first, so that the fuzzer reaches the checks behind the CRC. In raw mode, `FUZZ-RECOVERY` also opens the log a second time and checks that it finds the same records and changes no file. Checksummed mode skips that check, because it forges frames that pass their CRC but disagree with each other, which a caller cannot do without the log id ([ADR 0049](../decisions/0049-frame-crcs-cover-the-log-id.md)).
+
+`fuzz/seeds.py` builds the seed inputs from the [format v1 fixture](../../segment-log-core/tests/fixtures/format-v1/README.md). The [`fuzz` workflow](../../.github/workflows/fuzz.yml) runs each target for an hour on a schedule or on dispatch, and for a minute on a pull request that touches the core or the targets. A crash uploads its input. To run a target locally:
+
+```sh
+python3 fuzz/seeds.py
+mkdir -p fuzz/corpus/recovery
+cargo +nightly-2026-11-12 fuzz run -a recovery fuzz/corpus/recovery fuzz/seeds/recovery -- -max_len=65536
+```
 
 ## Benchmarks (M1 for the core, M6 for the server)
 

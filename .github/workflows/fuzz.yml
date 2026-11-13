@@ -1,0 +1,58 @@
+name: Fuzz
+# Runs FUZZ-DECODER and FUZZ-RECOVERY (testing.md). The schedule and a dispatch run each target for
+# an hour, which is the M5 gate. A pull request that touches the core or the targets runs each for a
+# minute, so that the targets keep building.
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Run time of each target, in seconds
+        required: false
+        default: '3600'
+  pull_request:
+    paths:
+      - segment-log-core/src/**
+      - segment-log-core/tests/fixtures/**
+      - fuzz/**
+      - .github/workflows/fuzz.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # cargo fuzz needs nightly. A fixed date keeps a run reproducible.
+  NIGHTLY: nightly-2026-11-12
+  SECONDS_PER_TARGET: ${{ github.event_name == 'pull_request' && '60' || inputs.seconds || '3600' }}
+
+jobs:
+  fuzz:
+    name: Fuzz ${{ matrix.target }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [decoder, recovery]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install "$NIGHTLY" --profile minimal
+      - run: cargo +"$NIGHTLY" install cargo-fuzz --version 0.13.2 --locked
+      - run: python3 fuzz/seeds.py
+      - run: mkdir -p "fuzz/corpus/${{ matrix.target }}"
+      # -a turns on debug assertions and overflow checks, so that an overflow is a crash.
+      - run: >
+          cargo +"$NIGHTLY" fuzz run -a ${{ matrix.target }}
+          "fuzz/corpus/${{ matrix.target }}" "fuzz/seeds/${{ matrix.target }}"
+          -- -max_total_time="$SECONDS_PER_TARGET" -max_len=65536 -rss_limit_mb=4096
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fuzz-${{ matrix.target }}-crash
+          path: fuzz/artifacts/${{ matrix.target }}/

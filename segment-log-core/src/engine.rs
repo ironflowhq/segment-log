@@ -12,6 +12,8 @@ use std::{
     time::Instant,
 };
 mod closing;
+#[cfg(fuzzing)]
+pub mod fuzzing;
 mod keys;
 mod reader;
 mod recovery;

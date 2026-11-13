@@ -9,6 +9,9 @@ mod acceptance;
 mod api;
 pub use api::*;
 mod engine;
+#[cfg(fuzzing)]
+#[doc(hidden)]
+pub use engine::fuzzing;
 pub use engine::{LogReader, Pending, SegmentLog};
 
 #[cfg(test)]
