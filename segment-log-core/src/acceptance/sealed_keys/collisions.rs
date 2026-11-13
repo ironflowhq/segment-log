@@ -143,3 +143,42 @@ fn colliding_keys_on_both_sides_of_a_key_index_page_boundary_still_match() {
         }
     });
 }
+
+/// Given keys `a` and `b` that share one hash, in a segment whose roll made its closing run durable
+/// When the roll fails to create the next segment, and power is lost
+/// Then the reopen rebuilds the closing run with the same key hashes, finds that it matches, and
+/// creates the next segment
+/// And a retry of `a` and `b` returns their original positions
+///
+/// Cases: KEY-COLLISION, KEY-FRAMES-CRASH, RECOVERY-FIXTURES
+#[test]
+fn a_rolled_segment_with_shared_hashes_reopens_after_a_crash() {
+    use crate::storage::{
+        Call, Op,
+        sim::{Crash, Fault},
+    };
+    bounded(|| {
+        let hooks = sharing(&[b"a".to_vec(), b"b".to_vec()]);
+        let sim = Sim::new(352);
+        let log = open_hooked(&sim, &hooks);
+        commit(&log, vec![keyed(b"a"), keyed(b"b")]);
+        let create = Call::new(raw::segment(2), Purpose::Roll, Op::Create);
+        sim.inject(create, Fault::error(std::io::ErrorKind::Other).unwrap());
+        let failed = log
+            .append(Submit {
+                records: vec![keyed(b"c")],
+            })
+            .unwrap()
+            .wait();
+        assert!(failed.is_err(), "{failed:?}");
+        drop(log);
+        sim.crash(Crash::PowerLoss, 352);
+        let log = open_hooked(&sim, &hooks);
+        assert_eq!(
+            raw::segments(&sim).len(),
+            2,
+            "the reopen creates the next segment"
+        );
+        assert_retry(&log, &[b"a", b"b"], &[0, 1]);
+    });
+}

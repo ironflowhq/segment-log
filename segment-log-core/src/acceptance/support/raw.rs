@@ -166,7 +166,7 @@ pub(crate) fn last_frame(sim: &Sim) -> (String, u64, Vec<u8>) {
     let position = bytes.len() - last.len();
     (segment(base), position as u64, last)
 }
-type Tails<'a> = std::collections::BTreeMap<&'a [u8], (u64, u64, u64)>;
+pub(crate) type Tails<'a> = std::collections::BTreeMap<&'a [u8], (u64, u64, u64)>;
 
 struct Groups<'a> {
     log_id: crate::codec::LogId,
@@ -240,13 +240,24 @@ fn footer(
 }
 
 pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
+    roll_run_with(segment, epoch, |_, _| {})
+}
+
+/// A roll's run built from `segment`'s groups after `edit` changes their keys or tails, for runs
+/// that pass every CRC but disagree with the groups.
+pub(crate) fn roll_run_with(
+    segment: &[u8],
+    epoch: u64,
+    edit: impl FnOnce(&mut Vec<crate::codec::KeyEntry>, &mut Tails<'_>),
+) -> Vec<u8> {
     use crate::codec;
     let Groups {
         log_id,
         next,
         mut keys,
-        tails,
+        mut tails,
     } = groups(segment);
+    edit(&mut keys, &mut tails);
     let key_frames = codec::encode_key_frames(&log_id, epoch, next, &mut keys).unwrap();
     let footer = footer(&log_id, epoch, next, segment.len() as u64, tails);
     let footer_position = segment.len() + key_frames.filter.len() + key_frames.index.len();
@@ -255,13 +266,22 @@ pub(crate) fn roll_run(segment: &[u8], epoch: u64) -> Vec<u8> {
 }
 
 pub(crate) fn seal_run(segment: &[u8], epoch: u64) -> Vec<u8> {
+    seal_run_with(segment, epoch, |_| {})
+}
+
+pub(crate) fn seal_run_with(
+    segment: &[u8],
+    epoch: u64,
+    edit: impl FnOnce(&mut Tails<'_>),
+) -> Vec<u8> {
     use crate::codec;
     let Groups {
         log_id,
         next,
-        tails,
+        mut tails,
         ..
     } = groups(segment);
+    edit(&mut tails);
     let footer = footer(&log_id, epoch, next, 0, tails);
     let seal = codec::encode_seal(&log_id, epoch, next);
     let locator = codec::encode_locator(&log_id, epoch, next, segment.len() as u64);
