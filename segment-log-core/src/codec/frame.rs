@@ -90,7 +90,7 @@ impl<'a> Frame<'a> {
 }
 
 impl LogId {
-    fn frame_crc(&self, frame: &[u8]) -> u32 {
+    pub(crate) fn frame_crc(&self, frame: &[u8]) -> u32 {
         !crc::update(crc::update(self.crc, &frame[..4]), &frame[ENVELOPE_LEN..])
     }
 }
