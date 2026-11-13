@@ -1,6 +1,6 @@
 use super::*;
 use closing::{RunState, Step, Tail};
-use keys::{ActiveKey, SealedSummary};
+use keys::{ActiveKey, KeyHash, SealedSummary};
 
 pub(super) use read_only::ReadOnly;
 
@@ -64,6 +64,7 @@ mod read_only {
 
 pub(super) struct Survey {
     pub log_id: codec::LogId,
+    pub hash: KeyHash,
     pub published: Published,
     pub sealed: Vec<SealedSummary>,
     pub epoch: u64,
@@ -128,6 +129,7 @@ pub(super) fn survey(
     storage: &ReadOnly<'_>,
     dir: &Path,
     bases: &[u64],
+    hash: impl FnOnce(codec::LogId) -> KeyHash,
 ) -> Result<Survey, OpenError> {
     let headers = bases
         .iter()
@@ -139,6 +141,7 @@ pub(super) fn survey(
             return Err(OpenError::LogIdMismatch { segment: base });
         }
     }
+    let hash = hash(log_id.clone());
 
     let mut kept = Kept {
         published: Published::default(),
@@ -167,7 +170,7 @@ pub(super) fn survey(
     kept.published.newest.epoch_floor = kept.epoch;
     let path = segment_path(dir, base);
     let length = storage.length(&path, Purpose::Recovery)?;
-    let newest = scan(storage, &log_id, base, &path, length, &mut kept)?;
+    let newest = scan(storage, &log_id, &hash, base, &path, length, &mut kept)?;
     if matches!(newest.ending, Ending::Stopped)
         && closing::sealed_behind(storage, &path, &log_id, length, newest.end)?
     {
@@ -178,6 +181,7 @@ pub(super) fn survey(
     }
     Ok(Survey {
         log_id,
+        hash,
         published: kept.published,
         sealed,
         epoch: kept.epoch,
@@ -305,11 +309,12 @@ fn header(
 fn scan(
     storage: &ReadOnly<'_>,
     log: &codec::LogId,
+    hash: &KeyHash,
     base: u64,
     path: &Path,
     length: u64,
     kept: &mut Kept,
-) -> io::Result<Scan> {
+) -> Result<Scan, OpenError> {
     let mut position = codec::HEADER_LEN as u64;
     let mut state = RunState::Groups;
     let mut epoch = kept.epoch;
@@ -387,6 +392,10 @@ fn scan(
             Step::Rolled { start, footer } => {
                 kept.epoch = epoch;
                 run.push(bytes);
+                let next = kept.published.watermark;
+                let mut entries = hash.entries(&keys);
+                let built = closing::roll_run(log, epoch, next, start, &tails, &mut entries);
+                matches_groups(&run, &built, base, start)?;
                 let summary = SealedSummary {
                     base,
                     next: kept.published.watermark,
@@ -400,10 +409,31 @@ fn scan(
             Step::Sealed { start } => {
                 kept.epoch = epoch;
                 run.push(bytes);
+                let next = kept.published.watermark;
+                let built = closing::seal_run(log, epoch, next, start, &tails);
+                matches_groups(&run, &built, base, start)?;
                 let sealed = Ending::Sealed(Run { start, frames: run });
                 return Ok(end(length, sealed, last, tails, keys));
             }
         }
         position = next;
+    }
+}
+
+/// A closing run passes every CRC only if a writer or the device made it, so one that differs from
+/// the run its groups produce is a bug or damage the CRC missed, never a torn write (ADR 0054).
+fn matches_groups(
+    run: &[Vec<u8>],
+    built: &[Vec<u8>],
+    segment: u64,
+    start: u64,
+) -> Result<(), OpenError> {
+    if run.iter().flatten().eq(built.iter().flatten()) {
+        Ok(())
+    } else {
+        Err(OpenError::Corrupt {
+            segment,
+            position: start,
+        })
     }
 }
