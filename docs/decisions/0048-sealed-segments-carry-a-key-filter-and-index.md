@@ -79,7 +79,7 @@ The rules that follow from it:
 
 ## Consequences
 
-- [ADR 0055](0055-format-version-2-aligns-key-index-pages.md), proposed, ends the key filter frame's body with zero padding, so that the key index pages start on a 4 KiB boundary.
+- [ADR 0055](0055-format-version-2-aligns-key-index-pages.md) ends the key filter frame's body with zero padding, so that the key index pages start on a 4 KiB boundary.
 - [ADR 0051](0051-a-log-key-filter-in-memory-in-front-of-the-segment-filters.md) puts a log key filter kept only in memory in front of the segment filters, and adds it to the memory in rule 5.
 - PRD open item 1 is resolved. M4 can start.
 - R21 and ORACLE-13 change. From each sealed segment except the newest, open reads the header, the locator, the footer and the key filter frame.

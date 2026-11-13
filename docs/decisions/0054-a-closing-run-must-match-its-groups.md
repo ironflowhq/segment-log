@@ -1,7 +1,7 @@
 ---
 id: "0054"
 title: "A closing run must equal the run its groups produce"
-status: proposed
+status: accepted
 date: 2026-11-13
 deciders: [Altug Sahin]
 supersedes: null

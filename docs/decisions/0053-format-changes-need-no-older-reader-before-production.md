@@ -1,7 +1,7 @@
 ---
 id: "0053"
 title: "Format changes need no reader for older versions until the first production release"
-status: proposed
+status: accepted
 date: 2026-11-13
 deciders: [Altug Sahin]
 supersedes: null
