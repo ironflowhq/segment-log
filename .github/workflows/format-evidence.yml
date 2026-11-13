@@ -1,0 +1,32 @@
+name: Format evidence
+# Measures cold key index page reads at aligned and unaligned offsets on one hosted Linux runner
+# (ADR 0052, option B). Dispatch it, or put the `format-evidence` label on a pull request.
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  key-page-alignment:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'format-evidence' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # The file goes to the runner's local disk under /mnt, not to the workspace.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          scripts/key-page-alignment.sh /mnt/segment-log "$RUNNER_TEMP/key-page-alignment"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: key-page-alignment
+          path: ${{ runner.temp }}/key-page-alignment
