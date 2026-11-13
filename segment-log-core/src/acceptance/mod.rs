@@ -37,3 +37,5 @@ mod summary_open;
 mod seal;
 
 mod evidence;
+
+mod format_golden;
