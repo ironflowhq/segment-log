@@ -1,6 +1,6 @@
 # Byte layout
 
-Status: provisional ([ADR 0013](../decisions/0013-provisional-v0-byte-layout.md)). The format can change in any way until M5 freezes it. A change before M5 increments `format_version`. It needs no migration and no reader for older versions.
+Status: frozen at `format_version` 1 ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). A change to the bytes of a segment file increments `format_version`, and a build reads every frozen version from 1 up to its own. Version 0 (M1–M3) is not frozen, and no build reads it. The sparse index is not frozen.
 
 This file is the only source for field widths, offsets and size limits. Other docs link here and do not copy them.
 
@@ -17,7 +17,7 @@ This file is the only source for field widths, offsets and size limits. Other do
 | --- | --- |
 | `LOCK` | Empty. The writer holds an exclusive OS lock on it ([ADR 0018](../decisions/0018-writer-epoch-from-the-segments.md)). |
 | `NNNNNNNNNNNNNNNNNNNN.seg` | A segment. The name is its base offset as 20 decimal digits, with leading zeros. |
-| `NNNNNNNNNNNNNNNNNNNN.idx` | The sparse index for that segment. Not written yet. A cache. |
+| `NNNNNNNNNNNNNNNNNNNN.idx` | The sparse index for that segment. Not written yet, and not frozen. A cache. |
 
 Open ignores any other file.
 
@@ -44,8 +44,6 @@ Open ignores any other file.
 | 32 | 8 | `epoch` — the writer epoch that created this segment |
 | 40 | 20 | reserved |
 | 60 | 4 | `crc` — CRC-32C of bytes 0..60 |
-
-The width of `log_id` is provisional. M5 reviews it ([ADR 0013](../decisions/0013-provisional-v0-byte-layout.md)).
 
 ## Frame
 
@@ -206,7 +204,9 @@ The whole frame is 40 bytes. It uses no log offset. Open reads the last 40 bytes
 
 A segment that a roll sealed holds, in order: the header, its group frames, the key filter, the key index, the footer and the locator. A roll writes both key frames even when the segment has no keyed record. The final segment of a sealed log holds the header, its group frames, the footer, the seal frame and the locator. It has no key frames, because a sealed log never checks a key again ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). Before M4, a sealed segment holds only the header and group frames. Seal ships in M4, so a seal frame always has a locator after it.
 
-## Sparse index (not written yet)
+## Sparse index (not written yet, not frozen)
+
+This section is not part of `format_version` 1. A sparse index gets its own decision and its own version header before any code writes it ([ADR 0052](../decisions/0052-freeze-format-version-1.md)).
 
 A file of fixed 8-byte entries with no header and no CRC. The log rebuilds it from the segment if it is missing, short or wrong.
 
