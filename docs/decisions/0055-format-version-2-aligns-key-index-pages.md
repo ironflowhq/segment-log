@@ -1,7 +1,7 @@
 ---
 id: "0055"
 title: "Format version 2 aligns key index pages to 4 KiB and drops the unbuilt sparse index"
-status: proposed
+status: accepted
 date: 2026-11-13
 deciders: [Altug Sahin]
 supersedes: null
