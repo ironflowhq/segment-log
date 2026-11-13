@@ -68,7 +68,7 @@ fn closing_run_at(log_id: &codec::LogId, filter_at: usize, next: u64) -> Vec<u8>
         position: 64,
         record: 0,
     }];
-    let keys = codec::encode_key_frames(log_id, 1, next, &mut entries).unwrap();
+    let keys = codec::encode_key_frames(log_id, 1, next, filter_at as u64, &mut entries).unwrap();
     let footer = codec::encode_footer(
         log_id,
         1,
@@ -677,5 +677,59 @@ fn a_seal_run_that_disagrees_with_its_groups_fails_open_and_the_reader() {
             reader.err()
         );
         assert!(sim.image() == before, "the reader changed a file");
+    });
+}
+
+/// Given a sealed segment with a successor, whose key filter frame is valid on its own bytes but
+/// carries padding for another file position, so that the key index pages after it do not start on
+/// a 4 KiB boundary, and whose footer and locator name the frames where they are
+/// When the log opens
+/// Then open fails with `Corrupt` at the key filter, and changes no file
+///
+/// Cases: RECOVERY-FIXTURES, OPEN-LAYOUT
+#[test]
+fn a_key_filter_that_misaligns_the_key_index_fails_open() {
+    bounded(|| {
+        let groups = keyed_segment(1);
+        let filter_at = groups.len();
+        let log_id = codec::LogId::new(raw::LOG_ID);
+        let next = KEYS as u64;
+        let mut entries: Vec<_> = (0..KEYS)
+            .map(|n| codec::KeyEntry {
+                hash: log_id.key_hash(&key(n)),
+                position: 64,
+                record: n as u32,
+            })
+            .collect();
+        let shifted = filter_at as u64 + 1;
+        let keys = codec::encode_key_frames(&log_id, 1, next, shifted, &mut entries).unwrap();
+        let aligned = raw::roll_run(&groups, 1);
+        let filter_len = frames_at(&aligned, filter_at)[0].1;
+        assert_eq!(
+            keys.filter.len(),
+            filter_len - 1,
+            "the padding is one byte short"
+        );
+        let index_len = frames_at(&aligned, filter_at)[1].1;
+        assert_eq!(keys.index, aligned[filter_len..filter_len + index_len]);
+        let footer_at = filter_at + keys.filter.len() + keys.index.len();
+        let tail = &aligned[filter_len + index_len..];
+        let footer_len = frames_at(tail, 0)[0].1;
+        let footer = tail[..footer_len].to_vec();
+        let locator = codec::encode_locator(&log_id, 1, next, footer_at as u64);
+        let bytes = [groups.clone(), keys.filter, keys.index, footer, locator].concat();
+        let sim = Sim::new(342);
+        raw::install_segments(
+            &sim,
+            &[(0, bytes), (next, raw::header(raw::VERSION, next, 1))],
+        );
+        let before = sim.image();
+        let result = try_open(&sim);
+        assert!(
+            matches!(result, Err(OpenError::Corrupt { segment: 0, position }) if position == filter_at as u64),
+            "{:?}",
+            result.err()
+        );
+        assert_eq!(sim.image(), before);
     });
 }

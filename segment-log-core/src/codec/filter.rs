@@ -1,4 +1,4 @@
-use super::{Error, KeyEntry, LogId, PAGE_ENTRIES, index::page_count};
+use super::{Error, KeyEntry, LogId, PAGE_ENTRIES, PAGE_SIZE, index::page_count};
 use std::ops::Range;
 
 const BLOCK_BYTES: usize = 64;
@@ -100,8 +100,16 @@ impl KeyFilter {
     pub(super) fn decode(count: u32, body: &[u8]) -> Result<Self, Error> {
         let pages = page_count(count);
         let blocks = (count as usize).div_ceil(KEYS_PER_BLOCK);
-        if body.len() != 8 * pages + BLOCK_BYTES * blocks {
+        let filter_bytes = 8 * pages + BLOCK_BYTES * blocks;
+        // The padding's length depends on the frame's file position, which the reader that knows
+        // it checks; here it is only bounded and zero.
+        let padding = body.len().checked_sub(filter_bytes).ok_or(Error::Length)?;
+        if padding >= PAGE_SIZE || (count == 0 && padding != 0) {
             return Err(Error::Length);
+        }
+        let (body, pad) = body.split_at(filter_bytes);
+        if pad.iter().any(|&b| b != 0) {
+            return Err(Error::Reserved);
         }
         let (fences, blocks) = body.split_at(8 * pages);
         let fences: Vec<u64> = fences

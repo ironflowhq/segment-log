@@ -16,7 +16,7 @@ pub(crate) fn crc(bytes: &[u8]) -> u32 {
     state ^ u32::MAX
 }
 pub(crate) const LOG_ID: [u8; 16] = [7; 16];
-pub(crate) const VERSION: u16 = 1;
+pub(crate) const VERSION: u16 = 2;
 pub(crate) fn header(version: u16, base: u64, epoch: u64) -> Vec<u8> {
     assert_eq!(crc(b"123456789"), 0xe3069283);
     let mut bytes = vec![0; 64];
@@ -258,7 +258,8 @@ pub(crate) fn roll_run_with(
         mut tails,
     } = groups(segment);
     edit(&mut keys, &mut tails);
-    let key_frames = codec::encode_key_frames(&log_id, epoch, next, &mut keys).unwrap();
+    let key_frames =
+        codec::encode_key_frames(&log_id, epoch, next, segment.len() as u64, &mut keys).unwrap();
     let footer = footer(&log_id, epoch, next, segment.len() as u64, tails);
     let footer_position = segment.len() + key_frames.filter.len() + key_frames.index.len();
     let locator = codec::encode_locator(&log_id, epoch, next, footer_position as u64);
