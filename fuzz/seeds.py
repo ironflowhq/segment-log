@@ -19,8 +19,28 @@ def frames(segment):
         at = end
 
 
+def append(stream, key, payload_byte, length):
+    """One submit of one record for the log target: op, record count, stream, key, payload."""
+    keyed = [1, key] if key is not None else [0]
+    return [0, 0, stream, *keyed, payload_byte, length, 1]
+
+
+def log_scripts():
+    """Scripts for the log target: flags, roll size, simulator seed, then steps (engine/fuzzing.rs)."""
+    appends = [b for n in range(12) for b in append(n % 4, n if n % 3 else None, n, 30)]
+    reopen, kill, power_loss, torn, seal = [4], [5, 0, 1], [5, 1, 7], [5, 2, 9], [7]
+    bodies = [
+        appends + reopen + appends + seal,
+        appends + power_loss + appends + torn + appends,
+        appends + kill + appends + reopen + appends + seal,
+    ]
+    for flags in (0, 1, 3):
+        for body in bodies:
+            yield bytes([flags, 4, 1, *body, 0, 200, 33])
+
+
 def main():
-    seeds = {"decoder": set(), "recovery": set()}
+    seeds = {"decoder": set(), "recovery": set(), "log": set(log_scripts())}
     for path in sorted(FIXTURE.glob("*/*.seg")):
         segment = path.read_bytes()
         seeds["recovery"].add(b"\0" + segment[HEADER_LEN:])

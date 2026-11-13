@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [decoder, recovery]
+        target: [decoder, recovery, log]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
