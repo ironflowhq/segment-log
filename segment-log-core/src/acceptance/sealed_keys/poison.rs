@@ -269,7 +269,8 @@ fn a_key_index_entry_that_names_no_group_frame_poisons_the_writer() {
                 position: position as u32,
                 record,
             }];
-            let keys = codec::encode_key_frames(&log_id, 1, 1, &mut entries).unwrap();
+            let keys =
+                codec::encode_key_frames(&log_id, 1, 1, filter_at as u64, &mut entries).unwrap();
             let footer = codec::encode_footer(
                 &log_id,
                 1,

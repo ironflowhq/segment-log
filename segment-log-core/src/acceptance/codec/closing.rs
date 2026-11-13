@@ -10,6 +10,15 @@ fn body_header(kind: u8, epoch: u64, base_offset: u64, count: u32) -> Vec<u8> {
     body
 }
 
+/// The key filter's file position in the codec cases: right after a segment header.
+const FILTER_AT: u64 = 64;
+
+/// The zero bytes that end a key filter at `FILTER_AT` with `filter_bytes` of fences and blocks,
+/// from format.md: the key index pages that follow start on a 4 KiB boundary.
+fn padding(filter_bytes: usize) -> usize {
+    (4096 - (FILTER_AT as usize + 2 * (8 + 24) + filter_bytes) % 4096) % 4096
+}
+
 fn frame_of(body: &[u8]) -> Vec<u8> {
     raw::frame(&CHECK_ID, body)
 }
@@ -123,7 +132,8 @@ fn a_frame_validates_only_under_its_own_log_id() {
                 revision: 0,
             }],
         };
-        let keys = codec::encode_key_frames(&log(), 1, 1, &mut [entry(1, 64, 0)]).unwrap();
+        let keys =
+            codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut [entry(1, 64, 0)]).unwrap();
         let frames = [
             codec::encode_group(&log(), &group).unwrap(),
             codec::encode_footer(&log(), 1, 1, &footer(vec![])).unwrap(),
@@ -254,8 +264,11 @@ fn the_key_filter_sets_the_bits_of_the_format_check_value() {
         let mut entries = vec![entry(hash, 64, 0)];
         entries.extend((0..32).map(|i| entry(i, 64, i as u32 + 1)));
         entries.extend((0..32).map(|i| entry(0xffff_ffff_0000_0000 | i, 64, i as u32 + 40)));
-        let frames = codec::encode_key_frames(&log(), 1, 1, &mut entries).unwrap();
-        assert_eq!(frames.filter.len(), 8 + 24 + 8 + 3 * 64);
+        let frames = codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut entries).unwrap();
+        assert_eq!(
+            frames.filter.len(),
+            8 + 24 + 8 + 3 * 64 + padding(8 + 3 * 64)
+        );
         let mut expected = [0u8; 64];
         for bit in BITS {
             expected[bit / 8] |= 1 << (bit % 8);
@@ -298,7 +311,7 @@ fn key_frames_follow_the_format_and_round_trip() {
             entry(5, 100, 0),
             entry(5, 64, 9),
         ];
-        let frames = codec::encode_key_frames(&log(), 3, 12, &mut entries).unwrap();
+        let frames = codec::encode_key_frames(&log(), 3, 12, FILTER_AT, &mut entries).unwrap();
         let sorted = [
             entry(5, 64, 9),
             entry(5, 100, 0),
@@ -310,6 +323,7 @@ fn key_frames_follow_the_format_and_round_trip() {
         let mut filter = body_header(5, 3, 12, 4);
         filter.extend(5u64.to_le_bytes());
         filter.extend(filter_blocks(&sorted.map(|e| e.hash)));
+        filter.resize(filter.len() + padding(8 + 64), 0);
         assert_eq!(frames.filter, frame_of(&filter));
 
         let mut index = body_header(6, 3, 12, 4);
@@ -341,8 +355,11 @@ fn a_key_filter_answers_maybe_for_every_inserted_hash() {
     bounded(|| {
         let hash = |i: u64| i.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ (i << 40);
         let mut entries: Vec<_> = (0..1000).map(|i| entry(hash(i), i as u32, 0)).collect();
-        let frames = codec::encode_key_frames(&log(), 1, 1000, &mut entries).unwrap();
-        assert_eq!(frames.filter.len(), 8 + 24 + 8 * 4 + 64 * 32);
+        let frames = codec::encode_key_frames(&log(), 1, 1000, FILTER_AT, &mut entries).unwrap();
+        assert_eq!(
+            frames.filter.len(),
+            8 + 24 + 8 * 4 + 64 * 32 + padding(8 * 4 + 64 * 32)
+        );
         assert_eq!(frames.index.len(), 8 + 24 + 4096 * 4);
         let filter = key_filter_of(&frames.filter);
         assert_eq!(filter.count(), 1000);
@@ -355,7 +372,7 @@ fn a_key_filter_answers_maybe_for_every_inserted_hash() {
             .count();
         assert!(hits < 100, "{hits} of 10000 absent hashes answered maybe");
 
-        let frames = codec::encode_key_frames(&log(), 1, 0, &mut []).unwrap();
+        let frames = codec::encode_key_frames(&log(), 1, 0, FILTER_AT, &mut []).unwrap();
         assert_eq!(frames.filter, frame_of(&body_header(5, 1, 0, 0)));
         assert_eq!(frames.index, frame_of(&body_header(6, 1, 0, 0)));
         let filter = key_filter_of(&frames.filter);
@@ -377,7 +394,7 @@ fn key_index_page_rules_are_enforced() {
     bounded(|| {
         use codec::Error;
         let mut entries: Vec<_> = (0..300).map(|i| entry(i * 3 + 1, i as u32, 0)).collect();
-        let frames = codec::encode_key_frames(&log(), 1, 300, &mut entries).unwrap();
+        let frames = codec::encode_key_frames(&log(), 1, 300, FILTER_AT, &mut entries).unwrap();
         let pages = index_pages_of(&frames.index);
         assert_eq!(pages.len(), 2);
         let fences = [1, 766];
@@ -459,7 +476,8 @@ fn the_fence_lookup_finds_a_hash_across_page_boundaries() {
             entries.extend((0..same).map(|i| entry(hash, 100 + i as u32, 0)));
             entries.extend((0..high).map(|i| entry(hash + 1 + i, i as u32, 0)));
             let count = entries.len() as u32;
-            let frames = codec::encode_key_frames(&log(), 1, 1, &mut entries.clone()).unwrap();
+            let frames =
+                codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut entries.clone()).unwrap();
             let filter = key_filter_of(&frames.filter);
             let pages = index_pages_of(&frames.index);
             let range = filter.index_pages(hash);
@@ -496,17 +514,17 @@ fn encoding_rejects_repeats_and_counts_past_the_limits() {
         use codec::Error;
         let mut repeat = [entry(1, 64, 0), entry(2, 64, 0), entry(1, 64, 0)];
         assert!(matches!(
-            codec::encode_key_frames(&log(), 1, 1, &mut repeat),
+            codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut repeat),
             Err(Error::Order)
         ));
         let mut same_hash = [entry(1, 64, 0), entry(1, 64, 1), entry(1, 65, 0)];
-        assert!(codec::encode_key_frames(&log(), 1, 1, &mut same_hash).is_ok());
+        assert!(codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut same_hash).is_ok());
 
         let limit = codec::KEYED_RECORD_LIMIT;
         assert_eq!(limit, 1_044_225);
         let mut too_many = vec![entry(0, 0, 0); limit + 1];
         assert!(matches!(
-            codec::encode_key_frames(&log(), 1, 1, &mut too_many),
+            codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut too_many),
             Err(Error::Count)
         ));
 
@@ -539,7 +557,7 @@ fn malformed_closing_frames_are_rejected() {
         use codec::Error;
         let streams = vec![tail(b"s"), tail(b"t")];
         let mut entries: Vec<_> = (0..300).map(|i| entry(i * 3 + 1, 64, i as u32)).collect();
-        let keys = codec::encode_key_frames(&log(), 1, 300, &mut entries).unwrap();
+        let keys = codec::encode_key_frames(&log(), 1, 300, FILTER_AT, &mut entries).unwrap();
         let valid = [
             codec::encode_footer(&log(), 1, 300, &footer(streams)).unwrap(),
             codec::encode_seal(&log(), 1, 300),
@@ -594,24 +612,29 @@ fn malformed_closing_frames_are_rejected() {
         );
 
         let too_many = (codec::KEYED_RECORD_LIMIT + 1) as u32;
-        for frame in [filter, index] {
-            for (count, expected) in [
-                (too_many, Error::Count),
-                (0, Error::Length),
-                (255, Error::Length),
-            ] {
+        // A key filter whose count shrinks can read its unused zero blocks as padding. Only a
+        // reader that knows the frame's position can reject it, by the alignment of the pages.
+        for (frame, counts) in [(filter, &[too_many, 0][..]), (index, &[too_many, 0, 255])] {
+            for &count in counts {
+                let expected = if count == too_many {
+                    Error::Count
+                } else {
+                    Error::Length
+                };
                 assert_eq!(
                     with(frame, &|f| f[28..32].copy_from_slice(&count.to_le_bytes())),
                     Err(expected)
                 );
             }
         }
-        let longer = filter.len() + 64;
+        // Fences and blocks for 300 keys, then padding shorter than a page.
+        let unpadded = 8 + 24 + 8 * 2 + 64 * 10;
+        let longer = unpadded + 4096;
         assert_eq!(
             with(filter, &|f| *f = resize(f, longer)),
             Err(Error::Length)
         );
-        let shorter = filter.len() - 1;
+        let shorter = unpadded - 1;
         assert_eq!(
             with(filter, &|f| *f = resize(f, shorter)),
             Err(Error::Length)
@@ -624,5 +647,56 @@ fn malformed_closing_frames_are_rejected() {
             Err(Error::Length)
         );
         assert_eq!(with(filter, &|f| f[32 + 7] = 1), Err(Error::Order));
+    });
+}
+
+/// Given key frames for a segment whose key filter starts at any of several file positions
+/// When they are encoded
+/// Then the key index pages start on a 4 KiB boundary, behind zero padding at the end of the key
+/// filter's body that is shorter than a page, and the filter decodes the same with any padding
+/// And a key filter with no keyed record has no padding
+/// And a decoder rejects padding that is not zero, a page long or longer, or behind an empty filter
+///
+/// Cases: CODEC-GROUP
+#[test]
+fn key_index_pages_start_on_a_page_boundary() {
+    bounded(|| {
+        let entries: Vec<_> = (0..300).map(|i| entry(i * 3 + 1, 64, i as u32)).collect();
+        let reference = codec::encode_key_frames(&log(), 1, 300, 64, &mut entries.clone()).unwrap();
+        let filter_bytes = 8 * 2 + 64 * 10;
+        for filter_at in [64, 65, 4000, 4095, 4096, 1 << 20, (1 << 32) - 1] {
+            let frames =
+                codec::encode_key_frames(&log(), 1, 300, filter_at, &mut entries.clone()).unwrap();
+            let pages_at = filter_at as usize + frames.filter.len() + 8 + 24;
+            assert_eq!(pages_at % 4096, 0, "filter at {filter_at}");
+            let pad = frames.filter.len() - (8 + 24 + filter_bytes);
+            assert!(pad < 4096);
+            assert!(
+                frames.filter[8 + 24 + filter_bytes..]
+                    .iter()
+                    .all(|&b| b == 0)
+            );
+            assert_eq!(
+                key_filter_of(&frames.filter),
+                key_filter_of(&reference.filter)
+            );
+            assert_eq!(frames.index, reference.index);
+        }
+        let empty = codec::encode_key_frames(&log(), 1, 0, 65, &mut []).unwrap();
+        assert_eq!(empty.filter, frame_of(&body_header(5, 1, 0, 0)));
+
+        let body = |count: u32, tail: &[u8]| {
+            let mut body = body_header(5, 1, 300, count);
+            body.extend(&reference.filter[8 + 24..8 + 24 + filter_bytes]);
+            body.extend(tail);
+            frame_of(&body)
+        };
+        let decoded = |frame: Vec<u8>| codec::decode(&log(), &frame).map(|_| ());
+        assert_eq!(decoded(body(300, &[0; 4095])), Ok(()));
+        assert_eq!(decoded(body(300, &[0; 4096])), Err(codec::Error::Length));
+        assert_eq!(decoded(body(300, &[0, 0, 1])), Err(codec::Error::Reserved));
+        let mut empty = body_header(5, 1, 0, 0);
+        empty.push(0);
+        assert_eq!(decoded(frame_of(&empty)), Err(codec::Error::Length));
     });
 }

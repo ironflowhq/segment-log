@@ -177,7 +177,8 @@ impl SealedKeys {
             .ok_or_else(corrupt)?;
         let keys = Self::decode(summary, log_id, &bytes).ok_or_else(corrupt)?;
         let pages = (keys.filter.count() as usize).div_ceil(codec::PAGE_ENTRIES);
-        if keys.pages_at + (codec::PAGE_SIZE * pages) as u64 != summary.footer_at {
+        let aligned = pages == 0 || keys.pages_at % codec::PAGE_SIZE as u64 == 0;
+        if !aligned || keys.pages_at + (codec::PAGE_SIZE * pages) as u64 != summary.footer_at {
             return Err(corrupt());
         }
         Ok(keys)

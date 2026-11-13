@@ -115,7 +115,7 @@ fn unsupported_header_version_is_reported_without_repair() {
         use crate::storage::Storage;
         let sim = Sim::new(14);
         drop(open(&sim));
-        for version in [0, raw::VERSION + 1, u16::MAX] {
+        for version in [0, raw::VERSION - 1, raw::VERSION + 1, u16::MAX] {
             let bytes = raw::header(version, 0, 1);
             sim.call(Call::new(SEG, Purpose::Recovery, Op::Write(0, bytes)))
                 .unwrap();
