@@ -233,7 +233,7 @@ A target must never panic. The targets are the separate crate `fuzz/`, built wit
 
 The first input byte picks a mode. Raw mode keeps the bytes. Checksummed mode rewrites each frame CRC first, so that the fuzzer reaches the checks behind the CRC. `FUZZ-RECOVERY` also opens the log a second time and checks that it finds the same records and changes no file. In checksummed mode this holds because a closing run that disagrees with its groups fails open ([ADR 0054](../decisions/0054-a-closing-run-must-match-its-groups.md)).
 
-`fuzz/seeds.py` builds the seed inputs from the [format v1 fixture](../../segment-log-core/tests/fixtures/format-v1/README.md). The [`fuzz` workflow](../../.github/workflows/fuzz.yml) runs each target for an hour on a schedule or on dispatch, and for a minute on a pull request that touches the core or the targets. A crash uploads its input. To run a target locally:
+`fuzz/seeds.py` builds the seed inputs from the [format v1 fixture](../../segment-log-core/tests/fixtures/format-v1/README.md). The [`fuzz` workflow](../../.github/workflows/fuzz.yml) runs each target for an hour on a schedule or on dispatch, and for a minute on a pull request that touches the core or the targets. A crash uploads its input. Scheduled runs keep their corpus from one day to the next; a dispatch and a pull request start from the seeds. On the schedule, a canary job also fuzzes for a minute with the latest nightly. Bump the pinned nightly in a pull request at least once a month, when the canary is green. To run a target locally:
 
 ```sh
 python3 fuzz/seeds.py
