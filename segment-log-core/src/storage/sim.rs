@@ -1,4 +1,5 @@
-// A fuzz build uses only the plain calls. The crash and fault parts serve the tests.
+// The simulated storage compiles only for tests and fuzz builds. A fuzz build uses only the plain
+// calls, so dead code is allowed there alone; the test build still reports it.
 #![cfg_attr(not(test), allow(dead_code))]
 use super::*;
 use std::{

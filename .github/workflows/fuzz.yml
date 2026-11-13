@@ -43,8 +43,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install "$NIGHTLY" --profile minimal
-      - run: cargo +"$NIGHTLY" install cargo-fuzz --version 0.13.2 --locked
+      - id: cargo-fuzz
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-fuzz
+          key: cargo-fuzz-0.13.2-${{ env.NIGHTLY }}
+      - if: steps.cargo-fuzz.outputs.cache-hit != 'true'
+        run: cargo +"$NIGHTLY" install cargo-fuzz --version 0.13.2 --locked
       - run: python3 fuzz/seeds.py
+      # The daily runs build on each other's corpus. A dispatch, which is the M5 gate, and a pull
+      # request start from the seeds alone.
+      - if: github.event_name == 'schedule'
+        uses: actions/cache/restore@v4
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: fuzz-corpus-${{ matrix.target }}-
       - run: mkdir -p "fuzz/corpus/${{ matrix.target }}"
       # -a turns on debug assertions and overflow checks, so that an overflow is a crash.
       - run: >
@@ -56,3 +70,29 @@ jobs:
         with:
           name: fuzz-${{ matrix.target }}-crash
           path: fuzz/artifacts/${{ matrix.target }}/
+      - if: github.event_name == 'schedule' && !cancelled()
+        uses: actions/cache/save@v4
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+
+  # The latest nightly, on the schedule only. A green canary says the pin can move; bump NIGHTLY in a
+  # pull request at least once a month (testing.md).
+  canary:
+    name: Canary ${{ matrix.target }} on the latest nightly
+    if: github.event_name == 'schedule'
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [decoder, recovery]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install nightly --profile minimal
+      - run: cargo +nightly install cargo-fuzz --version 0.13.2 --locked
+      - run: python3 fuzz/seeds.py && mkdir -p "fuzz/corpus/${{ matrix.target }}"
+      - run: >
+          cargo +nightly fuzz run -a ${{ matrix.target }}
+          "fuzz/corpus/${{ matrix.target }}" "fuzz/seeds/${{ matrix.target }}"
+          -- -max_total_time=60 -max_len=65536 -rss_limit_mb=4096
