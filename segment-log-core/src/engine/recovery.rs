@@ -1,8 +1,9 @@
 use super::*;
-use keys::{ActiveKey, SealedKeys};
+use keys::{ActiveKey, KeyHash, SealedKeys};
 use survey::{Ending, ReadOnly};
 pub(super) struct Recovered {
     pub log_id: codec::LogId,
+    pub hash: KeyHash,
     pub published: Published,
     pub state: State,
 }
@@ -25,7 +26,11 @@ impl From<io::Error> for OpenError {
     }
 }
 
-pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenError> {
+pub(super) fn open(
+    storage: &dyn Storage,
+    dir: &Path,
+    hash: impl FnOnce(codec::LogId) -> KeyHash,
+) -> Result<Recovered, OpenError> {
     match call(storage, dir, Purpose::Open, Op::CreateDir) {
         Ok(_) => (),
         Err(e) if e.kind() == io::ErrorKind::AlreadyExists => (),
@@ -79,7 +84,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
         bases.push(0);
     }
 
-    let mut found = survey::survey(&reader, dir, &bases)?;
+    let mut found = survey::survey(&reader, dir, &bases, hash)?;
     let newest = *bases.last().unwrap();
     let epoch = match found.newest.ending {
         // A sealed log starts no writer, so it needs no next epoch.
@@ -128,6 +133,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
             drop(lock);
             return Ok(Recovered {
                 log_id: found.log_id,
+                hash: found.hash,
                 published: found.published,
                 state: State::Sealed,
             });
@@ -154,6 +160,7 @@ pub(super) fn open(storage: &dyn Storage, dir: &Path) -> Result<Recovered, OpenE
     };
     Ok(Recovered {
         log_id: found.log_id,
+        hash: found.hash,
         published: found.published,
         state: State::Writable(Writable {
             lock,

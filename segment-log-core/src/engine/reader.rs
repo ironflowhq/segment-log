@@ -21,7 +21,7 @@ impl LogReader {
         if survey::is_torn_header(&reader, dir, newest)? {
             return Err(OpenError::NotSealed);
         }
-        let found = survey::survey(&reader, dir, &bases)?;
+        let found = survey::survey(&reader, dir, &bases, keys::KeyHash::new)?;
         let Ending::Sealed(_) = found.newest.ending else {
             return Err(OpenError::NotSealed);
         };
