@@ -1,3 +1,5 @@
+// A fuzz build uses only the plain calls. The crash and fault parts serve the tests.
+#![cfg_attr(not(test), allow(dead_code))]
 use super::*;
 use std::{
     collections::{BTreeMap, BTreeSet},
