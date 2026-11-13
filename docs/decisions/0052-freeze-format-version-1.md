@@ -84,8 +84,8 @@ A changes nothing that has been tested, and B and C fix costs that no measuremen
 
 The M5 tests must add `FORMAT-GOLDEN`, and testing.md names the case:
 
-- A small log committed as files under `segment-log-core/tests/fixtures/format-v1/`: two rolled segments with keyed and unkeyed records, and a sealed final segment. A test opens it with `LogReader` and checks every record, revision and key lookup against expected values in the test.
-- The same test writes the same records with a fixed log id and epoch through a private test constructor, and checks that the bytes equal the fixture byte for byte.
+- A small log committed as files under `segment-log-core/tests/fixtures/format-v1/`: two rolled segments with keyed and unkeyed records and an active segment, and the same log after `seal`. A test opens the first with a writable log, because a sealed log never checks a key, and checks every record, revision and key retry against expected values in the test. A test opens the sealed copy with `LogReader` and checks every record and revision.
+- A test writes the same records with the fixture's log id and epoch, then seals, and checks that the bytes equal both copies byte for byte.
 
 A change to the encoder fails the second check. Whoever changes the layout must then bump `format_version` and keep the first check passing through a version 1 reader.
 
