@@ -189,7 +189,7 @@ Unresolved items name the milestone that they block. Resolved items keep their n
 | A qualified stack changes after qualification, so its evidence no longer applies. | The deployment checks the running stack against the qualified fingerprint before every open ([V10](architecture/volume-requirements.md#v10-the-running-stack-matches-the-qualified-fingerprint)). |
 | The disk, not the CPU, limits the agent count, and group commit does not change that. | The M1 benchmark measures `fsync` p99 and group size together. Many guests on one host share its media, so [V11](architecture/volume-requirements.md#v11-flush-latency-allows-the-throughput-target) measures flush latency at the planned density. |
 | `fsync` error handling differs between kernels and filesystems. A failed `fsync` can leave bytes readable that are not on the device. | Poison on error ([ADR 0004](decisions/0004-io-errors-poison-the-writer.md)). Never retry `fsync` to get a success. Rewrite and sync the tail at open ([ADR 0015](decisions/0015-open-makes-the-recovered-tail-durable.md)). |
-| The format is frozen too early. | The format stays provisional until M5, and the version field allows a clean break. |
+| The format is frozen too early. | The format stayed provisional until M5 and is frozen at version 1 ([ADR 0052](decisions/0052-freeze-format-version-1.md)). A later change needs a new version and a reader for the older ones. |
 | A crash test that passes but does not model the real fault. | The simulated storage drops and tears unsynced bytes. A real-process `SIGKILL` test and an optional LazyFS job check it on Linux. |
 
 ## Documents
