@@ -2,6 +2,7 @@
 //! answer in request order (ADR 0057, ADR 0058).
 
 use crate::protocol::{self, Admit, Answer, HEADER_LEN, Request, Status};
+use crate::server::{EXIT_POISONED, Slot};
 use segment_log_core::{Pending, SegmentLog};
 use std::io::{self, Read, Write};
 use std::sync::Arc;
@@ -19,25 +20,26 @@ enum Job {
 }
 
 /// Starts both threads. `slot` is released when both have finished with the connection.
-pub fn serve<S, T>(stream: S, writer: S, log: Arc<SegmentLog>, frame_cap: usize, slot: T)
+pub fn serve<S>(stream: S, writer: S, log: Arc<SegmentLog>, frame_cap: usize, slot: Slot)
 where
     S: Read + Write + Send + 'static,
-    T: Send + Sync + 'static,
 {
     let (jobs, queue) = sync_channel(PIPELINE_DEPTH);
     let slot = Arc::new(slot);
     let answer_slot = Arc::clone(&slot);
-    thread::spawn(move || {
-        write_answers(writer, queue);
-        drop(answer_slot);
-    });
-    thread::spawn(move || {
-        read_requests(stream, &log, frame_cap, &jobs);
-        drop(slot);
-    });
+    thread::spawn(move || write_answers(writer, queue, &answer_slot));
+    thread::spawn(move || read_requests(stream, &log, frame_cap, &jobs, &slot));
 }
 
-fn write_answers(mut stream: impl Write, queue: Receiver<Job>) {
+/// A poisoned writer cannot recover in place (ADR 0004): the server stops, and a new open recovers.
+fn poisoned(status: &Status) -> bool {
+    matches!(
+        status,
+        Status::Poisoned | Status::PoisonedBeforeWrite | Status::Indeterminate
+    )
+}
+
+fn write_answers(mut stream: impl Write, queue: Receiver<Job>, slot: &Slot) {
     for job in queue {
         let bytes = match job {
             Job::Ready(bytes) => bytes,
@@ -45,7 +47,13 @@ fn write_answers(mut stream: impl Write, queue: Receiver<Job>) {
                 Ok(committed) => {
                     protocol::encode_answer(protocol::APPEND, &Answer::Append(&committed))
                 }
-                Err(error) => failed(protocol::APPEND, error.into()),
+                Err(error) => {
+                    let status = Status::from(error);
+                    if poisoned(&status) {
+                        slot.server.stop(EXIT_POISONED);
+                    }
+                    failed(protocol::APPEND, status)
+                }
             },
         };
         // shortcut: one write per answer; batch answers that are ready together if the socket
@@ -67,6 +75,7 @@ fn read_requests(
     log: &SegmentLog,
     frame_cap: usize,
     jobs: &SyncSender<Job>,
+    slot: &Slot,
 ) {
     let malformed = || {
         let _ = jobs.send(Job::Ready(failed(
@@ -128,7 +137,13 @@ fn read_requests(
             Request::Hello { .. } => return malformed(),
             Request::Append(submit) => match log.append(submit) {
                 Ok(pending) => Job::Append(pending),
-                Err(error) => Job::Ready(failed(protocol::APPEND, error.into())),
+                Err(error) => {
+                    let status = Status::from(error);
+                    if poisoned(&status) {
+                        slot.server.stop(EXIT_POISONED);
+                    }
+                    Job::Ready(failed(protocol::APPEND, status))
+                }
             },
             Request::Read { from, max } => {
                 let bytes = match log.read(from, protocol::read_limit(max, frame_cap)) {
@@ -150,7 +165,10 @@ fn read_requests(
             )),
             Request::Seal => Job::Ready(match log.seal() {
                 Ok(()) => protocol::encode_answer(protocol::SEAL, &Answer::Seal),
-                Err(error) => failed(protocol::SEAL, error.into()),
+                Err(error) => {
+                    slot.server.stop(EXIT_POISONED);
+                    failed(protocol::SEAL, error.into())
+                }
             }),
         };
         if jobs.send(job).is_err() {

@@ -4,16 +4,20 @@
 mod args;
 mod connection;
 pub mod protocol;
+mod server;
 
 use segment_log_core::SegmentLog;
+use server::Server;
 use std::fs;
 use std::io;
+use std::net::Shutdown;
 use std::os::unix::fs::FileTypeExt;
 use std::os::unix::net::UnixListener;
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::thread;
+use std::time::Duration;
 
 /// Exit status when the log does not open or a flag is invalid (ADR 0058).
 const EXIT_START: u8 = 1;
@@ -50,18 +54,33 @@ pub fn main_with(args: impl Iterator<Item = String>) -> ExitCode {
         }
     };
     eprintln!("segment-log-server: listening on {}", config.unix.display());
-    let open = Arc::new(AtomicUsize::new(0));
+    let server = Server::new(config.max_connections);
+    {
+        let (server, log) = (Arc::clone(&server), Arc::clone(&log));
+        thread::spawn(move || accept(listener, &server, &log, frame_cap));
+    }
+    let code = server.wait_for_stop();
+    server.wait_until_idle(DRAIN_LIMIT);
+    ExitCode::from(code)
+}
+
+/// How long a stopping server waits for its connections to send the answers they owe.
+const DRAIN_LIMIT: Duration = Duration::from_secs(5);
+
+fn accept(listener: UnixListener, server: &Arc<Server>, log: &Arc<SegmentLog>, frame_cap: usize) {
     for stream in listener.incoming() {
         let Ok(stream) = stream else { continue };
-        let Some(slot) = Slot::take(&open, config.max_connections) else {
-            continue; // dropping the stream closes it
-        };
-        let Ok(writer) = stream.try_clone() else {
+        let (Ok(writer), Ok(closer)) = (stream.try_clone(), stream.try_clone()) else {
             continue;
         };
-        connection::serve(stream, writer, Arc::clone(&log), frame_cap, slot);
+        let close_reads = Box::new(move || {
+            let _ = closer.shutdown(Shutdown::Read);
+        });
+        // Without a slot, dropping the stream closes it.
+        if let Some(slot) = server.admit(close_reads) {
+            connection::serve(stream, writer, Arc::clone(log), frame_cap, slot);
+        }
     }
-    ExitCode::SUCCESS
 }
 
 fn bind_unix(path: &Path) -> io::Result<UnixListener> {
@@ -77,23 +96,4 @@ fn bind_unix(path: &Path) -> io::Result<UnixListener> {
     // SAFETY: as above.
     unsafe { libc::umask(old) };
     listener
-}
-
-/// One of `--max-connections` connection slots, released on drop.
-struct Slot(Arc<AtomicUsize>);
-
-impl Slot {
-    fn take(open: &Arc<AtomicUsize>, max: usize) -> Option<Slot> {
-        open.try_update(Ordering::AcqRel, Ordering::Acquire, |n| {
-            (n < max).then_some(n + 1)
-        })
-        .ok()
-        .map(|_| Slot(Arc::clone(open)))
-    }
-}
-
-impl Drop for Slot {
-    fn drop(&mut self) {
-        self.0.fetch_sub(1, Ordering::AcqRel);
-    }
 }
