@@ -50,6 +50,7 @@ We accept storage growth and explicit deployment lifecycle work to preserve one 
 
 ## Consequences
 
+- [ADR 0056](0056-m6-builds-the-server-m7-validates-the-guest-deployment.md) adds M7. Complete-history retention covers M1–M7.
 - [ADR 0040](0040-volumes-meet-testable-minimum-requirements.md) makes capacity sizing and a timely free-space alert a volume requirement (V9), because complete retention grows storage and `ENOSPC` poisons the writer.
 - PRD open item 11 is resolved for the current milestones. R22 no longer schedules segment retention after M4.
 - Stream heads and keys remain reconstructible from retained history. ADR 0031's M4 lookup and key-cache memory work still applies.
