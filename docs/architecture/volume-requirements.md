@@ -1,6 +1,6 @@
 # Volume requirements
 
-The log's durability guarantees are conditional. They hold only if the volume under the log directory meets the requirements below. This document is the only source for those requirements, their pass criteria and how to verify them. [ADR 0040](../decisions/0040-volumes-meet-testable-minimum-requirements.md) records why they exist. [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) requires a qualification record for the actual stack before the M6 guest benchmark and before any production durability claim. Terms are as defined in the [glossary](../glossary.md).
+The log's durability guarantees are conditional. They hold only if the volume under the log directory meets the requirements below. This document is the only source for those requirements, their pass criteria and how to verify them. [ADR 0040](../decisions/0040-volumes-meet-testable-minimum-requirements.md) records why they exist. [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) requires a qualification record for the actual stack before the M7 guest benchmark and before any production durability claim. Terms are as defined in the [glossary](../glossary.md).
 
 The library cannot check most of these requirements from inside the process. The deployment layer owns the volume ([ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)), so the deployment runs the checks and keeps the evidence.
 
@@ -198,7 +198,7 @@ Pass: in step 1, open succeeds without `Corrupt` and every record acknowledged b
 
 ### V9. Capacity and a timely alert
 
-**Requirement.** Valid history is never deleted through M6 ([ADR 0037](../decisions/0037-retain-complete-logs-through-current-milestones.md)), and `ENOSPC` poisons the writer ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). A full volume is therefore an outage. Capacity covers the planned peak history of each log at every layer that allocates space: the guest filesystem, and any sparse backing file, thin pool or quota beneath it. Exhausting a lower layer appears in the guest as an I/O error or a stall, and an I/O error also poisons the writer. An alert fires at each layer while there is still time to act.
+**Requirement.** Valid history is never deleted through M7 ([ADR 0037](../decisions/0037-retain-complete-logs-through-current-milestones.md)), and `ENOSPC` poisons the writer ([ADR 0004](../decisions/0004-io-errors-poison-the-writer.md)). A full volume is therefore an outage. Capacity covers the planned peak history of each log at every layer that allocates space: the guest filesystem, and any sparse backing file, thin pool or quota beneath it. Exhausting a lower layer appears in the guest as an I/O error or a stall, and an I/O error also poisons the writer. An alert fires at each layer while there is still time to act.
 
 `VOL-CAPACITY`.
 
@@ -241,7 +241,7 @@ Record the mean, p50, p99 and p999 of each write-and-sync cycle, the syncs per s
 records/s ≈ callers × records per submit / (linger + mean cycle at planned density)
 ```
 
-Take the caller count, records per submit and linger from the benchmark configuration being claimed: the [PRD benchmark conditions](../prd.md#footprint-and-performance-targets) and the [api.md](api.md) defaults. The estimate assumes that each caller waits for its acknowledgment before it submits again, and that every group closes on linger with all waiting callers, not on the byte cap. It is an estimate, not a bound. If it falls below the PRD throughput target, record that the stack is not expected to meet the target. Only the M6 guest benchmark establishes a target result.
+Take the caller count, records per submit and linger from the benchmark configuration being claimed: the [PRD benchmark conditions](../prd.md#footprint-and-performance-targets) and the [api.md](api.md) defaults. The estimate assumes that each caller waits for its acknowledgment before it submits again, and that every group closes on linger with all waiting callers, not on the byte cap. It is an estimate, not a bound. If it falls below the PRD throughput target, record that the stack is not expected to meet the target. Only the M7 guest benchmark establishes a target result.
 
 ## Shared procedures
 
