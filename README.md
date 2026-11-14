@@ -3,7 +3,7 @@
 An embedded, append-only event log in Rust, for short-lived processes that need a durable history.
 
 > **Status: pre-release. Milestones M0–M4 have passed.**
-> `segment-log-core` appends, rolls, seals and reads logs, and recovers them after a crash. `segment-log-server` is a placeholder until milestone M6. Some decision records are still proposed. The on-disk format is provisional until milestone M5, and the API can change. Do not depend on this yet. See the [milestones](docs/prd.md#milestones) for the plan.
+> `segment-log-core` appends, rolls, seals and reads logs, and recovers them after a crash. `segment-log-server` serves a log over a Unix socket and is in development for milestone M6. Some decision records are still proposed. The on-disk format is provisional until milestone M5, and the API can change. Do not depend on this yet. See the [milestones](docs/prd.md#milestones) for the plan.
 
 - Many callers append to many streams in one directory.
 - One writer thread packs their appends into groups. One `fsync` makes a group durable, and only then does the caller get an acknowledgment.
@@ -27,7 +27,7 @@ An embedded, append-only event log in Rust, for short-lived processes that need 
 | Crate                | Purpose                                                                                        |
 | -------------------- | ---------------------------------------------------------------------------------------------- |
 | `segment-log-core`   | The library.                                                                                   |
-| `segment-log-server` | A Unix socket and vsock server for callers in other languages. Placeholder until milestone M6. |
+| `segment-log-server` | A Unix socket and vsock server for callers in other languages. In development for milestone M6. |
 
 ## License
 

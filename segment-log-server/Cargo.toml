@@ -8,4 +8,5 @@ repository.workspace = true
 readme = "README.md"
 
 [dependencies]
+libc = "0.2"
 segment-log-core = { path = "../segment-log-core", version = "0.0.1" }

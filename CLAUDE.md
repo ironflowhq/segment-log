@@ -23,7 +23,7 @@ All ADRs are `Proposed` until the owner accepts them. A Proposed ADR is still th
 ## Rules
 
 - **Invariants I1–I10 in [overview.md](docs/architecture/overview.md#invariants) must hold.** Never add an exception for one test or one path. If a design cannot satisfy them, change the design or write an ADR.
-- **The milestone order is a gate.** Do not start a milestone before the "done when" check of the one before it passes. `segment-log-server` stays a placeholder until M6.
+- **The milestone order is a gate.** Do not start a milestone before the "done when" check of the one before it passes. `segment-log-server` started in M6.
 - **Write path:** one writer thread. No async runtime, no SQL, no protobuf. No `unsafe` without an ADR ([0058](docs/decisions/0058-one-server-process-serves-one-log.md) covers the server's `libc` calls).
 - **Dependencies:** `segment-log-core` uses only `std`. A new runtime dependency there needs an ADR ([0012](docs/decisions/0012-no-log-crate-dependency.md)). Dev-dependencies are fine.
 - **File I/O** in the core goes through the storage trait, so that the crash tests can simulate it ([testing.md](docs/architecture/testing.md)).

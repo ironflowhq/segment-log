@@ -289,3 +289,19 @@ fn a_read_answer_holds_the_longest_prefix_within_the_cap_and_at_least_one_record
         HEADER_LEN + 6 + 2 * entry
     );
 }
+
+#[test]
+fn the_read_limit_never_asks_for_more_records_than_an_answer_holds() {
+    assert_eq!(read_limit(10, 65536), 10);
+    assert_eq!(read_limit(u32::MAX, 65536), 65536 / 25);
+    let records: Vec<Record> = (0..read_limit(u32::MAX, 65536) + 10)
+        .map(|_| Record {
+            offset: 0,
+            stream: b"s".to_vec(),
+            revision: 0,
+            key: None,
+            payload: vec![],
+        })
+        .collect();
+    assert!(fitting_records(&records, 65536) <= read_limit(u32::MAX, 65536));
+}

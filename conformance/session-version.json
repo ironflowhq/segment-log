@@ -1,0 +1,8 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "a Hello with another version gets UnsupportedVersion and the connection closes",
+  "no_hello": true,
+  "steps": [
+    {"raw": "080000000100000053474c5002000000", "expect": {"status": "UnsupportedVersion"}, "closed": true}
+  ]
+}

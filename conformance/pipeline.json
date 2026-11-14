@@ -1,0 +1,14 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "pipelined requests are answered in order, and a pipelined retry waits for its pending original",
+  "steps": [
+    {"pipeline": [
+      {"append": [{"stream": "a", "expected": "empty", "key": "k1", "payload": "1"}], "expect": {"status": "Ok", "positions": [[0, 0]], "deduplicated": false}},
+      {"append": [{"stream": "b", "expected": "empty", "payload": "2"}], "expect": {"status": "Ok", "positions": [[1, 0]]}},
+      {"append": [{"stream": "a", "expected": "empty", "key": "k1", "payload": "1"}], "expect": {"status": "Ok", "positions": [[0, 0]], "deduplicated": true}},
+      {"append": [{"stream": "a", "expected": "empty", "payload": "3"}], "expect": {"status": "WrongRevision", "index": 0, "actual": 0}},
+      {"append": [{"stream": "c", "expected": "empty", "payload": "4"}], "expect": {"status": "Ok", "positions": [[2, 0]]}}
+    ]},
+    {"watermark": {}, "expect": {"status": "Ok", "watermark": 3}}
+  ]
+}
