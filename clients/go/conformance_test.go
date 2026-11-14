@@ -171,21 +171,36 @@ func check(e *expect, a Answer) error {
 	return nil
 }
 
-func startServer(t *testing.T, args []string) string {
+// logDir is a log directory and a socket path that outlive one server process.
+type logDir struct {
+	dir, socket string
+}
+
+func newLogDir(t *testing.T) logDir {
 	t.Helper()
-	bin := os.Getenv("SEGMENT_LOG_SERVER")
-	if bin == "" {
-		t.Fatal("set SEGMENT_LOG_SERVER to the server binary (cargo build -p segment-log-server)")
-	}
 	// Under /tmp, not t.TempDir: macOS limits a socket path to 104 bytes.
 	dir, err := os.MkdirTemp("/tmp", "sl-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(dir) })
-	socket := filepath.Join(dir, "s")
+	return logDir{dir: dir, socket: filepath.Join(dir, "s")}
+}
+
+// start runs the server on d and returns once it listens. A non-empty shell prefix runs before
+// exec, for example to set a resource limit. The test cleanup kills the process.
+func (d logDir) start(t *testing.T, shell string, args ...string) *exec.Cmd {
+	t.Helper()
+	bin := os.Getenv("SEGMENT_LOG_SERVER")
+	if bin == "" {
+		t.Fatal("set SEGMENT_LOG_SERVER to the server binary (cargo build -p segment-log-server)")
+	}
+	argv := append([]string{bin, "--dir", filepath.Join(d.dir, "log"), "--unix", d.socket}, args...)
+	if shell != "" {
+		argv = append([]string{"sh", "-c", shell + `; exec "$0" "$@"`}, argv...)
+	}
 	var stderr bytes.Buffer
-	cmd := exec.Command(bin, append([]string{"--dir", filepath.Join(dir, "log"), "--unix", socket}, args...)...)
+	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Stderr = &stderr
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -198,13 +213,20 @@ func startServer(t *testing.T, args []string) string {
 		}
 	})
 	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
-		if conn, err := net.Dial("unix", socket); err == nil {
+		// A socket left by an earlier process refuses connections until the new one binds.
+		if conn, err := net.Dial("unix", d.socket); err == nil {
 			conn.Close()
-			return socket
+			return cmd
 		}
 	}
-	t.Fatalf("server did not listen on %s; stderr:\n%s", socket, stderr.String())
-	return ""
+	t.Fatalf("server did not listen on %s; stderr:\n%s", d.socket, stderr.String())
+	return nil
+}
+
+func startServer(t *testing.T, args []string) string {
+	d := newLogDir(t)
+	d.start(t, "", args...)
+	return d.socket
 }
 
 func TestConformance(t *testing.T) {
