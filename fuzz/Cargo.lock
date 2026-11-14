@@ -85,6 +85,14 @@ version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
  "segment-log-core",
+ "segment-log-server",
+]
+
+[[package]]
+name = "segment-log-server"
+version = "0.0.1"
+dependencies = [
+ "segment-log-core",
 ]
 
 [[package]]
