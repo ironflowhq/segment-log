@@ -41,3 +41,27 @@ jobs:
         env:
           SEGMENT_LOG_TEST_ROLL_BYTES: 256
       - run: python3 -m unittest discover -s scripts -p 'test_m*.py'
+
+  # The shared conformance cases over the Unix socket, run by the Go test client (ADR 0058).
+  conformance:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - run: cargo build -p segment-log-server
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: clients/go/go.mod
+          cache: false
+      - working-directory: clients/go
+        run: test -z "$(gofmt -l .)"
+      - working-directory: clients/go
+        run: go vet ./...
+      - working-directory: clients/go
+        run: go test -count=1 -v ./...
+        env:
+          SEGMENT_LOG_SERVER: ${{ github.workspace }}/target/debug/segment-log-server

@@ -237,7 +237,7 @@ Keep roll, sealing, `LogReader` and transport behavior in their [assigned milest
 
 ## M6 transport scenarios
 
-M6 adds Go-client scenarios for the cases in [M6 transport order and conformance](architecture/testing.md#m6-transport-order-and-conformance). Keep the conformance cases as data that both transports and the Go client share. Do not port the core's crash scenarios to Go. CI gains a Go toolchain job when the first transport scenario lands.
+M6 adds Go-client scenarios for the cases in [M6 transport order and conformance](architecture/testing.md#m6-transport-order-and-conformance). Keep the conformance cases as data that both transports and the Go client share. Do not port the core's crash scenarios to Go. The `conformance` job in CI builds the server and runs the cases with the Go client on Linux and macOS.
 
 ## Evidence
 

@@ -1,0 +1,12 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "after a seal, appends get Sealed and reads still work",
+  "steps": [
+    {"append": [{"stream": "s", "expected": "empty", "payload": "p"}], "expect": {"status": "Ok", "positions": [[0, 0]]}},
+    {"seal": {}, "expect": {"status": "Ok"}},
+    {"append": [{"stream": "s", "expected": 0, "payload": "q"}], "expect": {"status": "Sealed"}},
+    {"read": {"from": 0, "max": 10}, "expect": {"status": "Ok", "records": [{"offset": 0, "revision": 0, "stream": "s", "key": null, "payload": "p"}]}},
+    {"watermark": {}, "expect": {"status": "Ok", "watermark": 1}},
+    {"seal": {}, "expect": {"status": "Ok"}}
+  ]
+}

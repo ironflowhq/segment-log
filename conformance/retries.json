@@ -1,0 +1,20 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "keyed retries return original positions; conflicts and mixed retries are rejected",
+  "steps": [
+    {"append": [{"stream": "s", "expected": "empty", "key": "k1", "payload": "p1"}, {"stream": "s", "expected": 0, "key": "k2", "payload": "p2"}],
+     "expect": {"status": "Ok", "positions": [[0, 0], [1, 1]], "deduplicated": false}},
+    {"append": [{"stream": "s", "expected": "empty", "key": "k1", "payload": "p1"}, {"stream": "s", "expected": 0, "key": "k2", "payload": "p2"}],
+     "expect": {"status": "Ok", "positions": [[0, 0], [1, 1]], "deduplicated": true}},
+    {"append": [{"stream": "s", "expected": 7, "key": "k2", "payload": "p2"}, {"stream": "s", "expected": 7, "key": "k1", "payload": "p1"}],
+     "expect": {"status": "Ok", "positions": [[1, 1], [0, 0]], "deduplicated": true}},
+    {"append": [{"stream": "s", "expected": "empty", "key": "k1", "payload": "other"}], "expect": {"status": "KeyConflict", "index": 0}},
+    {"append": [{"stream": "t", "expected": "empty", "key": "k3", "payload": "p3"}, {"stream": "t", "expected": "empty", "key": "k1", "payload": "p1"}],
+     "expect": {"status": "KeyConflict", "index": 1}},
+    {"append": [{"stream": "s", "expected": "empty", "key": "k1", "payload": "p1"}, {"stream": "s", "expected": 1, "key": "k4", "payload": "p4"}],
+     "expect": {"status": "PartialRetry"}},
+    {"append": [{"stream": "u", "expected": "empty", "key": "k9", "payload": "a"}, {"stream": "u", "expected": 0, "key": "k9", "payload": "b"}],
+     "expect": {"status": "Invalid"}},
+    {"watermark": {}, "expect": {"status": "Ok", "watermark": 2}}
+  ]
+}

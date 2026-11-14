@@ -92,6 +92,7 @@ dependencies = [
 name = "segment-log-server"
 version = "0.0.1"
 dependencies = [
+ "libc",
  "segment-log-core",
 ]
 

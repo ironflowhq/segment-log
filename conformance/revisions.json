@@ -1,0 +1,15 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "expected revisions reject whole submits without using an offset",
+  "steps": [
+    {"append": [{"stream": "s", "expected": "empty", "payload": "p"}], "expect": {"status": "Ok", "positions": [[0, 0]]}},
+    {"append": [{"stream": "s", "expected": "empty", "payload": "p"}], "expect": {"status": "WrongRevision", "index": 0, "actual": 0}},
+    {"append": [{"stream": "s", "expected": 5, "payload": "p"}], "expect": {"status": "WrongRevision", "index": 0, "actual": 0}},
+    {"append": [{"stream": "t", "expected": 0, "payload": "p"}], "expect": {"status": "WrongRevision", "index": 0, "actual": "none"}},
+    {"append": [{"stream": "s", "expected": 0, "payload": "p"}, {"stream": "s", "expected": 0, "payload": "q"}],
+     "expect": {"status": "WrongRevision", "index": 1, "actual": 1}},
+    {"append": [{"stream": "s", "expected": 0, "payload": "p"}, {"stream": "s", "expected": 1, "payload": "q"}],
+     "expect": {"status": "Ok", "positions": [[1, 1], [2, 2]]}},
+    {"watermark": {}, "expect": {"status": "Ok", "watermark": 3}}
+  ]
+}
