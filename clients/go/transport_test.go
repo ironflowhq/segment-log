@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os/exec"
 	"slices"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -193,4 +194,80 @@ func TestPoisonExit(t *testing.T) {
 	}
 	d.start(t, "")
 	resolve(t, dial(t, d), submits)
+}
+
+func exitStatus(t *testing.T, cmd *exec.Cmd) int {
+	t.Helper()
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case err := <-done:
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
+			return exit.ExitCode()
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		return 0
+	case <-time.After(10 * time.Second):
+		t.Fatal("the server did not exit")
+		return -1
+	}
+}
+
+// A seal ends the server: the sealing client gets its answer, every connection closes, and the
+// process exits 0. A restart opens the sealed log: appends get Sealed, and reads still work.
+func TestSealExit(t *testing.T) {
+	d := newLogDir(t)
+	cmd := d.start(t, "")
+	sealer, other := dial(t, d), dial(t, d)
+	if a, err := sealer.Do(Append([]NewRecord{keyed("s", "k", empty, []byte("p"))})); err != nil || a.Status != 0 {
+		t.Fatalf("append: %v %v", a.Status, err)
+	}
+	if a, err := sealer.Do(Seal()); err != nil || a.Status != 0 {
+		t.Fatalf("seal: %v %v", a.Status, err)
+	}
+	if !sealer.Closed() || !other.Closed() {
+		t.Fatal("a connection stayed open after the seal")
+	}
+	if code := exitStatus(t, cmd); code != 0 {
+		t.Fatalf("exit status %d after a seal, want 0", code)
+	}
+	d.start(t, "")
+	c := dial(t, d)
+	if a, _ := c.Do(Append([]NewRecord{keyed("s", "k2", Expected{Revision: 0}, []byte("q"))})); a.Status.String() != "Sealed" {
+		t.Fatalf("append to a sealed log: %v, want Sealed", a.Status)
+	}
+	if a, _ := c.Do(Read(0, 10)); a.Status != 0 || len(a.Records) != 1 {
+		t.Fatalf("read of the sealed log: %+v", a)
+	}
+}
+
+// SIGTERM stops the server without sealing: the append it had read is answered, and the process
+// exits 0. A restart takes appends again.
+func TestSignalStop(t *testing.T) {
+	d := newLogDir(t)
+	// The linger holds the append in its group while the signal arrives.
+	cmd := d.start(t, "", "--linger-us", "500000")
+	c := dial(t, d)
+	if err := c.Send(Append([]NewRecord{keyed("s", "k", empty, []byte("p"))})); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	cmd.Process.Signal(syscall.SIGTERM)
+	if a, err := c.Receive(); err != nil || a.Status != 0 {
+		t.Fatalf("the append read before SIGTERM: %v %v, want an answer", a.Status, err)
+	}
+	if !c.Closed() {
+		t.Fatal("the connection stayed open after SIGTERM")
+	}
+	if code := exitStatus(t, cmd); code != 0 {
+		t.Fatalf("exit status %d after SIGTERM, want 0", code)
+	}
+	d.start(t, "")
+	c = dial(t, d)
+	if a, _ := c.Do(Append([]NewRecord{keyed("s", "k2", Expected{Revision: 0}, []byte("q"))})); a.Status != 0 {
+		t.Fatalf("append after a restart from SIGTERM: %v, want Ok, so the log was not sealed", a.Status)
+	}
 }

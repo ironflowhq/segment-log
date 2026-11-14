@@ -10,4 +10,6 @@ segment-log-server --dir <path> --unix <socket-path> \
 
 Omitted options keep the defaults in [api.md](../docs/architecture/api.md#target-signatures-and-defaults). `--max-connections` defaults to 64. The bytes on the socket are in [protocol.md](../docs/architecture/protocol.md), and the process behavior is in [ADR 0058](../docs/decisions/0058-one-server-process-serves-one-log.md).
 
+A successful `Seal` is answered, then the server closes every connection and exits 0. `SIGTERM` or `SIGINT` stops it the same way without sealing. Either way, the server first answers the requests it has read.
+
 Exit status 1 means the log did not open, the socket did not bind, or a flag was invalid. The reason is on stderr. Exit status 2 means the writer was poisoned: the server answered the requests it had read, and a restart recovers the log.
