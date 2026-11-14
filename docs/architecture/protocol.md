@@ -125,7 +125,7 @@ Request body: empty. Answer fields after the status: `watermark` (8).
 
 ### StreamHead
 
-Request body: the stream id, `body_len` bytes. An empty body or one above the stream id limit gets `Invalid`. Answer fields after the status (24 bytes):
+Request body: the stream id, `body_len` bytes. A stream id outside the stream id limit has no records, so it answers not present. Answer fields after the status (24 bytes):
 
 | Offset | Size | Field |
 | --- | --- | --- |
@@ -146,7 +146,7 @@ Each core outcome has its own code. Detail fields follow the status in the answe
 | --- | --- | --- | --- |
 | 1 | `Full` | `AppendError::Full` | none |
 | 2 | `TooLarge` | `AppendError::TooLarge`, or an `Append` body above `frame_cap` | none |
-| 3 | `Invalid` | `AppendError::Invalid`, or an invalid `StreamHead` stream id | `reason_len` (2), `reason` (UTF-8) |
+| 3 | `Invalid` | `AppendError::Invalid` | `reason_len` (2), `reason` (UTF-8) |
 | 4 | `Sealed` | `AppendError::Sealed` | none |
 | 5 | `Poisoned` | `AppendError::Poisoned`, `SealError::Poisoned` | none |
 | 6 | `Exhausted` | `CommitError::Exhausted` | none |

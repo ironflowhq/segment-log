@@ -39,8 +39,34 @@ def log_scripts():
             yield bytes([flags, 4, 1, *body, 0, 200, 33])
 
 
+def message(kind, body):
+    """One protocol message: header, then body (docs/architecture/protocol.md)."""
+    return struct.pack("<IB3x", len(body), kind) + body
+
+
+def append_entry(stream, expected, revision, key, payload):
+    head = struct.pack("<HHIBQ", len(stream), len(key), len(payload), expected, revision)
+    return head + stream + key + payload
+
+
+def protocol_messages():
+    """Seeds for the protocol target: one valid message of each request kind. No mode byte."""
+    entries = append_entry(b"s", 0, 0, b"", b"p") + append_entry(b"t", 1, 7, b"k", b"")
+    yield message(1, b"SGLP" + struct.pack("<HH", 1, 0))
+    yield message(2, struct.pack("<I", 2) + entries)
+    yield message(3, struct.pack("<QI", 0, 100))
+    yield message(4, b"")
+    yield message(5, b"orders")
+    yield message(6, b"")
+
+
 def main():
-    seeds = {"decoder": set(), "recovery": set(), "log": set(log_scripts())}
+    seeds = {
+        "decoder": set(),
+        "recovery": set(),
+        "log": set(log_scripts()),
+        "protocol": set(protocol_messages()),
+    }
     for path in sorted(FIXTURE.glob("*/*.seg")):
         segment = path.read_bytes()
         seeds["recovery"].add(b"\0" + segment[HEADER_LEN:])
