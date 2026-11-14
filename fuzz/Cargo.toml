@@ -10,6 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "=0.4.13"
 segment-log-core = { path = "../segment-log-core" }
+segment-log-server = { path = "../segment-log-server" }
 
 # Its own workspace, so that the nightly-only fuzz build stays out of the pinned workspace.
 [workspace]
@@ -32,6 +33,13 @@ bench = false
 [[bin]]
 name = "log"
 path = "fuzz_targets/log.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "protocol"
+path = "fuzz_targets/protocol.rs"
 test = false
 doc = false
 bench = false
