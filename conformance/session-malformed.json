@@ -1,0 +1,10 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "requests before a malformed one are answered, then the connection closes",
+  "steps": [
+    {"pipeline": [
+      {"watermark": {}, "expect": {"status": "Ok", "watermark": 0}},
+      {"raw": "0000000009000000", "expect": {"status": "Malformed"}}
+    ], "closed": true}
+  ]
+}

@@ -365,6 +365,13 @@ pub fn encode_answer(kind: u8, answer: &Answer) -> Vec<u8> {
     w.finish(kind | ANSWER_BIT)
 }
 
+/// The `max` to pass to the core's `read`. No answer within `frame_cap` holds more records than
+/// this, because every entry has at least a one-byte stream id; a larger `max` would only make the
+/// core collect records the answer then drops.
+pub fn read_limit(max: u32, frame_cap: usize) -> usize {
+    (max as usize).min(frame_cap / (READ_ENTRY_LEN + 1))
+}
+
 /// How many of `records` a `Read` answer holds: the longest prefix within `frame_cap`, and at least
 /// one record when there is any.
 pub fn fitting_records(records: &[Record], frame_cap: usize) -> usize {
