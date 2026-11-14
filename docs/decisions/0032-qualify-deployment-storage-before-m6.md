@@ -50,6 +50,7 @@ We accept leaving deployment qualification until that stack is available while p
 
 ## Consequences
 
+- [ADR 0056](0056-m6-builds-the-server-m7-validates-the-guest-deployment.md) moves the qualification record and the guest benchmark from before M6 to before M7. Their requirements do not change.
 - [ADR 0040](0040-volumes-meet-testable-minimum-requirements.md) defines the volume requirements V1–V11 that the qualification record checks, with binary pass criteria, known-bad controls and evidence classes. The three storage-contract assumptions above are now V1–V3.
 - The gate and M1 boundary of PRD item 3 are settled. The actual qualification result remains open.
 - A qualification record in `docs/` must distinguish verified support, limitations and unresolved assumptions before M6 guest validation proceeds.

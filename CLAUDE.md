@@ -6,7 +6,7 @@ An embedded, append-only event log in Rust. One writer thread packs many callers
 
 Read these before you change code. Start with the PRD.
 
-- [docs/prd.md](docs/prd.md): requirements (R1–R23), targets, milestones M0–M6, open items.
+- [docs/prd.md](docs/prd.md): requirements (R1–R23), targets, milestones M0–M7, open items.
 - [docs/architecture/overview.md](docs/architecture/overview.md): invariants I1–I10, write path, commit protocol, recovery, roll, seal.
 - [docs/architecture/format.md](docs/architecture/format.md): byte layout, version 1 since M5 (ADR 0052); breaking changes allowed until production (ADR 0053). The only source for field widths.
 - [docs/architecture/api.md](docs/architecture/api.md): public API and defaults. The only source for signatures.
