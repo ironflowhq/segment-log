@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Workspace lock at the root. The members are segment-log-core and segment-log-server.
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Separate lock. The fuzz crate is its own workspace so a nightly build stays out of the pinned one.
+  - package-ecosystem: "cargo"
+    directory: "/fuzz"
+    schedule:
+      interval: "weekly"
+
+  # Channel pinned in rust-toolchain.toml.
+  - package-ecosystem: "rust-toolchain"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Action references under .github/workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
