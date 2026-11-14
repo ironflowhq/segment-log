@@ -1,0 +1,8 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "a request before Hello is malformed and the connection closes",
+  "no_hello": true,
+  "steps": [
+    {"watermark": {}, "expect": {"status": "Malformed"}, "closed": true}
+  ]
+}

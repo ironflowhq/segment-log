@@ -40,7 +40,7 @@ Every message, in both directions, starts with the same header.
 | `StreamHead` | `5` | `0x85` |
 | `Seal` | `6` | `0x86` |
 
-An unknown `kind` is malformed. A `Malformed` answer to an unknown or unreadable request uses kind `0x80`.
+An unknown `kind` is malformed. A `Malformed` answer always uses kind `0x80`, because the request it answers may have no valid kind.
 
 ## Size cap
 

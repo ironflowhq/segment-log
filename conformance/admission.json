@@ -1,0 +1,12 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "size refusals come from the core or from the frame cap, and leave the connection open",
+  "server_args": ["--group-byte-cap", "1024"],
+  "steps": [
+    {"append": [{"stream": "s", "expected": "empty", "payload_len": 2000}], "expect": {"status": "TooLarge"}},
+    {"append": [{"stream": "s", "expected": "empty", "payload_len": 70000}], "expect": {"status": "TooLarge"}},
+    {"append": [], "expect": {"status": "Invalid"}},
+    {"append": [{"stream": "", "expected": "empty", "payload": "p"}], "expect": {"status": "Invalid"}},
+    {"append": [{"stream": "s", "expected": "empty", "payload": "p"}], "expect": {"status": "Ok", "positions": [[0, 0]]}}
+  ]
+}
