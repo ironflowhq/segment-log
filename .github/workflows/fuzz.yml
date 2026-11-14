@@ -1,7 +1,8 @@
 name: Fuzz
-# Runs FUZZ-DECODER and FUZZ-RECOVERY (testing.md). The schedule and a dispatch run each target for
-# an hour, which is the M5 gate. A pull request that touches the core or the targets runs each for a
-# minute, so that the targets keep building.
+# Runs FUZZ-DECODER, FUZZ-RECOVERY, FUZZ-LOG and FUZZ-PROTOCOL (testing.md). The schedule and a
+# dispatch run each target for an hour, which is the M5 gate and, for FUZZ-PROTOCOL, part of the M6
+# gate. A pull request that touches the core, the server or the targets runs each for a minute, so
+# that the targets keep building.
 on:
   schedule:
     - cron: '41 5 * * *'
@@ -15,6 +16,7 @@ on:
     paths:
       - segment-log-core/src/**
       - segment-log-core/tests/fixtures/**
+      - segment-log-server/src/**
       - fuzz/**
       - .github/workflows/fuzz.yml
 
@@ -38,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [decoder, recovery, log]
+        target: [decoder, recovery, log, protocol]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -85,7 +87,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [decoder, recovery, log]
+        target: [decoder, recovery, log, protocol]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

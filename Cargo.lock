@@ -159,6 +159,9 @@ dependencies = [
 [[package]]
 name = "segment-log-server"
 version = "0.0.1"
+dependencies = [
+ "segment-log-core",
+]
 
 [[package]]
 name = "talc"
