@@ -4,6 +4,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
+/// Exit status after a seal or a stop signal (ADR 0058).
+pub const EXIT_STOPPED: u8 = 0;
+
 /// Exit status after a poisoned writer (ADR 0058). The supervisor restarts the server, and the new
 /// open recovers the log.
 pub const EXIT_POISONED: u8 = 2;
