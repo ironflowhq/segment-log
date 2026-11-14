@@ -5,10 +5,11 @@ on:
     branches: [main]
   pull_request:
 
-# A new commit on a pull request replaces the run still in progress.
+# A new commit on a pull request or a branch push replaces the run still in progress.
+# A release does not.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 permissions:
   contents: read
@@ -18,13 +19,14 @@ env:
 
 jobs:
   check:
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         # ubuntu-latest warns until 2026-11-19 while GitHub moves that label to 26.04.
-        # Pin 24.04 so the job stays on the image that is already green.
+        # Pin 26.04 so this job does not float with that label.
         # https://github.com/actions/runner-images/issues/14748
-        os: [ubuntu-24.04, macos-latest]
+        os: [ubuntu-26.04, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -44,10 +46,12 @@ jobs:
 
   # The shared conformance cases over the Unix socket, run by the Go test client (ADR 0058).
   conformance:
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-latest]
+        # Same pin as check: ubuntu-latest warns until 2026-11-19.
+        os: [ubuntu-26.04, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7

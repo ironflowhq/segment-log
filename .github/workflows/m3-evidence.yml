@@ -7,10 +7,11 @@ on:
   pull_request:
     types: [labeled]
 
-# A repeated pull request event replaces the run still in progress.
+# A new commit on a pull request or a branch push replaces the run still in progress.
+# A release does not.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 permissions:
   contents: read
@@ -19,7 +20,7 @@ jobs:
     name: Linux roll syscall capture
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'm3-evidence' }}
     timeout-minutes: 30
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
