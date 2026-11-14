@@ -10,7 +10,7 @@ A segment log for each agent, with each agent calling `fsync`, is the shape this
 
 The sealed segments must be on a volume that outlives the guest. When the microVM is destroyed, a file on an ephemeral disk is lost. Recovery never needs the old process to still be there.
 
-The deployment or runner layer owns volume provisioning, mounting, preservation and post-guest reader handoff ([ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)). The core operates on the directory supplied to `SegmentLog::open`. Before M6, the deployment must identify the mount paths, reader component and handoff procedure, including access for writable recovery of unsealed crash logs. Those integration choices do not block M1.
+The deployment or runner layer owns volume provisioning, mounting, preservation and post-guest reader handoff ([ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)). The core operates on the directory supplied to `SegmentLog::open`. Before M7, the deployment must identify the mount paths, reader component and handoff procedure, including access for writable recovery of unsealed crash logs. Those integration choices do not block M1.
 
 Orchestration is above the log. Leases, waiting for events, dashboards and SDKs are a different layer, in another process and possibly another language. The log does not store subscribers. Waiting cursors, their positions, cancellation, timeouts and scheduling also belong above the core ([ADR 0035](../decisions/0035-waiting-cursors-belong-above-the-core.md)). M1 provides `watermark()` and bounded `read()` without a native watermark-wait API. Per-submit `Pending::wait` remains unchanged.
 
@@ -46,7 +46,7 @@ callers (threads, or a socket server in M6)
 
 The durability invariants hold only if the volume under the log meets the MUST requirements in [volume-requirements.md](volume-requirements.md) ([ADR 0040](../decisions/0040-volumes-meet-testable-minimum-requirements.md)). That document is the only source for them, their pass criteria and how to verify them. They cover flush durability through every layer, atomic sector writes, the filesystem's response to metadata write errors, a local filesystem, one writing kernel, survival of the guest, a declared failure domain, consistent copies, capacity and drift.
 
-The library cannot check them. Each deployment must check them ([PRD open item 3](../prd.md#open-items)). [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) requires qualification of the actual stack before the M6 guest benchmark and production durability claims. M1 implements and tests the explicit conditional contract; its completion evidence does not certify the eventual guest stack.
+The library cannot check them. Each deployment must check them ([PRD open item 3](../prd.md#open-items)). [ADR 0032](../decisions/0032-qualify-deployment-storage-before-m6.md) requires qualification of the actual stack before the M7 guest benchmark and production durability claims. M1 implements and tests the explicit conditional contract; its completion evidence does not certify the eventual guest stack.
 
 ## Invariants
 
@@ -188,7 +188,7 @@ A reader after the guest is gone uses `LogReader` ([ADR 0016](../decisions/0016-
 
 ## Retention
 
-M1–M6 retain complete valid history without segment-level retention ([ADR 0037](../decisions/0037-retain-complete-logs-through-current-milestones.md)). The core does not delete valid history segments even when a later footer covers their streams. Deployment owns whole-log archival and expiry under its lifecycle policy. Storage can grow until that policy archives or expires a complete log.
+M1–M7 retain complete valid history without segment-level retention ([ADR 0037](../decisions/0037-retain-complete-logs-through-current-milestones.md)). The core does not delete valid history segments even when a later footer covers their streams. Deployment owns whole-log archival and expiry under its lifecycle policy. Storage can grow until that policy archives or expires a complete log.
 
 Recovery still keeps the valid prefix and removes invalid, uncommitted tails or incomplete new segments under its existing rules. That cleanup is separate from retention. A future bounded-history feature needs durable revision checkpoints, key-expiry rules, deleted-offset reads and crash-safe deletion behavior before it can remove valid segments.
 
@@ -196,7 +196,7 @@ Recovery still keeps the valid prefix and removes invalid, uncommitted tails or 
 
 The library is Rust. It has no async runtime, SQL or protobuf on the write path. A caller in another language reaches it over a Unix socket or vsock through `segment-log-server` (M6). There is no in-process C ABI. A separate process can be sealed and killed without the orchestrator. A guest can be just the Rust server, with no other runtime in it. See [ADR 0001](../decisions/0001-rust-library-first-socket-boundary-later.md).
 
-M6 implements Unix socket first, followed by vsock with the same protocol ([ADR 0034](../decisions/0034-m6-builds-unix-socket-before-vsock.md)). Both transports remain required for M6. This sequence establishes a local Go-client protocol path before guest transport integration. Actual caller placement still determines the deployed transport, and the wire format remains a separate M6 decision. M1 remains library-only.
+M6 implements Unix socket first, followed by vsock with the same protocol ([ADR 0034](../decisions/0034-m6-builds-unix-socket-before-vsock.md)). Both transports remain required for M6, and vsock on the guest topology for M7 ([ADR 0056](../decisions/0056-m6-builds-the-server-m7-validates-the-guest-deployment.md)). This sequence establishes a local Go-client protocol path before guest transport integration. Actual caller placement still determines the deployed transport, and the wire format remains a separate M6 decision. M1 remains library-only.
 
 ## What a library build must still show
 

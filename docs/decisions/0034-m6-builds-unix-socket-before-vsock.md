@@ -45,6 +45,7 @@ We accept postponing the vsock integration until the second part of M6 so the lo
 
 ## Consequences
 
+- [ADR 0056](0056-m6-builds-the-server-m7-validates-the-guest-deployment.md) keeps this order within M6, with M6 vsock evidence from the Linux host loopback. The vsock evidence from the selected guest topology moves to M7.
 - PRD open item 5 is resolved as an implementation sequence.
 - M6 needs Go-client append and read evidence over both transports, with shared conformance cases for the protocol's retry, revision and admission outcomes.
 - Actual guest integration, storage qualification and surviving-volume handoff remain separate requirements under ADRs 0032 and 0033.
