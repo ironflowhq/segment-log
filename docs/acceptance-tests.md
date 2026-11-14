@@ -156,7 +156,7 @@ with a failed long-run job and a passed replay job for each platform.
 To check artifacts on another machine, download them and run the same script:
 
 ```sh
-gh run download RUN_ID --name trace-failures-ubuntu-24.04 --dir .audit/drill
+gh run download RUN_ID --name trace-failures-ubuntu-26.04 --dir .audit/drill
 scripts/m1-drill-replay.sh .audit/drill
 ```
 
@@ -243,13 +243,13 @@ M6 adds Go-client scenarios for the cases in [M6 transport order and conformance
 
 Acceptance scenarios give correctness evidence. Each milestone also needs its own completion artifacts. M1 needs the syscall, directory-sync and Linux benchmark artifacts in the [completion gate](architecture/testing.md#m1-completion-gate). Later gates keep their own measurement, fuzzing, transport and deployment evidence. Keep missing evidence separate from a measured performance miss, under the milestone's pass criteria.
 
-Two workflows capture M1 evidence on hosted runners, so that a capture needs no local Linux host:
+Two workflows capture M1 evidence, so that a capture needs no local Linux host:
 
-- `m1-evidence` runs `scripts/m1-evidence-guest.sh` on Linux and `scripts/m1-evidence-macos.sh` on macOS, and uploads each output directory. It covers the checks, the syscall trace, both directory-sync results, and the default and paced benchmark runs.
-- `m1-compare` runs `scripts/m1-compare-refs.sh`, which builds two commits and measures them in alternating pairs, closed loop and paced.
+- `m1-evidence` runs `scripts/m1-evidence-guest.sh` on a GitHub-hosted Linux runner and `scripts/m1-evidence-macos.sh` on macOS, and uploads each output directory. It covers the checks, the syscall trace, both directory-sync results, and the default and paced benchmark runs.
+- `m1-compare` runs `scripts/m1-compare-refs.sh` on a GitHub-hosted Linux runner. It builds two commits and measures them in alternating pairs, closed loop and paced.
 
-The `m3-evidence` workflow runs `scripts/m3-evidence.sh` on Linux. It traces `real_storage_roll_phases` with `strace`, checks the trace with `scripts/m3-verify-roll-syscalls.py` and uploads both. The script also runs in a Linux container with `strace` installed.
+The `m3-evidence` workflow runs `scripts/m3-evidence.sh` on a GitHub-hosted Linux runner. It traces `real_storage_roll_phases` with `strace`, checks the trace with `scripts/m3-verify-roll-syscalls.py` and uploads both. The script also runs in a Linux container with `strace` installed.
 
-The `m4-evidence` workflow runs `scripts/m4-evidence.sh` on Linux. It builds the M4 open-time fixture with `examples/sealed_probe.rs`, measures open cold and warm, and compares keyed appends with the M3 code at `0ffc772`. [docs/evidence/m4/README.md](evidence/m4/README.md) describes the outputs.
+The `m4-evidence` workflow runs `scripts/m4-evidence.sh` on a GitHub-hosted Linux runner. It frees preinstalled SDKs first, because the fixtures are about 20 GB and a standard runner can start with less free disk than that. It builds the M4 open-time fixture with `examples/sealed_probe.rs`, measures open cold and warm, and compares keyed appends with the M3 code at `0ffc772`. [docs/evidence/m4/README.md](evidence/m4/README.md) describes the outputs.
 
-Dispatch any of these workflows, or put the `m1-evidence`, `m1-compare`, `m3-evidence` or `m4-evidence` label on a pull request. A labeled pull request captures its head, and `m1-compare` measures its base against its head. A hosted runner is a shared virtual machine: record it as the measurement's conditions, as [testing.md](architecture/testing.md#benchmarks-m1-for-the-core-m6-for-the-server) requires, and do not read a target pass from it. Uploaded artifacts are kept for 3 days.
+Dispatch any of these workflows, or put the `m1-evidence`, `m1-compare`, `m3-evidence` or `m4-evidence` label on a pull request. A labeled pull request captures its head, and `m1-compare` measures its base against its head. A runner is a shared virtual machine: record it as the measurement's conditions, as [testing.md](architecture/testing.md#benchmarks-m1-for-the-core-m6-for-the-server) requires, and do not read a target pass from it. Uploaded artifacts are kept for 3 days.

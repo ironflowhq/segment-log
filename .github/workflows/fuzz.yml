@@ -20,9 +20,11 @@ on:
       - fuzz/**
       - .github/workflows/fuzz.yml
 
+# A new commit on a pull request or a branch push replaces the run still in progress.
+# A release does not. The hourly schedule is not a push, so a new day does not cancel it.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 permissions:
   contents: read
@@ -41,7 +43,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [decoder, recovery, log, protocol]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install "$NIGHTLY" --profile minimal
@@ -88,7 +90,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [decoder, recovery, log, protocol]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install nightly --profile minimal
