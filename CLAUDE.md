@@ -10,6 +10,7 @@ Read these before you change code. Start with the PRD.
 - [docs/architecture/overview.md](docs/architecture/overview.md): invariants I1–I10, write path, commit protocol, recovery, roll, seal.
 - [docs/architecture/format.md](docs/architecture/format.md): byte layout, version 1 since M5 (ADR 0052); breaking changes allowed until production (ADR 0053). The only source for field widths.
 - [docs/architecture/api.md](docs/architecture/api.md): public API and defaults. The only source for signatures.
+- [docs/architecture/protocol.md](docs/architecture/protocol.md): the server's wire protocol (M6). The only source for its message layout and status codes.
 - [docs/architecture/testing.md](docs/architecture/testing.md): crash model, oracle, benchmarks.
 - [docs/architecture/volume-requirements.md](docs/architecture/volume-requirements.md): requirements V1–V11 for the storage under the log, and how to test them.
 - [docs/acceptance-tests.md](docs/acceptance-tests.md): how to implement a behavior scenario-first, and where the tests go.
@@ -23,7 +24,7 @@ All ADRs are `Proposed` until the owner accepts them. A Proposed ADR is still th
 
 - **Invariants I1–I10 in [overview.md](docs/architecture/overview.md#invariants) must hold.** Never add an exception for one test or one path. If a design cannot satisfy them, change the design or write an ADR.
 - **The milestone order is a gate.** Do not start a milestone before the "done when" check of the one before it passes. `segment-log-server` stays a placeholder until M6.
-- **Write path:** one writer thread. No async runtime, no SQL, no protobuf. No `unsafe` without an ADR.
+- **Write path:** one writer thread. No async runtime, no SQL, no protobuf. No `unsafe` without an ADR ([0058](docs/decisions/0058-one-server-process-serves-one-log.md) covers the server's `libc` calls).
 - **Dependencies:** `segment-log-core` uses only `std`. A new runtime dependency there needs an ADR ([0012](docs/decisions/0012-no-log-crate-dependency.md)). Dev-dependencies are fine.
 - **File I/O** in the core goes through the storage trait, so that the crash tests can simulate it ([testing.md](docs/architecture/testing.md)).
 - **Never retry an `fsync`** after it returns an error. Poison the writer ([0004](docs/decisions/0004-io-errors-poison-the-writer.md)). The retry on `EINTR` inside `std` does not count, because that call did not complete.
