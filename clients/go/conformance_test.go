@@ -8,6 +8,9 @@ package segmentlog
 //
 // SEGMENT_LOG_TRANSPORT=vsock runs every test over the Linux vsock loopback (CID 1) instead of
 // a Unix socket. It needs the vsock_loopback module; without it the tests fail, never skip.
+//
+// SEGMENT_LOG_TRANSPORT=firecracker runs them over a Firecracker guest's vsock, from the host
+// side; scripts/m7-rehearse.sh sets it up.
 
 import (
 	"bytes"
@@ -203,8 +206,11 @@ func newLogDir(t *testing.T) logDir {
 	case "vsock":
 		port := fmt.Sprint(vsockPort.Add(1))
 		return logDir{dir, "vsock", "1:" + port, []string{"--vsock-port", port}}
+	case "firecracker":
+		// SEGMENT_LOG_SERVER is scripts/m7/fc-server, which boots a guest per start (ADR 0059).
+		return logDir{dir, "firecracker", filepath.Join(dir, "v.sock") + ":5000", []string{"--vsock-port", "5000"}}
 	default:
-		t.Fatalf("SEGMENT_LOG_TRANSPORT=%s: want unix or vsock", transport)
+		t.Fatalf("SEGMENT_LOG_TRANSPORT=%s: want unix, vsock or firecracker", transport)
 		return logDir{}
 	}
 }

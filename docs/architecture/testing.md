@@ -281,6 +281,8 @@ For M1, the Linux report is required by the completion gate even if the provisio
 
 Evidence must apply to the identified setup. A syscall trace alone does not establish a requirement. An unverified or contradicted MUST requirement blocks qualification. M7 evidence names the qualified stack used for its guest benchmark. Changes to that stack rerun the cases in the [requalification table](volume-requirements.md#requalification-triggers). No qualification is claimed by this checklist itself.
 
+[`scripts/m7-rehearse.sh`](../../scripts/m7-rehearse.sh) runs the stack that [ADR 0059](../decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md) chose on any Linux host with `/dev/kvm`: `VOL-FS-CHECK`, `VOL-FLUSH-CONFIG` with its `Unsafe` control, the one-host steps of `VOL-EXCLUSIVE`, and the Go conformance and transport cases over Firecracker vsock. On the Mac it runs in a nested Lima VM as a rehearsal, which fills no row of the record.
+
 <a id="surviving-volume-handoff-before-m6"></a>
 
 ## Surviving-volume handoff (before M7)
