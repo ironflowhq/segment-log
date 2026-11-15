@@ -4,7 +4,9 @@
 mount -t proc proc /proc
 mount -t sysfs sys /sys
 mount -t devtmpfs dev /dev 2>/dev/null
-mount -t ext4 /dev/vdb /mnt || { echo "m7: cannot mount /dev/vdb"; ls -l /dev/vd*; dmesg | tail -n 5; reboot -f; }
+# A read-only server gets a read-only drive (scripts/m7/fc-server), so the mount must match.
+case " $* " in *" --read-only "*) mode=ro ;; *) mode=rw ;; esac
+mount -t ext4 -o "$mode" /dev/vdb /mnt || { echo "m7: cannot mount /dev/vdb"; ls -l /dev/vd*; dmesg | tail -n 5; reboot -f; }
 # VOL-FS-CHECK and VOL-FLUSH-CONFIG read these lines from the console.
 echo "m7: fs $(findmnt -no SOURCE,FSTYPE,OPTIONS -T /mnt)"
 echo "m7: write_cache $(cat /sys/block/vdb/queue/write_cache)"

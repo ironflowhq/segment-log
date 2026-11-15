@@ -138,7 +138,7 @@ Request body: the stream id, `body_len` bytes. A stream id outside the stream id
 
 ### Seal
 
-Request body: empty. The answer has no fields after the status. After a successful seal answer, the server stops as [ADR 0058](../decisions/0058-one-server-process-serves-one-log.md) describes.
+Request body: empty. The answer has no fields after the status. After a successful seal answer, the server stops as [ADR 0058](../decisions/0058-one-server-process-serves-one-log.md) describes. A `--read-only` server answers success and keeps serving, because its log is already sealed ([ADR 0060](../decisions/0060-the-server-reads-a-sealed-log-with-read-only.md)).
 
 ## Status codes
 

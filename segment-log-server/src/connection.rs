@@ -1,9 +1,10 @@
 //! One connection: a thread that reads requests and calls the core, and a thread that writes each
 //! answer in request order (ADR 0057, ADR 0058).
 
+use crate::log::Log;
 use crate::protocol::{self, Admit, Answer, HEADER_LEN, Request, Status};
 use crate::server::{EXIT_POISONED, EXIT_STOPPED, Slot};
-use segment_log_core::{Pending, SegmentLog};
+use segment_log_core::Pending;
 use std::io::{self, Read, Write};
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
@@ -20,7 +21,7 @@ enum Job {
 }
 
 /// Starts both threads. `slot` is released when both have finished with the connection.
-pub fn serve<S>(stream: S, writer: S, log: Arc<SegmentLog>, frame_cap: usize, slot: Slot)
+pub fn serve<S>(stream: S, writer: S, log: Arc<Log>, frame_cap: usize, slot: Slot)
 where
     S: Read + Write + Send + 'static,
 {
@@ -72,7 +73,7 @@ fn failed(kind: u8, status: Status) -> Vec<u8> {
 /// Dropping `jobs` then lets the writer finish the answers already queued.
 fn read_requests(
     mut stream: impl Read,
-    log: &SegmentLog,
+    log: &Log,
     frame_cap: usize,
     jobs: &SyncSender<Job>,
     slot: &Slot,
@@ -164,10 +165,12 @@ fn read_requests(
                 &Answer::StreamHead(log.stream_head(&stream).as_ref()),
             )),
             Request::Seal => Job::Ready(match log.seal() {
-                Ok(()) => {
-                    // A sealed log takes no appends, so the server's work is done (ADR 0058).
+                Ok(stop) => {
+                    // A sealed log takes no appends, so a writer's work is done (ADR 0058).
                     // The answer still goes out: stopping ends reads, not the queued answers.
-                    slot.server.stop(EXIT_STOPPED);
+                    if stop {
+                        slot.server.stop(EXIT_STOPPED);
+                    }
                     protocol::encode_answer(protocol::SEAL, &Answer::Seal)
                 }
                 Err(error) => {
