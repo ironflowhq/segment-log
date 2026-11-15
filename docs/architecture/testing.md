@@ -291,6 +291,8 @@ Evidence must apply to the identified setup. A syscall trace alone does not esta
 
 `HANDOFF`. Integration evidence must show that acknowledged records remain available on the surviving volume after guest exit and can be read by the selected component. Cover sealed history through `LogReader` and an unsealed crash log through writable `SegmentLog::open` recovery. Using `LogReader` afterward requires explicitly sealing the recovered log; the test must state that policy rather than silently finalizing a resumable log.
 
+The reader component is `segment-log-server --read-only` ([ADR 0060](../decisions/0060-the-server-reads-a-sealed-log-with-read-only.md)). `TestHandoffSealed` and `TestHandoffUnsealed` in `clients/go/handoff_test.go` implement the case. Over the stack in [ADR 0059](../decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md), each server start is a new guest on the same volume, and the reader's drive is read-only.
+
 The integration record references the actual-stack qualification in ADR 0032. These checks do not select a provider, concrete path or reader implementation for M1, and do not claim that a deployment handoff has been exercised yet.
 
 ## M6 transport order and conformance
