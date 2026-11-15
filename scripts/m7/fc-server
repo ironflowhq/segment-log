@@ -23,6 +23,8 @@ fi
 exec 9<>"$img"
 flock -xn 9 || { echo "fc-server: $img is attached to another VMM" >&2; exit 75; }
 rm -f "$host/v.sock"
+# A read-only server (ADR 0060) gets the volume read-only, so the guest cannot write to it at all.
+case " $* " in *" --read-only "*) ro=true ;; *) ro=false ;; esac
 cat >"$host/vm.json" <<EOF
 {
   "boot-source": {
@@ -31,7 +33,7 @@ cat >"$host/vm.json" <<EOF
   },
   "drives": [
     {"drive_id": "root", "path_on_host": "$M7_CACHE/rootfs.ext4", "is_root_device": true, "is_read_only": true},
-    {"drive_id": "log", "path_on_host": "$img", "is_root_device": false, "is_read_only": false,
+    {"drive_id": "log", "path_on_host": "$img", "is_root_device": false, "is_read_only": $ro,
      "cache_type": "${M7_CACHE_TYPE:-Writeback}"}
   ],
   "machine-config": {"vcpu_count": ${M7_VCPUS:-2}, "mem_size_mib": ${M7_MEM_MIB:-256}},
