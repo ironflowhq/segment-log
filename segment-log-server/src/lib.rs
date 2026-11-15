@@ -3,12 +3,14 @@
 
 mod args;
 mod connection;
+mod log;
 pub mod protocol;
 mod server;
 #[cfg(target_os = "linux")]
 mod vsock;
 
-use segment_log_core::SegmentLog;
+use log::Log;
+use segment_log_core::{LogReader, SegmentLog};
 use server::Server;
 use std::fs;
 use std::io;
@@ -38,7 +40,13 @@ pub fn main_with(args: impl Iterator<Item = String>) -> ExitCode {
     let frame_cap = protocol::frame_cap(config.options.group_byte_cap);
     // The log first: its LOCK makes this the only server for the directory, so removing a stale
     // socket below cannot take the socket of a live server.
-    let log = match SegmentLog::open(&config.dir, config.options) {
+    // A reader takes no LOCK and writes nothing, so it opens only a sealed log (ADR 0060).
+    let opened = if config.read_only {
+        LogReader::open(&config.dir).map(Log::Reader)
+    } else {
+        SegmentLog::open(&config.dir, config.options).map(Log::Writer)
+    };
+    let log = match opened {
         Ok(log) => Arc::new(log),
         Err(error) => {
             eprintln!(
@@ -48,7 +56,7 @@ pub fn main_with(args: impl Iterator<Item = String>) -> ExitCode {
             return ExitCode::from(EXIT_START);
         }
     };
-    let (incoming, address) = match listen(&config.listen) {
+    let (incoming, address) = match listen(&config.listen, config.read_only) {
         Ok(listening) => listening,
         Err((address, error)) => {
             eprintln!("segment-log-server: bind {address}: {error}");
@@ -100,11 +108,14 @@ const DRAIN_LIMIT: Duration = Duration::from_secs(5);
 type Incoming = Box<dyn Iterator<Item = io::Result<UnixStream>> + Send>;
 
 /// The accepted connections for the configured transport, and its address for diagnostics.
-fn listen(listen: &args::Listen) -> Result<(Incoming, String), (String, io::Error)> {
+fn listen(
+    listen: &args::Listen,
+    read_only: bool,
+) -> Result<(Incoming, String), (String, io::Error)> {
     match listen {
         args::Listen::Unix(path) => {
             let address = path.display().to_string();
-            match bind_unix(path) {
+            match bind_unix(path, read_only) {
                 Ok(listener) => Ok((
                     Box::new(std::iter::from_fn(move || {
                         Some(listener.accept().map(|(stream, _)| stream))
@@ -134,7 +145,7 @@ fn listen(listen: &args::Listen) -> Result<(Incoming, String), (String, io::Erro
 }
 
 /// Holds the log weakly, so that after a stop the main thread's handle is the last one.
-fn accept(incoming: Incoming, server: &Arc<Server>, log: &Weak<SegmentLog>, frame_cap: usize) {
+fn accept(incoming: Incoming, server: &Arc<Server>, log: &Weak<Log>, frame_cap: usize) {
     for stream in incoming {
         let Ok(stream) = stream else { continue };
         let (Ok(writer), Ok(closer)) = (stream.try_clone(), stream.try_clone()) else {
@@ -150,8 +161,12 @@ fn accept(incoming: Incoming, server: &Arc<Server>, log: &Weak<SegmentLog>, fram
     }
 }
 
-fn bind_unix(path: &Path) -> io::Result<UnixListener> {
-    if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_socket()) {
+/// A writer holds the log's LOCK, so a socket at `path` cannot be a live server's. A reader holds
+/// no lock, so it removes the socket only when nothing answers on it.
+fn bind_unix(path: &Path, read_only: bool) -> io::Result<UnixListener> {
+    if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_socket())
+        && !(read_only && UnixStream::connect(path).is_ok())
+    {
         fs::remove_file(path)?;
     }
     // A umask, not a chmod after bind, so the socket never exists with wider permissions. The

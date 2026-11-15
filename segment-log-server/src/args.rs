@@ -6,7 +6,7 @@ use std::time::Duration;
 
 pub const USAGE: &str = "usage: segment-log-server --dir <path> (--unix <socket-path> | \
 --vsock-port <port>) [--linger-us <n>] [--group-byte-cap <n>] [--roll-bytes <n>] [--queue-capacity <n>] \
-[--pending-byte-budget <n>] [--max-connections <n>]";
+[--pending-byte-budget <n>] [--max-connections <n>] [--read-only]";
 
 /// Where the server listens: exactly one transport per process (ADR 0058).
 pub enum Listen {
@@ -19,13 +19,20 @@ pub struct Config {
     pub listen: Listen,
     pub options: Options,
     pub max_connections: usize,
+    /// Serve a sealed log through LogReader, writing nothing (ADR 0060).
+    pub read_only: bool,
 }
 
 pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Config, String> {
     let (mut dir, mut unix, mut vsock) = (None, None, None);
     let mut options = Options::default();
     let mut max_connections = 64;
+    let mut read_only = false;
     while let Some(flag) = args.next() {
+        if flag == "--read-only" {
+            read_only = true;
+            continue;
+        }
         let value = args.next().ok_or_else(|| format!("{flag} needs a value"))?;
         let number = || {
             value
@@ -62,6 +69,7 @@ pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Config, String> {
         listen,
         options,
         max_connections,
+        read_only,
     })
 }
 
@@ -96,6 +104,14 @@ mod tests {
             Options::default().queue_capacity
         );
         assert_eq!(config.max_connections, 64);
+        assert!(!config.read_only);
+    }
+
+    #[test]
+    fn read_only_takes_no_value() {
+        let config = parse(args(&["--dir", "d", "--read-only", "--unix", "s"])).unwrap();
+        assert!(config.read_only);
+        assert!(matches!(config.listen, Listen::Unix(_)));
     }
 
     #[test]

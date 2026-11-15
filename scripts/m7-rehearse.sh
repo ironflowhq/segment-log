@@ -11,6 +11,8 @@
 #   VOL-FLUSH-CONFIG  Writeback shows the guest a write-back cache (flushes reach the host);
 #                     the Unsafe control shows write through (no flush feature)
 #   conformance       the Go conformance and transport cases over Firecracker vsock
+#   HANDOFF           each start is a new guest on the same volume: a sealed log and a crashed
+#                     one are read back by a --read-only server on a read-only drive (ADR 0060)
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
@@ -96,6 +98,6 @@ echo "refused while attached and while paused; attached after the owner died"
 echo "== conformance over Firecracker vsock"
 cd "$repo/clients/go"
 SEGMENT_LOG_TRANSPORT=firecracker SEGMENT_LOG_SERVER="$repo/scripts/m7/fc-server" \
-	go test -count=1 -run 'TestConformance|TestTransportUnknown|TestTransportRestart' -v ./... |
+	go test -count=1 -run 'TestConformance|TestTransportUnknown|TestTransportRestart|TestHandoff' -v ./... |
 	grep -E '^(=== RUN|--- |ok|FAIL|PASS)'
 echo "== rehearsal passed"
