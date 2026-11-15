@@ -48,6 +48,9 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Cache** | Any state that the log can rebuild by reading segments. A cache is never the only copy of a fact. |
 | **Volume** | Every layer that holds one log directory: the guest filesystem, the guest block device, the VMM, the host storage and the durable media. Its requirements are in [volume-requirements.md](architecture/volume-requirements.md). |
 | **Failure domain** | The failure events after which a volume still holds every acknowledged record. [ADR 0040](decisions/0040-volumes-meet-testable-minimum-requirements.md) sets the minimum, and each deployment declares the rest. |
+| **Message** | One unit of the server's [wire protocol](architecture/protocol.md): an 8-byte header and a body. A request or an answer. Not a frame, which is on disk. |
+| **Conformance case** | One JSON file in `conformance/` that lists requests to a server and the answers it must give. Every transport runs the same cases ([testing.md](architecture/testing.md#m6-transport-order-and-conformance)). |
+| **Wire vector** | One line of `conformance/wire.txt`: a whole message written byte for byte from protocol.md's tables, with a name. The server tests and the Go client both check it. |
 | **Qualification record** | A document in `docs/` that identifies one stack and gives the evidence and result for each volume requirement ([ADR 0032](decisions/0032-qualify-deployment-storage-before-m6.md), [ADR 0040](decisions/0040-volumes-meet-testable-minimum-requirements.md)). |
 
 ## Diagrams

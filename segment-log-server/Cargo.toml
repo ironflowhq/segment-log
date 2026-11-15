@@ -1,6 +1,6 @@
 [package]
 name = "segment-log-server"
-description = "Placeholder: socket server for the Ironflow segment log (not yet usable)."
+description = "Socket server for the Ironflow segment log over a Unix socket or vsock (pre-release)."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
