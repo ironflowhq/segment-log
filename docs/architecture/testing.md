@@ -283,6 +283,8 @@ Evidence must apply to the identified setup. A syscall trace alone does not esta
 
 [`scripts/m7-rehearse.sh`](../../scripts/m7-rehearse.sh) runs the stack that [ADR 0059](../decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md) chose on any Linux host with `/dev/kvm`: `VOL-FS-CHECK`, `VOL-FLUSH-CONFIG` with its `Unsafe` control, the one-host steps of `VOL-EXCLUSIVE`, and the Go conformance and transport cases over Firecracker vsock. On the Mac it runs in a nested Lima VM as a rehearsal, which fills no row of the record.
 
+[`scripts/m7-power-cut.sh`](../../scripts/m7-power-cut.sh) runs the [power-cut harness](volume-requirements.md#power-cut-harness) on that stack for process crash, guest crash and guest destroy. The guest's server is the writer. `powercut load` (`clients/go/cmd/powercut`) runs on the VMM host, where ADR 0059 puts the caller, and reports each acknowledgment to `powercut observe` on another machine. `powercut check` reads the recovered log back. The control for these events is `--control`: the load reports each record before its acknowledgment, which is how a writer that acknowledges before it writes looks to the observer. A cycle in which the event does not end the load fails, so a missed event cannot pass. Host kernel crash and host power loss need the dedicated host.
+
 <a id="surviving-volume-handoff-before-m6"></a>
 
 ## Surviving-volume handoff (before M7)

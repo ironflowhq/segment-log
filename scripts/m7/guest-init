@@ -10,7 +10,24 @@ mount -t ext4 -o "$mode" /dev/vdb /mnt || { echo "m7: cannot mount /dev/vdb"; ls
 # VOL-FS-CHECK and VOL-FLUSH-CONFIG read these lines from the console.
 echo "m7: fs $(findmnt -no SOURCE,FSTYPE,OPTIONS -T /mnt)"
 echo "m7: write_cache $(cat /sys/block/vdb/queue/write_cache)"
-/segment-log-server --dir /mnt/log "$@"
-echo "m7: server exit $?"
+mount -t tmpfs run /run
+echo 1 >/proc/sys/kernel/sysrq
+# Power-cut harness events arrive as lines on the serial console (scripts/m7-power-cut.sh).
+while read -r event; do
+	case $event in
+	kill) kill -KILL "$(cat /run/server.pid)" ;; # process crash
+	crash) echo c >/proc/sysrq-trigger ;;        # guest crash
+	esac
+done </dev/console & # explicit: sh gives a background job /dev/null as its input
+# The supervisor: a crash or a poisoned writer restarts the server, and its open recovers the log
+# (ADR 0058). A seal or a signal (0) or a failed open (1) ends the guest.
+while :; do
+	/segment-log-server --dir /mnt/log "$@" &
+	echo $! >/run/server.pid
+	wait $!
+	code=$?
+	echo "m7: server exit $code"
+	case $code in 0 | 1) break ;; esac
+done
 umount /mnt
 reboot -f
