@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" role="img" aria-labelledby="title desc">
+  <title id="title">Two ways in, one writer</title>
+  <desc id="desc">A Rust program links segment-log-core and calls append directly. A Go program, or one in any other language, sends requests over a Unix socket, or over vsock from a guest, to segment-log-server, which runs one process per log and the same core inside it. Either way, the core's single writer thread packs appends into a group and one fsync makes the group durable in the segment files. The files sit on a volume that outlives the guest, and after the guest exits LogReader reads the sealed history.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .panel { fill: #f6f8fa; stroke: #d0d7de; }
+    .t { font: 600 18px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .s { font: 14px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .m { font: 13px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #59636e; }
+    .agent { fill: #ffffff; stroke: #8c959f; }
+    .line { stroke: #8c959f; stroke-width: 1.5; fill: none; }
+    .ack { stroke: #0969da; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
+    .head { fill: #8c959f; }
+    .headg { fill: #0969da; }
+    .bad { fill: #bc4c00; }
+    .badbox { fill: #ffffff; stroke: #bc4c00; stroke-width: 1.5; }
+    .good { fill: #0969da; }
+    .goodbox { fill: #ffffff; stroke: #0969da; stroke-width: 1.5; }
+    .soft { fill: #ddf4ff; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .panel { fill: #161b22; stroke: #30363d; }
+      .t, .s { fill: #e6edf3; }
+      .m { fill: #9198a1; }
+      .agent { fill: #0d1117; stroke: #6e7681; }
+      .line { stroke: #6e7681; }
+      .ack { stroke: #4493f8; }
+      .head { fill: #6e7681; }
+      .headg { fill: #4493f8; }
+      .bad { fill: #f0883e; }
+      .badbox { fill: #0d1117; stroke: #f0883e; }
+      .good { fill: #4493f8; }
+      .goodbox { fill: #0d1117; stroke: #4493f8; }
+      .soft { fill: #1f2a44; }
+    }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+    <marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="headg"/></marker>
+  </defs>
+  <rect class="bg" width="960" height="440"/>
+  <text class="t" x="24" y="38">Two ways in, one writer</text>
+  <text class="m" x="24" y="62">Rust links the library. Other languages talk to the server, which runs the same library.</text>
+
+  <!-- callers -->
+  <rect class="agent" x="24" y="104" width="180" height="60" rx="6"/>
+  <text class="s" x="40" y="130">your Rust code</text>
+  <text class="m" x="40" y="150">links the library</text>
+  <rect class="agent" x="24" y="262" width="180" height="60" rx="6"/>
+  <text class="s" x="40" y="288">your Go code</text>
+  <text class="m" x="40" y="308">or any language</text>
+
+  <!-- embedded path -->
+  <path class="line" d="M204,134 L626,134" marker-end="url(#ah)"/>
+  <text class="m" x="380" y="124">append(), in the same process</text>
+
+  <!-- socket path -->
+  <path class="line" d="M204,292 L240,292" marker-end="url(#ah)"/>
+  <rect class="soft" x="244" y="270" width="150" height="44" rx="22"/>
+  <text class="s" x="319" y="290" text-anchor="middle">Unix socket</text>
+  <text class="m" x="319" y="306" text-anchor="middle">or vsock from a guest</text>
+  <path class="line" d="M394,292 L420,292" marker-end="url(#ah)"/>
+  <rect class="panel" x="424" y="244" width="182" height="96" rx="6"/>
+  <text class="s" x="440" y="270">segment-log-server</text>
+  <text class="m" x="440" y="292">one process per log</text>
+  <text class="m" x="440" y="312">a reader and a writer</text>
+  <text class="m" x="440" y="330">thread per connection</text>
+  <path class="line" d="M606,292 L626,292" marker-end="url(#ah)"/>
+
+  <!-- core -->
+  <rect class="goodbox" x="630" y="96" width="170" height="250" rx="6"/>
+  <text class="s" x="646" y="122">segment-log-core</text>
+  <text class="m" x="646" y="140">in your process, or</text>
+  <text class="m" x="646" y="156">in the server's</text>
+  <rect class="agent" x="646" y="172" width="138" height="34" rx="4"/>
+  <text class="s" x="715" y="194" text-anchor="middle">accept queue</text>
+  <path class="line" d="M715,206 L715,226" marker-end="url(#ah)"/>
+  <rect class="agent" x="646" y="230" width="138" height="34" rx="4"/>
+  <text class="s" x="715" y="252" text-anchor="middle">writer thread</text>
+  <text class="m" x="715" y="290" text-anchor="middle">packs appends into</text>
+  <text class="m" x="715" y="308" text-anchor="middle">one group, then</text>
+  <text class="good" x="715" y="330" text-anchor="middle" style="font: 600 14px system-ui, -apple-system, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif">one fsync</text>
+
+  <!-- files and reader -->
+  <path class="ack" d="M800,246 L824,246" marker-end="url(#ahg)"/>
+  <rect class="agent" x="828" y="196" width="122" height="100" rx="6"/>
+  <text class="s" x="889" y="222" text-anchor="middle">segment</text>
+  <text class="s" x="889" y="240" text-anchor="middle">files</text>
+  <text class="m" x="889" y="262" text-anchor="middle">on a volume that</text>
+  <text class="m" x="889" y="280" text-anchor="middle">outlives the guest</text>
+  <path class="line" d="M889,296 L889,334" marker-end="url(#ah)"/>
+  <rect class="agent" x="828" y="338" width="122" height="52" rx="6"/>
+  <text class="s" x="889" y="360" text-anchor="middle">LogReader</text>
+  <text class="m" x="889" y="378" text-anchor="middle">after the guest</text>
+
+  <text class="s" x="24" y="396">Both ways get the same guarantee: an ack means the group is on disk.</text>
+  <text class="m" x="24" y="420">Over the socket, a connection lost before its answer means the outcome is unknown: retry with the same key.</text>
+</svg>
