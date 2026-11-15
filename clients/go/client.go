@@ -163,13 +163,17 @@ func Dial(network, address string) (*Client, error) {
 }
 
 // DialRaw connects without Hello. The network "vsock" takes the address "cid:port" (Linux only);
-// any other network goes to net.Dial.
+// "firecracker" takes "<VMM vsock socket path>:<guest port>" (any host); any other network goes
+// to net.Dial.
 func DialRaw(network, address string) (*Client, error) {
 	var conn io.ReadWriteCloser
 	var err error
-	if network == "vsock" {
+	switch network {
+	case "vsock":
 		conn, err = dialVsock(address)
-	} else {
+	case "firecracker":
+		conn, err = dialFirecracker(address)
+	default:
 		conn, err = net.Dial(network, address)
 	}
 	if err != nil {
