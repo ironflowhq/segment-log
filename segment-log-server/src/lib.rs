@@ -5,6 +5,8 @@ mod args;
 mod connection;
 pub mod protocol;
 mod server;
+#[cfg(target_os = "linux")]
+mod vsock;
 
 use segment_log_core::SegmentLog;
 use server::Server;
@@ -12,7 +14,7 @@ use std::fs;
 use std::io;
 use std::net::Shutdown;
 use std::os::unix::fs::FileTypeExt;
-use std::os::unix::net::UnixListener;
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::{Arc, Weak};
@@ -46,17 +48,14 @@ pub fn main_with(args: impl Iterator<Item = String>) -> ExitCode {
             return ExitCode::from(EXIT_START);
         }
     };
-    let listener = match bind_unix(&config.unix) {
-        Ok(listener) => listener,
-        Err(error) => {
-            eprintln!(
-                "segment-log-server: bind {}: {error}",
-                config.unix.display()
-            );
+    let (incoming, address) = match listen(&config.listen) {
+        Ok(listening) => listening,
+        Err((address, error)) => {
+            eprintln!("segment-log-server: bind {address}: {error}");
             return ExitCode::from(EXIT_START);
         }
     };
-    eprintln!("segment-log-server: listening on {}", config.unix.display());
+    eprintln!("segment-log-server: listening on {address}");
     let server = Server::new(config.max_connections);
     {
         let server = Arc::clone(&server);
@@ -69,7 +68,7 @@ pub fn main_with(args: impl Iterator<Item = String>) -> ExitCode {
     }
     {
         let (server, log) = (Arc::clone(&server), Arc::downgrade(&log));
-        thread::spawn(move || accept(listener, &server, &log, frame_cap));
+        thread::spawn(move || accept(incoming, &server, &log, frame_cap));
     }
     let code = server.wait_for_stop();
     server.wait_until_idle(DRAIN_LIMIT);
@@ -98,9 +97,45 @@ fn block_stop_signals() -> libc::sigset_t {
 /// How long a stopping server waits for its connections to send the answers they owe.
 const DRAIN_LIMIT: Duration = Duration::from_secs(5);
 
+type Incoming = Box<dyn Iterator<Item = io::Result<UnixStream>> + Send>;
+
+/// The accepted connections for the configured transport, and its address for diagnostics.
+fn listen(listen: &args::Listen) -> Result<(Incoming, String), (String, io::Error)> {
+    match listen {
+        args::Listen::Unix(path) => {
+            let address = path.display().to_string();
+            match bind_unix(path) {
+                Ok(listener) => Ok((
+                    Box::new(std::iter::from_fn(move || {
+                        Some(listener.accept().map(|(stream, _)| stream))
+                    })),
+                    address,
+                )),
+                Err(error) => Err((address, error)),
+            }
+        }
+        args::Listen::Vsock(port) => {
+            let address = format!("vsock port {port}");
+            #[cfg(target_os = "linux")]
+            match vsock::Listener::bind(*port) {
+                Ok(listener) => Ok((
+                    Box::new(std::iter::from_fn(move || Some(listener.accept()))),
+                    address,
+                )),
+                Err(error) => Err((address, error)),
+            }
+            #[cfg(not(target_os = "linux"))]
+            Err((
+                address,
+                io::Error::new(io::ErrorKind::Unsupported, "vsock needs Linux"),
+            ))
+        }
+    }
+}
+
 /// Holds the log weakly, so that after a stop the main thread's handle is the last one.
-fn accept(listener: UnixListener, server: &Arc<Server>, log: &Weak<SegmentLog>, frame_cap: usize) {
-    for stream in listener.incoming() {
+fn accept(incoming: Incoming, server: &Arc<Server>, log: &Weak<SegmentLog>, frame_cap: usize) {
+    for stream in incoming {
         let Ok(stream) = stream else { continue };
         let (Ok(writer), Ok(closer)) = (stream.try_clone(), stream.try_clone()) else {
             continue;

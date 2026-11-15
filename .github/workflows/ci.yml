@@ -52,11 +52,19 @@ jobs:
       matrix:
         # Same pin as check: ubuntu-latest warns until 2026-11-19.
         os: [ubuntu-26.04, macos-latest]
+        transport: [unix]
+        include:
+          # The same cases over the vsock host loopback (ADR 0056); Linux only.
+          - os: ubuntu-26.04
+            transport: vsock
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install
       - run: cargo build -p segment-log-server
+      # No skip if the module is missing: the step fails, and so does the job (ADR 0058).
+      - if: matrix.transport == 'vsock'
+        run: sudo modprobe vsock_loopback
       - uses: actions/setup-go@v5
         with:
           go-version-file: clients/go/go.mod
@@ -69,6 +77,7 @@ jobs:
         run: go test -count=1 -v ./...
         env:
           SEGMENT_LOG_SERVER: ${{ github.workspace }}/target/debug/segment-log-server
+          SEGMENT_LOG_TRANSPORT: ${{ matrix.transport }}
 
   # The M6 footprint targets: stripped release musl binary size and idle resident set (ADR 0056).
   footprint:
