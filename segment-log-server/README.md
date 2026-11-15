@@ -1,6 +1,6 @@
 # segment-log-server
 
-The socket server for the Ironflow segment log, in development for milestone M6. It serves one log directory over a Unix socket or, on Linux, a vsock port. Do not depend on it yet.
+The socket server for the Ironflow segment log, which passed milestone M6 ([completion record](../docs/evidence/m6/completion.md)). M7 validates it on the guest deployment. It serves one log directory over a Unix socket or, on Linux, a vsock port. Do not depend on it yet.
 
 ```sh
 segment-log-server --dir <path> (--unix <socket-path> | --vsock-port <port>) \
