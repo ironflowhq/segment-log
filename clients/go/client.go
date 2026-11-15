@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"syscall"
 )
 
 const (
@@ -204,7 +205,8 @@ func (c *Client) Closed() bool {
 }
 
 func unknown(err error) error {
-	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+	// Linux resets, rather than closes, a Unix socket whose peer died with requests unread.
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.ECONNRESET) {
 		return ErrUnknown
 	}
 	return err

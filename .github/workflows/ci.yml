@@ -69,3 +69,14 @@ jobs:
         run: go test -count=1 -v ./...
         env:
           SEGMENT_LOG_SERVER: ${{ github.workspace }}/target/debug/segment-log-server
+
+  # The M6 footprint targets: stripped release musl binary size and idle resident set (ADR 0056).
+  footprint:
+    timeout-minutes: 30
+    # Same pin as check: ubuntu-latest warns until 2026-11-19.
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install && rustup target add x86_64-unknown-linux-musl
+      - run: cargo build --release -p segment-log-server --target x86_64-unknown-linux-musl
+      - run: scripts/m6-footprint.sh target/x86_64-unknown-linux-musl/release/segment-log-server
