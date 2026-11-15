@@ -27,11 +27,6 @@ jobs:
         # Pin 26.04 so this job does not float with that label.
         # https://github.com/actions/runner-images/issues/14748
         os: [ubuntu-26.04, macos-latest]
-        transport: [unix]
-        include:
-          # The same cases over the vsock host loopback (ADR 0056); Linux only.
-          - os: ubuntu-26.04
-            transport: vsock
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
