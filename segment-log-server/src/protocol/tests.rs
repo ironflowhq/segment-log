@@ -305,3 +305,141 @@ fn the_read_limit_never_asks_for_more_records_than_an_answer_holds() {
         .collect();
     assert!(fitting_records(&records, 65536) <= read_limit(u32::MAX, 65536));
 }
+
+/// The vectors in conformance/wire.txt, which the Go client checks too.
+fn shared_vectors() -> Vec<(&'static str, Vec<u8>)> {
+    include_str!("../../../conformance/wire.txt")
+        .lines()
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|line| {
+            let (name, hex) = line.split_once(':').expect("name: hex");
+            let digits: Vec<u8> = hex.bytes().filter(|b| *b != b' ').collect();
+            let bytes = digits
+                .chunks(2)
+                .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+                .collect();
+            (name, bytes)
+        })
+        .collect()
+}
+
+#[test]
+fn the_shared_wire_vectors_match_the_encoder_and_decoder() {
+    let committed = Committed {
+        records: vec![Position {
+            offset: 5,
+            revision: 2,
+        }],
+        deduplicated: true,
+    };
+    let read = [Record {
+        offset: 1,
+        stream: b"s".to_vec(),
+        revision: 0,
+        key: Some(b"k".to_vec()),
+        payload: b"pp".to_vec(),
+    }];
+    let head = StreamHead {
+        revision: 3,
+        offset: 4,
+    };
+    let failed = |kind, status| encode_answer(kind, &Answer::Failed(status));
+    let append = Request::Append(Submit {
+        records: vec![
+            record(b"s", ExpectedRevision::Empty, None, b"p"),
+            record(b"t", ExpectedRevision::At(7), Some(b"k"), b""),
+        ],
+    });
+    let requests = [
+        ("hello", Request::Hello { version: 1 }),
+        ("append", append),
+        ("read", Request::Read { from: 3, max: 9 }),
+        ("watermark", Request::Watermark),
+        ("stream-head", Request::StreamHead(b"orders".to_vec())),
+        ("seal", Request::Seal),
+    ];
+    let answers = [
+        (
+            "hello-ok",
+            encode_answer(HELLO, &Answer::Hello { frame_cap: 65536 }),
+        ),
+        (
+            "append-ok",
+            encode_answer(APPEND, &Answer::Append(&committed)),
+        ),
+        ("read-ok", encode_answer(READ, &Answer::Read(&read))),
+        (
+            "watermark-ok",
+            encode_answer(WATERMARK, &Answer::Watermark(9)),
+        ),
+        (
+            "stream-head-present",
+            encode_answer(STREAM_HEAD, &Answer::StreamHead(Some(&head))),
+        ),
+        (
+            "stream-head-absent",
+            encode_answer(STREAM_HEAD, &Answer::StreamHead(None)),
+        ),
+        ("seal-ok", encode_answer(SEAL, &Answer::Seal)),
+        ("full", failed(APPEND, Status::Full)),
+        ("invalid", failed(APPEND, Status::Invalid("ab"))),
+        (
+            "wrong-revision",
+            failed(
+                APPEND,
+                Status::WrongRevision {
+                    index: 2,
+                    actual: Some(6),
+                },
+            ),
+        ),
+        (
+            "wrong-revision-none",
+            failed(
+                APPEND,
+                Status::WrongRevision {
+                    index: 0,
+                    actual: None,
+                },
+            ),
+        ),
+        (
+            "key-conflict",
+            failed(APPEND, Status::KeyConflict { index: 3 }),
+        ),
+        (
+            "corrupt",
+            failed(
+                READ,
+                Status::Corrupt {
+                    segment: 1,
+                    position: 64,
+                },
+            ),
+        ),
+        ("io", failed(READ, Status::Io(std::io::ErrorKind::Other))),
+        (
+            "unsupported-version",
+            failed(HELLO, Status::UnsupportedVersion),
+        ),
+        ("malformed", failed(MALFORMED_KIND, Status::Malformed)),
+    ];
+    let vectors = shared_vectors();
+    let mut checked = Vec::new();
+    for (name, request) in &requests {
+        let bytes = &vectors.iter().find(|v| v.0 == *name).expect(name).1;
+        assert_eq!(&encode_request(request), bytes, "{name}");
+        roundtrip(bytes);
+        checked.push(*name);
+    }
+    for (name, encoded) in &answers {
+        let bytes = &vectors.iter().find(|v| v.0 == *name).expect(name).1;
+        assert_eq!(encoded, bytes, "{name}");
+        checked.push(*name);
+    }
+    let names: Vec<&str> = vectors.iter().map(|v| v.0).collect();
+    assert_eq!(
+        checked, names,
+        "every vector has exactly one check, in file order"
+    );
+}
