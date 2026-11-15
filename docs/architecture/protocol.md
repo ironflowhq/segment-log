@@ -4,6 +4,8 @@ Status: protocol version 1, M6 ([ADR 0057](../decisions/0057-a-hand-rolled-binar
 
 This file is the only source for the protocol's message layout, widths, status codes and size caps. The server's process behavior is in [ADR 0058](../decisions/0058-one-server-process-serves-one-log.md). The record limits (stream id and key lengths) are in [format.md](format.md#limits) and are not copied here.
 
+[`conformance/wire.txt`](../../conformance/wire.txt) holds example messages written from these tables. The server tests and the Go client check them, each in the direction it implements. When a table here changes, change those examples in the same change.
+
 ## Conventions
 
 - All integers are little-endian and unsigned.
