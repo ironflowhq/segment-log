@@ -5,17 +5,20 @@ package segmentlog
 //
 // SEGMENT_LOG_SERVER names the binary: cargo build -p segment-log-server, then
 // SEGMENT_LOG_SERVER=$PWD/target/debug/segment-log-server go test ./...
+//
+// SEGMENT_LOG_TRANSPORT=vsock runs every test over the Linux vsock loopback (CID 1) instead of
+// a Unix socket. It needs the vsock_loopback module; without it the tests fail, never skip.
 
 import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -171,10 +174,19 @@ func check(e *expect, a Answer) error {
 	return nil
 }
 
-// logDir is a log directory and a socket path that outlive one server process.
+// logDir is a log directory and a listening address that outlive one server process.
 type logDir struct {
-	dir, socket string
+	dir string
+	// network and address are what the client dials; listen is the server's flags for them.
+	network, address string
+	listen           []string
 }
+
+// vsockPort gives each log directory its own port. The pid keeps two test processes on one
+// host apart.
+var vsockPort atomic.Uint32
+
+func init() { vsockPort.Store(20000 + uint32(os.Getpid()%1000)*40) }
 
 func newLogDir(t *testing.T) logDir {
 	t.Helper()
@@ -184,7 +196,17 @@ func newLogDir(t *testing.T) logDir {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(dir) })
-	return logDir{dir: dir, socket: filepath.Join(dir, "s")}
+	switch transport := os.Getenv("SEGMENT_LOG_TRANSPORT"); transport {
+	case "", "unix":
+		socket := filepath.Join(dir, "s")
+		return logDir{dir, "unix", socket, []string{"--unix", socket}}
+	case "vsock":
+		port := fmt.Sprint(vsockPort.Add(1))
+		return logDir{dir, "vsock", "1:" + port, []string{"--vsock-port", port}}
+	default:
+		t.Fatalf("SEGMENT_LOG_TRANSPORT=%s: want unix or vsock", transport)
+		return logDir{}
+	}
 }
 
 // start runs the server on d and returns once it listens. A non-empty shell prefix runs before
@@ -195,7 +217,7 @@ func (d logDir) start(t *testing.T, shell string, args ...string) *exec.Cmd {
 	if bin == "" {
 		t.Fatal("set SEGMENT_LOG_SERVER to the server binary (cargo build -p segment-log-server)")
 	}
-	argv := append([]string{bin, "--dir", filepath.Join(d.dir, "log"), "--unix", d.socket}, args...)
+	argv := append(append([]string{bin, "--dir", filepath.Join(d.dir, "log")}, d.listen...), args...)
 	if shell != "" {
 		argv = append([]string{"sh", "-c", shell + `; exec "$0" "$@"`}, argv...)
 	}
@@ -214,19 +236,13 @@ func (d logDir) start(t *testing.T, shell string, args ...string) *exec.Cmd {
 	})
 	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
 		// A socket left by an earlier process refuses connections until the new one binds.
-		if conn, err := net.Dial("unix", d.socket); err == nil {
-			conn.Close()
+		if c, err := DialRaw(d.network, d.address); err == nil {
+			c.Close()
 			return cmd
 		}
 	}
-	t.Fatalf("server did not listen on %s; stderr:\n%s", d.socket, stderr.String())
+	t.Fatalf("server did not listen on %s; stderr:\n%s", d.address, stderr.String())
 	return nil
-}
-
-func startServer(t *testing.T, args []string) string {
-	d := newLogDir(t)
-	d.start(t, "", args...)
-	return d.socket
 }
 
 func TestConformance(t *testing.T) {
@@ -244,12 +260,13 @@ func TestConformance(t *testing.T) {
 			t.Fatalf("%s: %v", file, err)
 		}
 		t.Run(filepath.Base(file), func(t *testing.T) {
-			socket := startServer(t, c.ServerArgs)
+			d := newLogDir(t)
+			d.start(t, "", c.ServerArgs...)
 			dial := Dial
 			if c.NoHello {
 				dial = DialRaw
 			}
-			client, err := dial("unix", socket)
+			client, err := dial(d.network, d.address)
 			if err != nil {
 				t.Fatal(err)
 			}

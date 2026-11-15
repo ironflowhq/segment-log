@@ -28,7 +28,7 @@ var empty = Expected{Empty: true}
 
 func dial(t *testing.T, d logDir) *Client {
 	t.Helper()
-	c, err := Dial("unix", d.socket)
+	c, err := Dial(d.network, d.address)
 	if err != nil {
 		t.Fatal(err)
 	}
