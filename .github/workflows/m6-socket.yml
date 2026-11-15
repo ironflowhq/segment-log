@@ -1,0 +1,45 @@
+name: M6 socket capture
+# Captures the M6 socket diagnostic on one hosted Linux runner: append throughput and latency over
+# the Unix socket beside the same workload in process (ADR 0056, diagnostics under ADR 0029).
+# Dispatch it, or put the `m6-socket` label on a pull request to measure its head.
+on:
+  workflow_dispatch:
+    inputs:
+      pairs:
+        description: Alternating in-process and socket pairs for each mode
+        required: false
+        default: "5"
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+jobs:
+  linux:
+    name: Linux socket and in-process capture
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'm6-socket' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: rustup toolchain install
+      # The logs go to the runner's local disk under /mnt, as in the M4 capture.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          scripts/m6-socket-report.sh "$RUNNER_TEMP/m6-socket"
+        env:
+          SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
+          M6_PAIRS: ${{ inputs.pairs || '5' }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: m6-socket-linux
+          path: ${{ runner.temp }}/m6-socket
+          retention-days: 3
