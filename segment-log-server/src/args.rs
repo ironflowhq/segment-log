@@ -4,19 +4,25 @@ use segment_log_core::Options;
 use std::path::PathBuf;
 use std::time::Duration;
 
-pub const USAGE: &str = "usage: segment-log-server --dir <path> --unix <socket-path> \
-[--linger-us <n>] [--group-byte-cap <n>] [--roll-bytes <n>] [--queue-capacity <n>] \
+pub const USAGE: &str = "usage: segment-log-server --dir <path> (--unix <socket-path> | \
+--vsock-port <port>) [--linger-us <n>] [--group-byte-cap <n>] [--roll-bytes <n>] [--queue-capacity <n>] \
 [--pending-byte-budget <n>] [--max-connections <n>]";
+
+/// Where the server listens: exactly one transport per process (ADR 0058).
+pub enum Listen {
+    Unix(PathBuf),
+    Vsock(u32),
+}
 
 pub struct Config {
     pub dir: PathBuf,
-    pub unix: PathBuf,
+    pub listen: Listen,
     pub options: Options,
     pub max_connections: usize,
 }
 
 pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Config, String> {
-    let (mut dir, mut unix) = (None, None);
+    let (mut dir, mut unix, mut vsock) = (None, None, None);
     let mut options = Options::default();
     let mut max_connections = 64;
     while let Some(flag) = args.next() {
@@ -30,6 +36,13 @@ pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Config, String> {
         match flag.as_str() {
             "--dir" => dir = Some(PathBuf::from(&value)),
             "--unix" => unix = Some(PathBuf::from(&value)),
+            "--vsock-port" => {
+                vsock = Some(
+                    value
+                        .parse::<u32>()
+                        .map_err(|_| format!("{flag}: not a port: {value}"))?,
+                )
+            }
             "--linger-us" => options.linger = Duration::from_micros(number()?),
             "--group-byte-cap" => options.group_byte_cap = size()?,
             "--roll-bytes" => options.roll_bytes = number()?,
@@ -39,9 +52,14 @@ pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Config, String> {
             _ => return Err(format!("unknown flag {flag}")),
         }
     }
+    let listen = match (unix, vsock) {
+        (Some(path), None) => Listen::Unix(path),
+        (None, Some(port)) => Listen::Vsock(port),
+        _ => return Err("give exactly one of --unix or --vsock-port".into()),
+    };
     Ok(Config {
         dir: dir.ok_or("--dir is required")?,
-        unix: unix.ok_or("--unix is required")?,
+        listen,
         options,
         max_connections,
     })
@@ -87,5 +105,13 @@ mod tests {
         assert!(parse(args(&["--dir", "d", "--unix", "s", "--bogus", "1"])).is_err());
         assert!(parse(args(&["--dir", "d", "--unix", "s", "--roll-bytes", "x"])).is_err());
         assert!(parse(args(&["--dir"])).is_err());
+    }
+
+    #[test]
+    fn exactly_one_transport() {
+        let config = parse(args(&["--dir", "d", "--vsock-port", "5000"])).unwrap();
+        assert!(matches!(config.listen, Listen::Vsock(5000)));
+        assert!(parse(args(&["--dir", "d", "--unix", "s", "--vsock-port", "1"])).is_err());
+        assert!(parse(args(&["--dir", "d", "--vsock-port", "-1"])).is_err());
     }
 }
