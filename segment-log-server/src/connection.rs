@@ -2,7 +2,7 @@
 //! answer in request order (ADR 0057, ADR 0058).
 
 use crate::protocol::{self, Admit, Answer, HEADER_LEN, Request, Status};
-use crate::server::{EXIT_POISONED, Slot};
+use crate::server::{EXIT_POISONED, EXIT_STOPPED, Slot};
 use segment_log_core::{Pending, SegmentLog};
 use std::io::{self, Read, Write};
 use std::sync::Arc;
@@ -164,7 +164,12 @@ fn read_requests(
                 &Answer::StreamHead(log.stream_head(&stream).as_ref()),
             )),
             Request::Seal => Job::Ready(match log.seal() {
-                Ok(()) => protocol::encode_answer(protocol::SEAL, &Answer::Seal),
+                Ok(()) => {
+                    // A sealed log takes no appends, so the server's work is done (ADR 0058).
+                    // The answer still goes out: stopping ends reads, not the queued answers.
+                    slot.server.stop(EXIT_STOPPED);
+                    protocol::encode_answer(protocol::SEAL, &Answer::Seal)
+                }
                 Err(error) => {
                     slot.server.stop(EXIT_POISONED);
                     failed(protocol::SEAL, error.into())
