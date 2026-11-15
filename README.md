@@ -12,6 +12,10 @@ An embedded, append-only event log in Rust, for short-lived processes that need 
 
 ![Without segment-log, every agent flushes its own file and the disk does one flush per agent. With segment-log, one writer packs many appends into one frame and one flush covers the group. Acks go out only after that flush returns.](docs/images/one-fsync-per-group.svg)
 
+A Rust program links the library. Other languages reach it through `segment-log-server`, which runs the same library behind a Unix socket or vsock.
+
+![A Rust program calls append in its own process. A Go program sends requests over a Unix socket, or vsock from a guest, to segment-log-server, one process per log, which runs the same core. Either way, one writer thread packs appends into a group and one fsync makes it durable in the segment files, on a volume that outlives the guest. After the guest exits, LogReader reads the sealed history.](docs/images/two-ways-in-one-writer.svg)
+
 ## Documents
 
 - [Product requirements](docs/prd.md)
