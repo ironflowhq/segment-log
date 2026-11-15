@@ -332,13 +332,35 @@ fn the_shared_wire_vectors_match_the_encoder_and_decoder() {
         }],
         deduplicated: true,
     };
-    let read = [Record {
-        offset: 1,
-        stream: b"s".to_vec(),
-        revision: 0,
-        key: Some(b"k".to_vec()),
-        payload: b"pp".to_vec(),
-    }];
+    let two = Committed {
+        records: vec![
+            Position {
+                offset: 5,
+                revision: 2,
+            },
+            Position {
+                offset: 6,
+                revision: 0,
+            },
+        ],
+        deduplicated: false,
+    };
+    let read = [
+        Record {
+            offset: 1,
+            stream: b"s".to_vec(),
+            revision: 0,
+            key: Some(b"k".to_vec()),
+            payload: b"pp".to_vec(),
+        },
+        Record {
+            offset: 2,
+            stream: b"s".to_vec(),
+            revision: 1,
+            key: None,
+            payload: b"q".to_vec(),
+        },
+    ];
     let head = StreamHead {
         revision: 3,
         offset: 4,
@@ -367,7 +389,13 @@ fn the_shared_wire_vectors_match_the_encoder_and_decoder() {
             "append-ok",
             encode_answer(APPEND, &Answer::Append(&committed)),
         ),
-        ("read-ok", encode_answer(READ, &Answer::Read(&read))),
+        (
+            "append-ok-two",
+            encode_answer(APPEND, &Answer::Append(&two)),
+        ),
+        ("read-ok", encode_answer(READ, &Answer::Read(&read[..1]))),
+        ("read-ok-two", encode_answer(READ, &Answer::Read(&read))),
+        ("read-empty", encode_answer(READ, &Answer::Read(&[]))),
         (
             "watermark-ok",
             encode_answer(WATERMARK, &Answer::Watermark(9)),
@@ -382,7 +410,11 @@ fn the_shared_wire_vectors_match_the_encoder_and_decoder() {
         ),
         ("seal-ok", encode_answer(SEAL, &Answer::Seal)),
         ("full", failed(APPEND, Status::Full)),
+        ("too-large", failed(APPEND, Status::TooLarge)),
         ("invalid", failed(APPEND, Status::Invalid("ab"))),
+        ("sealed", failed(APPEND, Status::Sealed)),
+        ("poisoned", failed(APPEND, Status::Poisoned)),
+        ("exhausted", failed(APPEND, Status::Exhausted)),
         (
             "wrong-revision",
             failed(
@@ -406,6 +438,12 @@ fn the_shared_wire_vectors_match_the_encoder_and_decoder() {
         (
             "key-conflict",
             failed(APPEND, Status::KeyConflict { index: 3 }),
+        ),
+        ("partial-retry", failed(APPEND, Status::PartialRetry)),
+        ("indeterminate", failed(APPEND, Status::Indeterminate)),
+        (
+            "poisoned-before-write",
+            failed(APPEND, Status::PoisonedBeforeWrite),
         ),
         (
             "corrupt",
@@ -441,5 +479,19 @@ fn the_shared_wire_vectors_match_the_encoder_and_decoder() {
     assert_eq!(
         checked, names,
         "every vector has exactly one check, in file order"
+    );
+    // A new status cannot arrive without a vector, so the Go client decodes every code too.
+    let mut codes: Vec<u16> = vectors
+        .iter()
+        .filter(|(_, bytes)| bytes[4] & 0x80 != 0)
+        .map(|(_, bytes)| u16::from_le_bytes([bytes[8], bytes[9]]))
+        .filter(|code| *code != 0)
+        .collect();
+    codes.sort_unstable();
+    codes.dedup();
+    assert_eq!(
+        codes,
+        (1..=15).collect::<Vec<_>>(),
+        "every status code has a vector"
     );
 }
