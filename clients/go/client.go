@@ -134,7 +134,7 @@ func Seal() Request                    { return message(KindSeal, nil) }
 // Client is one connection. Send may run ahead of Receive (pipelining); answers arrive in the
 // order of the requests.
 type Client struct {
-	conn     net.Conn
+	conn     io.ReadWriteCloser
 	reader   *bufio.Reader
 	FrameCap uint32
 }
@@ -143,7 +143,7 @@ type Client struct {
 // never a rejection.
 var ErrUnknown = errors.New("connection closed before the answer; outcome unknown")
 
-// Dial connects and sends Hello.
+// Dial connects as DialRaw does and sends Hello.
 func Dial(network, address string) (*Client, error) {
 	c, err := DialRaw(network, address)
 	if err != nil {
@@ -162,9 +162,16 @@ func Dial(network, address string) (*Client, error) {
 	return c, nil
 }
 
-// DialRaw connects without Hello.
+// DialRaw connects without Hello. The network "vsock" takes the address "cid:port" (Linux only);
+// any other network goes to net.Dial.
 func DialRaw(network, address string) (*Client, error) {
-	conn, err := net.Dial(network, address)
+	var conn io.ReadWriteCloser
+	var err error
+	if network == "vsock" {
+		conn, err = dialVsock(address)
+	} else {
+		conn, err = net.Dial(network, address)
+	}
 	if err != nil {
 		return nil, err
 	}
