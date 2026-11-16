@@ -78,9 +78,10 @@ for cycle in $(seq "$cycles"); do
 	# A real run checks every cycle's reports each time; the control counts each cycle's own.
 	only=()
 	[ "$control" = --control ] && only=(-cycle "$cycle")
-	if ! "$pc" check -address "$address" -observer "$M7_OBSERVER" -run "$run" "${only[@]}"; then
-		lost_cycles=$((lost_cycles + 1))
-	fi
+	# check exits 1 for a missing record; anything else is the harness failing, never a pass.
+	rc=0
+	"$pc" check -address "$address" -observer "$M7_OBSERVER" -run "$run" "${only[@]}" || rc=$?
+	case $rc in 0) ;; 1) lost_cycles=$((lost_cycles + 1)) ;; *) echo "FAIL: cycle $cycle: check exit $rc" >&2; exit 1 ;; esac
 	echo "-- cycle $cycle at ${delay} ms"
 done
 
