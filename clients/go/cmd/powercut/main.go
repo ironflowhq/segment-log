@@ -4,6 +4,7 @@
 //	powercut load  -network N -address A -observer H:P -run R -cycle C [-report-early]
 //	powercut check -network N -address A -observer H:P -run R
 //	powercut ready -network N -address A                  waits until the server answers Hello
+//	powercut probe -dir D -bytes B -duration T -rate R      the flush probe (VOL-FLUSH-LATENCY)
 //
 // load appends fully keyed records with deterministic payloads and, after each acknowledgment,
 // reports its key, log offset and stream revision to the observer, which stores them durably.
@@ -25,6 +26,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -47,6 +49,8 @@ func main() {
 		check(os.Args[2:])
 	case "ready":
 		ready(os.Args[2:])
+	case "probe":
+		probe(os.Args[2:])
 	default:
 		fail("unknown command " + os.Args[1])
 	}
@@ -326,4 +330,58 @@ func ready(args []string) {
 		}
 	}
 	fail("the server did not answer at " + *address)
+}
+
+// probe is the flush probe of volume-requirements.md: append one group-sized write to the end of
+// a new file, then fdatasync, so that each sync also commits the new size, as the writer's
+// commit does. It prints one PROBE line with the cycle statistics after the warm-up.
+func probe(args []string) {
+	fs := flag.NewFlagSet("probe", flag.ExitOnError)
+	dir := fs.String("dir", ".", "directory on the volume under test")
+	size := fs.Int("bytes", 16384, "bytes per write: the expected encoded group")
+	duration := fs.Duration("duration", 60*time.Second, "measured time, after the warm-up")
+	warmup := fs.Duration("warmup", 5*time.Second, "unmeasured time first")
+	rate := fs.Float64("rate", 0, "cycles per second, 0 for no limit")
+	fs.Parse(args)
+	f, err := os.Create(filepath.Join(*dir, "flush-probe"))
+	if err != nil {
+		fail(err.Error())
+	}
+	defer f.Close()
+	block := bytes.Repeat([]byte{0x5a}, *size)
+	var cycles []time.Duration
+	start := time.Now()
+	next := start
+	for {
+		now := time.Now()
+		if now.Sub(start) >= *warmup+*duration {
+			break
+		}
+		if *rate > 0 {
+			time.Sleep(time.Until(next))
+			next = next.Add(time.Duration(float64(time.Second) / *rate))
+		}
+		began := time.Now()
+		if _, err := f.Write(block); err != nil {
+			fail(err.Error())
+		}
+		if err := datasync(f); err != nil {
+			fail(err.Error())
+		}
+		if began.Sub(start) >= *warmup {
+			cycles = append(cycles, time.Since(began))
+		}
+	}
+	if len(cycles) == 0 {
+		fail("no cycle after the warm-up")
+	}
+	slices.Sort(cycles)
+	var sum time.Duration
+	for _, c := range cycles {
+		sum += c
+	}
+	at := func(q float64) int64 { return cycles[min(len(cycles)-1, int(q*float64(len(cycles))))].Microseconds() }
+	fmt.Printf("PROBE cycles=%d syncs_per_s=%.1f mean_us=%d p50_us=%d p99_us=%d p999_us=%d max_us=%d bytes=%d\n",
+		len(cycles), float64(len(cycles))/duration.Seconds(), (sum / time.Duration(len(cycles))).Microseconds(),
+		at(0.5), at(0.99), at(0.999), cycles[len(cycles)-1].Microseconds(), *size)
 }
