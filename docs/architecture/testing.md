@@ -292,6 +292,10 @@ Evidence must apply to the identified setup. A syscall trace alone does not esta
 
 [`scripts/m7-flush-latency.sh`](../../scripts/m7-flush-latency.sh) runs `VOL-FLUSH-LATENCY` ([V11](volume-requirements.md#v11-flush-latency-allows-the-throughput-target)). It boots N guests at once, each running the [flush probe](volume-requirements.md#flush-probe) (`powercut probe`: append one group-sized write, then `fdatasync`) on its own volume image in place of the server, optionally rate-limited. It prints each guest's cycle mean, p50, p99 and p999 and syncs per second, and the host drive's flushes per second.
 
+[`scripts/m7-metadata-error.sh`](../../scripts/m7-metadata-error.sh) runs `VOL-METADATA-ERROR` ([V3](volume-requirements.md#v3-the-filesystem-stops-after-a-metadata-write-error)). The guest kernel has no device-mapper, so the target that switches to failing writes is a dm table on the host, under the guest's virtio drive, and the guest keeps the qualified kernel, filesystem and mount options. The guest runs the four steps (`powercut metaerr`) and waits on its console while the host switches the table. `--control` mounts with `errors=continue`, and `--panic` runs the separate procedure for `errors=panic`.
+
+[`scripts/m7-enospc.sh`](../../scripts/m7-enospc.sh) runs `VOL-ENOSPC` ([V9](volume-requirements.md#v9-capacity-and-a-timely-alert)) for the guest filesystem and for the host filesystem under the sparse image: it fills the layer during load, restores capacity, reopens and checks every reported record.
+
 <a id="surviving-volume-handoff-before-m6"></a>
 
 ## Surviving-volume handoff (before M7)
