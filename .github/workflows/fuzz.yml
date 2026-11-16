@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v7
       - run: rustup toolchain install "$NIGHTLY" --profile minimal
       - id: cargo-fuzz
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cargo/bin/cargo-fuzz
           key: cargo-fuzz-0.13.2-${{ env.NIGHTLY }}
@@ -58,7 +58,7 @@ jobs:
       # The daily runs build on each other's corpus. A dispatch, which is the M5 gate, and a pull
       # request start from the seeds alone.
       - if: github.event_name == 'schedule'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: fuzz/corpus/${{ matrix.target }}
           key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
@@ -75,7 +75,7 @@ jobs:
           name: fuzz-${{ matrix.target }}-crash
           path: fuzz/artifacts/${{ matrix.target }}/
       - if: github.event_name == 'schedule' && !cancelled()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: fuzz/corpus/${{ matrix.target }}
           key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
