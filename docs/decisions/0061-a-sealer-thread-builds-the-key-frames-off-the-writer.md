@@ -1,7 +1,7 @@
 ---
 id: "0061"
 title: "Appends do not wait for the key frames of a roll: a sealer thread builds them, the writer writes them later"
-status: proposed
+status: accepted
 date: 2026-11-16
 deciders: [Altug Sahin]
 supersedes: null
