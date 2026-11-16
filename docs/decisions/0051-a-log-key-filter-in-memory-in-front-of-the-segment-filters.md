@@ -100,6 +100,7 @@ Option C passes if keyed closed-loop throughput is within 10% of unkeyed at both
 
 ## Consequences
 
+- [ADR 0061](0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md) amends rule 2: the writer tells the builder about a segment once its closing run is durable, not at roll.
 - Up to 1,000 sealed segments, the writer cost per new key no longer depends on history. That becomes a stated operating limit.
 - ADR 0048 rule 5 changes. Key-cache memory adds the log filter: between 1 and 2 bytes for each sealed key.
 - Open time does not change. After open, the builder reads about 16 bytes per sealed key. Until it finishes, lookups run at today's speed, and the builder competes with appends for processors: on a 4-processor runner, appends right after open ran at 0.82 to 0.85 of M3 against 0.90 to 0.93 after a 15 s wait. How long the build takes is not measured yet.
