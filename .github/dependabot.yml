@@ -5,18 +5,31 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # Exact pins in segment-log-core: a saved regression seed gives the same case only under the same generator.
+      - dependency-name: "proptest"
+      - dependency-name: "talc"
 
   # Separate lock. The fuzz crate is its own workspace so a nightly build stays out of the pinned one.
   - package-ecosystem: "cargo"
     directory: "/fuzz"
     schedule:
       interval: "weekly"
+    ignore:
+      # Exact pin; a bump moves with the nightly date in the fuzz workflow, not on its own.
+      - dependency-name: "libfuzzer-sys"
 
-  # Channel pinned in rust-toolchain.toml.
+  # The Go client has its own module.
+  - package-ecosystem: "gomod"
+    directory: "/clients/go"
+    schedule:
+      interval: "weekly"
+
+  # Channel pinned in rust-toolchain.toml. Monthly, because a new pin also moves the benchmark baseline.
   - package-ecosystem: "rust-toolchain"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
 
   # Action references under .github/workflows.
   - package-ecosystem: "github-actions"
