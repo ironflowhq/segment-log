@@ -6,10 +6,46 @@ mount -t sysfs sys /sys
 mount -t devtmpfs dev /dev 2>/dev/null
 # A read-only server gets a read-only drive (scripts/m7/fc-server), so the mount must match.
 case " $* " in *" --read-only "*) mode=ro ;; *) mode=rw ;; esac
-mount -t ext4 -o "$mode" /dev/vdb /mnt || { echo "m7: cannot mount /dev/vdb"; ls -l /dev/vd*; dmesg | tail -n 5; reboot -f; }
+# V3: a metadata write error must stop the filesystem; ext4's default is to continue.
+# m7.mount= on the kernel command line adds options, so that VOL-DRIFT can change one.
+extra=
+# shellcheck disable=SC2013 # the command line is words
+for word in $(cat /proc/cmdline); do
+	case $word in m7.mount=*) extra=,${word#m7.mount=} ;; esac
+done
+mount -t ext4 -o "$mode,errors=remount-ro$extra" /dev/vdb /mnt || { echo "m7: cannot mount /dev/vdb"; ls -l /dev/vd*; dmesg | tail -n 5; reboot -f; }
 # VOL-FS-CHECK and VOL-FLUSH-CONFIG read these lines from the console.
-echo "m7: fs $(findmnt -no SOURCE,FSTYPE,OPTIONS -T /mnt)"
-echo "m7: write_cache $(cat /sys/block/vdb/queue/write_cache)"
+fs=$(findmnt -no SOURCE,FSTYPE,OPTIONS -T /mnt | tr -s ' ')
+write_cache=$(cat /sys/block/vdb/queue/write_cache)
+echo "m7: kernel $(uname -r)"
+echo "m7: fs $fs"
+echo "m7: write_cache $write_cache"
+# V10: the guest's half of the qualified fingerprint (scripts/m7/fingerprint). On a mismatch the
+# log never opens, and the console names the field. Controls that change the stack on purpose boot
+# with m7.drift=off.
+if [ -r /etc/m7-fingerprint ] && ! grep -qw m7.drift=off /proc/cmdline; then
+	# A reader mounts read-only by design (ADR 0060); every other option must match.
+	qualified_fs=$(echo "$fs" | sed 's/ ro,/ rw,/')
+	drift=$(printf 'guest.kernel=%s\nguest.fs=%s\nguest.write_cache=%s\n' "$(uname -r)" "$qualified_fs" "$write_cache" |
+		while IFS= read -r line; do
+			key=${line%%=*}
+			grep -qxF "$line" /etc/m7-fingerprint ||
+				echo "m7: drift: $key is '${line#*=}', qualified '$(sed -n "s/^$key=//p" /etc/m7-fingerprint)'"
+		done)
+	if [ -n "$drift" ]; then
+		echo "$drift"
+		umount /mnt
+		reboot -f
+	fi
+fi
+# VOL-FLUSH-LATENCY: the flush probe runs in place of the server (scripts/m7-flush-latency.sh).
+if [ "${1:-}" = --probe ]; then
+	shift
+	mkdir -p /mnt/probe
+	/segment-log-probe probe -dir /mnt/probe "$@" 2>&1 | sed 's/^/m7: /'
+	umount /mnt
+	reboot -f
+fi
 mount -t tmpfs run /run
 echo 1 >/proc/sys/kernel/sysrq
 # Power-cut harness events arrive as lines on the serial console (scripts/m7-power-cut.sh).

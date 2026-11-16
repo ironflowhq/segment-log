@@ -28,16 +28,20 @@ echo "== build the server"
 	cargo build -q --release -p segment-log-server --target "$arch-unknown-linux-musl")
 server=$CARGO_TARGET_DIR/$arch-unknown-linux-musl/release/segment-log-server
 
+echo "== build the powercut tool"
+# Static, because the guest runs it too, as the flush probe.
+(cd "$repo/clients/go" && CGO_ENABLED=0 go build -o "$M7_CACHE/powercut" ./cmd/powercut)
+
 echo "== build the guest rootfs"
 sudo rm -rf rootfs.d
 sudo unsquashfs -q -d rootfs.d "ubuntu-$ci.squashfs" >/dev/null
 sudo mkdir -p rootfs.d/mnt && sudo install -m 0755 "$server" rootfs.d/segment-log-server
 sudo install -m 0755 "$repo/scripts/m7/guest-init" rootfs.d/segment-log-init
+sudo install -m 0755 "$M7_CACHE/powercut" rootfs.d/segment-log-probe
+sudo install -m 0644 "$repo/scripts/m7/fingerprint" rootfs.d/etc/m7-fingerprint
 rm -f rootfs.ext4
 truncate -s 1G rootfs.ext4
 sudo /sbin/mkfs.ext4 -q -F -d rootfs.d rootfs.ext4
 sudo chown "$(id -u):$(id -g)" rootfs.ext4
 
-echo "== build the powercut tool"
-(cd "$repo/clients/go" && go build -o "$M7_CACHE/powercut" ./cmd/powercut)
 cd "$repo"

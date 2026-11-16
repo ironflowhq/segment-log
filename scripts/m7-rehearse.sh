@@ -22,7 +22,9 @@ source "$(dirname "$0")/m7/setup.sh"
 boot_once() {
 	local dir
 	dir=$(mktemp -d /tmp/m7-XXXX)
-	M7_CACHE_TYPE=$1 "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 &
+	# The Unsafe control changes the stack on purpose, so it skips the fingerprint check (V10).
+	M7_CACHE_TYPE=$1 M7_DRIFT_CHECK=$([ "$1" = Writeback ] && echo 1 || echo 0) \
+		"$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 &
 	local pid=$!
 	for _ in $(seq 100); do
 		grep -q "m7: write_cache" "$dir/console.log" 2>/dev/null && break

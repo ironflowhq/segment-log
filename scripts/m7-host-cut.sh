@@ -34,7 +34,9 @@ fi
 repo=${M7_REPO:-/root/segment-log}
 window_ms=${M7_WINDOW_MS:-3000}
 cache=Writeback
-[ "$control" = --control ] && cache=Unsafe
+drift_check=1
+# The control changes the stack on purpose, so it skips the fingerprint check (V10).
+[ "$control" = --control ] && cache=Unsafe drift_check=0
 run=hc-$event-$(date +%Y%m%d%H%M%S)${control:+-control}
 work=/tmp/m7-$run
 
@@ -58,7 +60,7 @@ lost=0
 counted=0
 for cycle in $(seq "$cycles"); do
 	before=$(on_host "$repo/scripts/m7/host-cycle" boot-id)
-	on_host "M7_CACHE_TYPE=$cache $repo/scripts/m7/host-cycle" start "$work" "$run" "$cycle" "$M7_OBSERVER"
+	on_host "M7_CACHE_TYPE=$cache M7_DRIFT_CHECK=$drift_check $repo/scripts/m7/host-cycle" start "$work" "$run" "$cycle" "$M7_OBSERVER"
 	delay=$((500 + RANDOM % window_ms))
 	sleep "$(printf '%d.%03d' $((delay / 1000)) $((delay % 1000)))"
 	case $event in
