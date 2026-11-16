@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Host side of scripts/m7-host-cut.sh, run over ssh on the VMM host after scripts/m7/setup.sh has
+# built firecracker, the guest and powercut once. Every process it starts in the background
+# detaches from the ssh session, so the session returns while the load runs into the event.
+#
+#   host-cycle prep  <work>                          reboot on panic, keep <work> across boots
+#   host-cycle boot-id
+#   host-cycle start <work> <run> <cycle> <observer>  boot the guest, then start the load
+#   host-cycle check <work> <run> <observer> [cycle]  boot the guest, recover, check, destroy it
+#
+# <work> holds the volume image and must be on the qualified host filesystem. M7_CACHE_TYPE picks
+# the block cache mode for `start` (Unsafe is the host-event control).
+set -euo pipefail
+export M7_CACHE=${M7_CACHE:-$HOME/.cache/segment-log-m7}
+export M7_LOG_BYTES=${M7_LOG_BYTES:-8G}
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+pc=$M7_CACHE/powercut
+cmd=${1:?usage: host-cycle prep|boot-id|start|check ...}
+work=${2:-}
+address=$work/v.sock:5000
+
+case $cmd in
+prep)
+	# A host kernel crash must end in a reboot, not a hung panic screen.
+	printf 'kernel.panic = 5\nkernel.sysrq = 1\n' >/etc/sysctl.d/90-m7.conf
+	sysctl -q --system
+	# Debian empties /tmp at boot. The volume images there must survive the event.
+	case $work in /tmp/*) echo 'd /tmp 1777 root root -' >/etc/tmpfiles.d/tmp.conf ;; esac
+	mkdir -p "$work"
+	findmnt -no SOURCE,FSTYPE,OPTIONS -T "$work"
+	;;
+boot-id)
+	cat /proc/sys/kernel/random/boot_id
+	;;
+start)
+	run=${3:?run} cycle=${4:?cycle} observer=${5:?observer}
+	setsid "$repo/scripts/m7/fc-server" --dir "$work/log" --vsock-port 5000 \
+		</dev/null >>"$work/vmm.log" 2>&1 &
+	"$pc" ready -address "$address"
+	setsid "$pc" load -address "$address" -observer "$observer" -run "$run" -cycle "$cycle" \
+		</dev/null >>"$work/load.log" 2>&1 &
+	;;
+check)
+	run=${3:?run} observer=${4:?observer} only=${5:-}
+	# fc-server execs the VMM, so $! is the VMM itself and the trap destroys the guest.
+	M7_CACHE_TYPE=Writeback "$repo/scripts/m7/fc-server" --dir "$work/log" --vsock-port 5000 \
+		</dev/null >>"$work/vmm.log" 2>&1 &
+	vm=$!
+	# The VMM holds the volume's lock until it exits, so wait for it before the next cycle.
+	trap 'kill -KILL $vm 2>/dev/null || true; wait $vm 2>/dev/null || true' EXIT
+	"$pc" ready -address "$address"
+	"$pc" check -address "$address" -observer "$observer" -run "$run" ${only:+-cycle "$only"}
+	;;
+*)
+	echo "unknown command $cmd" >&2
+	exit 64
+	;;
+esac
