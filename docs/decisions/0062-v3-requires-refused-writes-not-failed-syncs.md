@@ -1,7 +1,7 @@
 ---
 id: "0062"
 title: "V3 requires that writes fail after a metadata write error, not that every later sync fails"
-status: proposed
+status: accepted
 date: 2026-11-16
 deciders: [Altug Sahin]
 supersedes: null
