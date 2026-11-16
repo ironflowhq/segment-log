@@ -36,7 +36,7 @@ jobs:
         run: |
           mkdir -p "$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process"
           TMPDIR="$SEGMENT_LOG_TRACE_ARTIFACT_DIR/process" cargo test -p segment-log-core --test process_crash killed_writers_preserve_the_recorded_contract -- --nocapture
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: trace-failures-${{ matrix.os }}
@@ -64,7 +64,7 @@ jobs:
       - if: ${{ !cancelled() }}
         run: cargo test -p segment-log-core --lib acceptance::model::erasing_rejected_submits_changes_nothing_long_run -- --ignored --exact --nocapture
       # proptest adds the seed of a failed case to this directory.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: model-regressions-${{ matrix.os }}

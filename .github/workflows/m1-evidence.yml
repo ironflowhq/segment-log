@@ -35,7 +35,7 @@ jobs:
           M1_OUT: ${{ runner.temp }}/m1-evidence
           CARGO_TARGET_DIR: ${{ runner.temp }}/m1-build
           SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: m1-evidence-linux
@@ -56,7 +56,7 @@ jobs:
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/m1-build
           SEGMENT_LOG_EVIDENCE_DIR: ${{ runner.temp }}/m1-data
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: m1-evidence-macos
