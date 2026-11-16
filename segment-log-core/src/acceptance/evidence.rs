@@ -230,17 +230,20 @@ fn files(path: &Path) -> Files {
     };
     for (index, name) in names.iter().enumerate() {
         let length = fs::metadata(name).unwrap().len();
-        let groups_end = if index + 1 == names.len() {
-            length
-        } else {
-            closing_run_start(name, length)
+        // The second-newest segment may still wait for its closing run (ADR 0061), so its groups
+        // then end at its length.
+        let groups_end = match names.len() - index {
+            1 => length,
+            2 => closing_run_start(name, length).unwrap_or(length),
+            _ => closing_run_start(name, length).expect("a sealed segment ends in its closing run"),
         };
         files.bytes += length;
         files.group_bytes += groups_end - crate::codec::HEADER_LEN as u64;
     }
     files
 }
-fn closing_run_start(name: &Path, length: u64) -> u64 {
+/// `None` when the segment does not end in a locator: its closing run is not written yet.
+fn closing_run_start(name: &Path, length: u64) -> Option<u64> {
     use crate::codec::{self, Body, LOCATOR_LEN};
     use std::io::{Read, Seek, SeekFrom};
     let mut file = fs::File::open(name).unwrap();
@@ -254,16 +257,22 @@ fn closing_run_start(name: &Path, length: u64) -> u64 {
     let log_id = codec::LogId::new(header.log_id);
     let locator_at = length - LOCATOR_LEN as u64;
     let locator = read(locator_at, LOCATOR_LEN);
-    let Body::Locator { footer_position } = codec::decode(&log_id, &locator).unwrap().body else {
-        panic!("{name:?} does not end in a locator")
+    let Ok(codec::Frame {
+        body: Body::Locator { footer_position },
+        ..
+    }) = codec::decode(&log_id, &locator)
+    else {
+        return None;
     };
     let footer = read(footer_position, (locator_at - footer_position) as usize);
     let Body::Footer(footer) = codec::decode(&log_id, &footer).unwrap().body else {
         panic!("{name:?}'s locator does not name a footer")
     };
-    footer
-        .key_filter_position
-        .map_or(footer_position, u64::from)
+    Some(
+        footer
+            .key_filter_position
+            .map_or(footer_position, u64::from),
+    )
 }
 
 /// Given literal keyed records, default options and actual storage
