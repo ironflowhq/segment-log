@@ -1,0 +1,8 @@
+Linux m7 6.1.0-54-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.190-1 (2026-10-16) x86_64 GNU/Linux
+Model name:                              Intel(R) Core(TM) i7-7700 CPU @ 3.60GHz
+BIOS Model name:                         Intel(R) Core(TM) i7-7700 CPU @ 3.60GHz To Be Filled By O.E.M. CPU @ 3.6GHz
+               total        used        free      shared  buff/cache   available
+Mem:              62           0          55           0           6          61
+TARGET SOURCE       FSTYPE OPTIONS
+/tmp   /dev/nvme1n1 ext4   rw,noatime
+write back
