@@ -318,3 +318,56 @@ fn repeated_rolls_keep_every_segment_and_every_stream() {
         }
     });
 }
+
+/// The writer's time in the first roll of a log whose segment holds `keys` keyed records. A key
+/// limit of `keys` makes the next keyed submit roll, with no earlier closing run pending.
+fn first_roll_time(seed: u64, keys: usize) -> std::time::Duration {
+    let sim = Sim::new(seed);
+    let log = SegmentLog::with_hooks(
+        Path::new("/log"),
+        Options {
+            roll_bytes: crate::codec::ROLL_BYTES_LIMIT,
+            ..options()
+        },
+        Arc::new(sim.clone()),
+        crate::engine::Hooks {
+            limits: crate::engine::Limits {
+                keyed_records: keys,
+                ..Default::default()
+            },
+            background_seal: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let keyed = |i: usize| {
+        let key = format!("k{i}").into_bytes();
+        record(b"s", Some(&key), b"p", i.checked_sub(1).map(|r| r as u64))
+    };
+    for batch in (0..=keys).collect::<Vec<_>>().chunks(1000) {
+        send(&log, batch.iter().map(|&i| keyed(i)).collect())
+            .wait()
+            .unwrap();
+    }
+    let rolls = log.roll_times();
+    assert_eq!(rolls.len(), 1, "the submit past the key limit rolls once");
+    rolls[0]
+}
+
+/// Given one segment of keyed records and one with four times as many keys
+/// When each rolls, with no earlier closing run pending
+/// Then the writer's time in the larger roll stays within twice the smaller one's plus a slack
+///
+/// Cases: ROLL-BOUNDED
+#[test]
+fn the_writer_time_in_a_roll_does_not_grow_with_the_keys() {
+    bounded(|| {
+        let small = first_roll_time(315, 25_000);
+        let large = first_roll_time(316, 100_000);
+        let slack = std::time::Duration::from_millis(5);
+        assert!(
+            large <= small * 2 + slack,
+            "roll with 100,000 keys took {large:?}, with 25,000 keys {small:?}"
+        );
+    });
+}

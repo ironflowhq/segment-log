@@ -7,6 +7,8 @@ use log_filter::{Builder, LogFilter};
 pub(super) struct Keys {
     hash: KeyHash,
     active: BTreeMap<Vec<u8>, ActiveKey>,
+    /// The rolled segment whose closing run is not durable yet (ADR 0061, rule 5).
+    pending: Option<PendingKeys>,
     sealed: Vec<Arc<SealedKeys>>,
     log: Option<Arc<LogFilter>>,
     builder: Option<Builder>,
@@ -27,6 +29,15 @@ pub(super) struct SealedKeys {
     filter: codec::KeyFilter,
 }
 
+pub(super) type KeyMap = BTreeMap<Vec<u8>, ActiveKey>;
+
+struct PendingKeys {
+    base: u64,
+    next: u64,
+    filter_at: u64,
+    keys: Arc<KeyMap>,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub(super) struct SealedSummary {
     pub base: u64,
@@ -35,6 +46,7 @@ pub(super) struct SealedSummary {
     pub footer_at: u64,
 }
 
+#[derive(Clone)]
 pub(super) struct KeyHash {
     log_id: codec::LogId,
     #[cfg(test)]
@@ -217,26 +229,55 @@ impl SealedKeys {
             let entries =
                 codec::decode_page(&bytes, page, self.filter.count(), self.filter.fence(page))?;
             for entry in entries.iter().filter(|entry| entry.hash == hash) {
-                let position = u64::from(entry.position);
-                if position < codec::HEADER_LEN as u64 {
-                    return Err(LookupFailure);
-                }
-                let frame = ReadOnly::new(storage)
-                    .frame(&path, Purpose::Lookup, position, self.filter_at)?
-                    .ok_or(LookupFailure)?;
-                let group = codec::decode(log_id, &frame)?
-                    .into_group()
-                    .filter(|group| {
-                        group.base_offset >= self.base
-                            && group.base_offset + group.entries.len() as u64 <= self.next
-                    })
-                    .ok_or(LookupFailure)?;
-                if let Some(original) = compare(&group, entry.record, incoming)? {
+                let at = Recorded {
+                    base: self.base,
+                    next: self.next,
+                    groups_end: self.filter_at,
+                    position: entry.position,
+                    record: entry.record,
+                };
+                if let Some(original) = at.compare(storage, &path, log_id, incoming)? {
                     return Ok(Some(original));
                 }
             }
         }
         Ok(None)
+    }
+}
+
+/// A record that a key names in a segment whose group frames end at `groups_end`.
+struct Recorded {
+    base: u64,
+    next: u64,
+    groups_end: u64,
+    position: u32,
+    record: u32,
+}
+
+impl Recorded {
+    /// `None` when the record holds another key, which a shared hash allows.
+    fn compare(
+        &self,
+        storage: &dyn Storage,
+        path: &Path,
+        log_id: &codec::LogId,
+        incoming: &NewRecord,
+    ) -> Result<Option<Original>, LookupFailure> {
+        let position = u64::from(self.position);
+        if position < codec::HEADER_LEN as u64 {
+            return Err(LookupFailure);
+        }
+        let frame = ReadOnly::new(storage)
+            .frame(path, Purpose::Lookup, position, self.groups_end)?
+            .ok_or(LookupFailure)?;
+        let group = codec::decode(log_id, &frame)?
+            .into_group()
+            .filter(|group| {
+                group.base_offset >= self.base
+                    && group.base_offset + group.entries.len() as u64 <= self.next
+            })
+            .ok_or(LookupFailure)?;
+        compare(&group, self.record, incoming)
     }
 }
 
@@ -268,6 +309,7 @@ impl Keys {
         Self {
             hash,
             active,
+            pending: None,
             sealed: sealed.into_iter().map(Arc::new).collect(),
             log: None,
             builder: None,
@@ -316,18 +358,34 @@ impl Keys {
         self.active.len()
     }
 
-    pub(super) fn index_entries(&self) -> Vec<codec::KeyEntry> {
-        self.hash.entries(&self.active)
+    pub(super) fn hash(&self) -> KeyHash {
+        self.hash.clone()
     }
 
-    pub(super) fn roll(&mut self, sealed: SealedKeys) {
+    /// Starts a roll: the active map becomes the pending segment's, which lookups keep probing
+    /// until its closing run is durable. Returns the map for the sealer.
+    pub(super) fn roll(&mut self, base: u64, next: u64, filter_at: u64) -> Arc<KeyMap> {
+        debug_assert!(self.pending.is_none(), "one closing run pends at a time");
+        let keys = Arc::new(std::mem::take(&mut self.active));
+        self.pending = Some(PendingKeys {
+            base,
+            next,
+            filter_at,
+            keys: keys.clone(),
+        });
+        keys
+    }
+
+    /// Ends a roll once its closing run is durable. Returns the pending map, so that the writer
+    /// can free it off its thread.
+    pub(super) fn sealed(&mut self, sealed: SealedKeys) -> Option<Arc<KeyMap>> {
         let sealed = Arc::new(sealed);
         if let Some(builder) = &mut self.builder {
             builder.rolled(sealed.clone());
         }
         self.sealed.push(sealed);
-        self.active.clear();
         self.refresh();
+        self.pending.take().map(|pending| pending.keys)
     }
 
     #[cfg(test)]
@@ -339,7 +397,11 @@ impl Keys {
                 .iter()
                 .map(|s| u64::from(s.filter.count()))
                 .sum(),
-            active_keys: self.active.len(),
+            active_keys: self.active.len()
+                + self
+                    .pending
+                    .as_ref()
+                    .map_or(0, |pending| pending.keys.len()),
             log_filter_bytes: self.log.as_ref().map_or(0, |log| log.memory_bytes()),
             log_filter_covered: self.log.as_ref().map_or(0, |log| log.covered()),
         }
@@ -405,6 +467,22 @@ impl Keys {
             }
             // The exact map names this key's record, so another key there is a damaged file.
             return active_record(view, position, record, incoming)?
+                .map(Some)
+                .ok_or(LookupFailure);
+        }
+        if let Some(pending) = &self.pending
+            && let Some(&ActiveKey { position, record }) = pending.keys.get(key)
+        {
+            let at = Recorded {
+                base: pending.base,
+                next: pending.next,
+                groups_end: pending.filter_at,
+                position,
+                record,
+            };
+            let path = segment_path(&view.dir, pending.base);
+            return at
+                .compare(view.storage.as_ref(), &path, &view.log_id, incoming)?
                 .map(Some)
                 .ok_or(LookupFailure);
         }

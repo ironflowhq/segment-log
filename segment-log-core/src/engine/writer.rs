@@ -7,8 +7,13 @@ pub(super) struct Writer {
     pub keys: Keys,
     pub active: Active,
     pub limits: Limits,
+    pub background_seal: bool,
+    /// The rolled segment whose closing run the writer has not written yet (ADR 0061).
+    pub pending: Option<Pending>,
     #[cfg(test)]
     pub memory: Arc<Mutex<KeyMemory>>,
+    #[cfg(test)]
+    pub rolls: Arc<Mutex<Vec<std::time::Duration>>>,
 }
 
 pub(super) struct Active {
@@ -35,6 +40,44 @@ impl Active {
             footer_body: codec::FOOTER_HEADER_LEN + footer_body,
         }
     }
+}
+
+pub(super) struct Pending {
+    base: u64,
+    sealing: Sealing,
+}
+
+enum Sealing {
+    Built(Built),
+    Running(thread::JoinHandle<Built>),
+}
+
+struct Built {
+    run: [Vec<u8>; 4],
+    keys: keys::SealedKeys,
+}
+
+/// The sealer's work: every step is O(keys in the segment), so none of it runs on the writer
+/// unless tests ask for that. Dropping `tails` here frees them off the writer too.
+fn build(
+    log_id: codec::LogId,
+    hash: keys::KeyHash,
+    epoch: u64,
+    summary: (u64, u64, u64),
+    tails: BTreeMap<Vec<u8>, Tail>,
+    keys: Arc<keys::KeyMap>,
+) -> Built {
+    let (base, next, filter_at) = summary;
+    let mut entries = hash.entries(&keys);
+    let run = closing::roll_run(&log_id, epoch, next, filter_at, &tails, &mut entries);
+    let summary = keys::SealedSummary {
+        base,
+        next,
+        filter_at,
+        footer_at: filter_at + (run[0].len() + run[1].len()) as u64,
+    };
+    let keys = keys::SealedKeys::written(summary, &log_id, &run[0]);
+    Built { run, keys }
 }
 
 fn footer_entry(stream: &[u8]) -> usize {
@@ -64,45 +107,79 @@ impl Writer {
         (self.active.length >= options.roll_bytes || !fits) && next != self.active.base
     }
 
-    /// The writer never appends to a segment after its first closing frame.
+    /// Hands the segment's closing run to the sealer and starts the next segment. The writer
+    /// writes the run later (`write_pending`), and never appends a group to the old segment.
     fn roll(&mut self, view: &View, next: u64) -> io::Result<()> {
-        let storage = view.storage.as_ref();
-        let path = segment_path(&view.dir, self.active.base);
-        let mut keys = self.keys.index_entries();
+        // At most one closing run pends, so recovery has one case to rebuild (ADR 0061, rule 4).
+        self.write_pending(view, true)?;
+        let base = self.active.base;
         let filter_at = self.active.length;
-        let run = closing::roll_run(
-            &view.log_id,
-            self.epoch,
-            next,
-            filter_at,
-            &self.active.tails,
-            &mut keys,
-        );
-        let summary = keys::SealedSummary {
-            base: self.active.base,
-            next,
-            filter_at,
-            footer_at: filter_at + (run[0].len() + run[1].len()) as u64,
+        let keys = self.keys.roll(base, next, filter_at);
+        let tails = std::mem::take(&mut self.active.tails);
+        let (log_id, hash, epoch) = (view.log_id.clone(), self.keys.hash(), self.epoch);
+        let job = move || build(log_id, hash, epoch, (base, next, filter_at), tails, keys);
+        let sealing = if self.background_seal {
+            Sealing::Running(
+                thread::Builder::new()
+                    .name("segment-log-sealer".into())
+                    .spawn(job)?,
+            )
+        } else {
+            Sealing::Built(job())
         };
-        let sealed = keys::SealedKeys::written(summary, &view.log_id, &run[0]);
-        for frame in run {
-            call(storage, &path, Purpose::Roll, Op::Append(frame))?;
-        }
-        call(storage, &path, Purpose::Roll, Op::SyncData)?;
+        self.pending = Some(Pending { base, sealing });
         let header = codec::Header {
             log_id: *view.log_id.bytes(),
             base_offset: next,
             epoch: self.epoch,
         };
-        create_segment(storage, &view.dir, Purpose::Roll, &header)?;
-        self.keys.roll(sealed);
+        create_segment(view.storage.as_ref(), &view.dir, Purpose::Roll, &header)?;
         let spans = view.published.lock().unwrap().roll(self.epoch, self.epoch);
-        view.tables.lock().unwrap().keep(self.active.base, spans);
+        view.tables.lock().unwrap().keep(base, spans);
         self.active = Active::new(next);
         Ok(())
     }
 
+    /// Writes and flushes the pending closing run once the sealer has built it, or, with `wait`,
+    /// after waiting for it. A sealer that panicked counts as a failed roll.
+    fn write_pending(&mut self, view: &View, wait: bool) -> io::Result<()> {
+        let Some(Pending { base, sealing }) = self.pending.take() else {
+            return Ok(());
+        };
+        let built = match sealing {
+            Sealing::Built(built) => built,
+            Sealing::Running(sealer) if wait || sealer.is_finished() => sealer
+                .join()
+                .map_err(|_| io::Error::other("the sealer panicked"))?,
+            sealing @ Sealing::Running(_) => {
+                self.pending = Some(Pending { base, sealing });
+                return Ok(());
+            }
+        };
+        let storage = view.storage.as_ref();
+        let path = segment_path(&view.dir, base);
+        // The key frames are durable before the footer and the locator exist, so that a valid
+        // locator and footer prove the whole run to an open that reads only them (step 5).
+        let [filter, index, footer, locator] = built.run;
+        for frames in [[filter, index], [footer, locator]] {
+            for frame in frames {
+                call(storage, &path, Purpose::Roll, Op::Append(frame))?;
+            }
+            call(storage, &path, Purpose::Roll, Op::SyncData)?;
+        }
+        if let Some(keys) = self.keys.sealed(built.keys) {
+            // Freeing every key of a segment costs as much as hashing them.
+            if self.background_seal {
+                let _ = thread::Builder::new()
+                    .name("segment-log-sealer".into())
+                    .spawn(move || drop(keys));
+            }
+        }
+        Ok(())
+    }
+
     fn seal(&mut self, view: &View) -> io::Result<()> {
+        self.write_pending(view, true)?;
         let storage = view.storage.as_ref();
         let path = segment_path(&view.dir, self.active.base);
         let run = closing::seal_run(
@@ -312,6 +389,8 @@ pub(super) fn run(
                     return;
                 }
                 let Ok(message) = receiver.recv() else {
+                    // A dropped log leaves no closing run pending (ADR 0061, rule 7).
+                    let _ = writer.write_pending(&view, true);
                     return;
                 };
                 let Some(request) = dequeued(Some(message), &mut seal) else {
@@ -363,9 +442,14 @@ pub(super) fn run(
                                 if draft.requests.is_empty()
                                     && writer.rolls_before(draft.base, fits, &options)
                                 {
-                                    if writer.roll(&view, draft.base).is_err() {
+                                    #[cfg(test)]
+                                    let started = Instant::now();
+                                    let rolled = writer.roll(&view, draft.base);
+                                    #[cfg(test)]
+                                    writer.rolls.lock().unwrap().push(started.elapsed());
+                                    if rolled.is_err() {
                                         writer.keys.stop_building();
-                                        poison(&poisoned, draft, Some(request), receiver);
+                                        poison(&poisoned, draft, Some(request), receiver, false);
                                         return;
                                     }
                                     debug_assert!(
@@ -393,7 +477,7 @@ pub(super) fn run(
                 Classification::LookupFailure => {
                     draft.requests.push(request);
                     writer.keys.stop_building();
-                    poison(&poisoned, draft, deferred.take(), receiver);
+                    poison(&poisoned, draft, deferred.take(), receiver, false);
                     return;
                 }
             }
@@ -430,9 +514,15 @@ pub(super) fn run(
         if draft.requests.is_empty() {
             continue;
         }
+        // The group's frame waits for no sealer: an unfinished closing run waits for a later group.
+        if writer.write_pending(&view, false).is_err() {
+            writer.keys.stop_building();
+            poison(&poisoned, draft, deferred.take(), receiver, true);
+            return;
+        }
         if writer.commit(&view, &mut draft).is_err() {
             writer.keys.stop_building();
-            poison(&poisoned, draft, deferred.take(), receiver);
+            poison(&poisoned, draft, deferred.take(), receiver, false);
             return;
         }
     }
@@ -529,18 +619,28 @@ impl Writer {
     }
 }
 
+/// `unwritten`: the writer failed before it wrote any byte of the draft's group, so its
+/// requests and waiters get `Poisoned` rather than `Indeterminate`.
 fn poison(
     poisoned: &std::sync::atomic::AtomicBool,
     draft: Draft,
     current: Option<Request>,
     receiver: mpsc::Receiver<Message>,
+    unwritten: bool,
 ) {
     poisoned.store(true, std::sync::atomic::Ordering::Release);
+    let outcome = || {
+        if unwritten {
+            CommitError::Poisoned
+        } else {
+            CommitError::Indeterminate
+        }
+    };
     for request in draft.requests {
-        request.answer(Err(CommitError::Indeterminate));
+        request.answer(Err(outcome()));
     }
     for waiter in draft.waiters {
-        waiter.request.answer(Err(CommitError::Indeterminate));
+        waiter.request.answer(Err(outcome()));
     }
     if let Some(request) = current {
         request.answer(Err(CommitError::Poisoned));

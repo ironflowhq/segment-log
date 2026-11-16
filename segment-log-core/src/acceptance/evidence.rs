@@ -341,7 +341,12 @@ fn measured_appends_survive_reopen() {
     } else {
         Arc::new(Real::default())
     };
-    let log = Arc::new(SegmentLog::with_storage(&path, options(), backend).unwrap());
+    // The closing runs are built off the writer, as `SegmentLog::open` builds them (ADR 0061).
+    let hooks = crate::engine::Hooks {
+        background_seal: true,
+        ..Default::default()
+    };
+    let log = Arc::new(SegmentLog::with_hooks(&path, options(), backend, hooks).unwrap());
     let opened = now.elapsed();
     let initial = files(&path);
     println!(
@@ -503,6 +508,9 @@ fn measured_appends_survive_reopen() {
         before.segments,
         before.bytes
     );
+    for (roll, time) in log.roll_times().iter().enumerate() {
+        println!("ROLL index={roll} writer_ns={}", time.as_nanos());
+    }
     drop(log);
     crate::pipeline::report();
     let now = Instant::now();
