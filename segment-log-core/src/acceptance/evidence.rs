@@ -510,17 +510,18 @@ fn measured_appends_survive_reopen() {
             }
         }
     }
+    let records = log.watermark();
+    let rolls = log.roll_times();
+    // Drop writes a pending closing run (ADR 0061), so the files settle only after it.
+    drop(log);
     let before = files(&path);
     println!(
-        "END records={} segments={} bytes={}",
-        log.watermark(),
-        before.segments,
-        before.bytes
+        "END records={records} segments={} bytes={}",
+        before.segments, before.bytes
     );
-    for (roll, time) in log.roll_times().iter().enumerate() {
+    for (roll, time) in rolls.iter().enumerate() {
         println!("ROLL index={roll} writer_ns={}", time.as_nanos());
     }
-    drop(log);
     crate::pipeline::report();
     let now = Instant::now();
     let log = SegmentLog::open(&path, options()).unwrap();
