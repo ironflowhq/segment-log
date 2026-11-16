@@ -145,6 +145,16 @@ pub(super) fn open(
         Ending::Rolled { run, .. } | Ending::Sealed(run) => (run.start, run.frames.concat()),
         Ending::Groups | Ending::Stopped => found.newest.last.unwrap_or((0, found.newest_header)),
     };
+    // The V2 control: different bytes over one acknowledged sector in place of the identical
+    // rewrite. The byte sits past the frame's envelope, so the frame's CRC fails at the next open.
+    #[cfg(feature = "rewrite-control")]
+    let bytes = {
+        let mut bytes = bytes;
+        if let Some(byte) = bytes.get_mut(32) {
+            *byte ^= 0xff;
+        }
+        bytes
+    };
     call(
         storage,
         &segment,
