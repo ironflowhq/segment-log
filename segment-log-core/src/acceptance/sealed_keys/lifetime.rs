@@ -72,12 +72,12 @@ fn a_retry_finds_a_sealed_key_through_its_segments_filter_and_index() {
 }
 
 /// Given a sealed segment and an active segment at the roll size, both with keyed records
-/// When a new submit starts a roll, and a crash in each mode comes after the roll flushed its
-/// closing run and before the next segment exists
+/// When a new submit starts a roll, and a crash in each mode comes after the roll created the next
+/// segment and before the first flush of the rolled segment's closing run
 /// Then the submit gets `Poisoned`
 /// When the log reopens
-/// Then open creates the next segment, and a retry of each key in the segment that open found
-/// sealed returns its original position through that segment's key index
+/// Then open completes the rolled segment's closing run (ADR 0061), and a retry of each key in it
+/// returns its original position through that segment's key index
 /// And so does a retry after another reopen and a power loss
 ///
 /// Cases: KEY-FRAMES-CRASH, KEY-LIFETIME, ORACLE-1, ORACLE-4, ORACLE-5, ORACLE-6
@@ -90,13 +90,13 @@ fn a_key_in_a_segment_that_open_seals_after_a_crash_still_matches() {
             let log = open_hooked(&sim, &hooks);
             commit(&log, vec![keyed(b"k0")]);
             commit(&log, vec![keyed(b"k1"), keyed(b"k2")]);
-            let create = sim.hold(Call::new(raw::segment(3), Purpose::Roll, Op::Create));
+            let flush = sim.hold(Call::new(raw::segment(1), Purpose::Roll, Op::SyncData));
             let rolling = log.append(Submit {
                 records: vec![keyed(b"k3")],
             });
-            create.wait();
+            flush.wait();
             sim.crash(mode, 341);
-            create.release(None);
+            flush.release(None);
             assert!(matches!(
                 rolling.unwrap().wait(),
                 Err(CommitError::Poisoned)
@@ -106,9 +106,8 @@ fn a_key_in_a_segment_that_open_seals_after_a_crash_still_matches() {
             assert!(
                 trace.iter().any(|event| matches!(event,
                     Event::Call(call, _, _) if call.purpose == Purpose::Roll
-                        && call.op == Op::SyncData
-                        && call.path == Path::new(&raw::segment(1)))),
-                "the roll flushed its closing run before the crash"
+                        && call.op == Op::SyncDir)),
+                "the roll made the next segment durable before the crash"
             );
 
             for crash in [None, Some(Crash::PowerLoss)] {

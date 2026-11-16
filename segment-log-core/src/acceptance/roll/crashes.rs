@@ -23,28 +23,36 @@ fn closing_run(sim: &Sim) -> Vec<u8> {
     raw::roll_run(&raw::segments(sim)[1].1, 1)
 }
 
-const CLOSING_FRAMES: usize = 4;
-const CLOSING_STEPS: usize = CLOSING_FRAMES + 1;
-const ROLL_STEPS: usize = CLOSING_STEPS + 4;
+/// The roll creates the next segment: create, header write, data flush, directory flush.
+const NEXT_SEGMENT_STEPS: usize = 4;
+/// Then the next group's commit writes the closing run first: key filter and key index, a flush,
+/// footer and locator, a flush (ADR 0061).
+const CLOSING_STEPS: usize = 6;
+const ROLL_STEPS: usize = NEXT_SEGMENT_STEPS + CLOSING_STEPS;
 fn roll_steps(sim: &Sim) -> Vec<Call> {
     let (log_id, _, _) = raw::header_fields(&raw::segments(sim)[0].1);
     let header = raw::with_log_id(raw::header(raw::VERSION, 2, 1), log_id);
     let run = closing_run(sim);
-    let closing = raw::frames(&[vec![0; 64], run].concat())
-        .into_iter()
-        .map(|frame| Call::new(raw::segment(1), Purpose::Roll, Op::Append(frame.to_vec())))
-        .collect::<Vec<_>>();
-    assert_eq!(closing.len(), CLOSING_FRAMES);
-    let steps: Vec<_> = closing
-        .into_iter()
-        .chain([
-            Call::new(raw::segment(1), Purpose::Roll, Op::SyncData),
-            Call::new(raw::segment(2), Purpose::Roll, Op::Create),
-            Call::new(raw::segment(2), Purpose::Roll, Op::Write(0, header)),
-            Call::new(raw::segment(2), Purpose::Roll, Op::SyncData),
-            Call::new("/log", Purpose::Roll, Op::SyncDir),
-        ])
-        .collect();
+    let append =
+        |frame: &[u8]| Call::new(raw::segment(1), Purpose::Roll, Op::Append(frame.to_vec()));
+    let flush = || Call::new(raw::segment(1), Purpose::Roll, Op::SyncData);
+    let segment = [vec![0; 64], run].concat();
+    let frames = raw::frames(&segment);
+    let [filter, index, footer, locator] = frames[..] else {
+        panic!("a roll's closing run has four frames")
+    };
+    let steps = vec![
+        Call::new(raw::segment(2), Purpose::Roll, Op::Create),
+        Call::new(raw::segment(2), Purpose::Roll, Op::Write(0, header)),
+        Call::new(raw::segment(2), Purpose::Roll, Op::SyncData),
+        Call::new("/log", Purpose::Roll, Op::SyncDir),
+        append(filter),
+        append(index),
+        flush(),
+        append(footer),
+        append(locator),
+        flush(),
+    ];
     assert_eq!(steps.len(), ROLL_STEPS);
     steps
 }
@@ -76,15 +84,17 @@ fn assert_whole_segments(sim: &Sim) {
 }
 
 /// Given two acknowledged groups, with the active segment at the roll size
-/// When a two-record submit starts a roll, and a crash overtakes one of the roll's four closing
-/// frame writes or their flush, the new segment's create, header write, data flush or directory
-/// flush, or the write or the flush of the first group in the new segment
-/// Then the submit gets `Poisoned` for a roll step and `Indeterminate` for a group step
+/// When a two-record submit starts a roll, and a crash overtakes the new segment's create, header
+/// write, data flush or directory flush, one of the rolled segment's closing frame writes or their
+/// two flushes, or the write or the flush of the first group in the new segment
+/// Then the submit gets `Poisoned` for a roll or closing run step and `Indeterminate` for a group
+/// step
 /// And the submit queued behind it gets `Poisoned`
 /// When the log reopens
 /// Then both acknowledged records are present, and the submit is there in full or not at all
-/// And the oldest segment keeps its bytes, and the rolled one keeps its groups and either loses its
-/// closing frames or keeps all of them, as it must once their flush returned
+/// And the oldest segment keeps its bytes, and the rolled one keeps its groups and ends in its
+/// closing run exactly when the new segment survived, which recovery completes if the crash cut
+/// the run (ADR 0061)
 /// And every file is a header and whole frames
 /// And a power loss after that open gives the same log, and the next append takes the next offset
 ///
@@ -113,6 +123,7 @@ fn a_crash_at_each_step_of_a_roll_keeps_every_acknowledged_record() {
                     sim.crash(mode, seed);
                     hold.release(None);
                     if step < ROLL_STEPS {
+                        // A failed closing run comes before any byte of the group.
                         assert!(matches!(rolling.wait(), Err(CommitError::Poisoned)));
                     } else {
                         assert!(matches!(rolling.wait(), Err(CommitError::Indeterminate)));
@@ -136,7 +147,9 @@ fn a_crash_at_each_step_of_a_roll_keeps_every_acknowledged_record() {
                     let segments = raw::segments(&sim);
                     assert_eq!(segments[0], sealed[0], "{label}");
                     assert_eq!(segments[1].0, 1, "{label}");
-                    if step >= CLOSING_STEPS || (step == CLOSING_STEPS - 1 && mode == Crash::Kill) {
+                    // Once the new segment's header and directory entry are durable, or a kill keeps
+                    // a written header, open finds the rolled segment second-newest.
+                    if step >= NEXT_SEGMENT_STEPS || (step >= 2 && mode == Crash::Kill) {
                         assert_eq!(segments[1].1, rolled, "{label}");
                     } else {
                         assert!(
@@ -254,22 +267,24 @@ fn every_storage_boundary_of_a_roll_can_crash() {
 }
 
 /// Given two acknowledged groups, with the active segment at the roll size
-/// When one of the roll's closing frame writes or their flush fails, or the new segment's create,
-/// header write, data flush or directory flush fails
+/// When the new segment's create, header write, data flush or directory flush fails, or one of the
+/// rolled segment's closing frame writes or their flushes fails
 /// Then the submit that started the roll gets `Poisoned`, and so does the submit queued behind it
 /// And later appends are refused, the acknowledged records stay readable
 /// And the writer makes no further storage call that writes or flushes
 /// When the log reopens, loses power and reopens again
 /// Then both acknowledged records are present, and the next append takes the next offset
-/// And the rolled segment keeps its closing frames only if all of them were written
+/// And the rolled segment ends in its closing run exactly when the new segment survived
 ///
 /// Cases: ORACLE-7, ORACLE-1, ORACLE-5, RECOVERY-FIXTURES
 #[test]
 fn a_failed_roll_step_poisons_the_writer_and_a_reopen_recovers() {
     bounded(|| {
         let other = || Fault::error(std::io::ErrorKind::Other).unwrap();
-        for step in 0..ROLL_STEPS {
-            let faults = if step < CLOSING_STEPS - 1 || step == CLOSING_STEPS + 1 {
+        let probe = Sim::new(322);
+        drop(two_groups(&probe));
+        for (step, call) in roll_steps(&probe).into_iter().enumerate() {
+            let faults = if matches!(call.op, Op::Append(_) | Op::Write(..)) {
                 vec![
                     Fault::Partial(1),
                     Fault::Partial(20),
@@ -321,7 +336,7 @@ fn a_failed_roll_step_poisons_the_writer_and_a_reopen_recovers() {
                     "{label}: the poisoned writer called the storage again"
                 );
 
-                if step == ROLL_STEPS - 1 {
+                if step == NEXT_SEGMENT_STEPS - 1 {
                     assert!(
                         matches!(
                             SegmentLog::with_storage(
@@ -339,12 +354,17 @@ fn a_failed_roll_step_poisons_the_writer_and_a_reopen_recovers() {
                 assert_eq!(payloads(&log), [b"a", b"b"], "{label}");
                 let segments = raw::segments(&sim);
                 assert_eq!(segments[0], sealed[0], "{label}");
-                let expected = if step >= CLOSING_STEPS - 1 {
-                    &rolled
-                } else {
-                    &sealed[1].1
-                };
-                assert_eq!(&segments[1].1, expected, "{label}");
+                // A failed header write leaves a torn file that open removes. A failed directory
+                // flush and the power loss after it may drop the new segment's entry.
+                match step {
+                    0 | 1 => assert_eq!(segments[1].1, sealed[1].1, "{label}"),
+                    3 => assert!(
+                        segments[1].1 == sealed[1].1 || segments[1].1 == rolled,
+                        "{label}"
+                    ),
+                    _ => assert_eq!(segments[1].1, rolled, "{label}"),
+                }
+                assert_eq!(segments.len() > 2, segments[1].1 == rolled, "{label}");
                 assert_whole_segments(&sim);
                 drop(log);
                 sim.crash(Crash::PowerLoss, 2);

@@ -403,8 +403,16 @@ pub(crate) fn valid_length(segments: &[(u64, Vec<u8>)]) -> usize {
         }
         if !newest {
             let run = &bytes[at..];
+            let run_epoch =
+                (run.len() > 32).then(|| u64::from_le_bytes(run[12..20].try_into().unwrap()));
+            // The second-newest segment may lack its closing run or hold a torn one, which
+            // recovery rebuilds from its groups (ADR 0061, rule 8).
+            let complete = run_epoch.is_some_and(|e| run == raw::roll_run(&bytes[..at], e));
+            if index + 2 == segments.len() && !complete {
+                continue;
+            }
             assert!(run.len() > 32, "sealed segment {base} has a closing run");
-            let run_epoch = u64::from_le_bytes(run[12..20].try_into().unwrap());
+            let run_epoch = run_epoch.unwrap();
             assert_eq!(
                 run,
                 raw::roll_run(&bytes[..at], run_epoch),
@@ -417,12 +425,44 @@ pub(crate) fn valid_length(segments: &[(u64, Vec<u8>)]) -> usize {
 }
 
 /// ORACLE-6: recovery leaves every segment that had a successor byte for byte as it found it.
+/// The second-newest one may lack its closing run, which the writer writes after the next
+/// segment exists. Recovery may then only complete it with the run that its groups produce
+/// (ADR 0061, rule 8).
 pub(crate) fn sealed_unchanged(before: &[(u64, Vec<u8>)], after: &[(u64, Vec<u8>)]) {
-    let sealed = &before[..before.len().saturating_sub(1)];
+    sealed_unchanged_with(before, after, raw::roll_run);
+}
+
+/// `sealed_unchanged` for a log whose closing runs `roll_run` builds from a segment's groups.
+pub(crate) fn sealed_unchanged_with(
+    before: &[(u64, Vec<u8>)],
+    after: &[(u64, Vec<u8>)],
+    roll_run: impl Fn(&[u8], u64) -> Vec<u8>,
+) {
+    let sealed = &before[..before.len().saturating_sub(2)];
     assert_eq!(
         after.get(..sealed.len()),
         Some(sealed),
         "recovery changed a sealed segment"
+    );
+    let Some(pending) = before.len().checked_sub(2).map(|at| &before[at]) else {
+        return;
+    };
+    let Some(completed) = after.get(sealed.len()) else {
+        return;
+    };
+    if completed == pending {
+        return;
+    }
+    let (groups, run) = raw::split_run(&completed.1);
+    assert!(
+        completed.0 == pending.0 && pending.1.starts_with(groups) && run.len() > 32,
+        "recovery changed the second-newest segment's groups"
+    );
+    let epoch = u64::from_le_bytes(run[12..20].try_into().unwrap());
+    assert_eq!(
+        run,
+        roll_run(groups, epoch),
+        "recovery completed the second-newest segment with its roll's closing run"
     );
 }
 

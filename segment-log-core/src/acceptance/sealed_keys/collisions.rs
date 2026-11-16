@@ -144,10 +144,10 @@ fn colliding_keys_on_both_sides_of_a_key_index_page_boundary_still_match() {
     });
 }
 
-/// Given keys `a` and `b` that share one hash, in a segment whose roll made its closing run durable
-/// When the roll fails to create the next segment, and power is lost
-/// Then the reopen rebuilds the closing run with the same key hashes, finds that it matches, and
-/// creates the next segment
+/// Given keys `a` and `b` that share one hash, in a segment whose roll created the next segment
+/// When the first flush of the segment's closing run fails, and power is lost
+/// Then the reopen rebuilds the closing run with the same key hashes and completes the segment
+/// (ADR 0061)
 /// And a retry of `a` and `b` returns their original positions
 ///
 /// Cases: KEY-COLLISION, KEY-FRAMES-CRASH, RECOVERY-FIXTURES
@@ -162,8 +162,8 @@ fn a_rolled_segment_with_shared_hashes_reopens_after_a_crash() {
         let sim = Sim::new(352);
         let log = open_hooked(&sim, &hooks);
         commit(&log, vec![keyed(b"a"), keyed(b"b")]);
-        let create = Call::new(raw::segment(2), Purpose::Roll, Op::Create);
-        sim.inject(create, Fault::error(std::io::ErrorKind::Other).unwrap());
+        let flush = Call::new(raw::segment(0), Purpose::Roll, Op::SyncData);
+        sim.inject(flush, Fault::error(std::io::ErrorKind::Other).unwrap());
         let failed = log
             .append(Submit {
                 records: vec![keyed(b"c")],
@@ -174,10 +174,13 @@ fn a_rolled_segment_with_shared_hashes_reopens_after_a_crash() {
         drop(log);
         sim.crash(Crash::PowerLoss, 352);
         let log = open_hooked(&sim, &hooks);
-        assert_eq!(
-            raw::segments(&sim).len(),
-            2,
-            "the reopen creates the next segment"
+        let segments = raw::segments(&sim);
+        assert_eq!(segments.len(), 2, "the next segment survives");
+        let (groups, run) = raw::split_run(&segments[0].1);
+        assert_eq!(index_hashes(&segments[0].1), [vec![SHARED, SHARED]]);
+        assert!(
+            !run.is_empty() && !groups.is_empty(),
+            "the reopen completes the segment"
         );
         assert_retry(&log, &[b"a", b"b"], &[0, 1]);
     });

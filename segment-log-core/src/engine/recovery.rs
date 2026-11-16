@@ -97,10 +97,40 @@ pub(super) fn open(
         // A sealed log never checks a key again.
         Ending::Sealed(_) => vec![],
         Ending::Rolled { summary, .. } => [found.sealed.as_slice(), &[*summary]].concat(),
+        // A rebuilt run's key filter is not on disk yet.
+        Ending::Groups | Ending::Stopped if found.pending.is_some() => {
+            found.sealed[..found.sealed.len() - 1].to_vec()
+        }
         Ending::Groups | Ending::Stopped => found.sealed.clone(),
     };
     // Step 11's reads come before any change, so that a bad key filter changes no file.
-    let sealed_keys = SealedKeys::load_all(&reader, dir, &found.log_id, &summaries)?;
+    let mut sealed_keys = SealedKeys::load_all(&reader, dir, &found.log_id, &summaries)?;
+
+    // The rebuilt closing run is the first change, so the newest segment's own recovery below
+    // happens with every older segment sealed (ADR 0061, rule 8).
+    if let Some(rebuilt) = found.pending.take() {
+        let path = segment_path(dir, rebuilt.summary.base);
+        if rebuilt.length > rebuilt.start {
+            call(
+                storage,
+                &path,
+                Purpose::Recovery,
+                Op::Truncate(rebuilt.start),
+            )?;
+        }
+        // In two steps, as the writer writes it, so that a crash here leaves a run that a later
+        // open either proves from its locator and footer or rebuilds again.
+        let [filter, index, footer, locator] = &rebuilt.run;
+        for (at, bytes) in [
+            (rebuilt.start, [filter, index]),
+            (rebuilt.summary.footer_at, [footer, locator]),
+        ] {
+            let bytes = bytes.map(Vec::as_slice).concat();
+            call(storage, &path, Purpose::Recovery, Op::Write(at, bytes))?;
+            call(storage, &path, Purpose::Recovery, Op::SyncAll)?;
+        }
+        sealed_keys.push(SealedKeys::written(rebuilt.summary, &found.log_id, filter));
+    }
 
     let segment = segment_path(dir, newest);
     if let Ending::Stopped = found.newest.ending {

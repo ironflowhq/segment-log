@@ -218,7 +218,7 @@ fn open_log(sim: &Sim, roll_bytes: u64) -> Result<SegmentLog, OpenError> {
         ..Options::default()
     };
     let storage: Arc<dyn Storage> = Arc::new(sim.clone());
-    // The inline log filter build keeps every run of one input the same.
+    // The inline log filter build and inline seal keep every run of one input the same.
     SegmentLog::start(
         Path::new("/log"),
         options,
@@ -226,6 +226,7 @@ fn open_log(sim: &Sim, roll_bytes: u64) -> Result<SegmentLog, OpenError> {
         keys::KeyHash::new,
         Limits::default(),
         LogFilterMode::Inline,
+        false,
     )
 }
 
