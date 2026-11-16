@@ -69,7 +69,7 @@ jobs:
           cargo +"$NIGHTLY" fuzz run -a ${{ matrix.target }}
           "fuzz/corpus/${{ matrix.target }}" "fuzz/seeds/${{ matrix.target }}"
           -- -max_total_time="$SECONDS_PER_TARGET" -max_len=65536 -rss_limit_mb=4096
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: fuzz-${{ matrix.target }}-crash

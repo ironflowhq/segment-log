@@ -37,7 +37,7 @@ jobs:
         env:
           SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
           M6_PAIRS: ${{ inputs.pairs || '5' }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: m6-socket-linux

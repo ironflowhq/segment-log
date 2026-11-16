@@ -44,7 +44,7 @@ jobs:
           BASE: ${{ inputs.base || github.event.pull_request.base.sha }}
           HEAD: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
           SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: m1-compare
