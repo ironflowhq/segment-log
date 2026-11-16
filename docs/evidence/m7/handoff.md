@@ -36,6 +36,51 @@ One kernel has the volume at a time. Each step below starts only after the VMM o
 
    The core never seals on its own ([ADR 0033](../../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)): finalizing is a deployment decision, made with an explicit `Seal`.
 
+## Sequence
+
+The lock on the image is what passes from writer to reader: a launcher takes it before it boots anything, and the kernel releases it only when that VMM process exits.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant D as Deployment (host)
+    participant L as Launcher (fc-server)
+    participant V as Volume (log.img + flock)
+    participant W as Writer guest
+    participant R as Reader guest
+
+    D->>L: start writer
+    L->>V: flock -x (exit 75 if held)
+    L->>W: boot, image read-write
+    W->>V: open: recover, then append groups
+    alt Finished work
+        D->>W: Seal
+        W->>V: seal run, fsync
+        W-->>D: Sealed, server exits 0
+    else Crash or teardown
+        D--xW: SIGKILL the VMM
+        Note over V: acknowledged records are durable,<br/>the log is unsealed
+    end
+    W-->>V: VMM exits, kernel drops the lock
+    opt Unsealed log
+        D->>L: start writable server
+        L->>V: flock -x
+        L->>W: boot, image read-write
+        W->>V: open recovers the log
+        alt Resume
+            W->>V: keep appending
+        else Finalize
+            D->>W: Seal (explicit, never automatic)
+            W-->>D: server exits 0, lock dropped
+        end
+    end
+    D->>L: start reader (--read-only)
+    L->>V: flock -x
+    L->>R: boot, image read-only
+    R->>V: LogReader: read, write nothing
+    R-->>D: consumers read every acknowledged record
+```
+
 ## Evidence
 
 `HANDOFF` is `TestHandoffSealed` and `TestHandoffUnsealed` in `clients/go/handoff_test.go`. Over `SEGMENT_LOG_TRANSPORT=firecracker` each server start is a new guest on the same image, so the writer's guest is gone before the reader's boots, and the unsealed case follows step 4 with the finalize policy. `TestReadOnlyRefusesAnUnsealedLog` checks the reader's `NotSealed` exit.
