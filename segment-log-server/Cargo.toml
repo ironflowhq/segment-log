@@ -7,6 +7,10 @@ license.workspace = true
 repository.workspace = true
 readme = "README.md"
 
+[features]
+# Test-only, the V2 control: see segment-log-core.
+rewrite-control = ["segment-log-core/rewrite-control"]
+
 [dependencies]
 libc = "0.2"
 segment-log-core = { path = "../segment-log-core", version = "0.0.1" }

@@ -296,6 +296,8 @@ Evidence must apply to the identified setup. A syscall trace alone does not esta
 
 [`scripts/m7-enospc.sh`](../../scripts/m7-enospc.sh) runs `VOL-ENOSPC` ([V9](volume-requirements.md#v9-capacity-and-a-timely-alert)) for the guest filesystem and for the host filesystem under the sparse image: it fills the layer during load, restores capacity, reopens and checks every reported record.
 
+[`scripts/m7-recovery-cut.sh`](../../scripts/m7-recovery-cut.sh) runs `VOL-POWER-CUT-RECOVERY` ([V2](volume-requirements.md#v2-sector-writes-are-atomic)) from a controller, for the fixtures `clean`, `sealed` and `header`. Open's rewrite reaches the drive only in its sync, which takes milliseconds, so each cycle puts the volume behind a dm-delay device that holds writes for `M7_DELAY_MS`. The cut is a host kernel crash, the one host event that can be timed. The host streams the guest console and its block trace (`blktrace`) to the controller, which crashes the host once the guest is past its mount and a write is queued with no completion. That trace is the evidence, saved for each counted cycle. The control boots the cut guest with a server built with the `rewrite-control` cargo feature, off by default in `segment-log-core`, which writes one changed byte over an acknowledged sector. It crashes once that server answers, so the changed byte is durable.
+
 <a id="surviving-volume-handoff-before-m6"></a>
 
 ## Surviving-volume handoff (before M7)

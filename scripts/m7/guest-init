@@ -9,9 +9,13 @@ case " $* " in *" --read-only "*) mode=ro ;; *) mode=rw ;; esac
 # V3: a metadata write error must stop the filesystem; ext4's default is to continue.
 # m7.mount= on the kernel command line adds options, so that VOL-DRIFT can change one.
 extra=
+server=/segment-log-server
 # shellcheck disable=SC2013 # the command line is words
 for word in $(cat /proc/cmdline); do
-	case $word in m7.mount=*) extra=,${word#m7.mount=} ;; esac
+	case $word in
+	m7.mount=*) extra=,${word#m7.mount=} ;;
+	m7.control=rewrite) server=/segment-log-server-control ;; # the V2 control build
+	esac
 done
 mount -t ext4 -o "$mode,errors=remount-ro$extra" /dev/vdb /mnt || { echo "m7: cannot mount /dev/vdb"; ls -l /dev/vd*; dmesg | tail -n 5; reboot -f; }
 # VOL-FS-CHECK and VOL-FLUSH-CONFIG read these lines from the console.
@@ -67,7 +71,7 @@ done </dev/console & # explicit: sh gives a background job /dev/null as its inpu
 # The supervisor: a crash or a poisoned writer restarts the server, and its open recovers the log
 # (ADR 0058). A seal or a signal (0) or a failed open (1) ends the guest.
 while :; do
-	/segment-log-server --dir /mnt/log "$@" &
+	"$server" --dir /mnt/log "$@" &
 	echo $! >/run/server.pid
 	wait $!
 	code=$?
