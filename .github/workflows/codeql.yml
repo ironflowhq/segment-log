@@ -1,0 +1,59 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # A weekly scan applies new queries to the default branch when the code is unchanged.
+    - cron: "23 6 * * 1"
+
+# A new commit on a pull request replaces the run still in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Jobs declare their own token scopes.
+permissions: {}
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    # Same image pin as CI: ubuntu-latest warns until 2026-11-19 while that label moves to 26.04.
+    runs-on: ubuntu-24.04
+    permissions:
+      # Checkout reads the repository. Uploading SARIF writes code scanning alerts.
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: rust
+            build-mode: none
+          - language: python
+            build-mode: none
+          - language: actions
+            build-mode: none
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # With no argument, rustup installs the version pinned in rust-toolchain.toml.
+      - name: Install the pinned toolchain
+        if: matrix.language == 'rust'
+        run: rustup toolchain install
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
