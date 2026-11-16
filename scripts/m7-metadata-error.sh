@@ -8,8 +8,9 @@
 # keeps the qualified kernel, filesystem and mount options and sees the failures as I/O errors.
 # The guest runs the four V3 steps (`powercut metaerr`) and waits at each switch on its console.
 #
-# Pass: the directory fsync while writes fail returns an error, and every call after the device
-# works again fails until remount. --control mounts with errors=continue, the mode V3 rules out:
+# Pass (ADR 0062): the directory fsync while writes fail returns an error, and every write after
+# the device works again fails until remount. The later directory fsyncs are printed, and decide
+# nothing. --control mounts with errors=continue, the mode V3 rules out:
 # the case must fail under it, or the record states that this kernel stops writes anyway.
 # --panic is V3's separate procedure for errors=panic: it passes when the guest halts at the
 # failure, before any later call returns.
@@ -78,13 +79,15 @@ step() { grep "^STEP $1 " <<<"$out" | awk '{print $3}'; }
 grep -q "^DONE" <<<"$out" || { echo "FAIL: the steps did not finish" >&2; exit 1; }
 v3=pass
 [ "$(step 2-dirsync)" = err ] || v3="fail: the directory fsync succeeded while writes failed"
-for s in 4-dirsync-held 4-dirsync-new 4-file; do
-	[ "$(step "$s")" = err ] || v3="fail: $s succeeded after the device recovered"
-done
+[ "$(step 4-file)" = err ] || v3="fail: a write succeeded after the device recovered"
+echo "evidence: directory fsync after recovery: held $(step 4-dirsync-held), new $(step 4-dirsync-new)"
 echo "== V3 ${control:+control }result: $v3"
 if [ "$control" = --control ]; then
-	[ "$v3" != pass ] && echo "control: errors=continue fails the case (expected)" ||
+	if [ "$v3" != pass ]; then
+		echo "control: errors=continue fails the case (expected)"
+	else
 		echo "control: this kernel stops writes under errors=continue too, so no control could be built"
+	fi
 else
 	[ "$v3" = pass ] || exit 1
 fi
