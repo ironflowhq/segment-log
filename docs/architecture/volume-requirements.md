@@ -53,7 +53,7 @@ These rules apply to every case below.
 | --- | --- | --- | --- | --- |
 | V1 | A successful flush makes the bytes survive every failure event in the declared failure domain. | MUST | I1, I3; [ADR 0005](../decisions/0005-flush-calls-and-platforms.md) | `VOL-FLUSH-CONFIG`, `VOL-FLUSH-TRACE`, `VOL-POWER-CUT` |
 | V2 | A power cut never leaves a sector with contents other than its old or its new bytes. | MUST | I3, I4; [ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md) | `VOL-POWER-CUT-RECOVERY`; `VOL-ATOMIC-WRITE` as supporting evidence |
-| V3 | After a metadata write error, the filesystem refuses every later write and sync until it is remounted. | MUST | I3; [ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md) | `VOL-METADATA-ERROR` |
+| V3 | After a metadata write error, the filesystem refuses every later write until it is remounted ([ADR 0062](../decisions/0062-v3-requires-refused-writes-not-failed-syncs.md)). | MUST | I3; [ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md) | `VOL-METADATA-ERROR` |
 | V4 | The log directory is on a local ext4 or xfs filesystem on a block device. | MUST | I8; [ADR 0005](../decisions/0005-flush-calls-and-platforms.md), [ADR 0018](../decisions/0018-writer-epoch-from-the-segments.md) | `VOL-FS-CHECK` |
 | V5 | At most one kernel has the volume attached for writing, no other kernel mounts it while that one does, and a former owner cannot write after ownership moves. | MUST | I8; R16 | `VOL-EXCLUSIVE` |
 | V6 | The volume outlives the guest and is readable after the guest is destroyed. | MUST | R20, R23; [ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md) | `HANDOFF` ([testing.md](testing.md#surviving-volume-handoff-before-m6)) |
@@ -113,7 +113,7 @@ Pass: zero acknowledged records missing, and the next open succeeds without `Cor
 
 ### V3. The filesystem stops after a metadata write error
 
-**Requirement.** After a metadata write fails, the filesystem refuses every later write and sync until it is remounted, even if the device recovers. A failed directory `fsync` must never be followed by a successful one that wrote nothing.
+**Requirement.** After a metadata write fails, the filesystem refuses every later write until it is remounted, even if the device recovers ([ADR 0062](../decisions/0062-v3-requires-refused-writes-not-failed-syncs.md)). A later `fsync` may then succeed, because it has nothing to write. The log never takes such an `fsync` as proof: the writer poisons on the first failed flush, and open writes back what it recovers before it syncs ([ADR 0015](../decisions/0015-open-makes-the-recovered-tail-durable.md)).
 
 **Layers.** Guest filesystem.
 
@@ -122,9 +122,9 @@ Pass: zero acknowledged records missing, and the next open succeeds without `Cor
 1. Create a file in a directory, then write it and call `sync_all`, so that its data is durable.
 2. Switch the target to fail writes. Create a second file in the same directory, then `fsync` the directory. Confirm with a block-layer trace that a metadata write failed.
 3. Switch the target back to working.
-4. `fsync` the directory again, once through the handle from step 2 and once through a newly opened handle. Then write and sync a file.
+4. `fsync` the directory again, once through the handle from step 2 and once through a newly opened handle. Then write and sync a new file in that directory.
 
-Pass: the directory `fsync` in step 2 fails, and every call in step 4 fails until remount. If step 2 cannot be made to fail, the case is `Not verified`. With `errors=panic`, run a separate procedure: it passes when the guest halts at the failure, before any later call returns. On ext4, the audit also confirms `errors=remount-ro` or `errors=panic` (`tune2fs -l` or the mount options). Control: where the kernel under test has a mode that continues after metadata errors (for ext4, `errors=continue` is the candidate), the case must fail under it. If that mode still stops writes on this kernel, record that no control could be built.
+Pass: the directory `fsync` in step 2 fails, and every write in step 4 fails until remount. The step 4 directory `fsync` results are recorded and decide nothing. If step 2 cannot be made to fail, the case is `Not verified`. With `errors=panic`, run a separate procedure: it passes when the guest halts at the failure, before any later call returns. On ext4, the audit also confirms `errors=remount-ro` or `errors=panic` (`tune2fs -l` or the mount options). Control: where the kernel under test has a mode that continues after metadata errors (for ext4, `errors=continue` is the candidate), the case must fail under it. If that mode still stops writes on this kernel, record that no control could be built.
 
 ### V4. A local ext4 or xfs filesystem on a block device
 

@@ -13,7 +13,7 @@ The guest kernel has no device-mapper, so the failing target is a dm table on th
 | `errors=panic` (separate procedure) | EIO | ok | ok | panic | Fail: the panic comes at the step 4 file write, after both fsyncs returned |
 | `errors=remount-ro`, guest kernel 5.10.245 | EIO | ok | ok | EROFS | Fail |
 
-After the journal aborts, the filesystem is read-only, and an fsync that has nothing to write returns success. V3 requires that every call after the failure fails until remount, so V3 fails on this filesystem and kernel. Every write fails with EROFS, so a writer cannot append after the failure. The log poisons on the first failed flush and never retries one ([ADR 0004](../../../decisions/0004-io-errors-poison-the-writer.md)). Whether that is enough is a requirement decision, not a test result: see issue 112.
+After the journal aborts, the filesystem is read-only, and an fsync that has nothing to write returns success. V3 requires that every call after the failure fails until remount, so V3 fails on this filesystem and kernel. Every write fails with EROFS, so a writer cannot append after the failure. The log poisons on the first failed flush and never retries one ([ADR 0004](../../../decisions/0004-io-errors-poison-the-writer.md)). [ADR 0062](../../../decisions/0062-v3-requires-refused-writes-not-failed-syncs.md) proposes to make refused writes the requirement. Under it, `errors=remount-ro` passes, and the record states that no control could be built, because `errors=continue` also makes this filesystem read-only.
 
 ## V9 `VOL-ENOSPC`: passes for both layers
 
