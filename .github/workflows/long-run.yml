@@ -88,7 +88,7 @@ jobs:
       - run: rustup toolchain install
       - name: The planted record failed the long run
         run: test "${{ needs.m1-long-run.result }}" = failure
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: trace-failures-${{ matrix.os }}
           path: .audit/drill
