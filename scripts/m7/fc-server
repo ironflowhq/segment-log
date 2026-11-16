@@ -10,6 +10,7 @@
 # M7_CACHE_TYPE=Unsafe is the known-bad control for VOL-FLUSH-CONFIG. M7_VMLINUX boots another
 # guest kernel and M7_GUEST_MOUNT adds mount options in the guest, both for VOL-DRIFT.
 # M7_DRIFT_CHECK=0 skips the fingerprint check, for controls that change the stack on purpose.
+# M7_REWRITE_CONTROL=1 runs the server built with rewrite-control, the V2 control.
 set -eu
 : "${M7_CACHE:?set M7_CACHE}"
 [ "${1:-}" = --dir ] || { echo "fc-server: want --dir first" >&2; exit 64; }
@@ -49,7 +50,7 @@ cat >"$host/vm.json" <<EOF
 {
   "boot-source": {
     "kernel_image_path": "$kernel",
-    "boot_args": "console=ttyS0 reboot=k panic=1 ro $drift ${M7_GUEST_MOUNT:+m7.mount=$M7_GUEST_MOUNT} init=/segment-log-init -- $*"
+    "boot_args": "console=ttyS0 reboot=k panic=1 ro $drift ${M7_GUEST_MOUNT:+m7.mount=$M7_GUEST_MOUNT} ${M7_REWRITE_CONTROL:+m7.control=rewrite} init=/segment-log-init -- $*"
   },
   "drives": [
     {"drive_id": "root", "path_on_host": "$M7_CACHE/rootfs.ext4", "is_root_device": true, "is_read_only": true},

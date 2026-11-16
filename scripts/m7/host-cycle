@@ -8,6 +8,13 @@
 #   host-cycle start <work> <run> <cycle> <observer>  boot the guest, then start the load
 #   host-cycle check <work> <run> <observer> [cycle]  boot the guest, recover, check, destroy it
 #
+# For VOL-POWER-CUT-RECOVERY (scripts/m7-recovery-cut.sh) the volume sits on a dm-delay device:
+#   host-cycle delay <work> <ms> [fresh]   create or retune it; `fresh` starts a new image
+#   host-cycle prepare <work> <fixture> <run> <cycle> <observer>   leave the fixture's last write
+#   host-cycle boot <work>                 boot the guest and return; its open does the rewrite
+#   host-cycle ready <work>                waits until the server answers, so its open is done
+#   host-cycle stream <work>               the guest console and the block trace, line by line
+#
 # <work> holds the volume image and must be on the qualified host filesystem. M7_CACHE_TYPE picks
 # the block cache mode for `start` (Unsafe is the host-event control).
 set -euo pipefail
@@ -19,7 +26,71 @@ cmd=${1:?usage: host-cycle prep|boot-id|start|check ...}
 work=${2:-}
 address=$work/v.sock:5000
 
+dm=m7-v2
+image() { # the volume, on the delay device when it exists
+	if [ -e "/dev/mapper/$dm" ]; then echo "/dev/mapper/$dm"; fi
+}
+
 case $cmd in
+delay)
+	ms=${3:?ms} fresh=${4:-}
+	modprobe dm_delay
+	if [ -n "$fresh" ]; then
+		dmsetup remove "$dm" 2>/dev/null || true
+		losetup -j "$work/log.img" | cut -d: -f1 | xargs -r -n1 losetup -d
+		rm -f "$work/log.img"
+	fi
+	if [ ! -e "$work/log.img" ]; then
+		truncate -s "$M7_LOG_BYTES" "$work/log.img"
+		/sbin/mkfs.ext4 -q -F "$work/log.img"
+	fi
+	loop=$(losetup -j "$work/log.img" | cut -d: -f1 | head -n 1)
+	[ -n "$loop" ] || loop=$(losetup -f --show "$work/log.img")
+	sectors=$(blockdev --getsz "$loop")
+	# Reads go through at once; writes and flushes wait <ms>, which widens open's rewrite window.
+	table="0 $sectors delay $loop 0 0 $loop 0 $ms"
+	if [ -e "/dev/mapper/$dm" ]; then
+		dmsetup suspend "$dm" && dmsetup load "$dm" --table "$table" && dmsetup resume "$dm"
+	else
+		dmsetup create "$dm" --table "$table"
+	fi
+	;;
+prepare)
+	fixture=${3:?fixture} run=${4:?run} cycle=${5:?cycle} observer=${6:?observer}
+	M7_IMAGE=$(image) "$repo/scripts/m7/fc-server" --dir "$work/log" --vsock-port 5000 \
+		</dev/null >>"$work/vmm.log" 2>&1 &
+	vm=$!
+	"$pc" ready -address "$address"
+	case $fixture in
+	header) ;; # a new log: one segment with only its header
+	clean | sealed)
+		# A short load that no event ends; it syncs its reports before it exits.
+		"$pc" load -address "$address" -observer "$observer" -run "$run" -cycle "$cycle" -max 2s \
+			>>"$work/load.log" 2>&1 || true
+		;;
+	*) echo "unknown fixture $fixture" >&2; exit 64 ;;
+	esac
+	if [ "$fixture" = sealed ]; then
+		"$pc" seal -address "$address"
+		wait "$vm" || true
+	else
+		kill -KILL "$vm"
+		wait "$vm" 2>/dev/null || true
+	fi
+	;;
+boot)
+	M7_IMAGE=$(image) setsid "$repo/scripts/m7/fc-server" --dir "$work/log" --vsock-port 5000 \
+		</dev/null >>"$work/vmm.log" 2>&1 &
+	;;
+ready)
+	"$pc" ready -address "$address" -max 120s
+	;;
+stream)
+	: >"$work/console.log"
+	tail -n 0 -F "$work/console.log" 2>/dev/null | sed -u 's/^/CON /' &
+	blktrace -d "/dev/mapper/$dm" -a write -a complete -o - 2>/dev/null |
+		blkparse -q -i - -f 'BLK %a %d %S %n\n'
+	;;
 prep)
 	# A host kernel crash must end in a reboot, not a hung panic screen.
 	printf 'kernel.panic = 5\nkernel.sysrq = 1\n' >/etc/sysctl.d/90-m7.conf
@@ -43,7 +114,7 @@ start)
 check)
 	run=${3:?run} observer=${4:?observer} only=${5:-}
 	# fc-server execs the VMM, so $! is the VMM itself and the trap destroys the guest.
-	M7_CACHE_TYPE=Writeback "$repo/scripts/m7/fc-server" --dir "$work/log" --vsock-port 5000 \
+	M7_CACHE_TYPE=Writeback M7_IMAGE=$(image) "$repo/scripts/m7/fc-server" --dir "$work/log" --vsock-port 5000 \
 		</dev/null >>"$work/vmm.log" 2>&1 &
 	vm=$!
 	# The VMM holds the volume's lock until it exits, so wait for it before the next cycle.
