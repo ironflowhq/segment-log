@@ -6,6 +6,7 @@ mod collisions;
 mod lifetime;
 mod log_filter;
 mod memory;
+mod pending;
 mod poison;
 
 fn rolling() -> Options {
@@ -24,7 +25,9 @@ fn open_hooked(sim: &Sim, hooks: &Hooks) -> SegmentLog {
         hooks.clone(),
     )
     .unwrap();
-    super::support::oracle::sealed_unchanged(&before, &raw::segments(sim));
+    super::support::oracle::sealed_unchanged_with(&before, &raw::segments(sim), |groups, epoch| {
+        raw::roll_run_forced(groups, epoch, &hooks.key_hashes)
+    });
     log
 }
 

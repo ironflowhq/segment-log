@@ -81,6 +81,8 @@ pub(crate) struct Hooks {
     /// Tests build the log key filter on the writer thread by default, so that traces stay the
     /// same from run to run.
     pub log_filter: LogFilterMode,
+    /// Tests build a roll's closing run on the writer thread by default, for the same reason.
+    pub background_seal: bool,
 }
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Limits {
@@ -117,6 +119,8 @@ pub struct SegmentLog {
     drop_closed: Option<mpsc::Sender<()>>,
     #[cfg(test)]
     memory: Arc<Mutex<KeyMemory>>,
+    #[cfg(test)]
+    rolls: Arc<Mutex<Vec<std::time::Duration>>>,
 }
 /// The queue's only sender. `append` holds the read lock across its state check and `try_send`,
 /// and `seal` takes the sender out under the write lock. So seal starts at one point in queue
@@ -153,6 +157,7 @@ impl SegmentLog {
             KeyHash::new,
             Limits::default(),
             LogFilterMode::Background,
+            true,
         )
     }
     #[cfg(test)]
@@ -174,9 +179,18 @@ impl SegmentLog {
             key_hashes,
             limits,
             log_filter,
+            background_seal,
         } = hooks;
         let hash = |log_id| KeyHash::new(log_id).forcing(key_hashes);
-        Self::start(dir, options, storage, hash, limits, log_filter)
+        Self::start(
+            dir,
+            options,
+            storage,
+            hash,
+            limits,
+            log_filter,
+            background_seal,
+        )
     }
     fn start(
         dir: &Path,
@@ -185,6 +199,7 @@ impl SegmentLog {
         hash: impl FnOnce(codec::LogId) -> KeyHash,
         limits: Limits,
         log_filter: LogFilterMode,
+        background_seal: bool,
     ) -> Result<Self, OpenError> {
         if options.queue_capacity == 0 || options.pending_byte_budget == 0 {
             return Err(OpenError::InvalidOptions("capacities must be positive"));
@@ -212,6 +227,8 @@ impl SegmentLog {
         let poisoned = Arc::new(std::sync::atomic::AtomicBool::new(false));
         #[cfg(test)]
         let memory = Arc::new(Mutex::new(KeyMemory::default()));
+        #[cfg(test)]
+        let rolls = Arc::new(Mutex::new(Vec::new()));
         let (gate, lifecycle) = match state {
             recovery::State::Sealed => (Gate::Closed, Lifecycle::Sealed),
             recovery::State::Writable(writable) => {
@@ -228,6 +245,8 @@ impl SegmentLog {
                 let writer_options = options.clone();
                 #[cfg(test)]
                 let writer_memory = memory.clone();
+                #[cfg(test)]
+                let writer_rolls = rolls.clone();
                 let writer = thread::Builder::new()
                     .name("segment-log-writer".into())
                     .spawn(move || {
@@ -240,8 +259,12 @@ impl SegmentLog {
                                 keys,
                                 active: writable.active,
                                 limits,
+                                background_seal,
+                                pending: None,
                                 #[cfg(test)]
                                 memory: writer_memory,
+                                #[cfg(test)]
+                                rolls: writer_rolls,
                             },
                             writer_options,
                         );
@@ -264,11 +287,18 @@ impl SegmentLog {
             drop_closed: None,
             #[cfg(test)]
             memory,
+            #[cfg(test)]
+            rolls,
         })
     }
     #[cfg(test)]
     pub(crate) fn key_memory(&self) -> KeyMemory {
         *self.memory.lock().unwrap()
+    }
+    /// The writer thread's time in each roll so far, in order.
+    #[cfg(test)]
+    pub(crate) fn roll_times(&self) -> Vec<std::time::Duration> {
+        self.rolls.lock().unwrap().clone()
     }
     #[cfg(test)]
     pub(crate) fn observe_drop(&mut self) -> mpsc::Receiver<()> {
