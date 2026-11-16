@@ -48,10 +48,12 @@ Use each term with this meaning only. If you need another meaning, use another w
 | **Cache** | Any state that the log can rebuild by reading segments. A cache is never the only copy of a fact. |
 | **Volume** | Every layer that holds one log directory: the guest filesystem, the guest block device, the VMM, the host storage and the durable media. Its requirements are in [volume-requirements.md](architecture/volume-requirements.md). |
 | **Failure domain** | The failure events after which a volume still holds every acknowledged record. [ADR 0040](decisions/0040-volumes-meet-testable-minimum-requirements.md) sets the minimum, and each deployment declares the rest. |
+| **Handoff** | Passing a log from the guest that wrote it to the component that reads it after that guest is gone. The volume outlives the guest, one kernel has it at a time, and a sealed log goes to a read-only reader while an unsealed one first gets writable recovery. The deployment owns it ([ADR 0033](decisions/0033-deployment-owns-volumes-and-reader-handoff.md)). The `HANDOFF` case tests it. |
 | **Message** | One unit of the server's [wire protocol](architecture/protocol.md): an 8-byte header and a body. A request or an answer. Not a frame, which is on disk. |
 | **Conformance case** | One JSON file in `conformance/` that lists requests to a server and the answers it must give. Every transport runs the same cases ([testing.md](architecture/testing.md#m6-transport-order-and-conformance)). |
 | **Wire vector** | One line of `conformance/wire.txt`: a whole message written byte for byte from protocol.md's tables, with a name. The server tests and the Go client both check it. |
 | **Qualification record** | A document in `docs/` that identifies one stack and gives the evidence and result for each volume requirement ([ADR 0032](decisions/0032-qualify-deployment-storage-before-m6.md), [ADR 0040](decisions/0040-volumes-meet-testable-minimum-requirements.md)). |
+| **Handoff record** | The document that names one stack's surviving volume, its writer and reader mount paths, its reader and its handoff procedure ([testing.md](architecture/testing.md#surviving-volume-handoff-before-m6)). For the M7 stack it is [docs/evidence/m7/handoff.md](evidence/m7/handoff.md). |
 
 ## Diagrams
 
