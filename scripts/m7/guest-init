@@ -38,6 +38,15 @@ if [ -r /etc/m7-fingerprint ] && ! grep -qw m7.drift=off /proc/cmdline; then
 		reboot -f
 	fi
 fi
+# VOL-METADATA-ERROR: the V3 steps run in place of the server, and the host answers each cue on
+# the serial console after it switches the device (scripts/m7-metadata-error.sh).
+if [ "${1:-}" = --metaerr ]; then
+	dmesg -n 1 # kernel messages would split the step lines on the console
+	/segment-log-probe metaerr -dir /mnt/metaerr </dev/console 2>&1 | sed 's/^/m7: /'
+	dmesg | grep -iE 'i/o error|ext4-fs|journal' | sed 's/^/m7: dmesg /'
+	echo "m7: mounted $(findmnt -no OPTIONS -T /mnt)"
+	reboot -f
+fi
 # VOL-FLUSH-LATENCY: the flush probe runs in place of the server (scripts/m7-flush-latency.sh).
 if [ "${1:-}" = --probe ]; then
 	shift

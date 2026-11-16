@@ -31,7 +31,9 @@ elif [ -r "$fingerprint" ]; then
 			{ echo "fc-server: drift: $key is '${field#*=}', qualified '$want'" >&2; exit 78; }
 	done
 fi
-img=$host/log.img
+# M7_IMAGE puts the volume on a host block device instead, such as a device-mapper target that
+# VOL-METADATA-ERROR switches to failing writes. The caller formats it.
+img=${M7_IMAGE:-$host/log.img}
 if [ ! -e "$img" ]; then
 	truncate -s "${M7_LOG_BYTES:-1G}" "$img"
 	/sbin/mkfs.ext4 -q -F "$img"

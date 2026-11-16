@@ -5,6 +5,7 @@
 //	powercut check -network N -address A -observer H:P -run R
 //	powercut ready -network N -address A                  waits until the server answers Hello
 //	powercut probe -dir D -bytes B -duration T -rate R      the flush probe (VOL-FLUSH-LATENCY)
+//	powercut metaerr -dir D                                 the steps of VOL-METADATA-ERROR
 //
 // load appends fully keyed records with deterministic payloads and, after each acknowledgment,
 // reports its key, log offset and stream revision to the observer, which stores them durably.
@@ -51,6 +52,8 @@ func main() {
 		ready(os.Args[2:])
 	case "probe":
 		probe(os.Args[2:])
+	case "metaerr":
+		metaerr(os.Args[2:])
 	default:
 		fail("unknown command " + os.Args[1])
 	}
@@ -384,4 +387,66 @@ func probe(args []string) {
 	fmt.Printf("PROBE cycles=%d syncs_per_s=%.1f mean_us=%d p50_us=%d p99_us=%d p999_us=%d max_us=%d bytes=%d\n",
 		len(cycles), float64(len(cycles))/duration.Seconds(), (sum / time.Duration(len(cycles))).Microseconds(),
 		at(0.5), at(0.99), at(0.999), cycles[len(cycles)-1].Microseconds(), *size)
+}
+
+// metaerr runs the four steps of VOL-METADATA-ERROR (volume-requirements.md, V3) in dir. It prints
+// READY-FAIL and READY-RECOVER and waits for a line on stdin at each, while the host switches the
+// device under the filesystem to failing writes and back. Each later line reports one call.
+func metaerr(args []string) {
+	fs := flag.NewFlagSet("metaerr", flag.ExitOnError)
+	dir := fs.String("dir", ".", "directory on the filesystem under test")
+	fs.Parse(args)
+	in := bufio.NewReader(os.Stdin)
+	report := func(step string, err error) {
+		if err != nil {
+			fmt.Printf("STEP %s err %v\n", step, err)
+		} else {
+			fmt.Printf("STEP %s ok\n", step)
+		}
+	}
+	writeSynced := func(name string) error {
+		f, err := os.Create(filepath.Join(*dir, name))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if _, err := f.Write([]byte(name)); err != nil {
+			return err
+		}
+		return f.Sync()
+	}
+	wait := func(cue string) {
+		fmt.Println(cue)
+		if _, err := in.ReadString('\n'); err != nil {
+			fail("no answer to " + cue)
+		}
+	}
+	if err := os.MkdirAll(*dir, 0o755); err != nil {
+		fail(err.Error())
+	}
+	// Step 1: a durable file.
+	report("1-file", writeSynced("first"))
+	// Step 2: with writes failing, a new entry and the directory fsync.
+	held, err := os.Open(*dir)
+	if err != nil {
+		fail(err.Error())
+	}
+	wait("READY-FAIL")
+	f, err := os.Create(filepath.Join(*dir, "second"))
+	if err == nil {
+		f.Close()
+	}
+	report("2-create", err)
+	report("2-dirsync", held.Sync())
+	// Step 4, after the device works again: both handles, then a file.
+	wait("READY-RECOVER")
+	report("4-dirsync-held", held.Sync())
+	fresh, err := os.Open(*dir)
+	if err == nil {
+		err = fresh.Sync()
+		fresh.Close()
+	}
+	report("4-dirsync-new", err)
+	report("4-file", writeSynced("third"))
+	fmt.Println("DONE")
 }
