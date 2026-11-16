@@ -64,6 +64,27 @@ timeout 3 "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 || rc=
 rm -rf "$dir"
 echo "refused while attached and while paused; attached after the owner died"
 
+echo "== two launches at once (VOL-EXCLUSIVE step 3, one host)"
+# Two launchers race for one unattached volume, 20 times: exactly one may boot it.
+for round in $(seq 20); do
+	dir=$(mktemp -d /tmp/m7-XXXX)
+	truncate -s 64M "$dir/log.img" && /sbin/mkfs.ext4 -q -F "$dir/log.img"
+	for _ in 1 2; do
+		(
+			rc=0
+			timeout 3 "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 2>/dev/null || rc=$?
+			echo "$rc" >>"$dir/codes"
+		) &
+	done
+	wait
+	mapfile -t codes <"$dir/codes"
+	rm -rf "$dir"
+	# 124: booted and ran until the timeout; 75: refused by the fence.
+	[ "$(printf '%s\n' "${codes[@]}" | sort | tr '\n' ' ')" = "124 75 " ] ||
+		{ echo "FAIL: round $round: launch exit codes ${codes[*]}, want one 124 and one 75" >&2; exit 1; }
+done
+echo "exactly one of two simultaneous launches attached, in 20 of 20 rounds"
+
 echo "== conformance over Firecracker vsock"
 cd "$repo/clients/go"
 SEGMENT_LOG_TRANSPORT=firecracker SEGMENT_LOG_SERVER="$repo/scripts/m7/fc-server" \
