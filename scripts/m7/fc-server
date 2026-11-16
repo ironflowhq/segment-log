@@ -7,12 +7,30 @@
 # destroys the guest and the volume survives.
 #
 # M7_CACHE holds firecracker, vmlinux and rootfs.ext4 (m7-rehearse.sh builds them).
-# M7_CACHE_TYPE=Unsafe is the known-bad control for VOL-FLUSH-CONFIG.
+# M7_CACHE_TYPE=Unsafe is the known-bad control for VOL-FLUSH-CONFIG. M7_VMLINUX boots another
+# guest kernel and M7_GUEST_MOUNT adds mount options in the guest, both for VOL-DRIFT.
+# M7_DRIFT_CHECK=0 skips the fingerprint check, for controls that change the stack on purpose.
 set -eu
 : "${M7_CACHE:?set M7_CACHE}"
 [ "${1:-}" = --dir ] || { echo "fc-server: want --dir first" >&2; exit 64; }
 host=$(dirname "$2")
 shift 2
+kernel=${M7_VMLINUX:-$M7_CACHE/vmlinux}
+cache_type=${M7_CACHE_TYPE:-Writeback}
+# V10: the launcher's half of the qualified fingerprint, before anything boots. The guest checks
+# its half before the log opens (scripts/m7/guest-init).
+fingerprint=$(dirname "$0")/fingerprint
+drift=
+if [ "${M7_DRIFT_CHECK:-1}" = 0 ]; then
+	drift=m7.drift=off
+elif [ -r "$fingerprint" ]; then
+	for field in "vmm.cache_type=$cache_type" "vmm.firecracker=$("$M7_CACHE/firecracker" --version | head -n 1)"; do
+		key=${field%%=*}
+		want=$(sed -n "s/^$key=//p" "$fingerprint")
+		[ "${field#*=}" = "$want" ] ||
+			{ echo "fc-server: drift: $key is '${field#*=}', qualified '$want'" >&2; exit 78; }
+	done
+fi
 img=$host/log.img
 if [ ! -e "$img" ]; then
 	truncate -s "${M7_LOG_BYTES:-1G}" "$img"
@@ -28,13 +46,13 @@ case " $* " in *" --read-only "*) ro=true ;; *) ro=false ;; esac
 cat >"$host/vm.json" <<EOF
 {
   "boot-source": {
-    "kernel_image_path": "$M7_CACHE/vmlinux",
-    "boot_args": "console=ttyS0 reboot=k panic=1 ro init=/segment-log-init -- $*"
+    "kernel_image_path": "$kernel",
+    "boot_args": "console=ttyS0 reboot=k panic=1 ro $drift ${M7_GUEST_MOUNT:+m7.mount=$M7_GUEST_MOUNT} init=/segment-log-init -- $*"
   },
   "drives": [
     {"drive_id": "root", "path_on_host": "$M7_CACHE/rootfs.ext4", "is_root_device": true, "is_read_only": true},
     {"drive_id": "log", "path_on_host": "$img", "is_root_device": false, "is_read_only": $ro,
-     "cache_type": "${M7_CACHE_TYPE:-Writeback}"}
+     "cache_type": "$cache_type"}
   ],
   "machine-config": {"vcpu_count": ${M7_VCPUS:-2}, "mem_size_mib": ${M7_MEM_MIB:-256}},
   "vsock": {"guest_cid": 3, "uds_path": "$host/v.sock"}
