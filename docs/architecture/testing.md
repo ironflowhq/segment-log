@@ -308,7 +308,7 @@ Evidence must apply to the identified setup. A syscall trace alone does not esta
 
 The reader component is `segment-log-server --read-only` ([ADR 0060](../decisions/0060-the-server-reads-a-sealed-log-with-read-only.md)). `TestHandoffSealed` and `TestHandoffUnsealed` in `clients/go/handoff_test.go` implement the case. Over the stack in [ADR 0059](../decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md), each server start is a new guest on the same volume, and the reader's drive is read-only.
 
-The [handoff record](../evidence/m7/handoff.md) gives the volume, the writer and reader mount paths, the reader and the procedure for the ADR 0059 stack, with the `HANDOFF` results so far. It references the actual-stack qualification in ADR 0032. M1 still selects no provider, path or reader.
+The [handoff record](../evidence/m7/handoff.md) gives the volume, the writer and reader mount paths, the reader and the procedure for the ADR 0059 stack, with a [sequence diagram](../evidence/m7/handoff.md#sequence), with the `HANDOFF` results so far. It references the actual-stack qualification in ADR 0032. M1 still selects no provider, path or reader.
 
 ## M6 transport order and conformance
 
