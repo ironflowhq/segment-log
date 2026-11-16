@@ -79,6 +79,7 @@ The rules that follow from it:
 
 ## Consequences
 
+- [ADR 0061](0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md) amends rule 6 and the roll cost: a sealer thread builds the key frames, the writer writes them at the next group boundary, and recovery rebuilds a pending closing run. Appends no longer wait for the key frames.
 - [ADR 0055](0055-format-version-2-aligns-key-index-pages.md) ends the key filter frame's body with zero padding, so that the key index pages start on a 4 KiB boundary.
 - [ADR 0051](0051-a-log-key-filter-in-memory-in-front-of-the-segment-filters.md) puts a log key filter kept only in memory in front of the segment filters, and adds it to the memory in rule 5.
 - PRD open item 1 is resolved. M4 can start.
