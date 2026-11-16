@@ -36,10 +36,21 @@ boot_once() {
 	rm -rf "$dir"
 }
 
+# V4: the log directory is on ext4 or xfs, and the source is a block device.
+fs_ok() { # fs_ok "<source> <type> <options>"
+	local source type
+	read -r source type _ <<<"$1"
+	case $type in ext4 | xfs) [ -b "$source" ] || [[ $source == /dev/vd* ]] ;; *) return 1 ;; esac
+}
+
 echo "== VOL-FS-CHECK and VOL-FLUSH-CONFIG (Writeback)"
 out=$(boot_once Writeback)
 echo "$out"
-grep -Eq "^m7: fs /dev/vdb ext4 " <<<"$out" || { echo "FAIL VOL-FS-CHECK" >&2; exit 1; }
+fs_ok "$(sed -n 's/^m7: fs //p' <<<"$out")" || { echo "FAIL VOL-FS-CHECK" >&2; exit 1; }
+# The control: the same rule rejects a directory on tmpfs.
+shm=$(findmnt -no SOURCE,FSTYPE,OPTIONS -T /dev/shm | tr -s ' ')
+! fs_ok "$shm" || { echo "FAIL VOL-FS-CHECK control: accepted $shm" >&2; exit 1; }
+echo "control: rejects /dev/shm ($shm)"
 grep -q "^m7: write_cache write back" <<<"$out" || { echo "FAIL VOL-FLUSH-CONFIG" >&2; exit 1; }
 
 echo "== VOL-FLUSH-CONFIG control (Unsafe)"
@@ -61,8 +72,18 @@ wait "$pid" 2>/dev/null || true
 rc=0
 timeout 3 "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 || rc=$?
 [ "$rc" = 124 ] || { echo "FAIL: no VMM could attach after the owner died (exit $rc)" >&2; exit 1; }
+# The control: without the fence, a second VMM attaches the volume its owner still holds.
+"$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 &
+pid=$!
+sleep 2
+rc=0
+M7_FENCE=0 timeout 3 "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5001 2>/dev/null || rc=$?
+kill -KILL "$pid"
+wait "$pid" 2>/dev/null || true
+[ "$rc" = 124 ] || { echo "FAIL VOL-EXCLUSIVE control: an unfenced launcher did not attach (exit $rc)" >&2; exit 1; }
 rm -rf "$dir"
 echo "refused while attached and while paused; attached after the owner died"
+echo "control: with the fence off, a second VMM attached the held volume"
 
 echo "== two launches at once (VOL-EXCLUSIVE step 3, one host)"
 # Two launchers race for one unattached volume, 20 times: exactly one may boot it.

@@ -1,7 +1,10 @@
 //! The M6 socket diagnostic (ADR 0056): the M1 append workload, run in process or over the Unix
 //! socket, so that the difference between two runs is the transport.
 //!
-//! usage: socket_bench (--inproc <log-dir> | --unix <socket>) <callers> <rounds> [<interval-us>]
+//! usage: socket_bench (--inproc <log-dir> | --unix <socket> | --firecracker <uds>:<port>) <callers> <rounds> [<interval-us>]
+//!
+//! `--firecracker` dials a server in a Firecracker guest through the VMM's hybrid vsock socket
+//! (`CONNECT <port>`), the caller's path on the M7 stack (ADR 0059): the M7 guest benchmark.
 //!
 //! Each caller appends one keyed 256-byte record per round to its own stream, expecting the
 //! previous revision, as the M1 benchmark does (segment-log-core/src/acceptance/evidence.rs).
@@ -93,9 +96,31 @@ fn quantile(sorted: &[u64], numerator: usize, denominator: usize) -> u64 {
         .saturating_sub(1)]
 }
 
+/// A Unix socket, or a Firecracker guest's vsock port through the VMM's socket.
+fn dial(mode: &str, path: &str) -> UnixStream {
+    if mode != "--firecracker" {
+        return UnixStream::connect(path).unwrap();
+    }
+    let (uds, port) = path.rsplit_once(':').expect("--firecracker <uds>:<port>");
+    let mut stream = UnixStream::connect(uds).unwrap();
+    stream
+        .write_all(format!("CONNECT {port}\n").as_bytes())
+        .unwrap();
+    // The VMM answers "OK <host port>\n"; read it byte by byte so no protocol byte is consumed.
+    let mut reply = Vec::new();
+    let mut byte = [0];
+    while reply.last() != Some(&b'\n') {
+        stream.read_exact(&mut byte).unwrap();
+        reply.push(byte[0]);
+        assert!(reply.len() <= 32, "no answer to CONNECT");
+    }
+    assert!(reply.starts_with(b"OK "), "CONNECT refused: {reply:?}");
+    stream
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let usage = "usage: socket_bench (--inproc <log-dir> | --unix <socket>) <callers> <rounds> [<interval-us>]";
+    let usage = "usage: socket_bench (--inproc <log-dir> | --unix <socket> | --firecracker <uds>:<port>) <callers> <rounds> [<interval-us>]";
     let [mode, path, callers, rounds, rest @ ..] = args.as_slice() else {
         panic!("{usage}");
     };
@@ -108,13 +133,13 @@ fn main() {
         "--inproc" => Some(Arc::new(
             SegmentLog::open(path, Options::default()).unwrap(),
         )),
-        "--unix" => None,
+        "--unix" | "--firecracker" => None,
         _ => panic!("{usage}"),
     };
     let options = Options::default();
     println!(
         "CONFIG transport={} callers={callers} rounds={rounds} payload=256 records_per_submit=1 interval_ns={} linger_ns={} group_byte_cap={} queue_capacity={} pending_byte_budget={}",
-        if log.is_some() { "inproc" } else { "unix" },
+        mode.trim_start_matches('-'),
         interval.map_or(0, |i| i.as_nanos()),
         options.linger.as_nanos(),
         options.group_byte_cap,
@@ -126,7 +151,7 @@ fn main() {
         .map(|_| match &log {
             Some(log) => Target::InProcess(Arc::clone(log)),
             None => {
-                let mut stream = UnixStream::connect(path).unwrap();
+                let mut stream = dial(mode, path);
                 let hello = exchange(
                     &mut stream,
                     &Request::Hello {
