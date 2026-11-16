@@ -84,7 +84,7 @@ jobs:
           M4_SEALED: ${{ inputs.sealed || '100' }}
           M4_ROLL_BYTES: ${{ inputs.roll_bytes || '67108864' }}
           M4_SETTLE_MS: ${{ inputs.settle_ms || '0' }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: m4-evidence-linux

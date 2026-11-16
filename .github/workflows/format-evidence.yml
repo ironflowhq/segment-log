@@ -27,7 +27,7 @@ jobs:
           sudo mkdir -p /mnt/segment-log
           sudo chown "$USER" /mnt/segment-log
           scripts/key-page-alignment.sh /mnt/segment-log "$RUNNER_TEMP/key-page-alignment"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: key-page-alignment

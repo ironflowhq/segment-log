@@ -30,7 +30,7 @@ jobs:
       - run: scripts/m3-evidence.sh "$RUNNER_TEMP/m3-evidence"
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/m3-build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: m3-evidence-linux
