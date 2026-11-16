@@ -65,7 +65,7 @@ jobs:
       # No skip if the module is missing: the step fails, and so does the job (ADR 0058).
       - if: matrix.transport == 'vsock'
         run: sudo modprobe vsock_loopback
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: clients/go/go.mod
           cache: false
