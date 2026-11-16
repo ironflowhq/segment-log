@@ -72,6 +72,7 @@ Option A beats B because only a test on the deployed stack shows that an ack is 
 
 ## Consequences
 
+- [ADR 0062](0062-v3-requires-refused-writes-not-failed-syncs.md) amends V3: after a metadata write error every later write must fail; later syncs are recorded, not required to fail.
 - ADR 0032's qualification record now checks V1–V11, not three assumptions. The three former assumptions are V1–V3.
 - ADR 0033's deployment obligations gain exclusive attachment (V5), a failure-domain declaration (V7), single-lineage copies (V8), capacity sizing (V9) and the start-time drift check (V10).
 - ADR 0037's deployment-owned lifecycle gains a capacity requirement and an alert (V9).
