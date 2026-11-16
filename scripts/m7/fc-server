@@ -11,6 +11,7 @@
 # guest kernel and M7_GUEST_MOUNT adds mount options in the guest, both for VOL-DRIFT.
 # M7_DRIFT_CHECK=0 skips the fingerprint check, for controls that change the stack on purpose.
 # M7_REWRITE_CONTROL=1 runs the server built with rewrite-control, the V2 control.
+# M7_FENCE=0 skips the flock, only as the VOL-EXCLUSIVE control.
 set -eu
 : "${M7_CACHE:?set M7_CACHE}"
 [ "${1:-}" = --dir ] || { echo "fc-server: want --dir first" >&2; exit 64; }
@@ -42,7 +43,7 @@ fi
 # V5: one VMM per volume. The lock rides on fd 9 into the VMM through exec, so it lasts exactly
 # as long as the VMM process, including while it is paused.
 exec 9<>"$img"
-flock -xn 9 || { echo "fc-server: $img is attached to another VMM" >&2; exit 75; }
+[ "${M7_FENCE:-1}" = 0 ] || flock -xn 9 || { echo "fc-server: $img is attached to another VMM" >&2; exit 75; }
 rm -f "$host/v.sock"
 # A read-only server (ADR 0060) gets the volume read-only, so the guest cannot write to it at all.
 case " $* " in *" --read-only "*) ro=true ;; *) ro=false ;; esac

@@ -1,6 +1,11 @@
 """Summarizes an m6-socket-report.sh capture: for each mode and side, the median and range of
 throughput and latency over the pairs, and the socket's change from in process. Warm-ups are not
-counted. A missing or malformed run log fails the summary instead of shrinking it."""
+counted. A missing or malformed run log fails the summary instead of shrinking it.
+
+    m6-socket-summary.py DIR [SIDE]
+
+SIDE names the second side's logs: unix (the default, M6) or guest (the M7 guest benchmark,
+scripts/m7-guest-bench.sh)."""
 
 import re
 import statistics
@@ -29,19 +34,23 @@ def show(field, value):
     return f"{value:,.0f}" if field == "records_per_second" else f"{value / 1e6:.3f}"
 
 
-def summarize(root):
-    lines = ["# M6 socket diagnostic", ""]
+LABELS = {"unix": ("M6 socket diagnostic", "Unix socket"), "guest": ("M7 guest benchmark", "Firecracker guest")}
+
+
+def summarize(root, side="unix"):
+    title, label_side = LABELS[side]
+    lines = [f"# {title}", ""]
     for mode in ["closed", "paced"]:
-        runs = {side: sorted((root / mode).glob(f"{side}-[0-9]*.log")) for side in ["inproc", "unix"]}
-        if not runs["inproc"] or len(runs["inproc"]) != len(runs["unix"]):
-            raise SystemExit(f"{mode}: {len(runs['inproc'])} in-process runs and {len(runs['unix'])} socket runs")
-        parsed = {side: [parse(p) for p in paths] for side, paths in runs.items()}
+        runs = {s: sorted((root / mode).glob(f"{s}-[0-9]*.log")) for s in ["inproc", side]}
+        if not runs["inproc"] or len(runs["inproc"]) != len(runs[side]):
+            raise SystemExit(f"{mode}: {len(runs['inproc'])} in-process runs and {len(runs[side])} {side} runs")
+        parsed = {s: [parse(p) for p in paths] for s, paths in runs.items()}
         lines += [f"## {mode} ({len(runs['inproc'])} pairs; median, min to max)", "",
-                  "| Metric | In process | Unix socket | Socket change |", "| --- | --- | --- | --- |"]
+                  f"| Metric | In process | {label_side} | Change |", "| --- | --- | --- | --- |"]
         for field, _, label in FIELDS:
             cells, medians = [], []
-            for side in ["inproc", "unix"]:
-                values = [run[field] for run in parsed[side]]
+            for s in ["inproc", side]:
+                values = [run[field] for run in parsed[s]]
                 medians.append(statistics.median(values))
                 cells.append(f"{show(field, medians[-1])} ({show(field, min(values))} to {show(field, max(values))})")
             change = (medians[1] - medians[0]) / medians[0] * 100
@@ -51,4 +60,4 @@ def summarize(root):
 
 
 if __name__ == "__main__":
-    print(summarize(Path(sys.argv[1])))
+    print(summarize(Path(sys.argv[1]), *sys.argv[2:3]))
