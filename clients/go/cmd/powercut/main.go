@@ -6,6 +6,7 @@
 //	powercut ready -network N -address A                  waits until the server answers Hello
 //	powercut probe -dir D -bytes B -duration T -rate R      the flush probe (VOL-FLUSH-LATENCY)
 //	powercut metaerr -dir D                                 the steps of VOL-METADATA-ERROR
+//	powercut seal -network N -address A                     seals the log
 //
 // load appends fully keyed records with deterministic payloads and, after each acknowledgment,
 // reports its key, log offset and stream revision to the observer, which stores them durably.
@@ -54,6 +55,8 @@ func main() {
 		probe(os.Args[2:])
 	case "metaerr":
 		metaerr(os.Args[2:])
+	case "seal":
+		seal(os.Args[2:])
 	default:
 		fail("unknown command " + os.Args[1])
 	}
@@ -449,4 +452,19 @@ func metaerr(args []string) {
 	report("4-dirsync-new", err)
 	report("4-file", writeSynced("third"))
 	fmt.Println("DONE")
+}
+
+func seal(args []string) {
+	fs := flag.NewFlagSet("seal", flag.ExitOnError)
+	network := fs.String("network", "firecracker", "client network")
+	address := fs.String("address", "", "server address")
+	fs.Parse(args)
+	c, err := segmentlog.Dial(*network, *address)
+	if err != nil {
+		fail(err.Error())
+	}
+	defer c.Close()
+	if a, err := c.Do(segmentlog.Seal()); err != nil || a.Status != 0 {
+		fail(fmt.Sprintf("seal: %v %v", a.Status, err))
+	}
 }
