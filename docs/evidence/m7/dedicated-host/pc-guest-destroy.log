@@ -1,0 +1,127 @@
+== build the server
+info: component rust-std for target x86_64-unknown-linux-musl is up to date
+== build the guest rootfs
+== build the powercut tool
+== pc-guest-destroy-20261116155723: 30 cycles, observer 178.156.201.194:7070
+scripts/m7-power-cut.sh: line 72:  9193 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 1: 1891 acknowledged, 1891 reported
+check: 1904 records, 1891 reported, 0 missing
+-- cycle 1 at 2503 ms
+scripts/m7-power-cut.sh: line 72:  9226 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 2: 2000 acknowledged, 2000 reported
+check: 3907 records, 3891 reported, 0 missing
+-- cycle 2 at 2551 ms
+scripts/m7-power-cut.sh: line 72:  9272 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 3: 691 acknowledged, 691 reported
+check: 4611 records, 4582 reported, 0 missing
+-- cycle 3 at 980 ms
+scripts/m7-power-cut.sh: line 72:  9314 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 4: 1280 acknowledged, 1280 reported
+check: 5892 records, 5862 reported, 0 missing
+-- cycle 4 at 1656 ms
+scripts/m7-power-cut.sh: line 72:  9362 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 5: 1520 acknowledged, 1520 reported
+check: 7412 records, 7382 reported, 0 missing
+-- cycle 5 at 1985 ms
+scripts/m7-power-cut.sh: line 72:  9408 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 6: 2544 acknowledged, 2544 reported
+check: 9961 records, 9926 reported, 0 missing
+-- cycle 6 at 3249 ms
+scripts/m7-power-cut.sh: line 72:  9453 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 7: 1810 acknowledged, 1810 reported
+check: 11785 records, 11736 reported, 0 missing
+-- cycle 7 at 2311 ms
+scripts/m7-power-cut.sh: line 72:  9503 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 8: 2448 acknowledged, 2448 reported
+check: 14233 records, 14184 reported, 0 missing
+-- cycle 8 at 2987 ms
+scripts/m7-power-cut.sh: line 72:  9552 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 9: 704 acknowledged, 704 reported
+check: 14937 records, 14888 reported, 0 missing
+-- cycle 9 at 978 ms
+scripts/m7-power-cut.sh: line 72:  9596 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 10: 2435 acknowledged, 2435 reported
+check: 17372 records, 17323 reported, 0 missing
+-- cycle 10 at 3099 ms
+scripts/m7-power-cut.sh: line 72:  9643 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 11: 576 acknowledged, 576 reported
+check: 17948 records, 17899 reported, 0 missing
+-- cycle 11 at 819 ms
+scripts/m7-power-cut.sh: line 72:  9691 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 12: 710 acknowledged, 710 reported
+check: 18669 records, 18609 reported, 0 missing
+-- cycle 12 at 1004 ms
+scripts/m7-power-cut.sh: line 72:  9737 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 13: 1008 acknowledged, 1008 reported
+check: 19677 records, 19617 reported, 0 missing
+-- cycle 13 at 1353 ms
+scripts/m7-power-cut.sh: line 72:  9781 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 14: 1552 acknowledged, 1552 reported
+check: 21230 records, 21169 reported, 0 missing
+-- cycle 14 at 1998 ms
+scripts/m7-power-cut.sh: line 72:  9828 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 15: 1184 acknowledged, 1184 reported
+check: 22414 records, 22353 reported, 0 missing
+-- cycle 15 at 1548 ms
+scripts/m7-power-cut.sh: line 72:  9875 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 16: 2352 acknowledged, 2352 reported
+check: 24766 records, 24705 reported, 0 missing
+-- cycle 16 at 3039 ms
+scripts/m7-power-cut.sh: line 72:  9931 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 17: 1458 acknowledged, 1458 reported
+check: 26224 records, 26163 reported, 0 missing
+-- cycle 17 at 1896 ms
+scripts/m7-power-cut.sh: line 72:  9981 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 18: 2528 acknowledged, 2528 reported
+check: 28752 records, 28691 reported, 0 missing
+-- cycle 18 at 3147 ms
+scripts/m7-power-cut.sh: line 72: 10028 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 19: 514 acknowledged, 514 reported
+check: 29266 records, 29205 reported, 0 missing
+-- cycle 19 at 743 ms
+scripts/m7-power-cut.sh: line 72: 10073 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 20: 1652 acknowledged, 1652 reported
+check: 30918 records, 30857 reported, 0 missing
+-- cycle 20 at 2163 ms
+scripts/m7-power-cut.sh: line 72: 10123 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 21: 2672 acknowledged, 2672 reported
+check: 33590 records, 33529 reported, 0 missing
+-- cycle 21 at 3378 ms
+scripts/m7-power-cut.sh: line 72: 10172 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 22: 2720 acknowledged, 2720 reported
+check: 36310 records, 36249 reported, 0 missing
+-- cycle 22 at 3487 ms
+scripts/m7-power-cut.sh: line 72: 10222 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 23: 723 acknowledged, 723 reported
+check: 37033 records, 36972 reported, 0 missing
+-- cycle 23 at 999 ms
+scripts/m7-power-cut.sh: line 72: 10271 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 24: 1104 acknowledged, 1104 reported
+check: 38138 records, 38076 reported, 0 missing
+-- cycle 24 at 1488 ms
+scripts/m7-power-cut.sh: line 72: 10319 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 25: 2560 acknowledged, 2560 reported
+check: 40698 records, 40636 reported, 0 missing
+-- cycle 25 at 3249 ms
+scripts/m7-power-cut.sh: line 72: 10367 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 26: 334 acknowledged, 334 reported
+check: 41032 records, 40970 reported, 0 missing
+-- cycle 26 at 527 ms
+scripts/m7-power-cut.sh: line 72: 10412 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 27: 1090 acknowledged, 1090 reported
+check: 42122 records, 42060 reported, 0 missing
+-- cycle 27 at 1486 ms
+scripts/m7-power-cut.sh: line 72: 10459 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 28: 2161 acknowledged, 2161 reported
+check: 44283 records, 44221 reported, 0 missing
+-- cycle 28 at 2814 ms
+scripts/m7-power-cut.sh: line 72: 10509 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 29: 752 acknowledged, 752 reported
+check: 45035 records, 44973 reported, 0 missing
+-- cycle 29 at 1045 ms
+scripts/m7-power-cut.sh: line 72: 10554 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 30: 1940 acknowledged, 1940 reported
+check: 46975 records, 46913 reported, 0 missing
+-- cycle 30 at 2529 ms
+== pc-guest-destroy-20261116155723: 0 of 30 cycles missed a reported record
+pass: zero acknowledged records missing in 30 cycles

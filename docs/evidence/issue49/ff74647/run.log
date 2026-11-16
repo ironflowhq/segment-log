@@ -1,0 +1,18 @@
+Hit:1 http://mirror.hetzner.com/debian/packages bookworm InRelease
+Hit:2 http://mirror.hetzner.com/debian/packages bookworm-backports InRelease
+Hit:3 http://mirror.hetzner.com/debian/packages bookworm-updates InRelease
+Hit:4 http://mirror.hetzner.com/debian/security bookworm-security InRelease
+Hit:5 http://deb.debian.org/debian bookworm InRelease
+Hit:6 http://security.debian.org/debian-security bookworm-security InRelease
+Hit:7 http://deb.debian.org/debian bookworm-updates InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+strace is already the newest version (6.1-0.1).
+sysstat is already the newest version (12.6.1-1).
+time is already the newest version (1.9-0.2).
+python3 is already the newest version (3.11.2-1+b1).
+0 upgraded, 0 newly installed, 0 to remove and 5 not upgraded.
+   Compiling segment-log-core v0.0.1 (/root/sl/segment-log-core)
+    Finished `release` profile [optimized] target(s) in 14.65s
