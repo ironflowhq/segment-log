@@ -185,6 +185,10 @@ fn invalid_options_precede_locks_missing_ancestors_and_permissions() {
 /// records of the sealed segment
 /// When the damaged file is older, or is longer than a header
 /// Then open fails with `Corrupt` and names that file, and no byte or directory entry changes
+/// When the older file is whole groups and a closing run followed by bytes that are not a frame,
+/// and the newest holds only its header
+/// Then open treats the older file's run as torn, as it would the newest's, and writes the run
+/// that its groups produce (ADR 0061, rule 8)
 /// Cases: OPEN-LAYOUT, RECOVERY-FIXTURES
 #[test]
 fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
@@ -211,10 +215,6 @@ fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
             (
                 vec![(0, vec![0; 63]), (1, raw::header(raw::VERSION, 1, 1))],
                 Some((0, 0)),
-            ),
-            (
-                vec![(0, trailing.clone()), (1, raw::header(raw::VERSION, 1, 1))],
-                Some((0, trailing.len() as u64 - 40)),
             ),
         ] {
             let sim = Sim::new(802);
@@ -245,6 +245,14 @@ fn only_a_torn_newest_segment_is_removed_beside_a_valid_one() {
                 }
             }
         }
+
+        let sim = Sim::new(802);
+        let newest = (1, raw::header(raw::VERSION, 1, 1));
+        raw::install_segments(&sim, &[(0, trailing), newest.clone()]);
+        let log =
+            SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone())).unwrap();
+        assert_eq!(log.read(0, 10).unwrap()[0].payload, b"kept");
+        assert_eq!(raw::segments(&sim), [(0, valid), newest]);
     });
 }
 

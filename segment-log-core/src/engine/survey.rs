@@ -70,6 +70,16 @@ pub(super) struct Survey {
     pub epoch: u64,
     pub newest_header: Vec<u8>,
     pub newest: Scan,
+    /// The second-newest segment's closing run, rebuilt because the writer had not written it
+    /// (ADR 0061, rule 8). Its summary is the last in `sealed`, and its key filter is not on disk.
+    pub pending: Option<Rebuilt>,
+}
+
+pub(super) struct Rebuilt {
+    pub start: u64,
+    pub length: u64,
+    pub run: [Vec<u8>; 4],
+    pub summary: SealedSummary,
 }
 
 pub(super) struct Scan {
@@ -148,6 +158,9 @@ pub(super) fn survey(
         epoch: 0,
     };
     let mut sealed = vec![];
+    let mut pending = None;
+    let newest_base = *bases.last().unwrap();
+    let newest_epoch = headers.last().unwrap().0.epoch;
     let mut headers = headers.into_iter();
     for (pair, (header, _)) in bases.windows(2).zip(headers.by_ref()) {
         let [base, successor] = *pair else {
@@ -157,9 +170,18 @@ pub(super) fn survey(
             return Err(OpenError::Gap { segment: base });
         }
         kept.epoch = kept.epoch.max(header.epoch);
-        sealed.push(summarize(
-            storage, &log_id, dir, base, successor, &mut kept,
-        )?);
+        let summary = match summarize(storage, &log_id, dir, base, successor, &mut kept) {
+            Err(error @ OpenError::Corrupt { .. }) if successor == newest_base => {
+                // The writer that created the newest segment also built this run.
+                let at = (base, successor, newest_epoch);
+                let rebuilt = rebuild(storage, &log_id, &hash, dir, at, &mut kept)?.ok_or(error)?;
+                let summary = rebuilt.summary;
+                pending = Some(rebuilt);
+                summary
+            }
+            summary => summary?,
+        };
+        sealed.push(summary);
     }
     let (header, newest_header) = headers.next().unwrap();
     let base = *bases.last().unwrap();
@@ -179,6 +201,15 @@ pub(super) fn survey(
             position: newest.end,
         });
     }
+    // A roll or seal first writes the pending run, so a closed newest segment rules it out.
+    if let Some(rebuilt) = &pending
+        && matches!(newest.ending, Ending::Rolled { .. } | Ending::Sealed(_))
+    {
+        return Err(OpenError::Corrupt {
+            segment: rebuilt.summary.base,
+            position: rebuilt.start,
+        });
+    }
     Ok(Survey {
         log_id,
         hash,
@@ -187,7 +218,54 @@ pub(super) fn survey(
         epoch: kept.epoch,
         newest_header,
         newest,
+        pending,
     })
+}
+
+/// Rule 8 of ADR 0061: the second-newest segment may end in its groups, or in a closing run that
+/// a crash tore, because the writer writes a roll's run after the next segment exists. Scans it,
+/// as step 6 scans the newest, and rebuilds the run that the writer would have written. `None`
+/// means that the segment is not that case, and the caller keeps its error.
+fn rebuild(
+    storage: &ReadOnly<'_>,
+    log: &codec::LogId,
+    hash: &KeyHash,
+    dir: &Path,
+    (base, successor, epoch): (u64, u64, u64),
+    kept: &mut Kept,
+) -> Result<Option<Rebuilt>, OpenError> {
+    let path = segment_path(dir, base);
+    let length = storage.length(&path, Purpose::Recovery)?;
+    kept.published.newest.epoch_floor = kept.epoch;
+    let scan = scan(storage, log, hash, base, &path, length, kept)?;
+    match scan.ending {
+        Ending::Groups => (),
+        Ending::Stopped if !closing::sealed_behind(storage, &path, log, length, scan.end)? => (),
+        _ => return Ok(None),
+    }
+    // A scan that stopped before the successor's first offset lost acknowledged records.
+    if kept.published.watermark != successor {
+        return Err(OpenError::Gap { segment: successor });
+    }
+    if kept.epoch > epoch {
+        return Ok(None);
+    }
+    let mut entries = hash.entries(&scan.keys);
+    let run = closing::roll_run(log, epoch, successor, scan.end, &scan.tails, &mut entries);
+    let summary = SealedSummary {
+        base,
+        next: successor,
+        filter_at: scan.end,
+        footer_at: scan.end + (run[0].len() + run[1].len()) as u64,
+    };
+    kept.published.roll(epoch, epoch);
+    kept.epoch = epoch;
+    Ok(Some(Rebuilt {
+        start: scan.end,
+        length,
+        run,
+        summary,
+    }))
 }
 
 /// Step 5 for a segment with a successor, which proves that its locator is its last frame. Reads

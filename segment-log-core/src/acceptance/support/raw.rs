@@ -266,6 +266,36 @@ pub(crate) fn roll_run_with(
     [key_frames.filter, key_frames.index, footer, locator].concat()
 }
 
+/// `roll_run` for a log whose test hooks force the hashes of some keys.
+pub(crate) fn roll_run_forced(
+    segment: &[u8],
+    epoch: u64,
+    forced: &std::collections::BTreeMap<Vec<u8>, u64>,
+) -> Vec<u8> {
+    let log_id = crate::codec::LogId::new(header_fields(segment).0);
+    let keys: Vec<Vec<u8>> = frames(segment)
+        .into_iter()
+        .flat_map(|frame| {
+            let group = crate::codec::decode(&log_id, frame)
+                .unwrap()
+                .into_group()
+                .expect("a group frame");
+            group
+                .entries
+                .iter()
+                .filter_map(|entry| entry.key.map(<[u8]>::to_vec))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    roll_run_with(segment, epoch, |entries, _| {
+        for (entry, key) in entries.iter_mut().zip(&keys) {
+            if let Some(&hash) = forced.get(key) {
+                entry.hash = hash;
+            }
+        }
+    })
+}
+
 pub(crate) fn seal_run(segment: &[u8], epoch: u64) -> Vec<u8> {
     seal_run_with(segment, epoch, |_| {})
 }
