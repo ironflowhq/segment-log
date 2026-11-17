@@ -1,0 +1,32 @@
+#!/bin/sh
+# Prints the host half of the V10 fingerprint (scripts/m7/fingerprint) for the filesystem that holds
+# <dir>: the host kernel, the filesystem's type and mount options, and the drive under it. The
+# launcher (scripts/m7/fc-server) compares these lines before boot; m7-session.sh pins them on the
+# qualified host. The source device is left out: NVMe names can swap across a reboot.
+#
+#   fingerprint-host <dir>               print the keys
+#   fingerprint-host --pin <file> <dir>  replace the host keys in a fingerprint file with them
+set -eu
+if [ "${1:-}" = --pin ]; then
+	file=${2:?usage: fingerprint-host --pin <file> <dir>}
+	{ grep -v '^host\.' "$file"; "$0" "${3:?dir}"; } >"$file.new"
+	mv "$file.new" "$file"
+	exit
+fi
+dir=${1:?usage: fingerprint-host <dir>}
+# -v: no [/subdir] suffix for a bind mount or a subvolume.
+src=$(findmnt -nvo SOURCE -T "$dir")
+# The first disk under the source, through partitions, device-mapper and md; for a source that is
+# not a block device (tmpfs), its name.
+disk=$(lsblk -snlo NAME,TYPE "$src" 2>/dev/null | awk '$2 == "disk" { print $1; exit }') || true
+[ -n "$disk" ] || disk=$(basename "$src")
+dev=/sys/block/$disk/device
+value() { # the first readable file, spaces squeezed, or "unknown"
+	for f; do [ -r "$f" ] && { tr -s ' ' <"$f" | sed 's/^ //; s/ $//'; return; }; done
+	echo unknown
+}
+echo "host.kernel=$(uname -r)"
+echo "host.fs=$(findmnt -no FSTYPE,OPTIONS -T "$dir" | tr -s ' ')"
+echo "host.drive=$(value "$dev/model") $(value "$dev/firmware_rev" "$dev/rev")"
+# For NVMe the kernel sets this from the controller's vwc bit: "write through" when vwc is 0.
+echo "host.write_cache=$(value "/sys/block/$disk/queue/write_cache")"

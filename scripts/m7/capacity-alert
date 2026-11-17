@@ -1,0 +1,18 @@
+#!/bin/sh
+# The V9 capacity alert at one allocating layer (volume-requirements.md, V9): the alert fires while
+# the filesystem that holds <dir> has fewer free bytes than <threshold>, the peak write rate times
+# the response time. One line per sample, so a fill test can show where it fired:
+#   m7: capacity <layer> free <bytes> threshold <bytes> ok|alert
+# The guest runs it on the log volume (scripts/m7/guest-init, m7.alert=); the host on the
+# filesystem under the sparse images.
+#
+#   capacity-alert <layer> <dir> <threshold bytes> [interval seconds=1]
+set -eu
+layer=${1:?usage: capacity-alert <layer> <dir> <threshold> [interval]} dir=${2:?dir} threshold=${3:?threshold}
+interval=${4:-1}
+while :; do
+	free=$(df -B1 --output=avail "$dir" | tail -n 1 | tr -d ' ')
+	if [ "$free" -lt "$threshold" ]; then state=alert; else state=ok; fi
+	echo "m7: capacity $layer free $free threshold $threshold $state"
+	sleep "$interval"
+done
