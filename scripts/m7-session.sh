@@ -43,7 +43,7 @@ bootstrap() {
 		mount /tmp && chmod 1777 /tmp
 		apt-get update -qq
 		DEBIAN_FRONTEND=noninteractive apt-get install -y -qq build-essential curl git squashfs-tools \
-			musl-tools nvme-cli fio blktrace dmsetup sudo >/dev/null
+			musl-tools nvme-cli fio blktrace dmsetup sudo time python3 >/dev/null
 		curl -fsSL https://go.dev/dl/go1.27.3.linux-amd64.tar.gz | tar -C /usr/local -xz
 		curl -fsSL https://sh.rustup.rs | sh -s -- -y -q --default-toolchain none >/dev/null 2>&1
 		git clone -q https://github.com/ironflowhq/segment-log.git '"$repo"'
@@ -69,7 +69,7 @@ host_step() { # a script that runs on the host, as root, from the repo
 
 run() {
 	: "${M7_OBSERVER:?set M7_OBSERVER to <observer ip>:7070}"
-	local all=(rehearse power-cut drift latency metadata enospc guest-bench host-cut recovery-cut)
+	local all=(rehearse power-cut drift latency metadata enospc guest-bench workloads host-cut recovery-cut)
 	local steps=("${@:-${all[@]}}")
 	for s in "${steps[@]}"; do
 		case $s in
@@ -95,6 +95,10 @@ run() {
 		guest-bench)
 			host_step guest-bench bash scripts/m7-guest-bench.sh /root/m7-guest-bench
 			scp -rq "$M7_HOST:/root/m7-guest-bench" "$out/guest-bench" || true
+			;;
+		workloads)
+			host_step workloads bash scripts/m7-workloads.sh /root/m7-workloads
+			scp -rq "$M7_HOST:/root/m7-workloads" "$out/workloads" || true
 			;;
 		enospc)
 			host_step enospc-guest bash scripts/m7-enospc.sh guest

@@ -23,7 +23,7 @@ fn check(result: libc::c_int) -> io::Result<()> {
 
 impl Listener {
     /// Listens on `port` for any CID, so the host loopback (CID 1) and a guest's peer both reach it.
-    pub fn bind(port: u32) -> io::Result<Listener> {
+    pub fn bind(port: u32, backlog: libc::c_int) -> io::Result<Listener> {
         // SAFETY: socket has no memory preconditions.
         let fd = owned(unsafe {
             libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM | libc::SOCK_CLOEXEC, 0)
@@ -37,7 +37,7 @@ impl Listener {
         // SAFETY: addr is a live sockaddr_vm and len is its size.
         check(unsafe { libc::bind(fd.as_raw_fd(), (&raw const addr).cast(), len) })?;
         // SAFETY: fd is a bound socket that this function owns.
-        check(unsafe { libc::listen(fd.as_raw_fd(), 128) })?;
+        check(unsafe { libc::listen(fd.as_raw_fd(), backlog) })?;
         Ok(Listener(fd))
     }
 

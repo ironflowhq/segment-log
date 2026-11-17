@@ -2,3 +2,4 @@ target/
 .DS_Store
 /.audit/
 scripts/__pycache__/
+m7-session-out/
