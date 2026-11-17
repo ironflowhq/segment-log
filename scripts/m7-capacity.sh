@@ -3,31 +3,33 @@
 #
 #   sudo M7_CACHE=<cache> scripts/m7-capacity.sh [m7-capacity.py arguments]
 #
-# The arguments override the provisional workload profile, which is m7-capacity.py's defaults and
-# --history-bytes 50GiB (qualification.md, Provisional values). M7_WORK (default /tmp) must be on
-# the host filesystem that holds the log images.
+# The arguments override the provisional workload profile, which is m7-capacity.py's defaults
+# (qualification.md, Provisional values). M7_WORK (default /tmp) must be on the host filesystem
+# that holds the log images.
 #
 # 1. Allocation ratio: a guest writes a test log and seals it; the ratio is the segment files'
 #    allocated size (du) over their encoded size (their length).
 # 2. Sizing record: m7-capacity.py with that ratio. A sparse image of the needed guest free space is
 #    formatted as the launcher does, to measure df avail over image size; then an image of the
 #    computed size must show at least the needed free bytes after mkfs (the guest layer), and the
-#    host filesystem must have room for every log's whole image plus its alert threshold (the
-#    host layer: the images are sparse, so each allocates at most its size).
+#    host filesystem's capacity for files (df used + avail, so leftovers of other steps do not
+#    count against it) must hold every log's whole image plus its alert threshold (the host layer:
+#    the images are sparse, so each allocates at most its size).
 # 3. Fill test, guest layer: the guest's alert (scripts/m7/capacity-alert) watches a small volume
 #    while the load fills it.
 # 4. Fill test, host layer: the host's alert watches a small host filesystem under the sparse image
 #    while the load fills it.
 # A fill passes when the alert was quiet at or above its threshold, fired below it, and fired while
 # the layer still had free bytes. The fills use small layers and scaled thresholds: the alert is the
-# same comparison at any size, and step 2 records the real thresholds.
+# same comparison at any size, and step 2 records the real thresholds. The load is paced (powercut's
+# default, at most 32 MB/s), so the last 128 MiB take seconds and the 0.5 s samples land in them.
 set -euo pipefail
+shopt -s inherit_errexit # a failed mkfs or mount inside $(...) must stop the script
 [ "$(id -u)" = 0 ] || { echo "run as root" >&2; exit 1; }
 : "${M7_CACHE:?set M7_CACHE to the cache that scripts/m7/setup.sh built}"
 repo=$(cd "$(dirname "$0")/.." && pwd)
 pc=$M7_CACHE/powercut
 args=("$@")
-[ ${#args[@]} -gt 0 ] || args=(--history-bytes 50GiB)
 work=$(mktemp -d "${M7_WORK:-/tmp}/m7-capacity-XXXX")
 run=capacity-$(date +%Y%m%d%H%M%S)
 vm='' observer='' loop='' alert=''
@@ -58,7 +60,7 @@ vmm() {
 	"$pc" ready -address "$dir/v.sock:5000"
 }
 stop() { kill -KILL "$vm" 2>/dev/null || true; wait "$vm" 2>/dev/null || true; vm=; }
-# load <dir> <cycle> [load flags]: appends of 4 KiB payloads; unpaced, they fill the volume.
+# load <dir> <cycle> [load flags]: appends of 4 KiB payloads, paced, until -max or the volume fills.
 load() {
 	local dir=$1 cycle=$2
 	shift 2
@@ -77,7 +79,7 @@ formatted() {
 	umount "$work/mnt"
 	rm -f "$work/size.img"
 }
-calc() { python3 "$repo/scripts/m7-capacity.py" "${args[@]}" "$@"; }
+calc() { python3 "$repo/scripts/m7-capacity.py" ${args[@]+"${args[@]}"} "$@"; }
 get() { sed -n "s/^$1=//p" <<<"$2"; }
 # judge <layer> <threshold> <sample lines>: the fill test's verdict from capacity-alert's samples.
 judge() {
@@ -115,7 +117,7 @@ first=$(calc --ratio "$ratio")
 probe=$(get guest_free_needed_bytes "$first")
 avail=$(formatted "$probe")
 avail_ratio=$(python3 -c "print(round($avail / $probe, 6))")
-host_free=$(df_bytes avail "$work")
+host_free=$(($(df_bytes used "$work") + $(df_bytes avail "$work")))
 record=$(calc --ratio "$ratio" --avail-ratio "$avail_ratio" --host-free "$host_free") || true
 echo "$record"
 image=$(get image_bytes "$record")
@@ -124,14 +126,14 @@ guest_free=$(formatted "$image")
 echo "guest layer: df avail $guest_free after mkfs of a $image-byte image; needs $need" \
 	"(planned allocated $(get planned_allocated_bytes_per_log "$record") + alert threshold $(get guest_alert_threshold_bytes "$record"))"
 [ "$guest_free" -ge "$need" ] || { echo "FAIL: the guest volume is too small" >&2; failed=1; }
-echo "host layer: df $(df -B1 --output=source,fstype,size,avail "$work" | tail -n 1 | tr -s ' '); needs" \
+echo "host layer: df $(df -B1 --output=source,fstype,size,used,avail "$work" | tail -n 1 | tr -s ' '); capacity $host_free; needs" \
 	"$(get host_free_needed_bytes "$record") ($(get logs "$record") images + alert threshold $(get host_alert_threshold_bytes "$record"))"
 [ "$(get host_fits "$record")" = yes ] || { echo "FAIL: the host filesystem cannot hold every image" >&2; failed=1; }
 
 echo "== fill test: guest layer"
 threshold=$((128 << 20))
 vmm "$work/guest" M7_LOG_BYTES=512M "M7_ALERT=$threshold"
-load "$work/guest" 2 -interval 0 -max 120s
+load "$work/guest" 2 -max 120s
 sleep 1 # one more sample after the load stops
 stop
 grep '^m7: capacity guest' "$work/guest/console.log" | judge guest "$threshold" ||
@@ -147,7 +149,7 @@ mount "$loop" "$work/hostfs"
 alert=$!
 # The volume sits on a test filesystem on purpose, so the host keys cannot match.
 vmm "$work/hostfs/vm" M7_LOG_BYTES=1G M7_HOST_CHECK=0
-load "$work/hostfs/vm" 3 -interval 0 -max 120s
+load "$work/hostfs/vm" 3 -max 120s
 sleep 1
 stop
 kill "$alert"

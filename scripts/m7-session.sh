@@ -66,8 +66,10 @@ bootstrap() {
 pin() {
 	# shellcheck disable=SC2016 # expands on the host
 	on_host 'set -e; cd '"$repo"'; f=scripts/m7/fingerprint
-		{ grep -v "^host\\." "$f"; scripts/m7/fingerprint-host /tmp; } >"$f.new" && mv "$f.new" "$f"
-		grep "^host\\." "$f"'
+		scripts/m7/fingerprint-host --pin "$f" /tmp
+		grep "^host\\." "$f"
+		# A key that reads unknown cannot tell one drive from another, so V10 could not refuse a swap.
+		! grep -q "^host\\..*unknown" "$f" || { echo "a host key is unknown" >&2; exit 1; }'
 }
 
 # step <name> <command...>: runs one step, logs it, records its status, never stops the session.
@@ -88,8 +90,13 @@ host_step() { # a script that runs on the host, as root, from the repo
 run() {
 	: "${M7_OBSERVER:?set M7_OBSERVER to <observer ip>:7070}"
 	local all=(rehearse power-cut drift latency metadata enospc capacity guest-bench workloads host-cut recovery-cut)
-	on_host "! grep -q '^host\\..*=unpinned\$' $repo/scripts/m7/fingerprint" ||
-		{ echo "the host keys are unpinned: run m7-session.sh pin first" >&2; exit 1; }
+	local rc=0
+	on_host "[ -r $repo/scripts/m7/fingerprint ] || exit 3; ! grep -q '^host\\..*=unpinned\$' $repo/scripts/m7/fingerprint" || rc=$?
+	case $rc in
+	0) ;;
+	1) echo "the host keys are unpinned: run m7-session.sh pin first" >&2; exit 1 ;;
+	*) echo "cannot read the host's fingerprint (exit $rc)" >&2; exit 1 ;;
+	esac
 	local steps=("${@:-${all[@]}}")
 	for s in "${steps[@]}"; do
 		case $s in

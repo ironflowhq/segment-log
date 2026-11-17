@@ -19,12 +19,10 @@ other=${M7_DRIFT_KERNEL:-5.10.245}
 fetch "vmlinux-$other" "vmlinux-$other"
 pinned=$(mktemp /tmp/m7-fingerprint-XXXX)
 trap 'rm -f "$pinned" "$pinned.other"' EXIT
-grep -v '^host\.' "$repo/scripts/m7/fingerprint" >"$pinned"
-if grep -q '^host\..*=unpinned$' "$repo/scripts/m7/fingerprint"; then
-	"$repo/scripts/m7/fingerprint-host" /tmp >>"$pinned"
+cp "$repo/scripts/m7/fingerprint" "$pinned"
+if grep -q '^host\..*=unpinned$' "$pinned"; then
+	"$repo/scripts/m7/fingerprint-host" --pin "$pinned" /tmp
 	echo "host keys unpinned: checking this host's values"
-else
-	grep '^host\.' "$repo/scripts/m7/fingerprint" >>"$pinned"
 fi
 export M7_FINGERPRINT=$pinned
 sed 's/^host\.drive=.*/host.drive=Another Drive 0000/' "$pinned" >"$pinned.other"

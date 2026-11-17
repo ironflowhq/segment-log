@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """The V9 VOL-CAPACITY sizing record (volume-requirements.md, V9) from a workload profile.
 
-  m7-capacity.py --history-bytes 50GiB --logs 8 [--ratio R] [--avail-ratio A] ...
+  m7-capacity.py [--history-bytes 50GiB] [--logs 8] [--ratio R] [--avail-ratio A] ...
+
+The defaults are the provisional workload profile (qualification.md, Provisional values).
 
 Prints key=value lines: the planned peak encoded size of one log, its planned allocated size (encoded
 times the measured allocation ratio, plus headroom), the alert thresholds of the guest and host
@@ -33,6 +35,7 @@ FENCE = 8
 MAX_PAD = PAGE - 1  # the filter's padding depends on its file position; size for the worst case
 MAX_KEYED_PER_SEGMENT = 1_044_225  # Limits
 MAX_GROUP_BODY = 8 * 1024 * 1024  # Limits
+MAX_FRAME_BODY = 16 * 1024 * 1024  # Limits
 
 
 def entry_bytes(payload, stream, key):
@@ -79,13 +82,19 @@ def segment_bytes(groups, per_group, last_group, profile):
     return SEGMENT_HEADER + body + closing_run(keyed, streams, p["stream"])
 
 
-def groups_per_segment(roll_bytes, frame, per_group, keyed):
-    # The writer rolls before a group once the segment reaches roll_bytes, or when the group's keys
-    # would pass the keyed-record limit (format.md, Limits).
-    by_size = max(1, math.ceil((roll_bytes - SEGMENT_HEADER) / frame))
+def groups_per_segment(roll_bytes, frame, per_group, keyed, stream=0, streams=0):
+    # The writer rolls before a group once the segment reaches roll_bytes, when the group's keys
+    # would pass the keyed-record limit (format.md, Limits), or when its new streams would make the
+    # footer body pass the frame body limit (format.md, Footer entry).
+    groups = max(1, math.ceil((roll_bytes - SEGMENT_HEADER) / frame))
     if keyed:
-        by_size = min(by_size, MAX_KEYED_PER_SEGMENT // per_group)
-    return by_size
+        groups = min(groups, MAX_KEYED_PER_SEGMENT // per_group)
+    footer_streams = (MAX_FRAME_BODY - BODY_HEADER - FOOTER_FIXED) // (FOOTER_ENTRY + stream)
+    if not streams or streams > footer_streams:
+        # shortcut: with capped streams this assumes each record brings a new one, which rolls early
+        # and so overstates the size; model stream reuse if a profile ever needs the exact figure.
+        groups = min(groups, footer_streams // per_group)
+    return groups
 
 
 def encoded_bytes(records, profile):
@@ -93,7 +102,7 @@ def encoded_bytes(records, profile):
     p = profile
     per_group = p["per_group"]
     frame = group_frame(per_group, p["payload"], p["stream"], p["key"], p["extra"])
-    gps = groups_per_segment(p["roll_bytes"], frame, per_group, p["key"])
+    gps = groups_per_segment(p["roll_bytes"], frame, per_group, p["key"], p["stream"], p["streams"])
     per_segment = gps * per_group
     full, rest = divmod(records, per_segment)
     total = full * segment_bytes(gps, per_group, per_group, p) if full else 0
@@ -191,9 +200,9 @@ def parser():
     p.add_argument("--records-per-group", type=int, default=0, help="mean records per group, in place of --group-bytes")
     p.add_argument("--group-extra", type=int, default=GROUP_EXTRA, help="bytes a format version adds to each group frame")
     p.add_argument("--roll-bytes", type=bytes_arg, default=64 * 1024 * 1024, help="roll_bytes (api.md default)")
-    who = p.add_mutually_exclusive_group(required=True)
-    who.add_argument("--records", type=int, help="planned peak records per log")
-    who.add_argument("--history-bytes", type=bytes_arg, help="planned peak encoded history per log")
+    who = p.add_mutually_exclusive_group()
+    who.add_argument("--records", type=int, help="planned peak records per log, in place of --history-bytes")
+    who.add_argument("--history-bytes", type=bytes_arg, default=50 << 30, help="planned peak encoded history per log")
     p.add_argument("--ratio", type=float, default=1.0, help="measured allocation ratio: du / encoded bytes")
     p.add_argument("--headroom", type=float, default=0.2, help="recorded headroom, as a fraction")
     p.add_argument("--rate", type=bytes_arg, default=200 * 16 * 1024, help="peak write bytes per second per log")

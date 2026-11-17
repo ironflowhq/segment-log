@@ -63,8 +63,14 @@ class SizingTests(unittest.TestCase):
         self.assertEqual(cap.encoded_bytes(1, p), 64 + (32 + 27) + 32 + 32 + (40 + 29) + 40)
 
     def test_the_keyed_limit_rolls_before_the_size_does(self):
-        self.assertEqual(cap.groups_per_segment(4000 << 20, 16144, 53, 16), 1_044_225 // 53)
-        self.assertEqual(cap.groups_per_segment(4000 << 20, 16144, 53, 0), -(-((4000 << 20) - 64) // 16144))
+        self.assertEqual(cap.groups_per_segment(4000 << 20, 16144, 53, 16, 16, 1), 1_044_225 // 53)
+        self.assertEqual(cap.groups_per_segment(4000 << 20, 16144, 53, 0, 16, 1), -(-((4000 << 20) - 64) // 16144))
+
+    def test_the_footer_limit_rolls_before_a_large_roll_size(self):
+        # one stream per record: (16 MiB - 32) // 44 = 381,300 streams, 7,194 groups of 53
+        self.assertEqual(cap.groups_per_segment(1 << 30, 16144, 53, 16, 16, 0), 381_300 // 53)
+        self.assertEqual(cap.groups_per_segment(1 << 30, 16144, 53, 0, 16, 1000), -(-((1 << 30) - 64) // 16144))
+        self.assertEqual(cap.groups_per_segment(64 << 20, 16144, 53, 16, 16, 0), -(-((64 << 20) - 64) // 16144))
 
     def test_records_for_is_the_largest_that_fits(self):
         p = profile(roll_bytes=64 << 20, per_group=53, payload=256, stream=16, key=16)
