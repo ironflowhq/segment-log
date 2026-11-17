@@ -10,8 +10,7 @@ set -euo pipefail
 # shellcheck source=m7/setup.sh
 source "$(dirname "$0")/m7/setup.sh"
 other=${M7_DRIFT_KERNEL:-5.10.245}
-[ -s "$M7_CACHE/vmlinux-$other" ] ||
-	curl -fsSL -o "$M7_CACHE/vmlinux-$other" "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/$ci/$arch/vmlinux-$other"
+fetch "vmlinux-$other" "vmlinux-$other"
 
 # boot <expected field or "none"> [env...]: boots one guest and checks what stopped it.
 boot() {

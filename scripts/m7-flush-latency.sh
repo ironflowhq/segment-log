@@ -18,7 +18,7 @@ export M7_LOG_BYTES=${M7_LOG_BYTES:-4G} M7_VCPUS=${M7_VCPUS:-1}
 # shellcheck source=m7/setup.sh
 source "$(dirname "$0")/m7/setup.sh"
 root=$(mktemp -d "${M7_WORK:-/tmp}/m7-fl-XXXX")
-source=$(findmnt -no SOURCE -T "$root")
+source=$(findmnt -no SOURCE -T "$root" | tail -n 1) # the top mount, if /tmp is stacked
 [ -b "$source" ] || { echo "$root is on $source, not a block device" >&2; rm -rf "$root"; exit 1; }
 disk=$(lsblk -no PKNAME "$source" | head -n 1)
 disk=${disk:-$(basename "$source")}

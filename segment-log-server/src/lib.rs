@@ -16,6 +16,7 @@ use std::fs;
 use std::io;
 use std::net::Shutdown;
 use std::os::unix::fs::FileTypeExt;
+use std::os::unix::io::{AsRawFd, RawFd};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::process::ExitCode;
@@ -38,6 +39,10 @@ pub fn main_with(args: impl Iterator<Item = String>) -> ExitCode {
         }
     };
     let frame_cap = protocol::frame_cap(config.options.group_byte_cap);
+    if let Err(error) = reserve_descriptors(config.max_connections) {
+        eprintln!("segment-log-server: {error}");
+        return ExitCode::from(EXIT_START);
+    }
     // The log first: its LOCK makes this the only server for the directory, so removing a stale
     // socket below cannot take the socket of a live server.
     // A reader takes no LOCK and writes nothing, so it opens only a sealed log (ADR 0060).
@@ -56,7 +61,8 @@ pub fn main_with(args: impl Iterator<Item = String>) -> ExitCode {
             return ExitCode::from(EXIT_START);
         }
     };
-    let (incoming, address) = match listen(&config.listen, config.read_only) {
+    let (incoming, address) = match listen(&config.listen, config.read_only, config.max_connections)
+    {
         Ok(listening) => listening,
         Err((address, error)) => {
             eprintln!("segment-log-server: bind {address}: {error}");
@@ -111,11 +117,14 @@ type Incoming = Box<dyn Iterator<Item = io::Result<UnixStream>> + Send>;
 fn listen(
     listen: &args::Listen,
     read_only: bool,
+    connections: usize,
 ) -> Result<(Incoming, String), (String, io::Error)> {
     match listen {
         args::Listen::Unix(path) => {
             let address = path.display().to_string();
-            match bind_unix(path, read_only) {
+            match bind_unix(path, read_only)
+                .and_then(|l| backlog(l.as_raw_fd(), connections).map(|()| l))
+            {
                 Ok(listener) => Ok((
                     Box::new(std::iter::from_fn(move || {
                         Some(listener.accept().map(|(stream, _)| stream))
@@ -128,7 +137,7 @@ fn listen(
         args::Listen::Vsock(port) => {
             let address = format!("vsock port {port}");
             #[cfg(target_os = "linux")]
-            match vsock::Listener::bind(*port) {
+            match vsock::Listener::bind(*port, backlog_len(connections)) {
                 Ok(listener) => Ok((
                     Box::new(std::iter::from_fn(move || Some(listener.accept()))),
                     address,
@@ -163,6 +172,59 @@ fn accept(incoming: Incoming, server: &Arc<Server>, log: &Weak<Log>, frame_cap: 
 
 /// A writer holds the log's LOCK, so a socket at `path` cannot be a live server's. A reader holds
 /// no lock, so it removes the socket only when nothing answers on it.
+/// Descriptors per connection: its stream, and the two clones that its threads hold.
+const DESCRIPTORS_PER_CONNECTION: libc::rlim_t = 3;
+/// Descriptors outside connections: the log's files, the listener, and std's own.
+const DESCRIPTORS_RESERVED: libc::rlim_t = 64;
+
+/// A connection accepted past the descriptor limit is dropped without an answer, so the limit
+/// must cover every connection that `--max-connections` admits. Raises the soft limit as far as
+/// the hard one; a guest's init, for one, starts at 1,024.
+fn reserve_descriptors(connections: usize) -> io::Result<()> {
+    let need = (connections as libc::rlim_t)
+        .saturating_mul(DESCRIPTORS_PER_CONNECTION)
+        .saturating_add(DESCRIPTORS_RESERVED);
+    let mut limit = libc::rlimit {
+        rlim_cur: 0,
+        rlim_max: 0,
+    };
+    // SAFETY: limit is a live rlimit that getrlimit fills.
+    if unsafe { libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    if limit.rlim_cur >= need {
+        return Ok(());
+    }
+    if limit.rlim_max < need {
+        return Err(io::Error::other(format!(
+            "--max-connections {connections} needs {need} file descriptors, and the hard limit is {}",
+            limit.rlim_max
+        )));
+    }
+    limit.rlim_cur = need;
+    // SAFETY: limit is an initialized rlimit whose soft value does not exceed its hard value.
+    if unsafe { libc::setrlimit(libc::RLIMIT_NOFILE, &limit) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
+/// A dial beyond the accept backlog is refused, on vsock and on a macOS Unix socket, so a pool
+/// that dials all at once needs a backlog of every connection the server admits. The kernel caps
+/// it at its `somaxconn` (4096 on Linux by default).
+fn backlog_len(connections: usize) -> libc::c_int {
+    connections.min(libc::c_int::MAX as usize) as libc::c_int
+}
+
+fn backlog(fd: RawFd, connections: usize) -> io::Result<()> {
+    // SAFETY: fd is a bound socket that the caller owns; listen on a listening socket only resizes
+    // its accept queue.
+    match unsafe { libc::listen(fd, backlog_len(connections)) } {
+        0 => Ok(()),
+        _ => Err(io::Error::last_os_error()),
+    }
+}
+
 fn bind_unix(path: &Path, read_only: bool) -> io::Result<UnixListener> {
     if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_socket())
         && !(read_only && UnixStream::connect(path).is_ok())

@@ -281,7 +281,8 @@ fn closing_run_start(name: &Path, length: u64) -> Option<u64> {
 /// Cases: ORACLE-1, ORACLE-12, ADM-CHARGE, GROUP-FORMATION
 #[test]
 fn measured_appends_survive_reopen() {
-    let _watchdog = super::support::deadline::Deadline::new(Duration::from_secs(300), || {});
+    let deadline = setting("SEGMENT_LOG_BENCH_DEADLINE_S", 300) as u64;
+    let _watchdog = super::support::deadline::Deadline::new(Duration::from_secs(deadline), || {});
     let workspace = Workspace::new();
     let callers = setting("SEGMENT_LOG_BENCH_CALLERS", 4);
     let rounds = setting("SEGMENT_LOG_BENCH_ROUNDS", 4);

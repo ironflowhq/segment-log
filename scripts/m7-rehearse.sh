@@ -108,7 +108,9 @@ echo "exactly one of two simultaneous launches attached, in 20 of 20 rounds"
 
 echo "== conformance over Firecracker vsock"
 cd "$repo/clients/go"
-SEGMENT_LOG_TRANSPORT=firecracker SEGMENT_LOG_SERVER="$repo/scripts/m7/fc-server" \
-	go test -count=1 -run 'TestConformance|TestTransportUnknown|TestTransportRestart|TestHandoff' -v ./... |
-	grep -E '^(=== RUN|--- |ok|FAIL|PASS)'
+# 1 GiB, as in m7-guest-bench.sh: TRANSPORT-DIAL-BURST's 1,000 connections take two server threads
+# each, more than a 256 MiB guest's threads-max.
+M7_MEM_MIB=1024 SEGMENT_LOG_TRANSPORT=firecracker SEGMENT_LOG_SERVER="$repo/scripts/m7/fc-server" \
+	go test -count=1 -run 'TestConformance|TestTransportUnknown|TestTransportRestart|TestDialBurst|TestHandoff' -v ./... |
+	grep -E '^(=== RUN|--- |ok|FAIL|PASS)|_test\.go:[0-9]+:'
 echo "== rehearsal passed"
