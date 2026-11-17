@@ -22,6 +22,8 @@ pub(crate) enum Purpose {
     Seal,
     /// The log key filter's builder reads key index frames after open (ADR 0051).
     LogFilter,
+    /// The operator repair tool's backup and truncation (ADR 0065).
+    Repair,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Op {
