@@ -60,6 +60,7 @@ pub(crate) fn first_frame(sim: &Sim) -> Vec<u8> {
         &crate::codec::Group {
             epoch: 1,
             base_offset: 0,
+            append_time: 0,
             entries: vec![crate::codec::Entry {
                 stream: b"s",
                 key: Some(b"key"),
@@ -92,6 +93,7 @@ pub(crate) fn epoch_fixture(
                 &crate::codec::Group {
                     epoch,
                     base_offset: 0,
+                    append_time: 0,
                     entries: vec![crate::codec::Entry {
                         stream: b"s",
                         key: None,

@@ -204,7 +204,10 @@ impl SegmentLog {
         if options.queue_capacity == 0 || options.pending_byte_budget == 0 {
             return Err(OpenError::InvalidOptions("capacities must be positive"));
         }
-        if !(41..=codec::GROUP_BODY_LIMIT).contains(&options.group_byte_cap) {
+        // The smallest valid group: one record, a one-byte stream id, no key, an empty payload.
+        if !(codec::GROUP_HEADER_LEN + 17..=codec::GROUP_BODY_LIMIT)
+            .contains(&options.group_byte_cap)
+        {
             return Err(OpenError::InvalidOptions("group byte cap outside limits"));
         }
         if options.roll_bytes == 0 || options.roll_bytes > codec::ROLL_BYTES_LIMIT {
@@ -256,6 +259,7 @@ impl SegmentLog {
                             receiver,
                             Writer {
                                 epoch: writable.epoch,
+                                append_time: writable.append_time,
                                 keys,
                                 active: writable.active,
                                 limits,
@@ -495,10 +499,13 @@ fn validate(submit: &Submit) -> Result<(), AppendError> {
     Ok(())
 }
 fn body_size(submit: &Submit) -> Option<usize> {
-    submit.records.iter().try_fold(24usize, |size, r| {
-        size.checked_add(16 + r.stream.len() + r.key.as_ref().map_or(0, Vec::len))?
-            .checked_add(r.payload.len())
-    })
+    submit
+        .records
+        .iter()
+        .try_fold(codec::GROUP_HEADER_LEN, |size, r| {
+            size.checked_add(16 + r.stream.len() + r.key.as_ref().map_or(0, Vec::len))?
+                .checked_add(r.payload.len())
+        })
 }
 
 fn charge(submit: &Submit) -> Option<usize> {

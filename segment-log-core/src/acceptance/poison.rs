@@ -137,6 +137,7 @@ fn frame(log_id: &[u8; 16], base: u64, records: &[NewRecord]) -> Vec<u8> {
     body.extend(1u64.to_le_bytes());
     body.extend(base.to_le_bytes());
     body.extend((records.len() as u32).to_le_bytes());
+    body.extend(0u64.to_le_bytes()); // append time
     for r in records {
         let key = r.key.as_deref().unwrap();
         body.extend((r.stream.len() as u16).to_le_bytes());

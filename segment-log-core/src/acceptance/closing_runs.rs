@@ -36,6 +36,7 @@ fn keyed_segment(epoch: u64) -> Vec<u8> {
         &codec::Group {
             epoch,
             base_offset: 0,
+            append_time: 0,
             entries: records
                 .iter()
                 .map(|r| codec::Entry {
@@ -68,7 +69,8 @@ fn closing_run_at(log_id: &codec::LogId, filter_at: usize, next: u64) -> Vec<u8>
         position: 64,
         record: 0,
     }];
-    let keys = codec::encode_key_frames(log_id, 1, next, filter_at as u64, &mut entries).unwrap();
+    let keys =
+        codec::encode_key_frames(log_id, 0, 1, next, filter_at as u64, &mut entries).unwrap();
     let footer = codec::encode_footer(
         log_id,
         1,
@@ -174,7 +176,7 @@ fn a_payload_that_ends_in_a_closing_run_leaves_the_segment_active() {
     bounded(|| {
         let log_id = codec::LogId::new(raw::LOG_ID);
         let prefix = vec![b'p'; 100];
-        let payload_at = 64 + 8 + 24 + 16 + b"s".len() + b"k".len();
+        let payload_at = 64 + 8 + 32 + 16 + b"s".len() + b"k".len();
         let run = closing_run_at(&log_id, payload_at + prefix.len(), 1);
         let payload = [prefix, run].concat();
         let group = codec::encode_group(
@@ -182,6 +184,7 @@ fn a_payload_that_ends_in_a_closing_run_leaves_the_segment_active() {
             &codec::Group {
                 epoch: 1,
                 base_offset: 0,
+                append_time: 0,
                 entries: vec![codec::Entry {
                     stream: b"s",
                     key: Some(b"k"),
@@ -343,7 +346,7 @@ fn a_torn_group_whose_payload_ends_in_a_foreign_closing_run_is_truncated() {
         let kept = [raw::header(raw::VERSION, 0, 1), raw::group(1, 0, &[b"a"])].concat();
         let torn_at = kept.len();
         let prefix = vec![b'p'; 3 * 4096];
-        let filter_at = torn_at + 8 + 24 + 16 + b"s".len() + prefix.len();
+        let filter_at = torn_at + 8 + 32 + 16 + b"s".len() + prefix.len();
         let own = codec::LogId::new(raw::LOG_ID);
         let other = codec::LogId::new([9; 16]);
         for (label, log_id, strip) in [
@@ -702,7 +705,7 @@ fn a_key_filter_that_misaligns_the_key_index_fails_open() {
             })
             .collect();
         let shifted = filter_at as u64 + 1;
-        let keys = codec::encode_key_frames(&log_id, 1, next, shifted, &mut entries).unwrap();
+        let keys = codec::encode_key_frames(&log_id, 0, 1, next, shifted, &mut entries).unwrap();
         let aligned = raw::roll_run(&groups, 1);
         let filter_len = frames_at(&aligned, filter_at)[0].1;
         assert_eq!(

@@ -66,4 +66,11 @@ pub(crate) trait Lock: Send {}
 pub(crate) trait Storage: Send + Sync {
     fn call(&self, call: Call) -> io::Result<Value>;
     fn lock(&self, path: &Path) -> io::Result<Box<dyn Lock>>;
+    /// Wall-clock milliseconds since the Unix epoch, for a group's append time. It sits on this
+    /// seam so that the simulation and the fixtures can fix it. A clock before 1970 reads 0.
+    fn now_millis(&self) -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+    }
 }

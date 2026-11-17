@@ -226,8 +226,14 @@ impl SealedKeys {
         for page in self.filter.index_pages(hash) {
             let at = self.pages_at + (codec::PAGE_SIZE * page) as u64;
             let bytes = read_exact(storage, &path, Purpose::KeyIndex, at, codec::PAGE_SIZE)?;
-            let entries =
-                codec::decode_page(&bytes, page, self.filter.count(), self.filter.fence(page))?;
+            let entries = codec::decode_page(
+                log_id,
+                self.base,
+                &bytes,
+                page,
+                self.filter.count(),
+                self.filter.fence(page),
+            )?;
             for entry in entries.iter().filter(|entry| entry.hash == hash) {
                 let at = Recorded {
                     base: self.base,
@@ -320,6 +326,7 @@ impl Keys {
     pub(super) fn start_building(&mut self, view: &View, mode: LogFilterMode) {
         self.builder = Builder::start(
             mode,
+            view.log_id.clone(),
             view.storage.clone(),
             view.dir.clone(),
             self.sealed.clone(),

@@ -4,6 +4,9 @@ use keys::Classification;
 
 pub(super) struct Writer {
     pub epoch: u64,
+    /// The newest group's append time. The next group never gets a lower one, even when the
+    /// wall clock steps back (ADR 0064, rule 2).
+    pub append_time: u64,
     pub keys: Keys,
     pub active: Active,
     pub limits: Limits,
@@ -69,7 +72,7 @@ fn build(
 ) -> Built {
     let (base, next, filter_at) = summary;
     let mut entries = hash.entries(&keys);
-    let run = closing::roll_run(&log_id, epoch, next, filter_at, &tails, &mut entries);
+    let run = closing::roll_run(&log_id, base, epoch, next, filter_at, &tails, &mut entries);
     let summary = keys::SealedSummary {
         base,
         next,
@@ -292,7 +295,7 @@ impl Draft {
             tails: BTreeMap::new(),
             footer_growth: 0,
             waiters: Vec::new(),
-            size: codec::BODY_HEADER_LEN,
+            size: codec::GROUP_HEADER_LEN,
         }
     }
 
@@ -316,7 +319,7 @@ impl Writer {
         draft
             .origins
             .extend((0..submit.records.len()).map(|record| (draft.requests.len(), record)));
-        draft.size += body_size(submit).unwrap() - codec::BODY_HEADER_LEN;
+        draft.size += body_size(submit).unwrap() - codec::GROUP_HEADER_LEN;
         for (i, (record, revision)) in submit.records.iter().zip(revisions).enumerate() {
             if !self.active.tails.contains_key(&record.stream)
                 && !draft.tails.contains_key(&record.stream)
@@ -419,7 +422,7 @@ pub(super) fn run(
                         }
                         Ok(revisions) => {
                             let added =
-                                body_size(&request.submit).unwrap() - codec::BODY_HEADER_LEN;
+                                body_size(&request.submit).unwrap() - codec::GROUP_HEADER_LEN;
                             let fits = writer.fits(&draft, &request.submit);
                             if draft.size + added > options.group_byte_cap
                                 || (!fits && !draft.requests.is_empty())
@@ -549,6 +552,7 @@ impl Writer {
         let group = codec::Group {
             epoch: self.epoch,
             base_offset: base,
+            append_time: view.storage.now_millis().max(self.append_time),
             entries,
         };
         let bytes = codec::encode_group(&view.log_id, &group).expect("validated group");
@@ -575,6 +579,7 @@ impl Writer {
         #[cfg(test)]
         timeline.mark(3);
         result?;
+        self.append_time = group.append_time;
         let span = GroupSpan::of(self.active.length, length, &group);
         self.active.length += length as u64;
         self.active.tails.append(&mut draft.tails);

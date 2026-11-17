@@ -34,10 +34,14 @@ pub fn decode_frame(data: &[u8]) {
     };
     let (epoch, base) = (decoded.epoch, decoded.base_offset);
     let encoded = match decoded.body {
-        codec::Body::Group(entries) => {
+        codec::Body::Group {
+            append_time,
+            entries,
+        } => {
             let group = codec::Group {
                 epoch,
                 base_offset: base,
+                append_time,
                 entries,
             };
             codec::encode_group(&log, &group).unwrap()
@@ -54,7 +58,14 @@ pub fn decode_frame(data: &[u8]) {
         }
         codec::Body::KeyIndex { count, pages } => {
             for (number, page) in pages.chunks(codec::PAGE_SIZE).enumerate() {
-                let _ = codec::decode_page(page, number, count, 0);
+                let mut page = page.to_vec();
+                // A page CRC is seeded with its segment's base, which a lone frame does not carry:
+                // checksummed mode re-seals it so that the checks behind the CRC are reached.
+                if mode & 1 == 1 && page.len() == codec::PAGE_SIZE {
+                    let crc = log.page_crc(0, number, &page);
+                    page[codec::PAGE_SIZE - 4..].copy_from_slice(&crc.to_le_bytes());
+                }
+                let _ = codec::decode_page(&log, 0, &page, number, count, 0);
             }
             return;
         }

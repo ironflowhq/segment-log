@@ -141,6 +141,9 @@ struct State {
     faults: Vec<(Call, Fault)>,
     held: Option<Held>,
     locks: BTreeSet<u64>,
+    /// The next reading, and how far each reading moves it. Both start at 0, so a test that
+    /// builds a group's bytes by hand gives it append time 0.
+    clock: (u64, i64),
 }
 #[derive(Clone)]
 pub(crate) struct Sim {
@@ -173,8 +176,14 @@ impl Sim {
                 faults: vec![],
                 held: None,
                 locks: BTreeSet::new(),
+                clock: (0, 0),
             })),
         }
+    }
+    /// The next clock reading is `millis`, and each reading moves the clock by `step` ms, which
+    /// may be negative: a wall clock can step back.
+    pub(crate) fn set_clock(&self, millis: u64, step: i64) {
+        self.state.lock().unwrap().clock = (millis, step);
     }
     pub(crate) fn inject(&self, call: Call, fault: Fault) {
         self.state.lock().unwrap().faults.push((call, fault));
@@ -259,6 +268,12 @@ impl Drop for Guard {
     }
 }
 impl Storage for Sim {
+    fn now_millis(&self) -> u64 {
+        let mut s = self.state.lock().unwrap();
+        let (now, step) = s.clock;
+        s.clock.0 = now.saturating_add_signed(step);
+        now
+    }
     fn call(&self, call: Call) -> io::Result<Value> {
         let (held, boot) = {
             let mut s = self.state.lock().unwrap();

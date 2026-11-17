@@ -1,7 +1,7 @@
 use super::{
     BODY_HEADER_LEN, ENVELOPE_LEN, Error, FOOTER_ENTRY_LEN, FOOTER_HEADER_LEN, FRAME_BODY_LIMIT,
-    GROUP_BODY_LIMIT, KEY_LEN_MAX, KEYED_RECORD_LIMIT, KeyFilter, LOCATOR_LEN, LogId, PAGE_SIZE,
-    STREAM_LEN_MAX, crc, index,
+    GROUP_BODY_LIMIT, GROUP_HEADER_LEN, KEY_LEN_MAX, KEYED_RECORD_LIMIT, KeyFilter, LOCATOR_LEN,
+    LogId, PAGE_SIZE, STREAM_LEN_MAX, crc, index,
 };
 
 #[derive(Clone, Copy)]
@@ -41,6 +41,8 @@ pub(crate) struct Entry<'a> {
 pub(crate) struct Group<'a> {
     pub epoch: u64,
     pub base_offset: u64,
+    /// Wall-clock milliseconds since the Unix epoch, read when the writer encoded the group.
+    pub append_time: u64,
     pub entries: Vec<Entry<'a>>,
 }
 
@@ -68,20 +70,32 @@ pub(crate) struct Frame<'a> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Body<'a> {
-    Group(Vec<Entry<'a>>),
+    Group {
+        append_time: u64,
+        entries: Vec<Entry<'a>>,
+    },
     Footer(Footer<'a>),
     Seal,
-    Locator { footer_position: u64 },
+    Locator {
+        footer_position: u64,
+    },
     KeyFilter(KeyFilter),
-    KeyIndex { count: u32, pages: &'a [u8] },
+    KeyIndex {
+        count: u32,
+        pages: &'a [u8],
+    },
 }
 
 impl<'a> Frame<'a> {
     pub(crate) fn into_group(self) -> Option<Group<'a>> {
         match self.body {
-            Body::Group(entries) => Some(Group {
+            Body::Group {
+                append_time,
+                entries,
+            } => Some(Group {
                 epoch: self.epoch,
                 base_offset: self.base_offset,
+                append_time,
                 entries,
             }),
             _ => None,
@@ -145,7 +159,7 @@ pub(crate) fn encode_group(log: &LogId, group: &Group<'_>) -> Result<Vec<u8>, Er
         .base_offset
         .checked_add(group.entries.len() as u64)
         .ok_or(Error::Offset)?;
-    let mut size = BODY_HEADER_LEN;
+    let mut size = GROUP_HEADER_LEN;
     for entry in &group.entries {
         check_entry(entry)?;
         size = size
@@ -163,6 +177,7 @@ pub(crate) fn encode_group(log: &LogId, group: &Group<'_>) -> Result<Vec<u8>, Er
         group.entries.len() as u32,
         size,
     );
+    out.extend_from_slice(&group.append_time.to_le_bytes());
     for entry in &group.entries {
         out.extend_from_slice(&(entry.stream.len() as u16).to_le_bytes());
         out.extend_from_slice(&(entry.key.map_or(0, <[u8]>::len) as u16).to_le_bytes());
@@ -278,7 +293,13 @@ pub(crate) fn decode<'a>(log: &LogId, bytes: &'a [u8]) -> Result<Frame<'a>, Erro
     let base_offset = c.u64()?;
     let count = c.u32()?;
     let body = match kind {
-        Kind::Group => Body::Group(decode_group(&mut c, size, base_offset, count)?),
+        Kind::Group => {
+            let (append_time, entries) = decode_group(&mut c, size, base_offset, count)?;
+            Body::Group {
+                append_time,
+                entries,
+            }
+        }
         Kind::Footer => Body::Footer(decode_footer(&mut c, size, count)?),
         Kind::Seal => {
             check_fixed_body(&c, count, BODY_HEADER_LEN)?;
@@ -332,15 +353,16 @@ fn decode_group<'a>(
     size: usize,
     base_offset: u64,
     count: u32,
-) -> Result<Vec<Entry<'a>>, Error> {
-    if size > GROUP_BODY_LIMIT {
+) -> Result<(u64, Vec<Entry<'a>>), Error> {
+    if !(GROUP_HEADER_LEN..=GROUP_BODY_LIMIT).contains(&size) {
         return Err(Error::Length);
     }
     let count = count as usize;
-    if count == 0 || count > (size - BODY_HEADER_LEN) / 17 {
+    if count == 0 || count > (size - GROUP_HEADER_LEN) / 17 {
         return Err(Error::Count);
     }
     base_offset.checked_add(count as u64).ok_or(Error::Offset)?;
+    let append_time = c.u64()?;
     let mut entries = Vec::with_capacity(count);
     for _ in 0..count {
         let stream_len = c.u16()? as usize;
@@ -370,7 +392,7 @@ fn decode_group<'a>(
     if c.position != c.bytes.len() {
         return Err(Error::Length);
     }
-    Ok(entries)
+    Ok((append_time, entries))
 }
 
 fn decode_footer<'a>(c: &mut Cursor<'a>, size: usize, count: u32) -> Result<Footer<'a>, Error> {

@@ -7,6 +7,11 @@ use std::{path::Path, sync::Arc};
 const LOG_ID: [u8; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 /// Submits that the first writer appends before the log reopens.
 const FIRST: usize = 3;
+/// The first writer's clock: 2025-11-17T00:00:00Z, moving 1 s at each group.
+const FIRST_CLOCK: u64 = 1_763_337_600_000;
+/// The second writer's clock starts 2.5 s behind the first writer's last group, so its first
+/// groups take that group's time (ADR 0064, rule 2), until the clock passes it.
+const SECOND_CLOCK: u64 = FIRST_CLOCK + (FIRST as u64 - 1) * 1_000 - 2_500;
 
 fn rolling() -> Options {
     Options {
@@ -16,7 +21,8 @@ fn rolling() -> Options {
 }
 
 /// Creates the log at epoch 1, appends the first submits, reopens it at epoch 2 and appends the
-/// rest, so the fixture holds a creation, an epoch change and rolls, as a real history does.
+/// rest, so the fixture holds a creation, an epoch change, rolls and a clock that steps back, as a
+/// real history does.
 fn write(sim: &Sim) -> SegmentLog {
     let random = Call::new("/log", Purpose::Open, Op::Random(16));
     sim.inject(random, Fault::Random(LOG_ID.to_vec()));
@@ -27,9 +33,11 @@ fn write(sim: &Sim) -> SegmentLog {
             .wait()
             .unwrap();
     };
+    sim.set_clock(FIRST_CLOCK, 1_000);
     let log = open_with(sim, rolling());
     submits.by_ref().take(FIRST).for_each(|s| append(&log, s));
     drop(log);
+    sim.set_clock(SECOND_CLOCK, 1_000);
     let log = open_with(sim, rolling());
     submits.for_each(|s| append(&log, s));
     log
@@ -102,7 +110,7 @@ macro_rules! fixture {
         vec![$((
             $base,
             include_bytes!(concat!(
-                "../../tests/fixtures/format-v2/", $dir, "/", $file, ".seg"
+                "../../tests/fixtures/format-v3/", $dir, "/", $file, ".seg"
             ))
             .to_vec(),
         )),+]
@@ -126,8 +134,9 @@ fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)]) {
         let first = actual.iter().zip(fixture).position(|(a, f)| a != f);
         assert!(
             actual == fixture,
-            "segment {base} differs from the format v2 fixture at byte {:?} (lengths {} and {}); \
-             a layout change increments format_version and replaces this fixture (ADR 0053)",
+            "segment {base} differs from the format v3 fixture at byte {:?} (lengths {} and {}); \
+             format v3 is the 0.1 baseline, so this fixture stays for good and a layout change is \
+             a new format version with its own fixture (ADR 0064)",
             first,
             actual.len(),
             fixture.len(),
@@ -135,7 +144,7 @@ fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)]) {
     }
 }
 
-/// Given the committed format v2 fixture: two rolled segments and an active one
+/// Given the committed format v3 fixture: two rolled segments and an active one
 /// When a writable log opens it
 /// Then it reads every record at its offset and revision
 /// And a retry of each keyed record returns the original position without appending
@@ -143,7 +152,7 @@ fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)]) {
 ///
 /// Cases: FORMAT-GOLDEN
 #[test]
-fn a_writable_log_opens_the_format_v2_fixture() {
+fn a_writable_log_opens_the_format_v3_fixture() {
     let sim = Sim::new(0);
     raw::install_segments(&sim, &open_fixture());
     let log = open_with(&sim, options());
@@ -185,13 +194,13 @@ fn a_writable_log_opens_the_format_v2_fixture() {
     assert_eq!(log.watermark(), expected.len() as u64);
 }
 
-/// Given the committed format v2 fixture of a sealed log
+/// Given the committed format v3 fixture of a sealed log
 /// When a `LogReader` opens it
 /// Then it reads every record at its offset and revision
 ///
 /// Cases: FORMAT-GOLDEN
 #[test]
-fn a_log_reader_opens_the_sealed_format_v2_fixture() {
+fn a_log_reader_opens_the_sealed_format_v3_fixture() {
     let sim = Sim::new(0);
     raw::install_segments(&sim, &sealed_fixture());
     let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone())).unwrap();
@@ -202,15 +211,36 @@ fn a_log_reader_opens_the_sealed_format_v2_fixture() {
 
 /// Given a new log created with the fixture's log id
 /// When it appends the first submits, reopens, appends the rest one submit at a time, and seals
-/// Then its segment files equal the committed format v2 fixture byte for byte, before and after the
+/// Then its segment files equal the committed format v3 fixture byte for byte, before and after the
 /// seal
 ///
 /// Cases: FORMAT-GOLDEN
 #[test]
-fn the_writer_still_writes_format_v2() {
+fn the_writer_still_writes_format_v3() {
     let sim = Sim::new(0);
     let log = write(&sim);
     assert_same(&raw::segments(&sim), &open_fixture());
     log.seal().unwrap();
     assert_same(&raw::segments(&sim), &sealed_fixture());
+}
+
+/// Given the committed format v3 fixture
+/// When each group frame is decoded
+/// Then the first writer's groups carry its clock, one second apart, and the second writer's
+/// groups never go below the first writer's last time although its clock started behind it
+///
+/// Cases: FORMAT-GOLDEN, FORMAT-APPEND-TIME
+#[test]
+fn the_format_v3_fixture_carries_append_times_that_never_decrease() {
+    let log_id = crate::codec::LogId::new(LOG_ID);
+    let times: Vec<u64> = open_fixture()
+        .iter()
+        .flat_map(|(_, bytes)| raw::frames(bytes))
+        .filter_map(|frame| crate::codec::decode(&log_id, frame).ok()?.into_group())
+        .map(|group| group.append_time - FIRST_CLOCK)
+        .collect();
+    assert_eq!(
+        times,
+        [0, 1_000, 2_000, 2_000, 2_000, 2_000, 2_500, 3_500, 4_500]
+    );
 }

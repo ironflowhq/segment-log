@@ -1,6 +1,8 @@
 # Byte layout
 
-Status: `format_version` 2 ([ADR 0055](../decisions/0055-format-version-2-aligns-key-index-pages.md)), from version 1, which M5 reviewed ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). Until the first production release, a change to the bytes of a segment file increments `format_version`, and a build reads only its own version ([ADR 0053](../decisions/0053-format-changes-need-no-older-reader-before-production.md)). No build reads version 0 (M1–M3) or version 1 (M4–M5).
+Status: `format_version` 3, the 0.1 baseline ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md)). Version 3 adds a group's append time and binds each key index page to its place; version 2 ([ADR 0055](../decisions/0055-format-version-2-aligns-key-index-pages.md)) aligned key index pages, and version 1 is what M5 reviewed ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). Until the 0.1 tag, a change may still replace version 3 ([ADR 0053](../decisions/0053-format-changes-need-no-older-reader-before-production.md)). From the 0.1 tag, a change to the bytes of a segment file is a new `format_version`, written one segment at a time, and every build reads every version from 3 up to its own (ADR 0064, rules 11–14). No build reads version 0, 1 or 2: each is refused with `UnsupportedVersion`.
+
+Every width, limit and constant in this file belongs to format version 3, the filter's parameters and the page size included. Changing one is a new format version.
 
 This file is the only source for field widths, offsets and size limits. Other docs link here and do not copy them.
 
@@ -22,6 +24,8 @@ Open ignores any other file.
 
 ## Limits
 
+These are format version 3's limits.
+
 | Limit | Value | Why |
 | --- | --- | --- |
 | Frame body (`body_len`) | at most 16 MiB (`16 * 1024 * 1024`) | Bounds the memory that one frame needs. |
@@ -36,13 +40,15 @@ Open ignores any other file.
 | Offset | Size | Field |
 | --- | --- | --- |
 | 0 | 4 | `magic` — the bytes `S G L G` (`0x53 0x47 0x4C 0x47`) |
-| 4 | 2 | `format_version` — `2`. Version 1 (M4–M5) did not align key index pages. Version 0 (M1–M3) had no closing frames. |
+| 4 | 2 | `format_version` — `3`. Version 2 had no append time and unbound key index pages. Version 1 (M4–M5) did not align key index pages. Version 0 (M1–M3) had no closing frames. |
 | 6 | 2 | `header_len` — `64` |
 | 8 | 16 | `log_id` — 128 random bits, chosen when the log is created. The same in every segment of a log. |
 | 24 | 8 | `base_offset` — the log offset of the first record in this segment. Equal to the file name. |
 | 32 | 8 | `epoch` — the writer epoch that created this segment |
 | 40 | 20 | reserved |
 | 60 | 4 | `crc` — CRC-32C of bytes 0..60 |
+
+`magic`, `format_version` and `header_len` keep their offsets in every version, and the header CRC sits at `header_len - 4`, so a reader can tell any version's header from its first 8 bytes (ADR 0064, rule 13).
 
 ## Frame
 
@@ -73,9 +79,19 @@ Check value: with `log_id` bytes `00 01 02 … 0f`, a seal frame with epoch 1 an
 
 The CRC covers the epoch. Kafka keeps its leader epoch outside the CRC, so that a broker can stamp it when it receives a batch. A local writer has no receive path, so it has no reason to leave a field unprotected.
 
+### Group body
+
+A group body is the body header, then `append_time`, then `count` record entries.
+
+| Offset in body | Size | Field |
+| --- | --- | --- |
+| 24 | 8 | `append_time` — wall-clock milliseconds since the Unix epoch, which the writer reads when it encodes the group |
+
+The append time never decreases within a log. The writer stamps the larger of its clock and the previous group's time. At open it takes the previous time from the newest group it keeps: the newest segment's last group, or, when the newest segment holds only its header, the last group of the segment before, which is the group at the largest `last_position` in that segment's footer. A clock that steps back therefore cannot reorder appends ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md), rule 2). Readers do not check the order: a decrease is not a reason to reject a frame. Closing frames carry no time, so ADR 0054's rebuild of a closing run never reads a clock.
+
 ### Group record entry
 
-A group body has `count` entries after the body header, one after another.
+The entries follow `append_time`, one after another.
 
 | Offset in entry | Size | Field |
 | --- | --- | --- |
@@ -92,10 +108,10 @@ The log offset of entry `i` (from 0) is `base_offset + i`. It is not stored. A r
 For admission, a submit's standalone group-body size is:
 
 ```text
-body_len = 24 + sum(16 + stream.len() + key_len + payload.len())
+body_len = 32 + sum(16 + stream.len() + key_len + payload.len())
 ```
 
-Here `key_len` is zero for an unkeyed record. The formula includes one body header and every record entry, and excludes the frame envelope and segment header. A submit fits alone when this size is at most `group_byte_cap`. Use checked arithmetic. This encoded size uses initialized lengths, separately from the capacity-based admission charge in [api.md](api.md#admission-charge).
+Here `key_len` is zero for an unkeyed record. The formula includes one body header, the append time and every record entry, and excludes the frame envelope and segment header. A submit fits alone when this size is at most `group_byte_cap`. Use checked arithmetic. This encoded size uses initialized lengths, separately from the capacity-based admission charge in [api.md](api.md#admission-charge).
 
 ### Footer frame (M4)
 
@@ -110,7 +126,7 @@ The key index frame starts where the key filter frame ends, so the footer needs 
 
 ### Footer entry (M4)
 
-There is one entry for each stream that has a record in this segment.
+There is one entry for each stream that has a record in this segment. The entries are sorted by stream id, compared as unsigned bytes, a shorter id before a longer one that starts with it. ADR 0054's byte check depends on this order.
 
 | Offset in entry | Size | Field |
 | --- | --- | --- |
@@ -172,7 +188,7 @@ Each page:
 | 0 | 4,080 | 255 entry slots |
 | 4,080 | 4 | `entry_count` — 255 in every page except the last, which holds the rest (1 to 255) |
 | 4,084 | 8 | reserved |
-| 4,092 | 4 | `crc` — CRC-32C of page bytes 0..4092 |
+| 4,092 | 4 | `crc` — CRC-32C of the segment header's 16 `log_id` bytes, then the segment's `base_offset` (8), then the page number from 0 (4), then page bytes 0..4092 |
 
 Each entry:
 
@@ -181,6 +197,8 @@ Each entry:
 | 0 | 8 | `hash` — the key hash |
 | 8 | 4 | `position` — the file position of the group frame that holds the record |
 | 12 | 4 | `record` — the record's index in that frame, from 0 |
+
+The seed makes a page valid only at its own number in its own segment of its own log, so a page copied from elsewhere fails its CRC, as a frame from another log does.
 
 The entries of all pages together are sorted by `(hash, position, record)`, with no repeats. Slots after `entry_count` are zero. The frame CRC covers the whole body, but a lookup reads one page and checks that page's CRC, so that it never reads a whole frame of up to 16 MiB.
 
@@ -208,12 +226,12 @@ A segment that a roll sealed holds, in order: the header, its group frames, the 
 
 - A header is valid only if its magic, version, length and CRC match, its reserved bytes are zero, its `log_id` equals the first segment's `log_id`, and its `base_offset` equals its file name.
 - Each segment's `base_offset` equals the next unused log offset of the segment before it. A gap is an error, not a hole to skip.
-- A frame is valid only if its length is in range, its CRC matches, its reserved fields are zero, its `kind` is known, its `base_offset` is the next expected offset, its `epoch` is not lower than the epoch of the frame before it, and its entries fill the body exactly.
+- A frame is valid only if its length is in range, its CRC matches, its reserved fields are zero, its `kind` is known, its `base_offset` is the next expected offset, its `epoch` is not lower than the epoch of the frame before it, nor than its segment header's `epoch`, nor than the highest epoch of the segment before, and its entries fill the body exactly.
 - From M4, key filter, key index, footer, seal and locator frames are closing frames. They are valid only as a closing run, which has one of two shapes:
   - A roll's run: a key filter, a key index with the same `count`, a footer whose `key_filter_position` is that key filter's position, and a locator.
   - A seal's run: a footer whose `key_filter_position` is `0`, a seal frame and a locator.
 
-  In both, the locator points to the footer and ends at the end of the file. The run's bytes must equal the run that a writer builds from the segment's group frames, with the run's epoch and start position: the footer names each stream's last record in the segment, and the key frames name every keyed record ([ADR 0054](../decisions/0054-a-closing-run-must-match-its-groups.md)). A forward scan that ends through a complete run shows a sealed segment. If a run is not complete and valid, the scan stops where the run starts. A closing frame anywhere else ends the log. The last bytes of a file never decide this alone, because a payload can end with bytes that look like a locator.
+  In both, the locator points to the footer and ends at the end of the file, and every frame of the run carries the run's epoch. The run's bytes must equal the run that a writer builds from the segment's group frames, with the run's epoch and start position: the footer names each stream's last record in the segment, and the key frames name every keyed record ([ADR 0054](../decisions/0054-a-closing-run-must-match-its-groups.md)). A forward scan that ends through a complete run shows a sealed segment. If a run is not complete and valid, the scan stops where the run starts. A closing frame anywhere else ends the log. The last bytes of a file never decide this alone, because a payload can end with bytes that look like a locator.
 - In the active segment, the first frame that is not valid ends the log. Recovery truncates there.
 - In a sealed segment, a frame that is not valid is corruption. Recovery stops with an error.
 - A key filter frame is valid only if its padding is zero and shorter than 4,096 bytes, and is empty when `count` is 0. A reader that knows the frame's file position also checks that the key index pages start on a 4 KiB boundary. A decoder that does not know it cannot, because the padding's length depends on the position.

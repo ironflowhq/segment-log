@@ -1,6 +1,6 @@
 use super::{
     BODY_HEADER_LEN, ENVELOPE_LEN, Error, KEYED_RECORD_LIMIT, KeyFilter, LogId, PAGE_ENTRIES,
-    PAGE_SIZE, crc32c,
+    PAGE_SIZE,
     frame::{Kind, begin, finish},
 };
 
@@ -24,7 +24,19 @@ pub(crate) fn page_count(count: u32) -> usize {
     (count as usize).div_ceil(PAGE_ENTRIES)
 }
 
-fn write_page(out: &mut Vec<u8>, entries: &[KeyEntry]) {
+impl LogId {
+    /// A page's CRC starts from the segment's `log_id`, `base_offset` and the page's number, so a
+    /// page is valid only at its own place in its own segment of its own log (format v3).
+    pub(crate) fn page_crc(&self, base: u64, number: usize, page: &[u8]) -> u32 {
+        // A page number is below the page count, which a u32 key count bounds far below 2^32.
+        let number = number as u32;
+        let seed = super::crc::update(self.crc, &base.to_le_bytes());
+        let seed = super::crc::update(seed, &number.to_le_bytes());
+        !super::crc::update(seed, &page[..PAGE_CRC_AT])
+    }
+}
+
+fn write_page(out: &mut Vec<u8>, log: &LogId, base: u64, number: usize, entries: &[KeyEntry]) {
     let start = out.len();
     for entry in entries {
         out.extend_from_slice(&entry.hash.to_le_bytes());
@@ -34,7 +46,7 @@ fn write_page(out: &mut Vec<u8>, entries: &[KeyEntry]) {
     out.resize(start + PAGE_COUNT_AT, 0);
     out.extend_from_slice(&(entries.len() as u32).to_le_bytes());
     out.extend_from_slice(&[0; 8]);
-    let crc = crc32c(&out[start..]);
+    let crc = log.page_crc(base, number, &out[start..]);
     out.extend_from_slice(&crc.to_le_bytes());
 }
 
@@ -49,8 +61,11 @@ fn key_filter_padding(filter_at: u64, count: u32, filter_bytes: usize) -> usize 
     (PAGE_SIZE - pages_at % PAGE_SIZE) % PAGE_SIZE
 }
 
+/// `base` is the segment's `base_offset`, which seeds each page's CRC; `base_offset` is the frames'
+/// next unused log offset.
 pub(crate) fn encode_key_frames(
     log: &LogId,
+    base: u64,
     epoch: u64,
     base_offset: u64,
     filter_at: u64,
@@ -83,8 +98,8 @@ pub(crate) fn encode_key_frames(
         count,
         BODY_HEADER_LEN + PAGE_SIZE * page_count(count),
     );
-    for page in entries.chunks(PAGE_ENTRIES) {
-        write_page(&mut out, page);
+    for (number, page) in entries.chunks(PAGE_ENTRIES).enumerate() {
+        write_page(&mut out, log, base, number, page);
     }
     Ok(KeyFrames {
         filter,
@@ -92,7 +107,10 @@ pub(crate) fn encode_key_frames(
     })
 }
 
+/// Page `number` of the key index of the segment at `base` in `log`.
 pub(crate) fn decode_page(
+    log: &LogId,
+    base: u64,
     page: &[u8],
     number: usize,
     count: u32,
@@ -101,12 +119,14 @@ pub(crate) fn decode_page(
     if page.len() != PAGE_SIZE {
         return Err(Error::Length);
     }
-    if crc32c(&page[..PAGE_CRC_AT]) != u32::from_le_bytes(page[PAGE_CRC_AT..].try_into().unwrap()) {
-        return Err(Error::Crc);
-    }
     let pages = page_count(count);
     if number >= pages {
         return Err(Error::Count);
+    }
+    if log.page_crc(base, number, page)
+        != u32::from_le_bytes(page[PAGE_CRC_AT..].try_into().unwrap())
+    {
+        return Err(Error::Crc);
     }
     let expected = if number + 1 == pages {
         count as usize - number * PAGE_ENTRIES

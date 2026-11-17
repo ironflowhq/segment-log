@@ -48,7 +48,7 @@ fn invalid_options_do_not_touch_storage() {
                 ..options()
             },
             Options {
-                group_byte_cap: 40,
+                group_byte_cap: 48,
                 ..options()
             },
             Options {
@@ -104,7 +104,7 @@ fn defaults_match_the_api_and_budgets_are_independent() {
 #[test]
 fn inclusive_option_boundaries_open_without_budget_sized_allocation() {
     bounded(|| {
-        let minimum_body = 24 + 16 + 1;
+        let minimum_body = 32 + 16 + 1;
         for cap in [minimum_body, 8 * 1024 * 1024] {
             for roll_bytes in [1, 4000 * 1024 * 1024] {
                 for budget in [1, usize::MAX] {

@@ -68,6 +68,9 @@ pub(super) struct Survey {
     pub published: Published,
     pub sealed: Vec<SealedSummary>,
     pub epoch: u64,
+    /// The append time of the newest group that open keeps, or 0 in a log with no group. The
+    /// writer never stamps a lower one (ADR 0064, rule 2).
+    pub append_time: u64,
     pub newest_header: Vec<u8>,
     pub newest: Scan,
     /// The second-newest segment's closing run, rebuilt because the writer had not written it
@@ -107,6 +110,8 @@ struct Kept {
     published: Published,
     /// The epoch that the next frame must not be lower than.
     epoch: u64,
+    /// The segment base and position of the newest group kept so far.
+    last_group: Option<(u64, u64)>,
 }
 
 pub(super) fn segment_bases(storage: &ReadOnly<'_>, dir: &Path) -> io::Result<Vec<u64>> {
@@ -156,6 +161,7 @@ pub(super) fn survey(
     let mut kept = Kept {
         published: Published::default(),
         epoch: 0,
+        last_group: None,
     };
     let mut sealed = vec![];
     let mut pending = None;
@@ -210,16 +216,37 @@ pub(super) fn survey(
             position: rebuilt.start,
         });
     }
+    let append_time = match (&newest.last, kept.last_group) {
+        (Some((_, bytes)), _) => group_time(&log_id, bytes).expect("scan keeps valid groups"),
+        // A newest segment with no group: the newest group ends the segment before it.
+        (None, Some((segment, position))) => {
+            let path = segment_path(dir, segment);
+            let length = storage.length(&path, Purpose::Recovery)?;
+            storage
+                .frame(&path, Purpose::Recovery, position, length)?
+                .and_then(|bytes| group_time(&log_id, &bytes))
+                .ok_or(OpenError::Corrupt { segment, position })?
+        }
+        (None, None) => 0,
+    };
     Ok(Survey {
         log_id,
         hash,
         published: kept.published,
         sealed,
         epoch: kept.epoch,
+        append_time,
         newest_header,
         newest,
         pending,
     })
+}
+
+fn group_time(log: &codec::LogId, frame: &[u8]) -> Option<u64> {
+    codec::decode(log, frame)
+        .ok()?
+        .into_group()
+        .map(|g| g.append_time)
 }
 
 /// Rule 8 of ADR 0061: the second-newest segment may end in its groups, or in a closing run that
@@ -251,7 +278,15 @@ fn rebuild(
         return Ok(None);
     }
     let mut entries = hash.entries(&scan.keys);
-    let run = closing::roll_run(log, epoch, successor, scan.end, &scan.tails, &mut entries);
+    let run = closing::roll_run(
+        log,
+        base,
+        epoch,
+        successor,
+        scan.end,
+        &scan.tails,
+        &mut entries,
+    );
     let summary = SealedSummary {
         base,
         next: successor,
@@ -348,6 +383,14 @@ fn summarize(
     };
     kept.published
         .opened(&summary, &footer, kept.epoch..=footer_epoch);
+    // A segment's newest group holds some stream's last record in it. A footer with no stream
+    // names no group, so an earlier segment's newest group stays the newest.
+    kept.last_group = footer
+        .streams
+        .iter()
+        .map(|tail| (base, tail.last_position))
+        .max_by_key(|&(_, position)| position)
+        .or(kept.last_group);
     // The locator is the segment's last frame, and epochs never decrease within a segment.
     kept.epoch = epoch;
     Ok(summary)
@@ -460,6 +503,7 @@ fn scan(
                 }
                 kept.published
                     .publish(GroupSpan::of(position, bytes.len(), &group), &group);
+                kept.last_group = Some((base, position));
                 last = Some((position, bytes));
             }
             Step::Run(next) => {
@@ -472,7 +516,7 @@ fn scan(
                 run.push(bytes);
                 let next = kept.published.watermark;
                 let mut entries = hash.entries(&keys);
-                let built = closing::roll_run(log, epoch, next, start, &tails, &mut entries);
+                let built = closing::roll_run(log, base, epoch, next, start, &tails, &mut entries);
                 matches_groups(&run, &built, base, start)?;
                 let summary = SealedSummary {
                     base,

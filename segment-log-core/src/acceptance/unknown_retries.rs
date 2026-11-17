@@ -100,6 +100,7 @@ fn unknown_regrouped_retry_can_have_only_a_subset_of_matches() {
                 &crate::codec::Group {
                     epoch: 1,
                     base_offset: 1,
+                    append_time: 0,
                     entries: vec![crate::codec::Entry {
                         stream: b"t",
                         key: Some(b"t"),

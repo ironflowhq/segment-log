@@ -97,7 +97,7 @@ impl SealedSegment {
             let base = u64::from_le_bytes(prefix[20..28].try_into().unwrap());
             let count = u32::from_le_bytes(prefix[28..32].try_into().unwrap());
             let end = position + 8 + body as u64;
-            let valid = (codec::BODY_HEADER_LEN..=codec::GROUP_BODY_LIMIT).contains(&body)
+            let valid = (codec::GROUP_HEADER_LEN..=codec::GROUP_BODY_LIMIT).contains(&body)
                 && end <= groups_end
                 && prefix[8] == 1
                 && (floor..=*self.epochs.end()).contains(&epoch)
