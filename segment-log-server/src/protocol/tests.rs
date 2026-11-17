@@ -372,7 +372,10 @@ fn every_supported_version_has_a_golden_fixture() {
         .unwrap()
         .filter_map(|entry| {
             let name = entry.unwrap().file_name().into_string().unwrap();
-            name.strip_prefix("wire-v")?.strip_suffix(".txt")?.parse().ok()
+            name.strip_prefix("wire-v")?
+                .strip_suffix(".txt")?
+                .parse()
+                .ok()
         })
         .collect();
     fixtures.sort_unstable();
