@@ -1,6 +1,7 @@
 //! A request's answer, and how the answers of a durable group reach their callers
 //! ([ADR 0044](../../../docs/decisions/0044-woken-callers-relay-group-acks.md)).
 use super::*;
+use std::sync::MutexGuard;
 use std::thread::{self, Thread};
 
 type Answer = Result<Committed, CommitError>;
@@ -64,14 +65,7 @@ impl Pending {
         let mut state = self.slot.0.lock().unwrap();
         loop {
             if let Some(answer) = state.answer.take() {
-                // Cleared so that a relay which reaches this place later wakes the children itself.
-                state.waiter = None;
-                let relay = state.relay.take();
-                drop(state);
-                if let Some((relay, place)) = relay {
-                    relay.wake_children(Some(place));
-                }
-                return answer;
+                return Self::answered(state, answer);
             }
             if state.waiter.is_none() {
                 state.waiter = Some(thread::current());
@@ -81,6 +75,29 @@ impl Pending {
             thread::park();
             state = self.slot.0.lock().unwrap();
         }
+    }
+
+    /// The answer if the writer has given it, or this handle back.
+    pub fn try_wait(self) -> Result<Result<Committed, CommitError>, Pending> {
+        let mut state = self.slot.0.lock().unwrap();
+        match state.answer.take() {
+            Some(answer) => Ok(Self::answered(state, answer)),
+            None => {
+                drop(state);
+                Err(self)
+            }
+        }
+    }
+
+    fn answered(mut state: MutexGuard<'_, State>, answer: Answer) -> Answer {
+        // Cleared so that a relay which reaches this place later wakes the children itself.
+        state.waiter = None;
+        let relay = state.relay.take();
+        drop(state);
+        if let Some((relay, place)) = relay {
+            relay.wake_children(Some(place));
+        }
+        answer
     }
 
     #[cfg(test)]

@@ -95,7 +95,7 @@ Request body: `count` (4 bytes, at least 1 is checked by the core), then `count`
 | … | `key_len` | idempotency key |
 | … | `payload_len` | payload |
 
-The server checks only the layout: the entries fill the body, `expected` is `0` or `1`, and `revision` is zero for `Empty`. Field limits, an empty submit and repeated keys are the core's checks, and they answer `Invalid`. The server answers when `Pending::wait` returns. Answer fields after the status:
+The server checks only the layout: the entries fill the body, `expected` is `0` or `1`, and `revision` is zero for `Empty`. Field limits, an empty submit and repeated keys are the core's checks, and they answer `Invalid`. The server answers when the submit's `Pending` has its answer. Answers that are ready together may share one write, still in request order. Answer fields after the status:
 
 | Offset | Size | Field |
 | --- | --- | --- |

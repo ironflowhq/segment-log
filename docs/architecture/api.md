@@ -118,6 +118,11 @@ impl Pending {
     /// Blocks until the writer answers this submit. If the writer thread stops
     /// without an answer (a panic), returns Indeterminate.
     pub fn wait(self) -> Result<Committed, CommitError>;
+
+    /// Returns the answer without blocking if the writer has given it, as `wait`
+    /// would, or hands this handle back. A server uses it to send every answer that
+    /// is ready in one write.
+    pub fn try_wait(self) -> Result<Result<Committed, CommitError>, Pending>;
 }
 
 pub struct Committed {

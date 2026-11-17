@@ -1,7 +1,7 @@
 //! The M6 socket diagnostic (ADR 0056): the M1 append workload, run in process or over the Unix
 //! socket, so that the difference between two runs is the transport.
 //!
-//! usage: socket_bench (--inproc <log-dir> | --unix <socket> | --firecracker <uds>:<port>) <callers> <rounds> [<interval-us>]
+//! usage: socket_bench (--inproc <log-dir> | --unix <socket> | --firecracker <uds>:<port>) <callers> <rounds> [<interval-us>] [--connections <n>]
 //!
 //! `--firecracker` dials a server in a Firecracker guest through the VMM's hybrid vsock socket
 //! (`CONNECT <port>`), the caller's path on the M7 stack (ADR 0059): the M7 guest benchmark.
@@ -11,14 +11,17 @@
 //! Without an interval each caller submits again as soon as it is answered (a closed loop). With
 //! one, each caller submits once per interval, the callers spread evenly over it, and latency runs
 //! from the scheduled send (ADR 0045). Over the socket each caller has its own connection, so the
-//! server must allow that many (`--max-connections`).
+//! server must allow that many (`--max-connections`). With `--connections <n>` the callers share
+//! `n` pipelined connections instead, caller `i` on connection `i % n`: each connection sends the
+//! requests queued together in one write, and hands the answers back in request order.
 
 use segment_log_core::{AppendError, ExpectedRevision, NewRecord, Options, SegmentLog, Submit};
 use segment_log_server::protocol::{self, HEADER_LEN, Request};
+use std::io::BufReader;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::sync::Arc;
-use std::sync::mpsc;
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -44,6 +47,56 @@ fn input(caller: usize, revision: usize) -> Submit {
 enum Target {
     InProcess(Arc<SegmentLog>),
     Socket(UnixStream),
+    Shared(Sender<Exchange>),
+}
+
+/// A request's bytes, and where its connection sends the answer's body.
+type Exchange = (Vec<u8>, Sender<Vec<u8>>);
+
+/// Starts a pipelined connection's two threads and returns the way to send it requests.
+fn share(stream: UnixStream) -> Sender<Exchange> {
+    let (requests, queue) = mpsc::channel::<Exchange>();
+    let (waiting, answers) = mpsc::channel::<Sender<Vec<u8>>>();
+    let mut writer = stream.try_clone().unwrap();
+    thread::spawn(move || {
+        while let Ok(first) = queue.recv() {
+            let mut bytes = Vec::new();
+            for (request, reply) in std::iter::once(first).chain(queue.try_iter()) {
+                bytes.extend(request);
+                // Queued before the write, so the reader always finds the request's caller.
+                waiting.send(reply).unwrap();
+            }
+            writer.write_all(&bytes).unwrap();
+        }
+    });
+    thread::spawn(move || deliver(BufReader::new(stream), answers));
+    requests
+}
+
+/// Hands each answer's body to the caller of the oldest unanswered request.
+fn deliver(mut stream: impl Read, answers: Receiver<Sender<Vec<u8>>>) {
+    for reply in answers {
+        let mut header = [0; HEADER_LEN];
+        stream.read_exact(&mut header).unwrap();
+        assert_eq!(header[4], protocol::APPEND | 0x80, "answer kind");
+        let mut body = vec![0; u32::from_le_bytes(header[..4].try_into().unwrap()) as usize];
+        stream.read_exact(&mut body).unwrap();
+        // A caller that has gone has nothing to learn.
+        let _ = reply.send(body);
+    }
+}
+
+/// The committed revision of an `Append` answer's body, or `None` for `Full`.
+fn revision(body: &[u8]) -> Option<u64> {
+    match u16::from_le_bytes([body[0], body[1]]) {
+        // Status, deduplicated, 3 reserved, count, then offset and revision.
+        0 => {
+            assert_eq!(body[2], 0, "deduplicated: the log was not fresh");
+            Some(u64::from_le_bytes(body[18..26].try_into().unwrap()))
+        }
+        1 => None, // Full (protocol.md)
+        status => panic!("append failed with status {status}"),
+    }
 }
 
 impl Target {
@@ -61,17 +114,16 @@ impl Target {
                 Err(AppendError::Full) => None,
                 Err(error) => panic!("admission failure: {error:?}"),
             },
-            Target::Socket(stream) => {
-                let body = exchange(stream, &Request::Append(submit), protocol::APPEND);
-                match u16::from_le_bytes([body[0], body[1]]) {
-                    // Status, deduplicated, 3 reserved, count, then offset and revision.
-                    0 => {
-                        assert_eq!(body[2], 0, "deduplicated: the log was not fresh");
-                        Some(u64::from_le_bytes(body[18..26].try_into().unwrap()))
-                    }
-                    1 => None, // Full (protocol.md)
-                    status => panic!("append failed with status {status}"),
-                }
+            Target::Socket(stream) => revision(&exchange(
+                stream,
+                &Request::Append(submit),
+                protocol::APPEND,
+            )),
+            Target::Shared(connection) => {
+                let (reply, answer) = mpsc::channel();
+                let request = protocol::encode_request(&Request::Append(submit));
+                connection.send((request, reply)).unwrap();
+                revision(&answer.recv().unwrap())
             }
         }
     }
@@ -119,8 +171,14 @@ fn dial(mode: &str, path: &str) -> UnixStream {
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    let usage = "usage: socket_bench (--inproc <log-dir> | --unix <socket> | --firecracker <uds>:<port>) <callers> <rounds> [<interval-us>]";
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    let usage = "usage: socket_bench (--inproc <log-dir> | --unix <socket> | --firecracker <uds>:<port>) <callers> <rounds> [<interval-us>] [--connections <n>]";
+    let connections = args.iter().position(|a| a == "--connections").map(|at| {
+        let n: usize = args.get(at + 1).and_then(|n| n.parse().ok()).expect(usage);
+        assert!(n > 0, "{usage}");
+        args.drain(at..at + 2);
+        n
+    });
     let [mode, path, callers, rounds, rest @ ..] = args.as_slice() else {
         panic!("{usage}");
     };
@@ -138,32 +196,43 @@ fn main() {
     };
     let options = Options::default();
     println!(
-        "CONFIG transport={} callers={callers} rounds={rounds} payload=256 records_per_submit=1 interval_ns={} linger_ns={} group_byte_cap={} queue_capacity={} pending_byte_budget={}",
+        "CONFIG transport={} callers={callers} connections={} rounds={rounds} payload=256 records_per_submit=1 interval_ns={} linger_ns={} group_byte_cap={} queue_capacity={} pending_byte_budget={}",
         mode.trim_start_matches('-'),
+        match (&log, connections) {
+            (Some(_), _) => 0,
+            (None, n) => n.unwrap_or(callers),
+        },
         interval.map_or(0, |i| i.as_nanos()),
         options.linger.as_nanos(),
         options.group_byte_cap,
         options.queue_capacity,
         options.pending_byte_budget,
     );
-    // Every caller connects and says Hello before the clock starts.
+    // Every connection says Hello before the clock starts.
+    let connect = || {
+        let mut stream = dial(mode, path);
+        let hello = exchange(
+            &mut stream,
+            &Request::Hello {
+                version: protocol::VERSION,
+            },
+            protocol::HELLO,
+        );
+        assert_eq!(hello[..2], [0, 0], "hello refused");
+        stream
+    };
+    let shared: Vec<Sender<Exchange>> = match (&log, connections) {
+        (None, Some(n)) => (0..n).map(|_| share(connect())).collect(),
+        _ => Vec::new(),
+    };
     let targets: Vec<Target> = (0..callers)
-        .map(|_| match &log {
+        .map(|caller| match &log {
             Some(log) => Target::InProcess(Arc::clone(log)),
-            None => {
-                let mut stream = dial(mode, path);
-                let hello = exchange(
-                    &mut stream,
-                    &Request::Hello {
-                        version: protocol::VERSION,
-                    },
-                    protocol::HELLO,
-                );
-                assert_eq!(hello[..2], [0, 0], "hello refused");
-                Target::Socket(stream)
-            }
+            None if !shared.is_empty() => Target::Shared(shared[caller % shared.len()].clone()),
+            None => Target::Socket(connect()),
         })
         .collect();
+    drop(shared);
     let (gates, workers): (Vec<_>, Vec<_>) = targets
         .into_iter()
         .enumerate()
