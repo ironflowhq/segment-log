@@ -16,6 +16,7 @@ use std::fs;
 use std::io;
 use std::net::Shutdown;
 use std::os::unix::fs::FileTypeExt;
+use std::os::unix::io::{AsRawFd, RawFd};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::process::ExitCode;
@@ -56,7 +57,8 @@ pub fn main_with(args: impl Iterator<Item = String>) -> ExitCode {
             return ExitCode::from(EXIT_START);
         }
     };
-    let (incoming, address) = match listen(&config.listen, config.read_only) {
+    let (incoming, address) = match listen(&config.listen, config.read_only, config.max_connections)
+    {
         Ok(listening) => listening,
         Err((address, error)) => {
             eprintln!("segment-log-server: bind {address}: {error}");
@@ -111,11 +113,14 @@ type Incoming = Box<dyn Iterator<Item = io::Result<UnixStream>> + Send>;
 fn listen(
     listen: &args::Listen,
     read_only: bool,
+    connections: usize,
 ) -> Result<(Incoming, String), (String, io::Error)> {
     match listen {
         args::Listen::Unix(path) => {
             let address = path.display().to_string();
-            match bind_unix(path, read_only) {
+            match bind_unix(path, read_only)
+                .and_then(|l| backlog(l.as_raw_fd(), connections).map(|()| l))
+            {
                 Ok(listener) => Ok((
                     Box::new(std::iter::from_fn(move || {
                         Some(listener.accept().map(|(stream, _)| stream))
@@ -128,7 +133,7 @@ fn listen(
         args::Listen::Vsock(port) => {
             let address = format!("vsock port {port}");
             #[cfg(target_os = "linux")]
-            match vsock::Listener::bind(*port) {
+            match vsock::Listener::bind(*port, backlog_len(connections)) {
                 Ok(listener) => Ok((
                     Box::new(std::iter::from_fn(move || Some(listener.accept()))),
                     address,
@@ -163,6 +168,22 @@ fn accept(incoming: Incoming, server: &Arc<Server>, log: &Weak<Log>, frame_cap: 
 
 /// A writer holds the log's LOCK, so a socket at `path` cannot be a live server's. A reader holds
 /// no lock, so it removes the socket only when nothing answers on it.
+/// A dial beyond the accept backlog is refused, on vsock and on a macOS Unix socket, so a pool
+/// that dials all at once needs a backlog of every connection the server admits. The kernel caps
+/// it at its `somaxconn` (4096 on Linux by default).
+fn backlog_len(connections: usize) -> libc::c_int {
+    connections.min(libc::c_int::MAX as usize) as libc::c_int
+}
+
+fn backlog(fd: RawFd, connections: usize) -> io::Result<()> {
+    // SAFETY: fd is a bound socket that the caller owns; listen on a listening socket only resizes
+    // its accept queue.
+    match unsafe { libc::listen(fd, backlog_len(connections)) } {
+        0 => Ok(()),
+        _ => Err(io::Error::last_os_error()),
+    }
+}
+
 fn bind_unix(path: &Path, read_only: bool) -> io::Result<UnixListener> {
     if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_socket())
         && !(read_only && UnixStream::connect(path).is_ok())
