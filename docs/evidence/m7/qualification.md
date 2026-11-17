@@ -12,6 +12,7 @@ The machine-readable copy that the launcher and the guest check before every ope
 | Guest filesystem | ext4, `mkfs.ext4` defaults | mounted `rw,relatime,errors=remount-ro` |
 | Guest block device | virtio-blk `/dev/vdb` | `write_cache`: `write back` |
 | VMM | Firecracker v1.18.0 | log drive `cache_type: Writeback`, one VMM per volume, `flock` on the image |
+| Guest size | 2 vCPUs, 256 MiB (launcher default) | 1 GiB for the guest benchmark and the transport tests with 1,000 connections; 1 vCPU for the flush-latency guests ([sizing](handoff.md#guest-size)). Not in the fingerprint: size changes capacity, not durability |
 | Host kernel | Pending (Debian 12) | Pending |
 | Host filesystem | ext4 on the second NVMe drive, whole device, no RAID | Pending (`noatime`) |
 | Backing file | raw sparse image per log | Pending |
