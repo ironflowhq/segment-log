@@ -1,7 +1,7 @@
 ---
 id: "0040"
 title: "Volumes meet testable minimum requirements"
-status: proposed
+status: accepted
 date: 2026-11-08
 deciders: []
 supersedes: null
@@ -72,6 +72,7 @@ Option A beats B because only a test on the deployed stack shows that an ack is 
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)). The M7 record takes no exception to this ADR: V9 `VOL-CAPACITY` gets a provisional sizing record and a fill test, labeled provisional like the planned density, and the whole record is rerun on one host that offers a power button reset ([ADR 0059](0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md)).
 - [ADR 0062](0062-v3-requires-refused-writes-not-failed-syncs.md) amends V3: after a metadata write error every later write must fail; later syncs are recorded, not required to fail.
 - ADR 0032's qualification record now checks V1–V11, not three assumptions. The three former assumptions are V1–V3.
 - ADR 0033's deployment obligations gain exclusive attachment (V5), a failure-domain declaration (V7), single-lineage copies (V8), capacity sizing (V9) and the start-time drift check (V10).

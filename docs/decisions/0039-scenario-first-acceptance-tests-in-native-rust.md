@@ -1,7 +1,7 @@
 ---
 id: "0039"
 title: "Scenario-first acceptance tests in native Rust, with private storage injection"
-status: proposed
+status: accepted
 date: 2026-11-08
 deciders: []
 supersedes: null
@@ -46,6 +46,7 @@ We accept the discipline cost of in-crate tests in exchange for an unchanged pub
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - [ADR 0043](0043-zero-linger-and-empty-read-boundaries.md) settles the two boundary outcomes left open below. Their definitions are in api.md.
 - [ADR 0014](0014-crash-testing-strategy.md)'s rule to print each failing seed now also saves the trace needed to rebuild the crash state.
 - The [acceptance-test workflow](../acceptance-tests.md) and testing.md's case IDs must stay in step. A new required case gets an ID in testing.md in the same change.

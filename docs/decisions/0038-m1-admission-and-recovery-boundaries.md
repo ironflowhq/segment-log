@@ -1,7 +1,7 @@
 ---
 id: "0038"
 title: "M1 admission and recovery boundaries"
-status: proposed
+status: accepted
 date: 2026-11-08
 deciders: []
 supersedes: null
@@ -43,6 +43,7 @@ We accept explicit deployment preparation and early layout refusal to keep M1's 
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - This proposal supplements the boundaries of ADRs 0001, 0004 and 0010. It does not replace their decisions.
 - API, recovery and test documentation must keep the same check order and milestone scope.
 - No new error variant, default value or on-disk field is needed.

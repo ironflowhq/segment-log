@@ -1,7 +1,7 @@
 ---
 id: "0015"
 title: "Open makes the recovered tail durable"
-status: proposed
+status: accepted
 date: 2026-11-07
 deciders: []
 supersedes: null
@@ -65,6 +65,7 @@ A directory entry cannot be written back like file bytes. If a directory `fsync`
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - [ADR 0032](0032-qualify-deployment-storage-before-m6.md) keeps the rewrite's storage assumptions explicit. Qualification of the actual guest stack is required before M6 guest validation and production durability claims; M1 tests the conditional contract without claiming that qualification.
 - R14 makes the kept prefix durable, not only the truncation.
 - The storage trait needs a write at a position.
