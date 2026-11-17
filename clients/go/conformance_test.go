@@ -43,10 +43,14 @@ type step struct {
 	Watermark  *struct{} `json:"watermark"`
 	StreamHead *string   `json:"stream_head"`
 	Seal       *struct{} `json:"seal"`
-	Raw        string    `json:"raw"`
-	Pipeline   []step    `json:"pipeline"`
-	Expect     *expect   `json:"expect"`
-	Closed     bool      `json:"closed"`
+	Hello      *struct {
+		Min uint16 `json:"min"`
+		Max uint16 `json:"max"`
+	} `json:"hello"`
+	Raw      string  `json:"raw"`
+	Pipeline []step  `json:"pipeline"`
+	Expect   *expect `json:"expect"`
+	Closed   bool    `json:"closed"`
 }
 
 type recordIn struct {
@@ -75,6 +79,9 @@ type expect struct {
 	Absent       bool            `json:"absent"`
 	Index        *uint32         `json:"index"`
 	Actual       json.RawMessage `json:"actual"`
+	Version      *uint16         `json:"version"`
+	MinVersion   *uint16         `json:"min_version"`
+	MaxVersion   *uint16         `json:"max_version"`
 }
 
 func (r recordIn) build() (NewRecord, error) {
@@ -112,6 +119,8 @@ func (s step) request() (Request, error) {
 		return StreamHead([]byte(*s.StreamHead)), nil
 	case s.Seal != nil:
 		return Seal(), nil
+	case s.Hello != nil:
+		return Hello(s.Hello.Min, s.Hello.Max), nil
 	case s.Raw != "":
 		return hex.DecodeString(s.Raw)
 	}
@@ -163,6 +172,15 @@ func check(e *expect, a Answer) error {
 	}
 	if e.Index != nil && a.Index != *e.Index {
 		return fmt.Errorf("index %d, want %d", a.Index, *e.Index)
+	}
+	for _, f := range []struct {
+		name string
+		want *uint16
+		got  uint16
+	}{{"version", e.Version, a.Version}, {"min_version", e.MinVersion, a.MinVersion}, {"max_version", e.MaxVersion, a.MaxVersion}} {
+		if f.want != nil && f.got != *f.want {
+			return fmt.Errorf("%s %d, want %d", f.name, f.got, *f.want)
+		}
 	}
 	if e.Actual != nil {
 		got := "none"
@@ -256,6 +274,7 @@ func TestConformance(t *testing.T) {
 	if err != nil || len(files) == 0 {
 		t.Fatalf("no conformance cases found: %v", err)
 	}
+	versions := serverVersions(t)
 	for _, file := range files {
 		data, err := os.ReadFile(file)
 		if err != nil {
@@ -265,25 +284,66 @@ func TestConformance(t *testing.T) {
 		if err := json.Unmarshal(data, &c); err != nil {
 			t.Fatalf("%s: %v", file, err)
 		}
-		t.Run(filepath.Base(file), func(t *testing.T) {
-			d := newLogDir(t)
-			d.start(t, "", c.ServerArgs...)
-			dial := Dial
-			if c.NoHello {
-				dial = DialRaw
-			}
-			client, err := dial(d.network, d.address)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer client.Close()
-			for i, s := range c.Steps {
-				if err := run(client, s); err != nil {
-					t.Fatalf("%s (%s) step %d: %v", c.Name, c.Case, i, err)
-				}
-			}
-		})
+		// A case that sends its own Hello runs once; every other case runs at each version.
+		if c.NoHello {
+			t.Run(filepath.Base(file), func(t *testing.T) {
+				d := newLogDir(t)
+				d.start(t, "", c.ServerArgs...)
+				runCase(t, c, func() (*Client, error) { return DialRaw(d.network, d.address) })
+			})
+			continue
+		}
+		for _, v := range versions {
+			t.Run(fmt.Sprintf("%s/v%d", filepath.Base(file), v), func(t *testing.T) {
+				d := newLogDir(t)
+				d.start(t, "", c.ServerArgs...)
+				runCase(t, c, func() (*Client, error) { return DialVersions(d.network, d.address, v, v) })
+			})
+		}
 	}
+}
+
+func runCase(t *testing.T, c caseFile, dial func() (*Client, error)) {
+	t.Helper()
+	client, err := dial()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	for i, s := range c.Steps {
+		if err := run(client, s); err != nil {
+			t.Fatalf("%s (%s) step %d: %v", c.Name, c.Case, i, err)
+		}
+	}
+}
+
+// serverVersions asks a server for the versions it claims: a Hello that offers no version gets
+// UnsupportedVersion with the server's range (protocol.md, Hello). Each must be one the client
+// speaks, so a server that adds a version fails here until the client and its cases follow.
+func serverVersions(t *testing.T) []uint16 {
+	t.Helper()
+	d := newLogDir(t)
+	d.start(t, "")
+	c, err := DialRaw(d.network, d.address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	a, err := c.Do(Hello(1, 0))
+	if err != nil || a.Status.String() != "UnsupportedVersion" {
+		t.Fatalf("probe Hello: %+v, %v", a, err)
+	}
+	var versions []uint16
+	for v := a.MinVersion; v <= a.MaxVersion; v++ {
+		if v < MinVersion || v > MaxVersion {
+			t.Fatalf("server claims version %d; the client speaks %d to %d", v, MinVersion, MaxVersion)
+		}
+		versions = append(versions, v)
+	}
+	if len(versions) == 0 {
+		t.Fatalf("server claims no version: %+v", a)
+	}
+	return versions
 }
 
 func run(c *Client, s step) error {

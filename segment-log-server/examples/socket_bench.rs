@@ -214,7 +214,8 @@ fn main() {
         let hello = exchange(
             &mut stream,
             &Request::Hello {
-                version: protocol::VERSION,
+                min: protocol::MIN_VERSION,
+                max: protocol::MAX_VERSION,
             },
             protocol::HELLO,
         );

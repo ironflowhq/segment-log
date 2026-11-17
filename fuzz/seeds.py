@@ -52,7 +52,7 @@ def append_entry(stream, expected, revision, key, payload):
 def protocol_messages():
     """Seeds for the protocol target: one valid message of each request kind. No mode byte."""
     entries = append_entry(b"s", 0, 0, b"", b"p") + append_entry(b"t", 1, 7, b"k", b"")
-    yield message(1, b"SGLP" + struct.pack("<HH", 1, 0))
+    yield message(1, b"SGLP" + struct.pack("<HH", 2, 2))
     yield message(2, struct.pack("<I", 2) + entries)
     yield message(3, struct.pack("<QI", 0, 100))
     yield message(4, b"")
