@@ -1,7 +1,7 @@
 ---
 id: "0056"
 title: "M6 builds and tests the server; guest deployment validation moves to M7"
-status: proposed
+status: accepted
 date: 2026-11-14
 deciders: [Altug Sahin]
 supersedes: null
@@ -68,6 +68,7 @@ M6 can be checked now and M7 later, so the gate shows the server's real progress
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - Amended by [ADR 0063](0063-the-guest-benchmark-shares-pipelined-connections.md): the guest benchmark must meet the throughput target, not only measure it, with its callers sharing pipelined connections.
 - The PRD milestone table gets the M6 and M7 rows above. Open items 3 and 4 and the risk on the storage contract now say "before M7".
 - ADR 0032's qualification and guest benchmark, and ADR 0033's handoff record, are required before M7 instead of before M6. Their requirements do not change. ADR 0034's transport order holds within M6; its guest-topology vsock evidence moves to M7.

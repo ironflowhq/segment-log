@@ -1,7 +1,7 @@
 ---
 id: "0064"
 title: "From 0.1, no release breaks an older log or an older client"
-status: proposed
+status: accepted
 date: 2026-11-17
 deciders: [Altug Sahin]
 supersedes: "0053"
@@ -58,7 +58,7 @@ We will use option B. Rules 1–4 are the last pre-production breaks, made under
 **Before 0.1: the last breaks.**
 
 1. **Protocol version 2 negotiates a range.** The `Hello` request is `magic` (4), `min_version` (2), `max_version` (2). The success answer is status, chosen `version` (2), `frame_cap` (4), reserved (2). The server chooses the highest version both sides speak. With no overlap, it answers `UnsupportedVersion` with its own `min` (2) and `max` (2), then closes. This layout of `Hello` never changes again.
-2. **Format version 3 adds an append time and binds index pages.** Each group frame carries a u64 wall-clock append time in milliseconds since the Unix epoch, written by the writer when it seals the group. The key index page CRC is seeded with the segment's `log_id`, `base_offset` and the page number. Record headers stay out.
+2. **Format version 3 adds an append time and binds index pages.** Each group frame carries a u64 wall-clock append time in milliseconds since the Unix epoch, written by the writer when it seals the group. The time never decreases within a log: the writer stamps the larger of the clock and the previous group's time, and open takes the previous time from the newest group it recovers, so a clock that steps back cannot reorder appends. The key index page CRC is seeded with the segment's `log_id`, `base_offset` and the page number. Record headers stay out.
 3. **format.md states the rules that the code and ADRs already depend on:**
    - footer entries are sorted by stream id bytes, compared as unsigned bytes;
    - every frame of a closing run carries the run's epoch;
@@ -68,7 +68,7 @@ We will use option B. Rules 1–4 are the last pre-production breaks, made under
 
 **From 0.1: the protocol.**
 
-5. A server speaks every protocol version from 2 up to its own. Removing a version needs an ADR and a major release.
+5. A server speaks every protocol version from 2 up to its own. Removing a version needs an ADR and a major release. A major release is 1.0, then 2.0 and so on: no 0.x release removes a protocol or format version.
 6. Capabilities follow the negotiated version, with no feature flags. Modes that depend on configuration, such as `--read-only`, show as status codes, or later through an info request kind.
 7. A `kind` outside the negotiated version is malformed. Reserved fields stay written as zero, and a nonzero one is malformed. A later version may give a reserved field a meaning only on connections that negotiated it.
 8. A new status code either comes only from a request kind that older versions lack, or names an existing code that the server sends to connections on older versions.
@@ -78,7 +78,7 @@ We will use option B. Rules 1–4 are the last pre-production breaks, made under
 **From 0.1: the format.**
 
 11. A build reads every format version from 3 up to its own. Dropping a version needs an ADR, a major release and a migration path.
-12. A new format version arrives one segment at a time. A reader checks each segment against its own version. A writer never appends to an older-version segment. At open, it closes an older active segment in that segment's own version, then rolls into the new version. An older active segment that holds only its header has that header rewritten in place, because a roll would reuse its file name. Sealed segments are never rewritten. So a build keeps the encoders for older versions' closing runs (roll, recovery and seal), not only their decoders.
+12. A new format version arrives one segment at a time. A reader checks each segment against its own version. A writer never appends to an older-version segment. At open, it closes an older active segment in that segment's own version, then rolls into the new version. An older active segment that holds only its header has that header rewritten in place, because a roll would reuse its file name. The rewrite is one write of the whole header (64 bytes, inside one sector), then `sync_all` of the segment and of the directory; it relies on V2's sector atomicity, as ADR 0015's rewrite does, and the crash simulation covers a crash before, during and after it. Sealed segments are never rewritten. So a build keeps the encoders for older versions' closing runs (roll, recovery and seal), not only their decoders.
 13. `magic`, `format_version` and `header_len` keep their offsets in every version. The header CRC sits at `header_len - 4`.
 14. An upgrade is one-way. An older build refuses a newer segment with `UnsupportedVersion`. Every release that bumps the format says so in the changelog, because rolling the binary back is safe only until the new build writes.
 
@@ -93,6 +93,7 @@ B beat A because A turns every future feature into a coordinated outage, and bea
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)), with three clarifications made before acceptance: a major release is 1.0 and later (rule 5), the append time never decreases within a log (rule 2), and the header rewrite of rule 12 is one sector-sized write covered by crash cases.
 - ADR 0053 is superseded at the 0.1 tag. Until then it governs rules 1–4. ADR 0052's rule "a build reads every frozen version from 1 up to its own" returns in rule 11, starting at version 3. ADR 0057's "the server accepts one version" ends with rule 5.
 - protocol.md and format.md change their Status lines, and change their bytes for rules 1–3, in the implementation pull request. `FORMAT-GOLDEN` gets a `format-v3` fixture.
 - Fixtures can no longer be replaced after 0.1. `format-v3/` and the protocol version 2 fixture stay for good, and each later version adds a fixture beside them.

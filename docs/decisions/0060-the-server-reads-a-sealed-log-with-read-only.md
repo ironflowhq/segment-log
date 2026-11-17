@@ -1,7 +1,7 @@
 ---
 id: "0060"
 title: "The handoff reader is the same server with --read-only, not a separate tool"
-status: proposed
+status: accepted
 date: 2026-11-15
 deciders: [Altug Sahin]
 supersedes: null
@@ -54,6 +54,7 @@ Option A beat a separate tool because the deployment then needs one binary, one 
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - ADR 0058's command line gains `--read-only`. Its exit statuses do not change.
 - protocol.md's Seal section notes the reader's answer. The bytes do not change.
 - On the ADR 0059 stack, `scripts/m7/fc-server` attaches the volume read-only for a reader, and the guest mounts it `ro`. So the reader cannot write the volume even through a bug.
