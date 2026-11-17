@@ -12,6 +12,16 @@ impl LogReader {
     }
 
     pub(crate) fn with_storage(dir: &Path, storage: Arc<dyn Storage>) -> Result<Self, OpenError> {
+        Self::at_version(dir, storage, codec::FORMAT_VERSION)
+    }
+
+    /// As a build that reads format versions from 3 up to `version`; tests raise it with the
+    /// writer's test-only version bump.
+    pub(crate) fn at_version(
+        dir: &Path,
+        storage: Arc<dyn Storage>,
+        version: u16,
+    ) -> Result<Self, OpenError> {
         let reader = ReadOnly::new(storage.as_ref());
         let bases = survey::segment_bases(&reader, dir)?;
         let Some(&newest) = bases.last() else {
@@ -21,7 +31,7 @@ impl LogReader {
         if survey::is_torn_header(&reader, dir, newest)? {
             return Err(OpenError::NotSealed);
         }
-        let found = survey::survey(&reader, dir, &bases, keys::KeyHash::new)?;
+        let found = survey::survey(&reader, dir, &bases, keys::KeyHash::new, version)?;
         let Ending::Sealed(_) = found.newest.ending else {
             return Err(OpenError::NotSealed);
         };

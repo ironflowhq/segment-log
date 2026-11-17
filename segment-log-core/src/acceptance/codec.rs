@@ -222,6 +222,7 @@ fn header_bytes_and_validation_follow_the_format() {
         let sum = crc(&expected[..60]);
         expected[60..].copy_from_slice(&sum.to_le_bytes());
         let header = codec::Header {
+            version: 3,
             log_id: raw::LOG_ID,
             base_offset: 3,
             epoch: 2,
@@ -231,7 +232,13 @@ fn header_bytes_and_validation_follow_the_format() {
         for end in 0..64 {
             assert!(codec::decode_header(&expected[..end]).is_err());
         }
-        for pos in [0, 4, 6, 40, 59, 60] {
+        // The decoder reads any version's header; which versions open accepts is survey's check.
+        let mut other = expected;
+        other[4] = 4;
+        let sum = crc(&other[..60]);
+        other[60..].copy_from_slice(&sum.to_le_bytes());
+        assert_eq!(codec::decode_header(&other).map(|h| h.version), Ok(4));
+        for pos in [0, 6, 40, 59, 60] {
             let mut bad = expected;
             bad[pos] ^= 1;
             if pos < 60 {

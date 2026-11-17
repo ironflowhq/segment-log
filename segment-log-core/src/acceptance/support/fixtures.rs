@@ -81,6 +81,7 @@ pub(crate) fn epoch_fixture(
     use crate::storage::{Call, Op, Purpose, Storage};
     drop(open(sim));
     let mut bytes = crate::codec::encode_header(&crate::codec::Header {
+        version: 3,
         log_id: super::raw::LOG_ID,
         base_offset: 0,
         epoch: header_epoch,

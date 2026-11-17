@@ -7,4 +7,4 @@ The scenario's writer made them with log id `00 01 … 0f`, a 300-byte roll size
 - `open/`: two rolled segments and an active one.
 - `sealed/`: the same log after `seal`.
 
-Never regenerate these files. Until the 0.1 tag, a layout change may still replace them under [ADR 0053](../../../../docs/decisions/0053-format-changes-need-no-older-reader-before-production.md). From the 0.1 tag they stay for good: a layout change is a new format version, which adds its own fixture directory beside this one, and every later build must still read these files (ADR 0064, rules 11 and 12).
+Never regenerate these files. Until the 0.1 tag, a layout change may still replace them under [ADR 0053](../../../../docs/decisions/0053-format-changes-need-no-older-reader-before-production.md). From the 0.1 tag they stay for good: a layout change is a new format version, which adds its own fixture directory beside this one, and every later build must still read these files (ADR 0064, rules 11 and 12). Only a major release, 1.0 or later, may drop version 3, through an ADR and a migration path.

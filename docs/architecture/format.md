@@ -1,6 +1,6 @@
 # Byte layout
 
-Status: `format_version` 3, the 0.1 baseline ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md)). Version 3 adds a group's append time and binds each key index page to its place; version 2 ([ADR 0055](../decisions/0055-format-version-2-aligns-key-index-pages.md)) aligned key index pages, and version 1 is what M5 reviewed ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). Until the 0.1 tag, a change may still replace version 3 ([ADR 0053](../decisions/0053-format-changes-need-no-older-reader-before-production.md)). From the 0.1 tag, a change to the bytes of a segment file is a new `format_version`, written one segment at a time, and every build reads every version from 3 up to its own (ADR 0064, rules 11–14). No build reads version 0, 1 or 2: each is refused with `UnsupportedVersion`.
+Status: `format_version` 3, the 0.1 baseline ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md)). Version 3 adds a group's append time and binds each key index page to its place; version 2 ([ADR 0055](../decisions/0055-format-version-2-aligns-key-index-pages.md)) aligned key index pages, and version 1 is what M5 reviewed ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). Until the 0.1 tag, a change may still replace version 3 ([ADR 0053](../decisions/0053-format-changes-need-no-older-reader-before-production.md)). From the 0.1 tag, a change to the bytes of a segment file is a new `format_version`, written one segment at a time, and every build reads every version from 3 up to its own (ADR 0064, rules 11–14). No 0.x release drops a version: dropping one needs an ADR, a major release (1.0 or later) and a migration path. No build reads version 0, 1 or 2: each is refused with `UnsupportedVersion`.
 
 Every width, limit and constant in this file belongs to format version 3, the filter's parameters and the page size included. Changing one is a new format version.
 
@@ -224,7 +224,7 @@ A segment that a roll sealed holds, in order: the header, its group frames, the 
 
 ## Rules for readers
 
-- A header is valid only if its magic, version, length and CRC match, its reserved bytes are zero, its `log_id` equals the first segment's `log_id`, and its `base_offset` equals its file name.
+- A header is valid only if its magic, length and CRC match, its version is from 3 up to the build's own (another version fails open with `UnsupportedVersion`), each segment being read under its own version, its reserved bytes are zero, its `log_id` equals the first segment's `log_id`, and its `base_offset` equals its file name.
 - Each segment's `base_offset` equals the next unused log offset of the segment before it. A gap is an error, not a hole to skip.
 - A frame is valid only if its length is in range, its CRC matches, its reserved fields are zero, its `kind` is known, its `base_offset` is the next expected offset, its `epoch` is not lower than the epoch of the frame before it, nor than its segment header's `epoch`, nor than the highest epoch of the segment before, and its entries fill the body exactly.
 - From M4, key filter, key index, footer, seal and locator frames are closing frames. They are valid only as a closing run, which has one of two shapes:
