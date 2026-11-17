@@ -110,5 +110,5 @@ echo "== conformance over Firecracker vsock"
 cd "$repo/clients/go"
 SEGMENT_LOG_TRANSPORT=firecracker SEGMENT_LOG_SERVER="$repo/scripts/m7/fc-server" \
 	go test -count=1 -run 'TestConformance|TestTransportUnknown|TestTransportRestart|TestDialBurst|TestHandoff' -v ./... |
-	grep -E '^(=== RUN|--- |ok|FAIL|PASS)'
+	grep -E '^(=== RUN|--- |ok|FAIL|PASS)|_test\.go:[0-9]+:'
 echo "== rehearsal passed"

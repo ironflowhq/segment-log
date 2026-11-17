@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"runtime"
 	"slices"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -273,25 +274,30 @@ func TestSignalStop(t *testing.T) {
 	}
 }
 
-// TRANSPORT-DIAL-BURST: the PRD's 1,000 callers dial at once, as a pool does at start. A vsock
-// listener refuses connections beyond its accept backlog, where a Unix socket makes them wait, so
-// every one must still get through Hello and one append.
+// TRANSPORT-DIAL-BURST: the PRD's 1,000 callers dial at once, as a pool does at start, and all
+// stay open together. A vsock listener refuses connections beyond its accept backlog, and a
+// server out of descriptors drops them, so every one must still get through Hello and one append.
 func TestDialBurst(t *testing.T) {
 	const callers = 1000
 	if runtime.GOOS == "darwin" {
 		t.Skip("macOS caps every accept backlog at kern.ipc.somaxconn, 128 by default")
 	}
 	d := newLogDir(t)
-	d.start(t, "ulimit -n 4096", "--max-connections", fmt.Sprint(callers))
+	// No ulimit here: the server raises its own descriptor limit to cover --max-connections.
+	d.start(t, "", "--max-connections", fmt.Sprint(callers))
 	errs := make(chan error, callers)
+	var dialed sync.WaitGroup // every connection stays open until all are dialed
+	dialed.Add(callers)
 	for i := range callers {
 		go func() {
 			c, err := Dial(d.network, d.address)
+			dialed.Done()
 			if err != nil {
 				errs <- fmt.Errorf("caller %d: dial: %w", i, err)
 				return
 			}
 			defer c.Close()
+			dialed.Wait()
 			a, err := c.Do(Append([]NewRecord{keyed(fmt.Sprint("s", i), fmt.Sprint("k", i), empty, []byte("burst"))}))
 			if err == nil && a.Status != 0 {
 				err = fmt.Errorf("status %v", a.Status)
