@@ -1,6 +1,6 @@
 //! `segment-log-server repair` on a real directory: exit codes and output of api.md's "Operator
 //! repair" section (ADR 0065).
-use segment_log_core::{ExpectedRevision, NewRecord, Options, SegmentLog, Submit};
+use segment_log_core::{ExpectedRevision, LogReader, NewRecord, Options, SegmentLog, Submit};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
@@ -65,7 +65,7 @@ fn verify_exit_codes_and_json() {
     assert_eq!(code(&json), 0);
     assert_eq!(
         stdout(&json),
-        "{\"schema\":1,\"command\":\"verify\",\"findings\":[],\"frames\":[],\"plan\":null}\n"
+        "{\"schema\":1,\"command\":\"verify\",\"findings\":[],\"frames\":[],\"plan\":null,\"refusal\":null}\n"
     );
 
     let oldest = dir.join("00000000000000000000.seg");
@@ -111,4 +111,108 @@ fn verify_exit_codes_and_json() {
     for dir in [dir, held] {
         std::fs::remove_dir_all(dir).unwrap();
     }
+}
+
+/// Given a sealed log whose second of three groups has a bad checksum, so open fails with `Corrupt`
+/// When `segment-log-server repair truncate` runs without `--apply`
+/// Then it exits 1 and prints a lossy plan that drops offsets 1 to 3
+/// When `--apply` names another cut, or omits `--drop-acknowledged`
+/// Then it exits 3 and changes nothing
+/// When `--apply --at <cut> --drop-acknowledged` runs
+/// Then it exits 0, names its `repair-<unix seconds>` backup, and the log reads as sealed with the
+/// first record
+/// And `truncate` on the repaired log exits 3, because there is nothing to cut
+///
+/// Cases: REPAIR-CLI
+#[test]
+fn truncate_exit_codes_and_json() {
+    let dir = fresh("truncate");
+    let log = SegmentLog::open(&dir, Options::default()).unwrap();
+    for n in 0..3u8 {
+        let submit = Submit {
+            records: vec![NewRecord {
+                stream: vec![b'a' + n],
+                expected: ExpectedRevision::Empty,
+                key: None,
+                payload: vec![n; 200],
+            }],
+        };
+        log.append(submit).unwrap().wait().unwrap();
+    }
+    log.seal().unwrap();
+    drop(log);
+    let segment = dir.join("00000000000000000000.seg");
+    let mut bytes = std::fs::read(&segment).unwrap();
+    // Header, then a group of 8 + 32 + 16 + 1 + 200 bytes; the byte sits in the second's body.
+    let cut = 64 + 257;
+    bytes[cut + 40] ^= 1;
+    std::fs::write(&segment, &bytes).unwrap();
+    let d = dir.to_str().unwrap();
+
+    let dry = run(&["repair", "truncate", "--dir", d, "--json"]);
+    assert_eq!(code(&dry), 1, "{dry:?}");
+    let expected = format!(
+        "\"plan\":{{\"cut\":\"0:{cut}\",\"kind\":\"lossy\",\"dropped_offsets\":[1,3],\
+         \"closing_frames_removed\":[\"footer\",\"seal\",\"locator\"],\"backup\":null,\
+         \"applied\":false}},\"refusal\":null}}"
+    );
+    assert!(
+        stdout(&dry).ends_with(&format!("{expected}\n")),
+        "{}",
+        stdout(&dry)
+    );
+    assert!(
+        stdout(&dry)
+            .starts_with("{\"schema\":1,\"command\":\"truncate\",\"findings\":[{\"class\":\"A\"")
+    );
+
+    let at = format!("0:{cut}");
+    let other = format!("0:{}", cut + 1);
+    let mismatch = run(&["repair", "truncate", "--dir", d, "--apply", "--at", &other]);
+    assert_eq!(code(&mismatch), 3, "{mismatch:?}");
+    let undropped = run(&["repair", "truncate", "--dir", d, "--apply", "--at", &at]);
+    assert_eq!(code(&undropped), 3, "{undropped:?}");
+    assert!(stdout(&undropped).contains("refused: "));
+    assert_eq!(
+        std::fs::read(&segment).unwrap(),
+        bytes,
+        "a refusal changed the segment"
+    );
+
+    let applied = run(&[
+        "repair",
+        "truncate",
+        "--dir",
+        d,
+        "--apply",
+        "--at",
+        &at,
+        "--drop-acknowledged",
+        "--json",
+    ]);
+    assert_eq!(code(&applied), 0, "{applied:?}");
+    let out = stdout(&applied);
+    assert!(out.contains("\"applied\":true"), "{out}");
+    let backup = out
+        .split("\"backup\":\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap();
+    let name = Path::new(backup).file_name().unwrap().to_str().unwrap();
+    assert!(
+        name.strip_prefix("repair-").unwrap().parse::<u64>().is_ok(),
+        "{name}"
+    );
+    assert_eq!(
+        std::fs::read(Path::new(backup).join("00000000000000000000.seg")).unwrap(),
+        bytes
+    );
+
+    assert_eq!(code(&run(&["repair", "verify", "--dir", d])), 0);
+    let reader = LogReader::open(&dir).unwrap();
+    assert_eq!(reader.read(0, 10).unwrap().len(), 1);
+    assert_eq!(code(&run(&["repair", "truncate", "--dir", d])), 3);
+    std::fs::remove_dir_all(dir).unwrap();
 }

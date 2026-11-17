@@ -1,19 +1,20 @@
 //! The operator repair tool (ADR 0065): `verify` reports, and never changes a segment.
+//! `truncate` is in [`super::repair_truncate`].
 use super::closing_runs::closing_run_at;
 use super::support::{bounded, fixtures::*, raw};
-use crate::repair::{Class, Error, Report, verify_with};
+use crate::repair::{Apply, Class, Error, Report, apply_with, plan_with, verify_with};
 use crate::storage::{Call, Op, Purpose, Storage, sim::Event, sim::Outcome};
 use crate::{codec, *};
 use std::path::Path;
 
-const VERSION: u16 = codec::FORMAT_VERSION;
+pub(super) const VERSION: u16 = codec::FORMAT_VERSION;
 
 fn verify(sim: &Sim) -> Report {
     verify_with(sim, Path::new("/log"), VERSION).unwrap()
 }
 
 /// Calls that changed the image: a successful create, write, truncate, removal or sync.
-fn changes(sim: &Sim) -> usize {
+pub(super) fn changes(sim: &Sim) -> usize {
     sim.trace()
         .1
         .iter()
@@ -33,7 +34,7 @@ fn verify_unchanged(sim: &Sim) -> Report {
     report
 }
 
-fn classes(report: &Report) -> Vec<(Class, u64, u64)> {
+pub(super) fn classes(report: &Report) -> Vec<(Class, u64, u64)> {
     report
         .findings
         .iter()
@@ -55,7 +56,7 @@ fn keyed(n: usize) -> Submit {
 
 /// A log of keyed records in several segments: each segment past the first sealed by a roll, and
 /// the newest active.
-fn rolled_log(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
+pub(super) fn rolled_log(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
     let options = Options {
         roll_bytes: 150,
         ..options()
@@ -76,7 +77,7 @@ fn rolled_log(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
 }
 
 /// The position and kind byte of each frame of a segment image.
-fn kinds(segment: &[u8]) -> Vec<(usize, u8)> {
+pub(super) fn kinds(segment: &[u8]) -> Vec<(usize, u8)> {
     let mut at = 64;
     raw::frames(segment)
         .into_iter()
@@ -88,7 +89,7 @@ fn kinds(segment: &[u8]) -> Vec<(usize, u8)> {
         .collect()
 }
 
-fn position_of(segment: &[u8], kind: u8) -> usize {
+pub(super) fn position_of(segment: &[u8], kind: u8) -> usize {
     kinds(segment)
         .into_iter()
         .find(|&(_, k)| k == kind)
@@ -143,6 +144,7 @@ fn verify_finds_no_damage_in_a_healthy_log() {
 /// or a header of a format version this build does not read (E)
 /// When `verify` runs
 /// Then it names the segment, and changes nothing
+/// And `truncate` refuses every class B–E, and changes nothing
 ///
 /// Given the newest segment ends in a torn group whose payload holds the log's own closing run, so
 /// open fails with `Corrupt` (A)
@@ -160,6 +162,20 @@ fn verify_names_each_class_of_damage() {
             raw::install_segments(&sim, &segments);
             let report = verify_unchanged(&sim);
             assert!(report.damaged(), "{label}: {:?}", report.findings);
+            let before = sim.image();
+            let outcome = plan_with(&sim, Path::new("/log"), VERSION).unwrap();
+            assert!(
+                outcome.plan.is_none() && outcome.refusal.is_some(),
+                "{label}"
+            );
+            let apply = Apply {
+                at: (0, 64),
+                drop_acknowledged: true,
+                backup: "repair-1",
+            };
+            let outcome = apply_with(&sim, Path::new("/log"), VERSION, apply).unwrap();
+            assert!(outcome.refusal.is_some(), "{label}");
+            assert_eq!(sim.image(), before, "{label}");
             classes(&report)
         };
         let with_first = |bytes: Vec<u8>| {
@@ -233,7 +249,7 @@ fn verify_names_each_class_of_damage() {
 
 /// The trigger of issue #1: a torn group whose payload ends in a closing run under the log's own
 /// id. Returns the log and the torn group's position.
-fn lookalike() -> (Sim, u64) {
+pub(super) fn lookalike() -> (Sim, u64) {
     let kept = [raw::header(raw::VERSION, 0, 1), raw::group(1, 0, &[b"a"])].concat();
     let torn_at = kept.len();
     let prefix = vec![b'p'; 3 * 4096];
