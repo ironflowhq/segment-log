@@ -34,8 +34,8 @@ class SizingTests(unittest.TestCase):
     def test_group_frame_of_the_provisional_profile(self):
         self.assertEqual(cap.entry_bytes(256, 16, 16), 304)
         self.assertEqual(cap.records_per_group(16384, 256, 16, 16), 53)
-        self.assertEqual(cap.group_frame(53, 256, 16, 16), 8 + 24 + 53 * 304)
-        self.assertEqual(cap.group_frame(53, 256, 16, 16, extra=8), 8 + 24 + 8 + 53 * 304)
+        self.assertEqual(cap.group_frame(53, 256, 16, 16), 8 + 24 + 8 + 53 * 304)
+        self.assertEqual(cap.group_frame(53, 256, 16, 16, extra=0), 8 + 24 + 53 * 304)
 
     def test_closing_run_without_keys(self):
         # key filter and key index are body headers alone; one footer entry; the 40-byte locator
