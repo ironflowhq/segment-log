@@ -1,6 +1,6 @@
 # Read allocation and retained-history investigation
 
-The goal is to investigate issue [#20](https://github.com/ironflowhq/segment-log/issues/20), compare alternatives, and make a focused M1 improvement supported by runtime evidence. This result supports bounding the frame snapshot for a read. It does not close #20 or decide the M1 gate in #17.
+The goal is to investigate issue [#20](https://github.com/ironflowx/segment-log/issues/20), compare alternatives, and make a focused M1 improvement supported by runtime evidence. This result supports bounding the frame snapshot for a read. It does not close #20 or decide the M1 gate in #17.
 
 ## Result
 

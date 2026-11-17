@@ -1,6 +1,6 @@
 # Key positions: memory and append evidence for issue 20
 
-[Issue 20](https://github.com/ironflowhq/segment-log/issues/20) leaves the engine's memory growth open. This record measures one change: the key map keeps each key's log offset and revision, and no longer a copy of its frame descriptor.
+[Issue 20](https://github.com/ironflowx/segment-log/issues/20) leaves the engine's memory growth open. This record measures one change: the key map keeps each key's log offset and revision, and no longer a copy of its frame descriptor.
 
 ## Result
 

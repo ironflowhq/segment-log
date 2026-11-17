@@ -1,6 +1,6 @@
 # Stream heads: many-stream append evidence for issue 20
 
-[Issue 20](https://github.com/ironflowhq/segment-log/issues/20) leaves performance on larger histories open. This record measures one change: before it forms a group, the writer no longer copies the head of every stream in the log. A group now keeps only the revisions it assigns and reads the durable head of each stream it touches.
+[Issue 20](https://github.com/ironflowx/segment-log/issues/20) leaves performance on larger histories open. This record measures one change: before it forms a group, the writer no longer copies the head of every stream in the log. A group now keeps only the revisions it assigns and reads the durable head of each stream it touches.
 
 ## Result
 

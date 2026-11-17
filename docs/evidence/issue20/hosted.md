@@ -1,7 +1,7 @@
 # Issue 20: hardware, hosted runs, and warning evidence
 
 Investigate the M1 qualification gaps after merge without deciding the M1 gate.
-This record covers [issue #20](https://github.com/ironflowhq/segment-log/issues/20)
+This record covers [issue #20](https://github.com/ironflowx/segment-log/issues/20)
 sections 3, 4, and 5. It does not close that issue or gate #17.
 
 ## Source and environment
@@ -59,7 +59,7 @@ adapter and its own exercised build configuration.
 Before dispatch, this command returned an empty list on 9 November 2026:
 
 ```sh
-gh run list --repo ironflowhq/segment-log --workflow long-run.yml --limit 30 \
+gh run list --repo ironflowx/segment-log --workflow long-run.yml --limit 30 \
   --json databaseId,event,headSha,status,conclusion,url,createdAt
 ```
 
@@ -70,15 +70,15 @@ execution cannot prove that the scheduler works.
 The authorized command was:
 
 ```sh
-gh workflow run long-run.yml --repo ironflowhq/segment-log --ref main
+gh workflow run long-run.yml --repo ironflowx/segment-log --ref main
 ```
 
-It started [manual run 42654692594](https://github.com/ironflowhq/segment-log/actions/runs/42654692594)
+It started [manual run 42654692594](https://github.com/ironflowx/segment-log/actions/runs/42654692594)
 on the merged baseline SHA above. The [initial API snapshot](hosted/manual-run-initial.json)
 records both jobs as in progress:
 
-- [Linux, ubuntu-24.04](https://github.com/ironflowhq/segment-log/actions/runs/42654692594/job/129289934512).
-- [macOS, macos-latest](https://github.com/ironflowhq/segment-log/actions/runs/42654692594/job/129289934650).
+- [Linux, ubuntu-24.04](https://github.com/ironflowx/segment-log/actions/runs/42654692594/job/129289934512).
+- [macOS, macos-latest](https://github.com/ironflowx/segment-log/actions/runs/42654692594/job/129289934650).
 
 Each job requests 100 trace seeds starting at 10000, all three crash modes and
 nine variants per seed, followed by 30 process-crash repetitions starting at

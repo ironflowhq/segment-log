@@ -71,7 +71,7 @@ Option B beat A because the log's correctness depends on refused writes, not on 
 
 ## Enforcement
 
-`scripts/m7-metadata-error.sh` on the qualified stack, recorded in the M7 qualification record ([issue 112](https://github.com/ironflowhq/segment-log/issues/112)).
+`scripts/m7-metadata-error.sh` on the qualified stack, recorded in the M7 qualification record ([issue 112](https://github.com/ironflowx/segment-log/issues/112)).
 
 ## Revisit if
 

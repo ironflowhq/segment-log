@@ -15,21 +15,21 @@ The [completion record](completion.md) holds the gate evidence for the final M1
 tree. [Slice 10](slice10.md) is the earlier record, from before the issue 20 changes. This archive does not establish M1 completion.
 The completion record does, and the [PRD](../../prd.md#milestones) records the result.
 Issues 17 and 20 tracked the M1 work and are closed. Follow-up work is tracked in
-[issue 46](https://github.com/ironflowhq/segment-log/issues/46) (deployment storage), [issue 47](https://github.com/ironflowhq/segment-log/issues/47) (larger and longer workloads),
-[issue 48](https://github.com/ironflowhq/segment-log/issues/48) (memory peaks) and [issue 49](https://github.com/ironflowhq/segment-log/issues/49) (physical local-NVMe benchmark).
+[issue 46](https://github.com/ironflowx/segment-log/issues/46) (deployment storage), [issue 47](https://github.com/ironflowx/segment-log/issues/47) (larger and longer workloads),
+[issue 48](https://github.com/ironflowx/segment-log/issues/48) (memory peaks) and [issue 49](https://github.com/ironflowx/segment-log/issues/49) (physical local-NVMe benchmark).
 The [issue 48 record](../issue48/README.md) gives exact phase peaks and the bytes that the engine owns.
 
 | Slice | PR | Observed evidence and limits |
 | --- | --- | --- |
-| 0 | [#6](https://github.com/ironflowhq/segment-log/pull/6) | [Contemporaneous journal](provenance/slice0.tsv) and [parent corrections](provenance/parent-decisions.tsv). Several initial behaviors were implemented before their scenarios. Original raw red output is unavailable. Narrative entries cannot repair that history. |
-| 1 | [#7](https://github.com/ironflowhq/segment-log/pull/7) | [Command journal](provenance/slice1.tsv), captured `red/slice1-*.txt` outputs, [counter journal](provenance/counters.tsv) and five counter red logs. Early admission failures did not independently exercise later fault assertions. |
-| 2 | [#8](https://github.com/ironflowhq/segment-log/pull/8) | Seven supplemental scenarios. The experimental red assumed two unflushed groups, an unreachable premise under [ADR 0015](../../decisions/0015-open-makes-the-recovered-tail-durable.md). Its experimental fix was reverted; it is not claimed as a production defect. |
-| 3 | [#9](https://github.com/ironflowhq/segment-log/pull/9) | Seven supplemental revision scenarios; no production fix or behavioral red. Compilation and fixture corrections are excluded from red evidence. |
-| 4 | [#10](https://github.com/ironflowhq/segment-log/pull/10) | [Seven-test red run](red/slice4-durable-keys.log), extracted from the original output column. The separate short-frame guard correction has [narrative evidence](provenance/parent-decisions.tsv), with no retained raw stdout. |
-| 5 | [#11](https://github.com/ironflowhq/segment-log/pull/11) | [Five-test pending-key red run](red/slice5-pending-keys.log). The earlier fixture-timeout run is excluded. |
-| 6 | [#12](https://github.com/ironflowhq/segment-log/pull/12) | Fourteen supplemental scenarios. [Wrapping-add mutation rejection](mutation/slice6-overflow.log) is sensitivity evidence, not a discovered production defect. The temporary mutation changed the final `charge_base` addition from checked to wrapping arithmetic. |
-| 7 | [#13](https://github.com/ironflowhq/segment-log/pull/13) | Five delegate scenarios reached 121 tests. Review added an admission-close observation and sixth scenario, reaching 122. The final [parent record](provenance/parent-decisions.tsv) preserves this distinction. |
-| 8 | [#15](https://github.com/ironflowhq/segment-log/pull/15) | Seven supplemental scenarios and a reproduced harness scheduling failure. [Final workspace summaries](validation/slice8-workspace-summary.log) show 125 core, three process and one real-storage test. [Thirty additional repetitions](validation/slice8-process30.log) used seeds 5001–5030. |
+| 0 | [#6](https://github.com/ironflowx/segment-log/pull/6) | [Contemporaneous journal](provenance/slice0.tsv) and [parent corrections](provenance/parent-decisions.tsv). Several initial behaviors were implemented before their scenarios. Original raw red output is unavailable. Narrative entries cannot repair that history. |
+| 1 | [#7](https://github.com/ironflowx/segment-log/pull/7) | [Command journal](provenance/slice1.tsv), captured `red/slice1-*.txt` outputs, [counter journal](provenance/counters.tsv) and five counter red logs. Early admission failures did not independently exercise later fault assertions. |
+| 2 | [#8](https://github.com/ironflowx/segment-log/pull/8) | Seven supplemental scenarios. The experimental red assumed two unflushed groups, an unreachable premise under [ADR 0015](../../decisions/0015-open-makes-the-recovered-tail-durable.md). Its experimental fix was reverted; it is not claimed as a production defect. |
+| 3 | [#9](https://github.com/ironflowx/segment-log/pull/9) | Seven supplemental revision scenarios; no production fix or behavioral red. Compilation and fixture corrections are excluded from red evidence. |
+| 4 | [#10](https://github.com/ironflowx/segment-log/pull/10) | [Seven-test red run](red/slice4-durable-keys.log), extracted from the original output column. The separate short-frame guard correction has [narrative evidence](provenance/parent-decisions.tsv), with no retained raw stdout. |
+| 5 | [#11](https://github.com/ironflowx/segment-log/pull/11) | [Five-test pending-key red run](red/slice5-pending-keys.log). The earlier fixture-timeout run is excluded. |
+| 6 | [#12](https://github.com/ironflowx/segment-log/pull/12) | Fourteen supplemental scenarios. [Wrapping-add mutation rejection](mutation/slice6-overflow.log) is sensitivity evidence, not a discovered production defect. The temporary mutation changed the final `charge_base` addition from checked to wrapping arithmetic. |
+| 7 | [#13](https://github.com/ironflowx/segment-log/pull/13) | Five delegate scenarios reached 121 tests. Review added an admission-close observation and sixth scenario, reaching 122. The final [parent record](provenance/parent-decisions.tsv) preserves this distinction. |
+| 8 | [#15](https://github.com/ironflowx/segment-log/pull/15) | Seven supplemental scenarios and a reproduced harness scheduling failure. [Final workspace summaries](validation/slice8-workspace-summary.log) show 125 core, three process and one real-storage test. [Thirty additional repetitions](validation/slice8-process30.log) used seeds 5001–5030. |
 
 Slice 9 adds the [threaded trace oracle and coverage audit](slice9.md), including
 saved replay commands, the preserved pressure-seed regression and local validation.
@@ -69,8 +69,8 @@ The slice 8 local executions used Rust 1.99.1 (`58cf8f9c3`, LLVM 23.1.1), host
 Clippy, workspace tests, case-ID validation and diff checks passed. The fuzzing
 configuration compiled with 24 existing unused simulator warnings.
 
-Slice 8 CI passed on [Linux](https://github.com/ironflowhq/segment-log/actions/runs/42559576442/job/128972810634)
-and [macOS](https://github.com/ironflowhq/segment-log/actions/runs/42559576442/job/128972811118)
+Slice 8 CI passed on [Linux](https://github.com/ironflowx/segment-log/actions/runs/42559576442/job/128972810634)
+and [macOS](https://github.com/ironflowx/segment-log/actions/runs/42559576442/job/128972811118)
 at commit `4bf4844`. The [captured check metadata](validation/slice8-ci.json)
 identifies the head and completion times.
 

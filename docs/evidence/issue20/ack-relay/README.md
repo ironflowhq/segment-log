@@ -1,6 +1,6 @@
 # Ack relay: 1,000-caller attribution and append evidence for issue 20
 
-[Issue 20](https://github.com/ironflowhq/segment-log/issues/20) lists two open items that this record addresses: the latency attribution at the default 1,000 callers, and the lack of a throughput or p99 improvement. It measures one change, the ack relay of [ADR 0044](../../../decisions/0044-woken-callers-relay-group-acks.md).
+[Issue 20](https://github.com/ironflowx/segment-log/issues/20) lists two open items that this record addresses: the latency attribution at the default 1,000 callers, and the lack of a throughput or p99 improvement. It measures one change, the ack relay of [ADR 0044](../../../decisions/0044-woken-callers-relay-group-acks.md).
 
 ## Result
 

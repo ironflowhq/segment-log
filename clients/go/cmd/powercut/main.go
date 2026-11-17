@@ -35,7 +35,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	segmentlog "github.com/ironflowhq/segment-log/clients/go"
+	segmentlog "github.com/ironflowx/segment-log/clients/go"
 )
 
 func main() {
