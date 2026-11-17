@@ -54,7 +54,12 @@ run() { # run <side> <mode> <log>
 			</dev/null 2>"${log%.log}.vmm.txt" &
 		vm=$!
 		"$M7_CACHE/powercut" ready -address "$dir/v.sock:5000" -max 60s
+		# Per-thread CPU of the VMM mid-run: a saturated event-loop thread ("firecracker") means its
+		# vsock muxer bounds the run; busy fc_vcpu threads mean the guest's CPU or its exits do.
+		(sleep 10 && top -H -b -n 1 -d 1 -p "$vm" | sed -n '7,20p') >"${log%.log}.threads.txt" 2>&1 &
+		local sampler=$!
 		"$bench" --firecracker "$dir/v.sock:5000" "$callers" "$rounds" "${interval[@]}" >"$log"
+		wait "$sampler" 2>/dev/null || true
 		kill -KILL "$vm"
 		wait "$vm" 2>/dev/null || true
 		vm=''
