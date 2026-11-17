@@ -132,6 +132,7 @@ impl Writer {
         };
         self.pending = Some(Pending { base, sealing });
         let header = codec::Header {
+            version: self.limits.format_version,
             log_id: *view.log_id.bytes(),
             base_offset: next,
             epoch: self.epoch,

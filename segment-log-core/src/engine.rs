@@ -88,12 +88,16 @@ pub(crate) struct Hooks {
 pub(crate) struct Limits {
     pub footer_body: usize,
     pub keyed_records: usize,
+    /// The format version this build writes, and the newest it reads. Tests raise it to stand in
+    /// for a later build until a real version 4 exists (ADR 0064, Enforcement).
+    pub format_version: u16,
 }
 impl Default for Limits {
     fn default() -> Self {
         Self {
             footer_body: codec::FRAME_BODY_LIMIT,
             keyed_records: codec::KEYED_RECORD_LIMIT,
+            format_version: codec::FORMAT_VERSION,
         }
     }
 }
@@ -219,7 +223,7 @@ impl SegmentLog {
             hash,
             published,
             state,
-        } = recovery::open(storage.as_ref(), dir, hash)?;
+        } = recovery::open(storage.as_ref(), dir, hash, limits.format_version)?;
         let view = Arc::new(View {
             storage,
             dir: dir.to_owned(),

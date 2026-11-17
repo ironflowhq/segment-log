@@ -219,6 +219,7 @@ fn epoch_refusal(header: u64, group: Option<u64>, tail: bool) {
         Op::Write(
             0,
             crate::codec::encode_header(&crate::codec::Header {
+                version: 3,
                 log_id: [7; 16],
                 base_offset: 0,
                 epoch: 1,

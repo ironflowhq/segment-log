@@ -194,7 +194,7 @@ pub enum OpenError {
     LogIdMismatch { segment: LogOffset },
     Gap { segment: LogOffset },                    // does not start where the one before it ends
     NotSealed,                                     // LogReader::open on a log with no seal frame
-    UnsupportedVersion(u16),
+    UnsupportedVersion(u16),                       // a segment's format version outside 3..=the build's own
     Io(std::io::Error),
 }
 

@@ -3,6 +3,7 @@ name = "segment-log-server"
 description = "Socket server for the Ironflow segment log over a Unix socket or vsock (pre-release)."
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 readme = "README.md"
