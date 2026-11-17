@@ -16,14 +16,13 @@ import argparse
 import math
 import sys
 
-FORMAT_VERSION = 2
+FORMAT_VERSION = 3
 SEGMENT_HEADER = 64  # Segment header
 ENVELOPE = 8  # Frame: body_len, crc
 BODY_HEADER = 24  # Body header
 ENTRY = 16  # Group record entry: stream_len, key_len, payload_len, revision
-# Bytes a group frame carries beyond the version 2 group body. Format version 3 adds an 8-byte append
-# time: set 8 here when FORMAT_VERSION becomes 3, or pass --group-extra 8 to plan ahead.
-GROUP_EXTRA = 0
+# Bytes a group frame carries beyond the version 2 group body: version 3's 8-byte append_time.
+GROUP_EXTRA = 8
 FOOTER_FIXED = 8  # Footer frame: key_filter_position
 FOOTER_ENTRY = 28  # Footer entry, before the stream id
 LOCATOR = ENVELOPE + BODY_HEADER + 8  # Locator frame: the whole frame is 40 bytes
