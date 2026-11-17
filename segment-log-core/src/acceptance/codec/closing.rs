@@ -125,6 +125,7 @@ fn a_frame_validates_only_under_its_own_log_id() {
         let group = Group {
             epoch: 1,
             base_offset: 0,
+            append_time: 0,
             entries: vec![Entry {
                 stream: b"s",
                 key: None,
@@ -133,7 +134,7 @@ fn a_frame_validates_only_under_its_own_log_id() {
             }],
         };
         let keys =
-            codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut [entry(1, 64, 0)]).unwrap();
+            codec::encode_key_frames(&log(), 0, 1, 1, FILTER_AT, &mut [entry(1, 64, 0)]).unwrap();
         let frames = [
             codec::encode_group(&log(), &group).unwrap(),
             codec::encode_footer(&log(), 1, 1, &footer(vec![])).unwrap(),
@@ -264,7 +265,7 @@ fn the_key_filter_sets_the_bits_of_the_format_check_value() {
         let mut entries = vec![entry(hash, 64, 0)];
         entries.extend((0..32).map(|i| entry(i, 64, i as u32 + 1)));
         entries.extend((0..32).map(|i| entry(0xffff_ffff_0000_0000 | i, 64, i as u32 + 40)));
-        let frames = codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut entries).unwrap();
+        let frames = codec::encode_key_frames(&log(), 0, 1, 1, FILTER_AT, &mut entries).unwrap();
         assert_eq!(
             frames.filter.len(),
             8 + 24 + 8 + 3 * 64 + padding(8 + 3 * 64)
@@ -311,7 +312,7 @@ fn key_frames_follow_the_format_and_round_trip() {
             entry(5, 100, 0),
             entry(5, 64, 9),
         ];
-        let frames = codec::encode_key_frames(&log(), 3, 12, FILTER_AT, &mut entries).unwrap();
+        let frames = codec::encode_key_frames(&log(), 0, 3, 12, FILTER_AT, &mut entries).unwrap();
         let sorted = [
             entry(5, 64, 9),
             entry(5, 100, 0),
@@ -335,13 +336,16 @@ fn key_frames_follow_the_format_and_round_trip() {
         index.resize(24 + 4080, 0);
         index.extend(4u32.to_le_bytes());
         index.extend([0; 8]);
-        let checksum = raw::crc(&index[24..]);
+        let checksum = raw::page_crc(&CHECK_ID, 0, 0, &index[24..]);
         index.extend(checksum.to_le_bytes());
         assert_eq!(frames.index, frame_of(&index));
 
         assert_eq!(key_filter_of(&frames.filter).count(), 4);
         let page = &index_pages_of(&frames.index)[0];
-        assert_eq!(codec::decode_page(page, 0, 4, 5).unwrap(), sorted);
+        assert_eq!(
+            codec::decode_page(&log(), 0, page, 0, 4, 5).unwrap(),
+            sorted
+        );
     });
 }
 
@@ -355,7 +359,7 @@ fn a_key_filter_answers_maybe_for_every_inserted_hash() {
     bounded(|| {
         let hash = |i: u64| i.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ (i << 40);
         let mut entries: Vec<_> = (0..1000).map(|i| entry(hash(i), i as u32, 0)).collect();
-        let frames = codec::encode_key_frames(&log(), 1, 1000, FILTER_AT, &mut entries).unwrap();
+        let frames = codec::encode_key_frames(&log(), 0, 1, 1000, FILTER_AT, &mut entries).unwrap();
         assert_eq!(
             frames.filter.len(),
             8 + 24 + 8 * 4 + 64 * 32 + padding(8 * 4 + 64 * 32)
@@ -372,7 +376,7 @@ fn a_key_filter_answers_maybe_for_every_inserted_hash() {
             .count();
         assert!(hits < 100, "{hits} of 10000 absent hashes answered maybe");
 
-        let frames = codec::encode_key_frames(&log(), 1, 0, FILTER_AT, &mut []).unwrap();
+        let frames = codec::encode_key_frames(&log(), 0, 1, 0, FILTER_AT, &mut []).unwrap();
         assert_eq!(frames.filter, frame_of(&body_header(5, 1, 0, 0)));
         assert_eq!(frames.index, frame_of(&body_header(6, 1, 0, 0)));
         let filter = key_filter_of(&frames.filter);
@@ -394,27 +398,27 @@ fn key_index_page_rules_are_enforced() {
     bounded(|| {
         use codec::Error;
         let mut entries: Vec<_> = (0..300).map(|i| entry(i * 3 + 1, i as u32, 0)).collect();
-        let frames = codec::encode_key_frames(&log(), 1, 300, FILTER_AT, &mut entries).unwrap();
+        let frames = codec::encode_key_frames(&log(), 0, 1, 300, FILTER_AT, &mut entries).unwrap();
         let pages = index_pages_of(&frames.index);
         assert_eq!(pages.len(), 2);
         let fences = [1, 766];
         assert_eq!(
-            codec::decode_page(&pages[0], 0, 300, fences[0]).unwrap(),
+            codec::decode_page(&log(), 0, &pages[0], 0, 300, fences[0]).unwrap(),
             entries[..255]
         );
         assert_eq!(
-            codec::decode_page(&pages[1], 1, 300, fences[1]).unwrap(),
+            codec::decode_page(&log(), 0, &pages[1], 1, 300, fences[1]).unwrap(),
             entries[255..]
         );
-        let seal = |page: &mut Vec<u8>| {
-            let checksum = raw::crc(&page[..4092]);
+        let seal = |page: &mut Vec<u8>, number: u32| {
+            let checksum = raw::page_crc(&CHECK_ID, 0, number, page);
             page[4092..].copy_from_slice(&checksum.to_le_bytes());
         };
         let check = |number: usize, expected: Error, change: &dyn Fn(&mut Vec<u8>)| {
             let mut page = pages[number].clone();
             change(&mut page);
             assert_eq!(
-                codec::decode_page(&page, number, 300, fences[number]),
+                codec::decode_page(&log(), 0, &page, number, 300, fences[number]),
                 Err(expected)
             );
         };
@@ -427,38 +431,53 @@ fn key_index_page_rules_are_enforced() {
         for (number, count) in [(0, 254u32), (0, 0), (0, 256), (1, 255), (1, 44), (1, 46)] {
             check(number, Error::Count, &|p| {
                 p[4080..4084].copy_from_slice(&count.to_le_bytes());
-                seal(p);
+                seal(p, number as u32);
             });
         }
         for at in [4084, 4091] {
             check(0, Error::Reserved, &|p| {
                 p[at] = 1;
-                seal(p);
+                seal(p, 0);
             });
         }
         for at in [45 * 16, 45 * 16 + 3, 4079] {
             check(1, Error::Reserved, &|p| {
                 p[at] = 1;
-                seal(p);
+                seal(p, 1);
             });
         }
         check(0, Error::Order, &|p| {
             let (first, second) = p.split_at_mut(16);
             first.swap_with_slice(&mut second[..16]);
-            seal(p);
+            seal(p, 0);
         });
         check(0, Error::Order, &|p| {
             p.copy_within(16..32, 32);
-            seal(p);
+            seal(p, 0);
         });
         assert_eq!(
-            codec::decode_page(&pages[0], 0, 300, fences[0] + 1),
+            codec::decode_page(&log(), 0, &pages[0], 0, 300, fences[0] + 1),
             Err(Error::Fence)
         );
         assert_eq!(
-            codec::decode_page(&pages[0], 2, 300, fences[0]),
+            codec::decode_page(&log(), 0, &pages[0], 2, 300, fences[0]),
             Err(Error::Count)
         );
+        // Format v3 seeds each page's CRC with the log id, the segment's base offset and the page
+        // number, so an intact page is valid only at its own place.
+        let elsewhere = [
+            (log(), 0, 1, &pages[0], "another page number"),
+            (log(), 0, 0, &pages[1], "another page's bytes"),
+            (log(), 300, 0, &pages[0], "another segment"),
+            (LogId::new([9; 16]), 0, 0, &pages[0], "another log"),
+        ];
+        for (log_id, base, number, page, label) in elsewhere {
+            assert_eq!(
+                codec::decode_page(&log_id, base, page, number, 300, fences[0]),
+                Err(Error::Crc),
+                "{label}"
+            );
+        }
     });
 }
 
@@ -477,7 +496,7 @@ fn the_fence_lookup_finds_a_hash_across_page_boundaries() {
             entries.extend((0..high).map(|i| entry(hash + 1 + i, i as u32, 0)));
             let count = entries.len() as u32;
             let frames =
-                codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut entries.clone()).unwrap();
+                codec::encode_key_frames(&log(), 0, 1, 1, FILTER_AT, &mut entries.clone()).unwrap();
             let filter = key_filter_of(&frames.filter);
             let pages = index_pages_of(&frames.index);
             let range = filter.index_pages(hash);
@@ -485,7 +504,7 @@ fn the_fence_lookup_finds_a_hash_across_page_boundaries() {
             for number in range.clone() {
                 let fence = entries[number * 255].hash;
                 found.extend(
-                    codec::decode_page(&pages[number], number, count, fence)
+                    codec::decode_page(&log(), 0, &pages[number], number, count, fence)
                         .unwrap()
                         .into_iter()
                         .filter(|e| e.hash == hash),
@@ -514,17 +533,17 @@ fn encoding_rejects_repeats_and_counts_past_the_limits() {
         use codec::Error;
         let mut repeat = [entry(1, 64, 0), entry(2, 64, 0), entry(1, 64, 0)];
         assert!(matches!(
-            codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut repeat),
+            codec::encode_key_frames(&log(), 0, 1, 1, FILTER_AT, &mut repeat),
             Err(Error::Order)
         ));
         let mut same_hash = [entry(1, 64, 0), entry(1, 64, 1), entry(1, 65, 0)];
-        assert!(codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut same_hash).is_ok());
+        assert!(codec::encode_key_frames(&log(), 0, 1, 1, FILTER_AT, &mut same_hash).is_ok());
 
         let limit = codec::KEYED_RECORD_LIMIT;
         assert_eq!(limit, 1_044_225);
         let mut too_many = vec![entry(0, 0, 0); limit + 1];
         assert!(matches!(
-            codec::encode_key_frames(&log(), 1, 1, FILTER_AT, &mut too_many),
+            codec::encode_key_frames(&log(), 0, 1, 1, FILTER_AT, &mut too_many),
             Err(Error::Count)
         ));
 
@@ -557,7 +576,7 @@ fn malformed_closing_frames_are_rejected() {
         use codec::Error;
         let streams = vec![tail(b"s"), tail(b"t")];
         let mut entries: Vec<_> = (0..300).map(|i| entry(i * 3 + 1, 64, i as u32)).collect();
-        let keys = codec::encode_key_frames(&log(), 1, 300, FILTER_AT, &mut entries).unwrap();
+        let keys = codec::encode_key_frames(&log(), 0, 1, 300, FILTER_AT, &mut entries).unwrap();
         let valid = [
             codec::encode_footer(&log(), 1, 300, &footer(streams)).unwrap(),
             codec::encode_seal(&log(), 1, 300),
@@ -662,11 +681,13 @@ fn malformed_closing_frames_are_rejected() {
 fn key_index_pages_start_on_a_page_boundary() {
     bounded(|| {
         let entries: Vec<_> = (0..300).map(|i| entry(i * 3 + 1, 64, i as u32)).collect();
-        let reference = codec::encode_key_frames(&log(), 1, 300, 64, &mut entries.clone()).unwrap();
+        let reference =
+            codec::encode_key_frames(&log(), 0, 1, 300, 64, &mut entries.clone()).unwrap();
         let filter_bytes = 8 * 2 + 64 * 10;
         for filter_at in [64, 65, 4000, 4095, 4096, 1 << 20, (1 << 32) - 1] {
             let frames =
-                codec::encode_key_frames(&log(), 1, 300, filter_at, &mut entries.clone()).unwrap();
+                codec::encode_key_frames(&log(), 0, 1, 300, filter_at, &mut entries.clone())
+                    .unwrap();
             let pages_at = filter_at as usize + frames.filter.len() + 8 + 24;
             assert_eq!(pages_at % 4096, 0, "filter at {filter_at}");
             let pad = frames.filter.len() - (8 + 24 + filter_bytes);
@@ -682,7 +703,7 @@ fn key_index_pages_start_on_a_page_boundary() {
             );
             assert_eq!(frames.index, reference.index);
         }
-        let empty = codec::encode_key_frames(&log(), 1, 0, 65, &mut []).unwrap();
+        let empty = codec::encode_key_frames(&log(), 0, 1, 0, 65, &mut []).unwrap();
         assert_eq!(empty.filter, frame_of(&body_header(5, 1, 0, 0)));
 
         let body = |count: u32, tail: &[u8]| {

@@ -114,7 +114,7 @@ pub(crate) fn charge(inputs: &[Input]) -> Option<usize> {
 }
 
 fn size_eligible(inputs: &[Input], options: &Options) -> bool {
-    let body = inputs.iter().try_fold(24usize, |n, r| {
+    let body = inputs.iter().try_fold(32usize, |n, r| {
         n.checked_add(16)?
             .checked_add(r.stream.len())?
             .checked_add(r.key.as_ref().map_or(0, Vec::len))?
@@ -194,7 +194,7 @@ pub(crate) fn frame_inputs(log_id: &[u8; 16], frame: &[u8]) -> Vec<Identity> {
     );
     assert_eq!(frame[8], 1);
     let count = u32::from_le_bytes(frame[28..32].try_into().unwrap());
-    let mut at = 32;
+    let mut at = 40; // envelope, body header, append time
     let mut out = vec![];
     for _ in 0..count {
         let s = u16::from_le_bytes(frame[at..at + 2].try_into().unwrap()) as usize;

@@ -594,7 +594,7 @@ fn segment_keys(bytes: &[u8]) -> Vec<Vec<Vec<u8>>> {
             break;
         }
         let count = u32::from_le_bytes(body[20..24].try_into().unwrap());
-        let mut pos = 24;
+        let mut pos = 32; // the body header, then the append time (format v3)
         let mut keys = vec![];
         for _ in 0..count {
             let stream_len = u16::from_le_bytes(body[pos..pos + 2].try_into().unwrap()) as usize;

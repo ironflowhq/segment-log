@@ -75,6 +75,7 @@ pub(crate) enum Mode {
 /// The builder's state. It adds sealed segments to `building` in order, and gives the writer a
 /// filter once that filter covers at least what the writer's current filter covers.
 struct Build {
+    log_id: codec::LogId,
     storage: Arc<dyn Storage>,
     dir: PathBuf,
     segments: Vec<Arc<SealedKeys>>,
@@ -142,8 +143,15 @@ impl Build {
             .map_err(drop)?;
             for (i, page) in bytes.chunks(codec::PAGE_SIZE).enumerate() {
                 let number = first + i;
-                let entries = codec::decode_page(page, number, count, segment.filter.fence(number))
-                    .map_err(drop)?;
+                let entries = codec::decode_page(
+                    &self.log_id,
+                    segment.base,
+                    page,
+                    number,
+                    count,
+                    segment.filter.fence(number),
+                )
+                .map_err(drop)?;
                 for entry in entries {
                     filter.insert(entry.hash);
                 }
@@ -174,11 +182,13 @@ enum Run {
 impl Builder {
     pub(super) fn start(
         mode: Mode,
+        log_id: codec::LogId,
         storage: Arc<dyn Storage>,
         dir: PathBuf,
         segments: Vec<Arc<SealedKeys>>,
     ) -> Option<Self> {
         let mut build = Box::new(Build {
+            log_id,
             storage,
             dir,
             segments,

@@ -153,7 +153,7 @@ fn a_huge_count_reserves_only_what_the_body_holds() {
 fn bodies_above_the_cap_are_discarded_or_malformed_before_reading() {
     let cap = frame_cap(1024 * 1024);
     assert_eq!(cap, 2 * 1024 * 1024);
-    assert_eq!(frame_cap(41), 64 * 1024);
+    assert_eq!(frame_cap(49), 64 * 1024);
     let at = |len: usize, kind| Header {
         body_len: len,
         kind,
@@ -168,12 +168,13 @@ fn bodies_above_the_cap_are_discarded_or_malformed_before_reading() {
 /// worst case packs the most records into the body: one-byte stream ids, no keys, no payloads.
 #[test]
 fn an_append_above_the_cap_has_a_group_body_above_the_group_cap() {
-    for group_byte_cap in [41, 1000, 1024 * 1024, 8 * 1024 * 1024] {
+    // 49 is the smallest group byte cap (format.md, group record entry).
+    for group_byte_cap in [49, 1000, 1024 * 1024, 8 * 1024 * 1024] {
         let cap = frame_cap(group_byte_cap);
         let records = (cap - 4) / (APPEND_ENTRY_LEN + 1) + 1;
         let wire_body = 4 + records * (APPEND_ENTRY_LEN + 1);
         assert!(wire_body > cap);
-        let group_body = 24 + records * (16 + 1); // format.md, group record entry
+        let group_body = 32 + records * (16 + 1); // format.md, group record entry
         assert!(group_body > group_byte_cap, "cap {group_byte_cap}");
     }
 }

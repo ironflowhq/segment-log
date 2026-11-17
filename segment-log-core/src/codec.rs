@@ -1,5 +1,5 @@
-//! The v1 byte layout of [format.md](../../docs/architecture/format.md). Every width, limit and
-//! check value comes from that file.
+//! The byte layout of [format.md](../../docs/architecture/format.md), version 3. Every width,
+//! limit and check value comes from that file, and belongs to its format version (ADR 0064).
 
 mod crc;
 mod filter;
@@ -28,6 +28,8 @@ pub(crate) const LOCATOR_LEN: usize = 40;
 
 pub(crate) const ENVELOPE_LEN: usize = 8;
 pub(crate) const BODY_HEADER_LEN: usize = 24;
+/// A group body's header: the body header, then the group's append time.
+pub(crate) const GROUP_HEADER_LEN: usize = BODY_HEADER_LEN + 8;
 pub(crate) const FOOTER_HEADER_LEN: usize = BODY_HEADER_LEN + 8;
 pub(crate) const FOOTER_ENTRY_LEN: usize = 28;
 

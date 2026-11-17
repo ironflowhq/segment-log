@@ -16,6 +16,7 @@ pub(super) enum State {
 pub(super) struct Writable {
     pub lock: Box<dyn Lock>,
     pub epoch: u64,
+    pub append_time: u64,
     pub active: Active,
     pub active_keys: BTreeMap<Vec<u8>, ActiveKey>,
     pub sealed_keys: Vec<SealedKeys>,
@@ -205,6 +206,7 @@ pub(super) fn open(
         state: State::Writable(Writable {
             lock,
             epoch,
+            append_time: found.append_time,
             active,
             active_keys,
             sealed_keys,

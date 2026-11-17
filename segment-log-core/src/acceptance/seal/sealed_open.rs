@@ -165,7 +165,7 @@ fn a_payload_that_ends_in_a_seal_run_leaves_the_segment_active() {
     bounded(|| {
         let log_id = codec::LogId::new(raw::LOG_ID);
         let prefix = vec![b'p'; 100];
-        let payload_at = 64 + 8 + 24 + 16 + b"s".len();
+        let payload_at = 64 + 8 + 32 + 16 + b"s".len();
         let run = seal_run_at(&log_id, payload_at + prefix.len(), 1);
         let payload = [prefix, run].concat();
         let segment = [

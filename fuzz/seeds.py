@@ -7,7 +7,7 @@ import pathlib
 import struct
 
 FUZZ = pathlib.Path(__file__).parent
-FIXTURE = FUZZ.parent / "segment-log-core/tests/fixtures/format-v2"
+FIXTURE = FUZZ.parent / "segment-log-core/tests/fixtures/format-v3"
 HEADER_LEN = 64
 
 

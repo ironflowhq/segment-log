@@ -16,7 +16,7 @@ pub(crate) fn crc(bytes: &[u8]) -> u32 {
     state ^ u32::MAX
 }
 pub(crate) const LOG_ID: [u8; 16] = [7; 16];
-pub(crate) const VERSION: u16 = 2;
+pub(crate) const VERSION: u16 = 3;
 pub(crate) fn header(version: u16, base: u64, epoch: u64) -> Vec<u8> {
     assert_eq!(crc(b"123456789"), 0xe3069283);
     let mut bytes = vec![0; 64];
@@ -32,6 +32,17 @@ pub(crate) fn header(version: u16, base: u64, epoch: u64) -> Vec<u8> {
 }
 pub(crate) fn frame_crc(log_id: &[u8; 16], frame: &[u8]) -> u32 {
     crc(&[log_id.as_slice(), &frame[..4], &frame[8..]].concat())
+}
+/// A key index page's CRC, from format.md: seeded with the `log_id`, the segment's `base_offset`
+/// and the page number (format v3).
+pub(crate) fn page_crc(log_id: &[u8; 16], base: u64, number: u32, page: &[u8]) -> u32 {
+    crc(&[
+        log_id.as_slice(),
+        &base.to_le_bytes(),
+        &number.to_le_bytes(),
+        &page[..4092],
+    ]
+    .concat())
 }
 pub(crate) fn rechecksum(log_id: &[u8; 16], frame: &mut [u8]) {
     let checksum = frame_crc(log_id, frame);
@@ -49,6 +60,7 @@ pub(crate) fn group_in(log_id: &[u8; 16], epoch: u64, base: u64, payloads: &[&[u
     body.extend(epoch.to_le_bytes());
     body.extend(base.to_le_bytes());
     body.extend((payloads.len() as u32).to_le_bytes());
+    body.extend(0u64.to_le_bytes()); // append time
     for (i, payload) in payloads.iter().enumerate() {
         body.extend(1u16.to_le_bytes());
         body.extend(0u16.to_le_bytes());
@@ -258,8 +270,15 @@ pub(crate) fn roll_run_with(
         mut tails,
     } = groups(segment);
     edit(&mut keys, &mut tails);
-    let key_frames =
-        codec::encode_key_frames(&log_id, epoch, next, segment.len() as u64, &mut keys).unwrap();
+    let key_frames = codec::encode_key_frames(
+        &log_id,
+        header_fields(segment).1,
+        epoch,
+        next,
+        segment.len() as u64,
+        &mut keys,
+    )
+    .unwrap();
     let footer = footer(&log_id, epoch, next, segment.len() as u64, tails);
     let footer_position = segment.len() + key_frames.filter.len() + key_frames.index.len();
     let locator = codec::encode_locator(&log_id, epoch, next, footer_position as u64);
