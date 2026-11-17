@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"slices"
 	"syscall"
 	"testing"
@@ -269,5 +270,48 @@ func TestSignalStop(t *testing.T) {
 	c = dial(t, d)
 	if a, _ := c.Do(Append([]NewRecord{keyed("s", "k2", Expected{Revision: 0}, []byte("q"))})); a.Status != 0 {
 		t.Fatalf("append after a restart from SIGTERM: %v, want Ok, so the log was not sealed", a.Status)
+	}
+}
+
+// TRANSPORT-DIAL-BURST: the PRD's 1,000 callers dial at once, as a pool does at start. A vsock
+// listener refuses connections beyond its accept backlog, where a Unix socket makes them wait, so
+// every one must still get through Hello and one append.
+func TestDialBurst(t *testing.T) {
+	const callers = 1000
+	if runtime.GOOS == "darwin" {
+		t.Skip("macOS caps every accept backlog at kern.ipc.somaxconn, 128 by default")
+	}
+	d := newLogDir(t)
+	d.start(t, "ulimit -n 4096", "--max-connections", fmt.Sprint(callers))
+	errs := make(chan error, callers)
+	for i := range callers {
+		go func() {
+			c, err := Dial(d.network, d.address)
+			if err != nil {
+				errs <- fmt.Errorf("caller %d: dial: %w", i, err)
+				return
+			}
+			defer c.Close()
+			a, err := c.Do(Append([]NewRecord{keyed(fmt.Sprint("s", i), fmt.Sprint("k", i), empty, []byte("burst"))}))
+			if err == nil && a.Status != 0 {
+				err = fmt.Errorf("status %v", a.Status)
+			}
+			if err != nil {
+				err = fmt.Errorf("caller %d: append: %w", i, err)
+			}
+			errs <- err
+		}()
+	}
+	failed := 0
+	for range callers {
+		if err := <-errs; err != nil {
+			if failed < 5 {
+				t.Error(err)
+			}
+			failed++
+		}
+	}
+	if failed > 0 {
+		t.Fatalf("%d of %d callers failed", failed, callers)
 	}
 }
