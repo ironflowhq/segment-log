@@ -49,6 +49,7 @@ fn group_write(sim: &Sim, base: u64, streams: &[u8]) -> Call {
                 &crate::codec::Group {
                     epoch: 1,
                     base_offset: base,
+                    append_time: 0,
                     entries: streams
                         .iter()
                         .map(|s| crate::codec::Entry {
@@ -179,7 +180,7 @@ fn failure_after_drop_closes_admission_poisons_deferred_and_queued_work() {
             let mut log = SegmentLog::with_storage(
                 Path::new("/log"),
                 Options {
-                    group_byte_cap: 24 + 2 * (16 + 1 + 1),
+                    group_byte_cap: 32 + 2 * (16 + 1 + 1),
                     ..options()
                 },
                 Arc::new(sim.clone()),

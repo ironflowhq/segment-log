@@ -138,7 +138,7 @@ impl Rng {
     }
 }
 fn body(inputs: &[Input]) -> usize {
-    24 + inputs
+    32 + inputs
         .iter()
         .map(|r| 16 + r.stream.len() + r.key.as_ref().map_or(0, Vec::len) + r.payload.len())
         .sum::<usize>()
@@ -162,6 +162,7 @@ fn frame(log_id: &[u8; 16], base: u64, inputs: &[Input], prior: &[Record]) -> Ve
     body.extend(1u64.to_le_bytes());
     body.extend(base.to_le_bytes());
     body.extend((inputs.len() as u32).to_le_bytes());
+    body.extend(0u64.to_le_bytes()); // append time
     for (r, p) in inputs.iter().zip(&history[prior.len()..]) {
         body.extend((r.stream.len() as u16).to_le_bytes());
         body.extend((r.key.as_ref().map_or(0, Vec::len) as u16).to_le_bytes());

@@ -10,6 +10,7 @@ pub(super) struct Tail {
 
 pub(super) fn roll_run(
     log_id: &codec::LogId,
+    base: u64,
     epoch: u64,
     next: u64,
     filter_at: u64,
@@ -17,7 +18,7 @@ pub(super) fn roll_run(
     keys: &mut [codec::KeyEntry],
 ) -> [Vec<u8>; 4] {
     let codec::KeyFrames { filter, index } =
-        codec::encode_key_frames(log_id, epoch, next, filter_at, keys)
+        codec::encode_key_frames(log_id, base, epoch, next, filter_at, keys)
             .expect("the writer rolls before the key index passes the frame limit");
     let footer = footer(
         log_id,
@@ -92,7 +93,7 @@ impl RunState {
     pub(super) fn step(self, at: u64, end: u64, length: u64, body: &codec::Body<'_>) -> Step {
         use codec::Body;
         match (self, body) {
-            (Self::Groups, Body::Group(_)) => Step::Group,
+            (Self::Groups, Body::Group { .. }) => Step::Group,
             (Self::Groups, Body::KeyFilter(filter)) => Step::Run(Self::Filter {
                 start: at,
                 count: filter.count(),

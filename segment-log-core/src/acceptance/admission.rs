@@ -257,7 +257,7 @@ fn encoded_size_equality_and_retry_eligibility_are_independent_of_pressure() {
         let log = configured(
             &sim,
             Options {
-                group_byte_cap: 24 + 16 + 1 + 1,
+                group_byte_cap: 32 + 16 + 1 + 1,
                 pending_byte_budget: 2 * charge,
                 ..options()
             },
@@ -306,7 +306,7 @@ fn structural_size_state_and_capacity_failures_have_defined_precedence() {
                 &sim,
                 Options {
                     queue_capacity: 1,
-                    group_byte_cap: 41,
+                    group_byte_cap: 49,
                     pending_byte_budget: 2 * charge,
                     ..options()
                 },
@@ -448,7 +448,7 @@ fn every_terminal_answer_releases_bytes_before_the_caller_receives_it() {
             let log = configured(
                 &sim,
                 Options {
-                    group_byte_cap: 59,
+                    group_byte_cap: 67,
                     pending_byte_budget: budget,
                     ..options()
                 },
@@ -542,7 +542,7 @@ fn matched_and_abandoned_pending_handles_keep_fixed_charges_until_answered() {
                 &sim,
                 Options {
                     pending_byte_budget: 2 * c + b,
-                    group_byte_cap: 42,
+                    group_byte_cap: 50,
                     ..options()
                 },
             );
@@ -654,7 +654,7 @@ fn maximum_fields_fit_by_length_even_with_unused_buffers() {
         let log = configured(
             &sim,
             Options {
-                group_byte_cap: 24 + 16 + 1024 + 256,
+                group_byte_cap: 32 + 16 + 1024 + 256,
                 ..options()
             },
         );
@@ -695,7 +695,7 @@ fn failed_groups_release_matched_abandoned_and_queued_reservations() {
                 &sim,
                 Options {
                     pending_byte_budget: 4 * c,
-                    group_byte_cap: 42,
+                    group_byte_cap: 50,
                     ..options()
                 },
             );
@@ -750,7 +750,7 @@ fn durable_retries_must_still_fit_standalone_limits() {
                     group_byte_cap: if charge_limit {
                         options().group_byte_cap
                     } else {
-                        24 + 16 + 1 + 1 + 7 - 1
+                        32 + 16 + 1 + 1 + 7 - 1
                     },
                     pending_byte_budget: if charge_limit {
                         expected_charge(&make()) - 1

@@ -23,6 +23,7 @@ fn group_bytes_follow_the_provisional_format() {
         let group = Group {
             epoch: 2,
             base_offset: 3,
+            append_time: 0x0807_0605_0403_0201,
             entries: vec![Entry {
                 stream: b"s",
                 key: Some(b"k"),
@@ -32,9 +33,10 @@ fn group_bytes_follow_the_provisional_format() {
         };
         let bytes = codec::encode_group(&log(), &group).unwrap();
         let expected = [
-            44, 0, 0, 0, 0xf0, 0x85, 0xc8, 0x87, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0,
-            0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 2, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, b's', b'k', 0,
-            255,
+            52, 0, 0, 0, 0x0b, 0x73, 0xe6, 0x06, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0,
+            0, 0, 0, 1, 0, 0, 0, // body header
+            1, 2, 3, 4, 5, 6, 7, 8, // append time
+            1, 0, 1, 0, 2, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, b's', b'k', 0, 255,
         ];
         assert_eq!(bytes, expected);
         assert_eq!(group_of(codec::decode(&log(), &bytes).unwrap()), group);
@@ -54,6 +56,7 @@ fn malformed_groups_are_rejected_without_panicking() {
         let group = Group {
             epoch: 0,
             base_offset: 0,
+            append_time: 0,
             entries: vec![Entry {
                 stream: b"s",
                 key: None,
@@ -73,10 +76,10 @@ fn malformed_groups_are_rejected_without_panicking() {
             (11, 1, Error::Reserved),
             (28, 0, Error::Count),
             (28, 255, Error::Count),
-            (32, 0, Error::Stream),
-            (33, 5, Error::Stream),
-            (35, 2, Error::Key),
-            (36, 255, Error::Length),
+            (40, 0, Error::Stream),
+            (41, 5, Error::Stream),
+            (43, 2, Error::Key),
+            (44, 255, Error::Length),
         ] {
             let mut bytes = valid.clone();
             bytes[pos] = value;
@@ -93,6 +96,7 @@ fn malformed_groups_are_rejected_without_panicking() {
         for len in [
             0u32,
             23,
+            31, // a group body shorter than its header and append time
             8 * 1024 * 1024 + 1,
             16 * 1024 * 1024 + 1,
             u32::MAX,
@@ -124,6 +128,7 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
             let g = Group {
                 epoch: u64::MAX,
                 base_offset: 5,
+                append_time: 0,
                 entries: vec![
                     Entry {
                         stream: &stream,
@@ -151,6 +156,7 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
             let g = Group {
                 epoch: 0,
                 base_offset: 0,
+                append_time: 0,
                 entries: vec![Entry {
                     stream,
                     key,
@@ -163,10 +169,11 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
         let mut g = Group {
             epoch: 0,
             base_offset: 0,
+            append_time: 0,
             entries: vec![],
         };
         assert_eq!(codec::encode_group(&log(), &g), Err(Error::Count));
-        let payload = vec![0; 8 * 1024 * 1024 - 41];
+        let payload = vec![0; 8 * 1024 * 1024 - 49];
         g.entries.push(Entry {
             stream: b"s",
             key: None,
@@ -195,7 +202,7 @@ fn binary_groups_round_trip_and_encoding_enforces_limits() {
 fn header_bytes_and_validation_follow_the_format() {
     bounded(|| {
         let mut expected = [0; 64];
-        expected[..8].copy_from_slice(b"SGLG\x02\0\x40\0");
+        expected[..8].copy_from_slice(b"SGLG\x03\0\x40\0");
         expected[8..24].copy_from_slice(&raw::LOG_ID);
         expected[24] = 3;
         expected[32] = 2;
@@ -256,6 +263,7 @@ fn checksums_and_frames_match_the_bitwise_fixture() {
         let group = Group {
             epoch: 3,
             base_offset: 5,
+            append_time: 0,
             entries: vec![Entry {
                 stream: b"s",
                 key: None,
@@ -285,6 +293,7 @@ fn checksums_match_the_bitwise_fixture_at_every_step_remainder() {
         let group = Group {
             epoch: 3,
             base_offset: 5,
+            append_time: 0,
             entries: vec![Entry {
                 stream: b"s",
                 key: None,

@@ -162,7 +162,8 @@ fn a_failed_key_index_page_read_poisons_the_writer() {
             |intact| {
                 let mut bytes = intact.to_vec();
                 bytes[page + 4080] = 2;
-                let checksum = raw::crc(&bytes[page..page + 4092]);
+                let (log_id, base, _) = raw::header_fields(intact);
+                let checksum = raw::page_crc(&log_id, base, 0, &bytes[page..page + 4096]);
                 bytes[page + 4092..page + 4096].copy_from_slice(&checksum.to_le_bytes());
                 Damage::Bytes(bytes)
             },
@@ -220,7 +221,7 @@ fn a_failed_sealed_frame_read_poisons_the_writer() {
             &target,
             |intact| {
                 let mut bytes = intact.to_vec();
-                bytes[64 + 32] = 0;
+                bytes[64 + 40] = 0; // the first entry's stream length, after the append time
                 let (log_id, _, _) = raw::header_fields(intact);
                 raw::rechecksum(&log_id, &mut bytes[64..64 + frame]);
                 Damage::Bytes(bytes)
@@ -248,6 +249,7 @@ fn a_key_index_entry_that_names_no_group_frame_poisons_the_writer() {
             &codec::Group {
                 epoch: 1,
                 base_offset: 0,
+                append_time: 0,
                 entries: vec![codec::Entry {
                     stream: &z.stream,
                     key: z.key.as_deref(),
@@ -270,7 +272,7 @@ fn a_key_index_entry_that_names_no_group_frame_poisons_the_writer() {
                 record,
             }];
             let keys =
-                codec::encode_key_frames(&log_id, 1, 1, filter_at as u64, &mut entries).unwrap();
+                codec::encode_key_frames(&log_id, 0, 1, 1, filter_at as u64, &mut entries).unwrap();
             let footer = codec::encode_footer(
                 &log_id,
                 1,

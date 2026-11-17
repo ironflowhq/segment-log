@@ -447,7 +447,7 @@ fn retry_bytes_do_not_fill_groups_or_overtake_deferred_new_work() {
         let log = SegmentLog::with_storage(
             Path::new("/log"),
             Options {
-                group_byte_cap: 50,
+                group_byte_cap: 58,
                 ..options()
             },
             std::sync::Arc::new(sim.clone()),
@@ -568,7 +568,7 @@ fn regrouped_retries_still_obey_the_admission_group_cap() {
         let log = SegmentLog::with_storage(
             Path::new("/log"),
             Options {
-                group_byte_cap: 50,
+                group_byte_cap: 58,
                 ..options()
             },
             std::sync::Arc::new(sim.clone()),
@@ -742,6 +742,7 @@ fn recovery_does_not_index_keys_from_a_discarded_frame() {
             &crate::codec::Group {
                 epoch: 1,
                 base_offset: 1,
+                append_time: 0,
                 entries: vec![crate::codec::Entry {
                     stream: b"t",
                     key: Some(b"t"),
@@ -793,6 +794,7 @@ fn lookup_compares_stored_stream_and_payload_not_cached_contents() {
                 &crate::codec::Group {
                     epoch: 1,
                     base_offset: 0,
+                    append_time: 0,
                     entries: vec![crate::codec::Entry {
                         stream: if change_stream { b"t" } else { b"s" },
                         key: Some(b"k"),
@@ -908,7 +910,7 @@ fn a_failed_group_poisons_deferred_work_without_overtaking() {
         let log = SegmentLog::with_storage(
             Path::new("/log"),
             Options {
-                group_byte_cap: 50,
+                group_byte_cap: 58,
                 ..options()
             },
             std::sync::Arc::new(sim.clone()),

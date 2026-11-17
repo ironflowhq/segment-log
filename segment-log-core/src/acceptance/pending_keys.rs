@@ -290,6 +290,7 @@ fn pending_frame(log_id: &crate::codec::LogId) -> Vec<u8> {
         &crate::codec::Group {
             epoch: 1,
             base_offset: 1,
+            append_time: 0,
             entries: vec![
                 crate::codec::Entry {
                     stream: b"s",
@@ -649,7 +650,7 @@ fn deferred_original_keys_do_not_leak_into_the_previous_group() {
             let log = SegmentLog::with_storage(
                 Path::new("/log"),
                 Options {
-                    group_byte_cap: 65,
+                    group_byte_cap: 73,
                     ..options()
                 },
                 Arc::new(sim.clone()),
@@ -778,7 +779,7 @@ fn terminal_answers_do_not_wait_for_positive_linger() {
             Path::new("/log"),
             Options {
                 linger: std::time::Duration::from_secs(60),
-                group_byte_cap: 65,
+                group_byte_cap: 73,
                 ..options()
             },
             Arc::new(sim.clone()),

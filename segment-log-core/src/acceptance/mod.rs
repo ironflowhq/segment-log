@@ -1,4 +1,5 @@
 mod admission;
+mod append_time;
 mod codec;
 mod delivery;
 mod durability;
@@ -39,3 +40,4 @@ mod seal;
 mod evidence;
 
 mod format_golden;
+mod format_rules;

@@ -92,7 +92,7 @@ fn read_boundaries_return_empty() {
 #[test]
 fn zero_linger_drains_queued_submits_up_to_the_cap() {
     bounded(|| {
-        for (cap, flushes) in [(1024, 2), (47, 3)] {
+        for (cap, flushes) in [(1024, 2), (55, 3)] {
             let sim = Sim::new(6);
             let log = SegmentLog::with_storage(
                 Path::new("/log"),
