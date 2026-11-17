@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / 'scripts/m3-verify-roll-syscalls.py'
 TRACE = ROOT / 'scripts/fixtures/m3-roll-syscalls.trace'
 NEW = r'00000000000000000001\.seg'
+OLD = r'00000000000000000000\.seg'
 
 
 class RollOrder(unittest.TestCase):
@@ -27,6 +28,15 @@ class RollOrder(unittest.TestCase):
         start = next(i for i, x in enumerate(lines) if 'PHASE roll' in x)
         return next(i for i in range(start, len(lines)) if re.search(pattern, lines[i]))
 
+    def closing_run(self, lines):
+        """The roll phase's calls on the old segment (ADR 0061), removed from lines."""
+        start = next(i for i, x in enumerate(lines) if 'PHASE roll' in x)
+        found = [i for i in range(start, len(lines)) if re.search(rf'(write|fdatasync)\(\d+<[^>]*{OLD}>', lines[i])]
+        run = [lines[i] for i in found]
+        for i in reversed(found):
+            del lines[i]
+        return run
+
     def reject(self, lines, message):
         result = self.check_trace(lines)
         self.assertNotEqual(result.returncode, 0, result.stdout)
@@ -39,7 +49,8 @@ class RollOrder(unittest.TestCase):
         """
         result = self.check_trace(self.trace())
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn('roll: fdatasync=2 fsync=1 success', result.stdout)
+        self.assertIn('roll: fdatasync=4 fsync=1 success', result.stdout)
+        self.assertIn('closing run in roll', result.stdout)
 
     def test_missing_directory_sync_is_rejected(self):
         """Given a roll without its directory fsync, when verified, then it rejects it.
@@ -157,6 +168,64 @@ class RollOrder(unittest.TestCase):
                                   f'{pid}  {time} <... fsync resumed>){tail}']
         result = self.check_trace(lines)
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_closing_run_in_the_next_commit_is_accepted(self):
+        """Given the sealer's closing run written at the next group commit, when verified, then it passes.
+
+        Cases: KEY-FRAMES-CRASH
+        """
+        lines = self.trace()
+        run = self.closing_run(lines)
+        start = next(i for i, x in enumerate(lines) if 'PHASE commit-1' in x)
+        frame = next(i for i in range(start, len(lines)) if re.search(rf'write\(\d+<[^>]*{NEW}>', lines[i]))
+        lines[frame:frame] = run
+        result = self.check_trace(lines)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn('closing run in commit-1', result.stdout)
+
+    def test_closing_run_at_drop_is_accepted(self):
+        """Given the closing run written when the log is dropped, when verified, then it passes.
+
+        Cases: KEY-FRAMES-CRASH
+        """
+        lines = self.trace()
+        run = self.closing_run(lines)
+        done = next(i for i, x in enumerate(lines) if 'PHASE done' in x)
+        lines[done + 1:done + 1] = run
+        result = self.check_trace(lines)
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_missing_closing_run_is_rejected(self):
+        """Given a roll whose old segment never gets its closing run, when verified, then it rejects it.
+
+        Cases: KEY-FRAMES-CRASH
+        """
+        lines = self.trace()
+        self.closing_run(lines)
+        self.reject(lines, 'expected exactly one')
+
+    def test_closing_run_without_its_first_flush_is_rejected(self):
+        """Given footer and locator written before the key frames are flushed, when verified, then it rejects it.
+
+        Cases: KEY-FRAMES-CRASH
+        """
+        lines = self.trace()
+        start = next(i for i, x in enumerate(lines) if 'PHASE roll' in x)
+        flush = next(i for i in range(start, len(lines)) if re.search(rf'fdatasync\(\d+<[^>]*{OLD}>', lines[i]))
+        del lines[flush]
+        self.reject(lines, 'expected the closing run')
+
+    def test_closing_run_after_the_group_frame_is_rejected(self):
+        """Given the closing run written after the group frame of the same commit, when verified, then it rejects it.
+
+        Cases: KEY-FRAMES-CRASH
+        """
+        lines = self.trace()
+        run = self.closing_run(lines)
+        start = next(i for i, x in enumerate(lines) if 'PHASE commit-1' in x)
+        flush = next(i for i in range(start, len(lines)) if re.search(rf'fdatasync\(\d+<[^>]*{NEW}>', lines[i]))
+        lines[flush + 1:flush + 1] = run
+        self.reject(lines, 'commit-1: closing run after the group frame')
 
     def test_markers_out_of_order_are_rejected(self):
         """Given a trace without the roll marker, when verified, then it rejects it.

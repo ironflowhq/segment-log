@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Verify the Linux calls of a segment roll between workload markers, not wrapper counters.
 
+From ADR 0061 the old segment's closing run is written after the roll, at the first group commit
+after the sealer returns it, or at drop: two frame writes and an fdatasync, then two more and an
+fdatasync, before that group's frame. It lands in exactly one of the phases roll, commit-1, done.
+
 Input is a strace log of acceptance::evidence::real_storage_roll_phases, taken with
 -f -yy -e trace=openat,write,fdatasync,fsync so that each fd shows its path.
 """
@@ -87,8 +91,21 @@ def syncs(events):
             yield event
 
 
-def segment_writes(events):
-    return [e.path for e in events if e.name == "write" and e.path.endswith(".seg")]
+def segment_writes(events, skip=None):
+    return [e.path for e in events if e.name == "write" and e.path.endswith(".seg") and e.path != skip]
+
+
+CLOSING_RUN = ["write", "write", "fdatasync", "write", "write", "fdatasync"]
+
+
+def closing_run(events, old):
+    """Indices of the old segment's closing run in one phase's events, or [] if it is elsewhere."""
+    found = [i for i, e in enumerate(events) if e.path == old and e.name in ("write", "fdatasync", "fsync")]
+    if not found:
+        return []
+    names = [events[i].name for i in found]
+    require(names == CLOSING_RUN, f"{events[found[0]].phase}: old segment calls {names}, expected the closing run {CLOSING_RUN}")
+    return found
 
 
 def position(events, found, what, after=-1):
@@ -135,8 +152,13 @@ def verify(text):
         "commit-0": [first], "roll": [new, new], "commit-1": [new], "done": [],
     }
     for phase, paths in expected_writes.items():
-        actual = segment_writes(by_phase[phase])
+        skip = first if phase != "commit-0" else None
+        actual = segment_writes(by_phase[phase], skip)
         require(actual == paths, f"{phase}: segment writes {actual}, expected {paths}")
+    runs = {phase: closing_run(by_phase[phase], first) for phase in ("roll", "commit-1", "done")}
+    holding = [phase for phase, run in runs.items() if run]
+    require(len(holding) == 1, f"closing run of {FIRST_SEGMENT} in phases {holding}, expected exactly one")
+    run_phase = holding[0]
 
     expected_syncs = {
         "create": Counter({("fdatasync", first): 1, ("fsync", first): 1,
@@ -146,6 +168,7 @@ def verify(text):
         "commit-1": Counter({("fdatasync", new): 1}),
         "done": Counter(),
     }
+    expected_syncs[run_phase][("fdatasync", first)] += 2
     report = []
     for phase in PHASES:
         done = list(syncs(by_phase[phase]))
@@ -164,6 +187,15 @@ def verify(text):
              "fsync log directory", "group frame write", "fdatasync new segment"]
     report.append("roll order: " + " < ".join(steps))
     report.extend(f"  {step}: {by_phase['roll'][i].line}" for step, i in zip(steps, order))
+
+    run = runs[run_phase]
+    events = by_phase[run_phase]
+    frames = [i for i, e in enumerate(events) if e.name == "write" and e.path == new and not e.data.startswith(HEADER_MAGIC)]
+    if run_phase == "roll":
+        require(run[0] > order[3], "roll: closing run before the log directory fsync")
+    require(not frames or run[-1] < frames[0], f"{run_phase}: closing run after the group frame")
+    report.append(f"closing run in {run_phase}: " + " < ".join(CLOSING_RUN) + (" < group frame write" if frames else ""))
+    report.extend(f"  {events[i].line}" for i in run)
     return report
 
 
