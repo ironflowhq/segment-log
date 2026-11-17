@@ -5,6 +5,7 @@ mod args;
 mod connection;
 mod log;
 pub mod protocol;
+mod repair;
 mod server;
 #[cfg(target_os = "linux")]
 mod vsock;
@@ -28,6 +29,12 @@ use std::time::Duration;
 const EXIT_START: u8 = 1;
 
 pub fn main_with(args: impl Iterator<Item = String>) -> ExitCode {
+    let mut args = args.peekable();
+    // The offline repair command (ADR 0065). Without a subcommand, the command line serves.
+    if args.peek().is_some_and(|first| first == "repair") {
+        args.next();
+        return repair::main(args);
+    }
     // Before any thread starts, so every thread inherits the mask and only the waiter below
     // receives these signals.
     let stop_signals = block_stop_signals();
