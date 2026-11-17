@@ -1,6 +1,6 @@
 # Positioned reads: read and append evidence for issue 20
 
-The [Mac concurrent evidence](../concurrent-macos/README.md) for [issue 20](https://github.com/ironflowhq/segment-log/issues/20) found readers blocked in the storage mutex, which real storage held across every read, write and flush. This record measures one change: real storage reads at a position on a shared handle, and the lock covers only the handle lookup.
+The [Mac concurrent evidence](../concurrent-macos/README.md) for [issue 20](https://github.com/ironflowx/segment-log/issues/20) found readers blocked in the storage mutex, which real storage held across every read, write and flush. This record measures one change: real storage reads at a position on a shared handle, and the lock covers only the handle lookup.
 
 ## Result
 

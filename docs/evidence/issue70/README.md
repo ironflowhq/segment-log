@@ -4,8 +4,8 @@ Two captures of the [`m4-evidence` workflow](../m4/README.md) at `15dd21d`, on h
 
 | Capture | Fixture | Run |
 | --- | --- | --- |
-| [`sealed-100`](sealed-100/summary.md) | The PRD fixture: 100 sealed segments at the 64 MiB default `roll_bytes`, 22.7 million keyed records | [43291174944](https://github.com/ironflowhq/segment-log/actions/runs/43291174944) |
-| [`sealed-1000`](sealed-1000/summary.md) | A named variant ([ADR 0036](../../decisions/0036-measure-the-existing-defaults-before-tuning.md)): 1,000 sealed segments at `roll_bytes` 6,710,886, about the same number of keys | [43291173652](https://github.com/ironflowhq/segment-log/actions/runs/43291173652) |
+| [`sealed-100`](sealed-100/summary.md) | The PRD fixture: 100 sealed segments at the 64 MiB default `roll_bytes`, 22.7 million keyed records | [43291174944](https://github.com/ironflowx/segment-log/actions/runs/43291174944) |
+| [`sealed-1000`](sealed-1000/summary.md) | A named variant ([ADR 0036](../../decisions/0036-measure-the-existing-defaults-before-tuning.md)): 1,000 sealed segments at `roll_bytes` 6,710,886, about the same number of keys | [43291173652](https://github.com/ironflowx/segment-log/actions/runs/43291173652) |
 
 The `closed-unkeyed` mode sends the same records without keys to the same keyed fixture, so the gap to the keyed closed loop on one side is what the key lookup costs on that side.
 
@@ -33,10 +33,10 @@ Four more captures measure the log key filter of pull request 75 beside the same
 
 | Capture | Wait after open | Run |
 | --- | --- | --- |
-| [`log-filter-100`](log-filter-100/summary.md) | none | [43300711775](https://github.com/ironflowhq/segment-log/actions/runs/43300711775), at `2c3bfcc` |
-| [`log-filter-1000`](log-filter-1000/summary.md) | none | [43300699281](https://github.com/ironflowhq/segment-log/actions/runs/43300699281), at `2c3bfcc` |
-| [`log-filter-100-settled`](log-filter-100-settled/summary.md) | 15 s | [43305119312](https://github.com/ironflowhq/segment-log/actions/runs/43305119312), at `4744340` |
-| [`log-filter-1000-settled`](log-filter-1000-settled/summary.md) | 15 s | [43305124391](https://github.com/ironflowhq/segment-log/actions/runs/43305124391), at `4744340` |
+| [`log-filter-100`](log-filter-100/summary.md) | none | [43300711775](https://github.com/ironflowx/segment-log/actions/runs/43300711775), at `2c3bfcc` |
+| [`log-filter-1000`](log-filter-1000/summary.md) | none | [43300699281](https://github.com/ironflowx/segment-log/actions/runs/43300699281), at `2c3bfcc` |
+| [`log-filter-100-settled`](log-filter-100-settled/summary.md) | 15 s | [43305119312](https://github.com/ironflowx/segment-log/actions/runs/43305119312), at `4744340` |
+| [`log-filter-1000-settled`](log-filter-1000-settled/summary.md) | 15 s | [43305124391](https://github.com/ironflowx/segment-log/actions/runs/43305124391), at `4744340` |
 
 `4744340` changes only the probe and the scripts: `SEALED_PROBE_SETTLE_MS` waits between open and the first append on both sides, so that the builder has finished before the timed run.
 

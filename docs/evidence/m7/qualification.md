@@ -1,6 +1,6 @@
 # Qualification record: the ADR 0059 stack
 
-**Status: draft.** The layout, the cases and the commands are final. The results are `Pending` until the stage 2 session runs them on the qualified host ([issue 112](https://github.com/ironflowhq/segment-log/issues/112)), with `scripts/m7-session.sh`. The stack qualifies when every MUST row is `Pass`, or `Not applicable` where V8 allows it ([volume-requirements.md](../../architecture/volume-requirements.md#qualification-record)).
+**Status: draft.** The layout, the cases and the commands are final. The results are `Pending` until the stage 2 session runs them on the qualified host ([issue 112](https://github.com/ironflowx/segment-log/issues/112)), with `scripts/m7-session.sh`. The stack qualifies when every MUST row is `Pass`, or `Not applicable` where V8 allows it ([volume-requirements.md](../../architecture/volume-requirements.md#qualification-record)).
 
 ## Fingerprint
 

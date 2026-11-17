@@ -1,6 +1,6 @@
 # Linux phase peaks: resident memory at each phase for issue 20
 
-[Issue 20](https://github.com/ironflowhq/segment-log/issues/20), section 2, asks for steady-state and peak memory, measured separately for the engine, the caller workload, validation, read and reopen. The [Mac record](../mac-resident/README.md) separates those phases, but it samples the resident set with `ps`, so most short operations have no peak. This record reads the Linux kernel's own counters at each phase barrier instead. It adds a driver and its tests. It changes no production code, default, API, format or dependency.
+[Issue 20](https://github.com/ironflowx/segment-log/issues/20), section 2, asks for steady-state and peak memory, measured separately for the engine, the caller workload, validation, read and reopen. The [Mac record](../mac-resident/README.md) separates those phases, but it samples the resident set with `ps`, so most short operations have no peak. This record reads the Linux kernel's own counters at each phase barrier instead. It adds a driver and its tests. It changes no production code, default, API, format or dependency.
 
 ## Result
 

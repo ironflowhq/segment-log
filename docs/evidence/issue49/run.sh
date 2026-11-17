@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run as root on the host, on 2026-11-16. /tmp is ext4 on nvme1n1, one drive, no RAID.
 . "$HOME/.cargo/env"
-cd /root && rm -rf sl && git clone -q https://github.com/ironflowhq/segment-log.git sl && cd sl
+cd /root && rm -rf sl && git clone -q https://github.com/ironflowx/segment-log.git sl && cd sl
 for rev in main ff746473929eccb5398f2b7d4d3fa5ba90f8b10c; do
   git checkout -q $rev; rustup toolchain install >/dev/null 2>&1
   o=/root/m1/out-${rev:0:7}; rm -rf $o /tmp/m1; mkdir -p $o /root/m1/build /tmp/m1/data

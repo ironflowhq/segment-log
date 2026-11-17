@@ -1,6 +1,6 @@
 # Paced benchmark: evidence for issue 20
 
-[Issue 20](https://github.com/ironflowhq/segment-log/issues/20) reports that the append p99 misses its bound. The default benchmark cannot show whether the miss comes from the log or from the workload, because it is a closed loop. This record measures a paced variant of the benchmark on `main`. It changes no engine code.
+[Issue 20](https://github.com/ironflowx/segment-log/issues/20) reports that the append p99 misses its bound. The default benchmark cannot show whether the miss comes from the log or from the workload, because it is a closed loop. This record measures a paced variant of the benchmark on `main`. It changes no engine code.
 
 ## Result
 

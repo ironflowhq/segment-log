@@ -1,6 +1,6 @@
 # Exact phase peaks and engine-owned bytes for issue 48
 
-[Issue 48](https://github.com/ironflowhq/segment-log/issues/48) asks for three things that the [Linux phase peaks record](../issue20/linux-phase-peaks/README.md) left open. First, the exact peak of each phase: engine, caller workload, validation, read and reopen. Second, the bytes that the engine owns, apart from the caller and the test. Third, a statement of how exact each figure is, checked against a buffer of known size.
+[Issue 48](https://github.com/ironflowx/segment-log/issues/48) asks for three things that the [Linux phase peaks record](../issue20/linux-phase-peaks/README.md) left open. First, the exact peak of each phase: engine, caller workload, validation, read and reopen. Second, the bytes that the engine owns, apart from the caller and the test. Third, a statement of how exact each figure is, checked against a buffer of known size.
 
 This record adds a driver that replays the kernel's own trace of every change to a process's resident set. It adds a probe that gives the engine its own allocator arena, and it adds tests for both. It changes no production code, default, API or format. The probe adds two dev-dependencies, `talc` and `libc`. `segment-log-core` still uses only `std`.
 

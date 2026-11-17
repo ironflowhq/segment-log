@@ -1,12 +1,12 @@
 # Long-run failure artifacts: hosted drill
 
-[Issue 20](https://github.com/ironflowhq/segment-log/issues/20) section 4 left two points open: no hosted run had shown that a failed long run uploads usable artifacts, and no downloaded artifact had been replayed. No hosted run has failed, so a real failure could not show either. This record forces the failure path on both platforms and replays what it leaves.
+[Issue 20](https://github.com/ironflowx/segment-log/issues/20) section 4 left two points open: no hosted run had shown that a failed long run uploads usable artifacts, and no downloaded artifact had been replayed. No hosted run has failed, so a real failure could not show either. This record forces the failure path on both platforms and replays what it leaves.
 
 ## Result
 
-**The failure path works on Linux and macOS.** In [drill run 42754924923](https://github.com/ironflowhq/segment-log/actions/runs/42754924923), both long-run jobs failed on the planted records and uploaded their artifacts. Both replay jobs downloaded them and passed. The same two artifacts, downloaded to a Mac with `gh run download`, replay there with the same result.
+**The failure path works on Linux and macOS.** In [drill run 42754924923](https://github.com/ironflowx/segment-log/actions/runs/42754924923), both long-run jobs failed on the planted records and uploaded their artifacts. Both replay jobs downloaded them and passed. The same two artifacts, downloaded to a Mac with `gh run download`, replay there with the same result.
 
-**A run without the drill still passes.** [Run 42754928006](https://github.com/ironflowhq/segment-log/actions/runs/42754928006) used the same workflow revision without the input. Both long-run jobs passed with 100 trace seeds and 30 process repetitions, and the replay job was skipped. [plain-run.json](plain-run.json) is its API record.
+**A run without the drill still passes.** [Run 42754928006](https://github.com/ironflowx/segment-log/actions/runs/42754928006) used the same workflow revision without the input. Both long-run jobs passed with 100 trace seeds and 30 process repetitions, and the replay job was skipped. [plain-run.json](plain-run.json) is its API record.
 
 This shows that a failed check leaves a trace, a ledger and a process directory that can be fetched and checked again. It does not show a real defect, because none was observed.
 
@@ -23,7 +23,7 @@ The planted records exist only in the check. The saved pair and the kept process
 
 ## Hosted run
 
-Source: `7d8c483b3c27bdc88e621e397aa460aa39114bd2`, branch `t3/m1-failed-artifact-drill`. [run.json](run.json) is the API record and [run.log](run.log) the full log. An earlier drill, [run 42753948712](https://github.com/ironflowhq/segment-log/actions/runs/42753948712) at `3b19599`, gave the same result. The commit between them only renames the replay job.
+Source: `7d8c483b3c27bdc88e621e397aa460aa39114bd2`, branch `t3/m1-failed-artifact-drill`. [run.json](run.json) is the API record and [run.log](run.log) the full log. An earlier drill, [run 42753948712](https://github.com/ironflowx/segment-log/actions/runs/42753948712) at `3b19599`, gave the same result. The commit between them only renames the replay job.
 
 | Job | Linux (`ubuntu-24.04`) | macOS (`macos-latest`) |
 | --- | --- | --- |

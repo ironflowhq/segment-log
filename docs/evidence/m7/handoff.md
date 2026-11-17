@@ -1,6 +1,6 @@
 # Handoff record for the ADR 0059 stack
 
-The [handoff record](../../architecture/testing.md#surviving-volume-handoff-before-m6) that [ADR 0033](../../decisions/0033-deployment-owns-volumes-and-reader-handoff.md) asks for, on the stack that [ADR 0059](../../decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md) chose: one Firecracker VMM per log volume on a dedicated local-NVMe host, with the caller on the host over hybrid vsock. `scripts/m7/fc-server` is the launcher the record describes. The storage qualification is separate ([ADR 0032](../../decisions/0032-qualify-deployment-storage-before-m6.md), [issue 112](https://github.com/ironflowhq/segment-log/issues/112)).
+The [handoff record](../../architecture/testing.md#surviving-volume-handoff-before-m6) that [ADR 0033](../../decisions/0033-deployment-owns-volumes-and-reader-handoff.md) asks for, on the stack that [ADR 0059](../../decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md) chose: one Firecracker VMM per log volume on a dedicated local-NVMe host, with the caller on the host over hybrid vsock. `scripts/m7/fc-server` is the launcher the record describes. The storage qualification is separate ([ADR 0032](../../decisions/0032-qualify-deployment-storage-before-m6.md), [issue 112](https://github.com/ironflowx/segment-log/issues/112)).
 
 ## The surviving volume
 
