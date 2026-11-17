@@ -43,6 +43,7 @@ if [ "$layer" = host ]; then
 	mount "$loop" "$work/hostfs"
 	dir=$work/hostfs
 	export M7_LOG_BYTES=1G # sparse: the host filesystem fills long before the guest's
+	export M7_HOST_CHECK=0 # the volume sits on a test filesystem on purpose (V10's host keys)
 else
 	export M7_LOG_BYTES=96M
 fi

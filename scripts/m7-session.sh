@@ -5,13 +5,14 @@
 # (docs/evidence/m7/qualification.md) cites these logs.
 #
 #   M7_HOST=root@<server ip> scripts/m7-session.sh bootstrap        from the Hetzner rescue system
+#   M7_HOST=... scripts/m7-session.sh pin                           pin the host keys (bootstrap does)
 #   M7_HOST=... M7_OBSERVER=<ip>:7070 M7_ROBOT_CURLRC=<file> M7_ROBOT_SERVER=<n> \
 #     scripts/m7-session.sh run [step...]                            all steps, or the named ones
 #   M7_HOST=... scripts/m7-session.sh collect                       host facts and the #49 capture
 #
 # The observer is a separate machine (memory/hetzner-m7-observer.md describes how it is built).
 set -euo pipefail
-cmd=${1:?usage: m7-session.sh bootstrap|run|collect [step...]}
+cmd=${1:?usage: m7-session.sh bootstrap|pin|run|collect [step...]}
 shift
 : "${M7_HOST:?set M7_HOST to root@<server ip>}"
 here=$(cd "$(dirname "$0")" && pwd)
@@ -56,6 +57,19 @@ bootstrap() {
 		cd '"$repo"' && . "$HOME/.cargo/env" && rustup toolchain install >/dev/null 2>&1
 		bash -c "source scripts/m7/setup.sh" >/root/setup.log 2>&1
 		echo bootstrapped: $(git -C '"$repo"' rev-parse --short HEAD)'
+	pin
+}
+
+# V10 (ADR 0059): pins this host's keys in the host checkout's fingerprint, so that every step's
+# launcher refuses another kernel, mount options or drive. The record commits the pinned copy,
+# which collect saves.
+pin() {
+	# shellcheck disable=SC2016 # expands on the host
+	on_host 'set -e; cd '"$repo"'; f=scripts/m7/fingerprint
+		scripts/m7/fingerprint-host --pin "$f" /tmp
+		grep "^host\\." "$f"
+		# A key that reads unknown cannot tell one drive from another, so V10 could not refuse a swap.
+		! grep -q "^host\\..*unknown" "$f" || { echo "a host key is unknown" >&2; exit 1; }'
 }
 
 # step <name> <command...>: runs one step, logs it, records its status, never stops the session.
@@ -75,7 +89,14 @@ host_step() { # a script that runs on the host, as root, from the repo
 
 run() {
 	: "${M7_OBSERVER:?set M7_OBSERVER to <observer ip>:7070}"
-	local all=(rehearse power-cut drift latency metadata enospc guest-bench workloads host-cut recovery-cut)
+	local all=(rehearse power-cut drift latency metadata enospc capacity guest-bench workloads host-cut recovery-cut)
+	local rc=0
+	on_host "[ -r $repo/scripts/m7/fingerprint ] || exit 3; ! grep -q '^host\\..*=unpinned\$' $repo/scripts/m7/fingerprint" || rc=$?
+	case $rc in
+	0) ;;
+	1) echo "the host keys are unpinned: run m7-session.sh pin first" >&2; exit 1 ;;
+	*) echo "cannot read the host's fingerprint (exit $rc)" >&2; exit 1 ;;
+	esac
 	local steps=("${@:-${all[@]}}")
 	for s in "${steps[@]}"; do
 		case $s in
@@ -113,6 +134,7 @@ run() {
 			host_step enospc-guest bash scripts/m7-enospc.sh guest
 			host_step enospc-host bash scripts/m7-enospc.sh host
 			;;
+		capacity) host_step capacity bash scripts/m7-capacity.sh ;;
 		host-cut)
 			: "${M7_ROBOT_CURLRC:?set M7_ROBOT_CURLRC}" "${M7_ROBOT_SERVER:?set M7_ROBOT_SERVER}"
 			for e in host-kernel-crash host-reset host-power-loss; do
@@ -138,7 +160,10 @@ collect() {
 		data=$(basename "$(findmnt -no SOURCE /tmp)")
 		nvme id-ns "/dev/$data" | grep -E "^(nawupf|lbaf)"; cat "/sys/block/$data/queue/write_cache"
 		for d in /dev/nvme0 /dev/nvme1; do nvme smart-log "$d" | grep -E "^(power_cycles|unsafe_shutdowns|power_on_hours)"; done
-		/root/.cache/segment-log-m7/firecracker --version | head -n 1' >"$out/host.txt" 2>&1
+		/root/.cache/segment-log-m7/firecracker --version | head -n 1
+		echo "fingerprint-host:"; '"$repo"'/scripts/m7/fingerprint-host /tmp' >"$out/host.txt" 2>&1
+	# The pinned fingerprint, for the record to commit as scripts/m7/fingerprint.
+	scp -q "$M7_HOST:$repo/scripts/m7/fingerprint" "$out/fingerprint" || true
 	# The #49 capture on the qualified host, with the per-roll writer times (ADR 0061).
 	step m1-capture on_host "cd $repo && . \$HOME/.cargo/env && mkdir -p /root/m1/out /tmp/m1/data &&
 		M1_OUT=/root/m1/out CARGO_TARGET_DIR=/root/m1/build SEGMENT_LOG_EVIDENCE_DIR=/tmp/m1/data \
@@ -148,6 +173,7 @@ collect() {
 
 case $cmd in
 bootstrap) bootstrap ;;
+pin) pin ;;
 run) run "$@" ;;
 collect) collect ;;
 *) echo "unknown command $cmd" >&2; exit 64 ;;
