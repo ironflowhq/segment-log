@@ -1,0 +1,18 @@
+== nvme0
+mn        : SAMSUNG MZQLW960HMJP-00003              
+fr        : CXV8601Q
+oncs      : 0x1f
+vwc       : 0
+awupf     : 0
+power_cycles				: 54
+power_on_hours				: 66,867
+unsafe_shutdowns			: 28
+== nvme1
+mn        : SAMSUNG MZQLW960HMJP-00003              
+fr        : CXV8601Q
+oncs      : 0x1f
+vwc       : 0
+awupf     : 0
+power_cycles				: 54
+power_on_hours				: 66,867
+unsafe_shutdowns			: 28

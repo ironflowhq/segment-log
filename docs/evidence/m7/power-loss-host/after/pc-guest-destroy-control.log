@@ -1,0 +1,95 @@
+== build the server
+info: component rust-std for target x86_64-unknown-linux-musl is up to date
+== build the powercut tool
+== build the guest rootfs
+== pc-guest-destroy-20261117213717-control: 10 cycles, observer 178.156.201.194:7070
+scripts/m7-power-cut.sh: line 72: 39654 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 1: 5238 acknowledged, 5254 reported
+check: MISSING pc-guest-destroy-20261117213717-control/1/11/328 (want offset -1 revision 328; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/1/5/327 (want offset -1 revision 327; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/1/9/327 (want offset -1 revision 327; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/1/4/327 (want offset -1 revision 327; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/1/1/327 (want offset -1 revision 327; found false)
+check: 5238 records, 5254 reported, 16 missing
+-- cycle 1 at 2026 ms
+scripts/m7-power-cut.sh: line 72: 39700 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 2: 8044 acknowledged, 8060 reported
+check: MISSING pc-guest-destroy-20261117213717-control/2/1/503 (want offset -1 revision 503; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/2/4/503 (want offset -1 revision 503; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/2/8/503 (want offset -1 revision 503; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/2/3/503 (want offset -1 revision 503; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/2/15/503 (want offset -1 revision 503; found false)
+check: 13282 records, 8060 reported, 16 missing
+-- cycle 2 at 3007 ms
+scripts/m7-power-cut.sh: line 72: 39771 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 3: 5424 acknowledged, 5440 reported
+check: MISSING pc-guest-destroy-20261117213717-control/3/8/339 (want offset -1 revision 339; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/3/0/339 (want offset -1 revision 339; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/3/13/339 (want offset -1 revision 339; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/3/1/339 (want offset -1 revision 339; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/3/14/339 (want offset -1 revision 339; found false)
+check: 18706 records, 5440 reported, 16 missing
+-- cycle 3 at 2172 ms
+scripts/m7-power-cut.sh: line 72: 39834 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 4: 2785 acknowledged, 2801 reported
+check: MISSING pc-guest-destroy-20261117213717-control/4/10/174 (want offset -1 revision 174; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/4/12/174 (want offset -1 revision 174; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/4/2/174 (want offset -1 revision 174; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/4/15/175 (want offset -1 revision 175; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/4/6/174 (want offset -1 revision 174; found false)
+check: 21491 records, 2801 reported, 16 missing
+-- cycle 4 at 1097 ms
+scripts/m7-power-cut.sh: line 72: 39902 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 5: 1753 acknowledged, 1769 reported
+check: MISSING pc-guest-destroy-20261117213717-control/5/11/109 (want offset -1 revision 109; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/5/12/109 (want offset -1 revision 109; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/5/13/109 (want offset -1 revision 109; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/5/0/110 (want offset -1 revision 110; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/5/1/109 (want offset -1 revision 109; found false)
+check: 23244 records, 1769 reported, 16 missing
+-- cycle 5 at 766 ms
+scripts/m7-power-cut.sh: line 72: 39965 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 6: 4446 acknowledged, 4462 reported
+check: MISSING pc-guest-destroy-20261117213717-control/6/0/278 (want offset -1 revision 278; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/6/9/279 (want offset -1 revision 279; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/6/13/278 (want offset -1 revision 278; found false)
+check: 27703 records, 4462 reported, 3 missing
+-- cycle 6 at 1780 ms
+scripts/m7-power-cut.sh: line 72: 40028 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 7: 1389 acknowledged, 1405 reported
+check: MISSING pc-guest-destroy-20261117213717-control/7/13/87 (want offset -1 revision 87; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/7/2/87 (want offset -1 revision 87; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/7/15/87 (want offset -1 revision 87; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/7/8/87 (want offset -1 revision 87; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/7/1/87 (want offset -1 revision 87; found false)
+check: 29092 records, 1405 reported, 16 missing
+-- cycle 7 at 606 ms
+load: cycle 8: 1824 acknowledged, 1840 reported
+scripts/m7-power-cut.sh: line 72: 40090 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+check: MISSING pc-guest-destroy-20261117213717-control/8/14/114 (want offset -1 revision 114; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/8/4/114 (want offset -1 revision 114; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/8/12/114 (want offset -1 revision 114; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/8/8/114 (want offset -1 revision 114; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/8/5/114 (want offset -1 revision 114; found false)
+check: 30916 records, 1840 reported, 16 missing
+-- cycle 8 at 797 ms
+scripts/m7-power-cut.sh: line 72: 40154 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 9: 7342 acknowledged, 7358 reported
+check: MISSING pc-guest-destroy-20261117213717-control/9/0/459 (want offset -1 revision 459; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/9/11/459 (want offset -1 revision 459; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/9/5/459 (want offset -1 revision 459; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/9/3/459 (want offset -1 revision 459; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/9/10/459 (want offset -1 revision 459; found false)
+check: 38258 records, 7358 reported, 16 missing
+-- cycle 9 at 2733 ms
+scripts/m7-power-cut.sh: line 72: 40226 Killed                  "$repo/scripts/m7/fc-server" --dir "$dir/log" --vsock-port 5000 0<> "$dir/serial"
+load: cycle 10: 1201 acknowledged, 1217 reported
+check: MISSING pc-guest-destroy-20261117213717-control/10/13/76 (want offset -1 revision 76; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/10/6/74 (want offset -1 revision 74; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/10/2/75 (want offset -1 revision 75; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/10/10/76 (want offset -1 revision 76; found false)
+check: MISSING pc-guest-destroy-20261117213717-control/10/7/76 (want offset -1 revision 76; found false)
+check: 39459 records, 1217 reported, 16 missing
+-- cycle 10 at 559 ms
+== pc-guest-destroy-20261117213717-control: 10 of 10 cycles missed a reported record
+control detected (expected)

@@ -1,6 +1,6 @@
 # Qualification record: the ADR 0059 stack
 
-**Status: not qualified, one MUST row open.** The stage 2 session ran every case on the qualified host on 2026-11-17 ([issue 112](https://github.com/ironflowx/segment-log/issues/112)), with `scripts/m7-session.sh` at `df23d9b` plus the `host-reset` event added to `scripts/m7-host-cut.sh` in the same change. Every row passes except host power loss: this server's Robot web service offers no power button reset, so the harness cannot cut the host's power. The stack qualifies when every MUST row is `Pass`, or `Not applicable` where V8 allows it ([volume-requirements.md](../../architecture/volume-requirements.md#qualification-record)). The session's logs and the host description are in [qualified-host/](qualified-host/README.md).
+**Status: every MUST row passes, with one limitation for the owner to accept.** The stage 2 session ran every case on the qualified host on 2026-11-17 ([issue 112](https://github.com/ironflowx/segment-log/issues/112)), with `scripts/m7-session.sh` at `df23d9b` plus the `host-reset` event added to `scripts/m7-host-cut.sh` in the same change. That host's Robot web service offers no power button reset, so host power loss ran the same day on a second auction host whose Robot does ([power-loss-host/](power-loss-host/README.md)). Its drives are Samsung PM963, not the PM983 of the qualified host: the same vendor and class (U.2 datacenter drives with no volatile write cache), but a different model. The stack qualifies when every MUST row is `Pass`, or `Not applicable` where V8 allows it ([volume-requirements.md](../../architecture/volume-requirements.md#qualification-record)). The first session's logs and the host description are in [qualified-host/](qualified-host/README.md).
 
 ## Fingerprint
 
@@ -28,7 +28,7 @@ The machine-readable copy that the launcher and the guest check before every ope
 | Guest destroy | yes | `SIGKILL` the VMM |
 | Host kernel crash | yes | `sysrq c` on the host, `kernel.panic` reboots it |
 | Host reset | yes | Robot web service, `hw`: the reset button. The drives keep power ([evidence](qualified-host/README.md#host-reset-is-not-a-power-cut)), so this is never a power cut |
-| Host power loss | yes | Robot web service: long press, then press, of the power button. **Not offered on this server** (`sw`, `hw`, `man` only), so not caused |
+| Host power loss | yes | Robot web service: long press, then press, of the power button. Run on the [power-loss host](power-loss-host/README.md); the qualified host's Robot offers no power button reset. Each cut removed drive power: SMART `power_cycles` rose by exactly the number of cuts |
 | Host loss | no | The image lives on one host's local drive |
 | Device loss | no | One drive, no RAID |
 | Zone loss | no | One host |
@@ -54,14 +54,14 @@ Logs are in [qualified-host/](qualified-host/), one per step, named after the st
 | V1 | `VOL-POWER-CUT`, guest-side events | Tested | `m7-power-cut.sh process-crash\|guest-crash\|guest-destroy 30` | `--control`, 10 cycles each: caught 10, 10 and 9 of 10 | Pass | 0 of 30 cycles lost a record for each event; the last checks covered 139,883, 143,756 and 127,719 reported records |
 | V1 | `VOL-POWER-CUT`, host kernel crash | Tested | `m7-host-cut.sh host-kernel-crash 30` | `--control` (`Unsafe`): first cycle lost all 11,558 reported records | Pass | 0 of 30 cycles lost a record; 249,682 reported records checked |
 | V1 | `VOL-POWER-CUT`, host reset | Tested | `m7-host-cut.sh host-reset 30` | `--control` (`Unsafe`): first cycle lost all 10,084 reported records | Pass | 0 of 30 cycles lost a record; 183,477 reported records checked. Not a power cut: the drives' `power_cycles` stayed below the session's 31 resets |
-| V1 | `VOL-POWER-CUT`, host power loss | Tested | `m7-host-cut.sh host-power-loss 30` | not run | **Not verified** | The Robot API offers no power button reset for this server ([log](qualified-host/hc-host-power-loss.log)). Supporting only: the drive has no volatile write cache (`vwc 0`), and no step depends on a host flush reaching the media |
+| V1 | `VOL-POWER-CUT`, host power loss | Tested | `m7-host-cut.sh host-power-loss 30` on the [power-loss host](power-loss-host/README.md) | `--control` (`Unsafe`): first cycle lost all 25,313 reported records | Pass | 0 of 30 cycles lost a record. Both drives' `power_cycles` went from 54 to 85 and `unsafe_shutdowns` from 28 to 59: one per cut, 30 real and 1 control. Ran on Samsung PM963 drives, not the qualified host's PM983 (see Status). The qualified host's Robot offers no power button reset ([log](qualified-host/hc-host-power-loss.log)) |
 | V2 | `VOL-POWER-CUT-RECOVERY` | Tested | `m7-recovery-cut.sh clean\|sealed\|header 10` | `--control` (`rewrite-control` build): first cycle, 4 reported records missing | Pass | 0 of 10 counted cycles failed for each window, open never `Corrupt`. Cut by host kernel crash on block-trace evidence; dm-delay widens the window |
 | V2 | `VOL-ATOMIC-WRITE` | Supporting | `host.txt` (`awupf`, `nawupf`, logical block size) | | `awupf 7`, `nawupf 7`: 4 KiB | Supporting only |
 | V3 | `VOL-METADATA-ERROR` | Tested | `m7-metadata-error.sh`, `--control`, `--panic` | No control could be built (`errors=continue` also goes read-only), as expected | Pass | Under [ADR 0062](../../decisions/0062-v3-requires-refused-writes-not-failed-syncs.md); the failing target is a dm table on the host, under the guest's drive. `--panic` exits 1 (`fail`), as in Lima and ADR 0062: evidence only, since the stack mounts `errors=remount-ro` and ext4 panics only at the next write |
 | V4 | `VOL-FS-CHECK` | Tested | `m7-rehearse.sh` (`/dev/vdb ext4`) | the same rule rejects `/dev/shm` (`tmpfs`) | Pass | |
 | V5 | `VOL-EXCLUSIVE` | Tested | `m7-rehearse.sh` (steps 2, 3 and 4 on one host) | `M7_FENCE=0`: a second VMM attached the held volume | Pass | 20 of 20 races attached exactly one VMM. Step 1's read-only attach is the same `flock`; two hosts never share an image |
 | V6 | `HANDOFF` | Tested | `m7-rehearse.sh` (`TestHandoffSealed`, `TestHandoffUnsealed`) | | Pass | [Handoff record](handoff.md) |
-| V7 | `VOL-FAILURE-DOMAIN` | Tested | the V1 power-cut rows, one per declared event | as in V1 | **Not verified** | Every declared event passes except host power loss, which was not caused |
+| V7 | `VOL-FAILURE-DOMAIN` | Tested | the V1 power-cut rows, one per declared event | as in V1 | Pass | Every declared event passes. Host power loss ran on the power-loss host's PM963 drives; host kernel crash and host reset passed on both hosts |
 | V8 | `VOL-COPY` | Not applicable | none | | Not applicable | Provisional: the deployment never copies a log volume |
 | V9 | `VOL-CAPACITY` | Not verified | none | | Not verified | Provisional: no workload profile or response time |
 | V9 | `VOL-ENOSPC` | Tested | `m7-enospc.sh guest\|host` | | Pass | Guest full: 20,744 of 20,744 reported records survived; host full: 27,317 of 27,317 |
@@ -94,6 +94,18 @@ The guest benchmark ([summary](qualified-host/guest-bench/summary.md)) runs the 
 | Paced, p99 ms | 1.4 | 1,731 |
 
 **The guest topology misses the PRD's 50,000 records/s target by about 8 %.** It cannot reach the paced rate, so the paced latencies show a queue that grows for the whole run, not the log's latency. The bound is the VMM's main thread: in [the thread sample](qualified-host/guest-bench/closed/guest-1.threads.txt) the `firecracker` thread runs at 99.9 % CPU while the two `fc_vcpu` threads run at 87–93 %. That thread runs Firecracker's vsock muxer, so the bound is the hybrid vsock transport, not the log, the drive or the guest's CPU. The in-process run on the same volume does 5.7× the guest's rate.
+
+### After ADR 0063, on the power-loss host
+
+[ADR 0063](../../decisions/0063-the-guest-benchmark-shares-pipelined-connections.md) sends answers that are ready together in one write, and the benchmark's 1,000 callers share 16 connections. The power-loss host ran the guest benchmark before the change (`0a41cff`) and after it (`2b378c7`), on the same machine ([before](power-loss-host/before/guest-bench/summary.md), [after](power-loss-host/after/guest-bench/summary.md), [one connection per caller](power-loss-host/after/guest-bench-per-caller/summary.md)). That host has an AMD EPYC 7401P, whose cores are slower than the qualified host's Xeon E-2176G, so its numbers are lower in both columns.
+
+| Guest, median of 5 pairs | Before, 1,000 connections | After, 16 connections | After, 1,000 connections |
+| --- | ---: | ---: | ---: |
+| Closed loop, records/s | 32,217 | 50,644 (49,560 to 51,691) | 30,848 |
+| Paced at 50,000/s, achieved records/s | 33,343 | 49,777 | 29,486 |
+| Paced, p99 ms | 9,782 | 77 | 13,656 |
+
+**The change lifts the guest by 57 % and reaches the throughput target on the slower host.** The `firecracker` thread is still at 99.9 % CPU, so the vsock muxer is still the bound; the change moves more records per unit of its work. At 50,000/s the guest runs at about 98 % of its closed-loop rate, so the paced p99 of 77 ms is queueing near saturation and misses the latency target. The qualified host's faster cores should leave more headroom; that run is still to do.
 
 The issue 49 capture on this host ([summary](qualified-host/m1-capture/summary.md)), with `ROLL writer_ns` per roll ([ADR 0061](../../decisions/0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md)):
 

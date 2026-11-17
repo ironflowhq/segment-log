@@ -1,0 +1,78 @@
+== build the server
+info: component rust-std for target x86_64-unknown-linux-musl is up to date
+== build the powercut tool
+== build the guest rootfs
+== pc-process-crash-20261117212914-control: 10 cycles, observer 178.156.201.194:7070
+load: cycle 1: 5835 acknowledged, 5851 reported
+check: MISSING pc-process-crash-20261117212914-control/1/15/365 (want offset -1 revision 365; found false)
+check: MISSING pc-process-crash-20261117212914-control/1/1/365 (want offset -1 revision 365; found false)
+check: MISSING pc-process-crash-20261117212914-control/1/9/366 (want offset -1 revision 366; found false)
+check: MISSING pc-process-crash-20261117212914-control/1/2/365 (want offset -1 revision 365; found false)
+check: MISSING pc-process-crash-20261117212914-control/1/6/366 (want offset -1 revision 366; found false)
+check: 5846 records, 5851 reported, 5 missing
+-- cycle 1 at 2284 ms
+load: cycle 2: 4203 acknowledged, 4219 reported
+check: MISSING pc-process-crash-20261117212914-control/2/8/262 (want offset -1 revision 262; found false)
+check: MISSING pc-process-crash-20261117212914-control/2/15/263 (want offset -1 revision 263; found false)
+check: MISSING pc-process-crash-20261117212914-control/2/4/262 (want offset -1 revision 262; found false)
+check: MISSING pc-process-crash-20261117212914-control/2/13/263 (want offset -1 revision 263; found false)
+check: MISSING pc-process-crash-20261117212914-control/2/1/263 (want offset -1 revision 263; found false)
+check: 10049 records, 4219 reported, 16 missing
+-- cycle 2 at 1673 ms
+load: cycle 3: 1756 acknowledged, 1772 reported
+check: MISSING pc-process-crash-20261117212914-control/3/2/110 (want offset -1 revision 110; found false)
+check: MISSING pc-process-crash-20261117212914-control/3/3/110 (want offset -1 revision 110; found false)
+check: MISSING pc-process-crash-20261117212914-control/3/8/110 (want offset -1 revision 110; found false)
+check: MISSING pc-process-crash-20261117212914-control/3/10/110 (want offset -1 revision 110; found false)
+check: MISSING pc-process-crash-20261117212914-control/3/5/110 (want offset -1 revision 110; found false)
+check: 11811 records, 1772 reported, 10 missing
+-- cycle 3 at 750 ms
+load: cycle 4: 6703 acknowledged, 6719 reported
+check: MISSING pc-process-crash-20261117212914-control/4/12/419 (want offset -1 revision 419; found false)
+check: MISSING pc-process-crash-20261117212914-control/4/10/419 (want offset -1 revision 419; found false)
+check: MISSING pc-process-crash-20261117212914-control/4/2/419 (want offset -1 revision 419; found false)
+check: MISSING pc-process-crash-20261117212914-control/4/3/419 (want offset -1 revision 419; found false)
+check: MISSING pc-process-crash-20261117212914-control/4/5/419 (want offset -1 revision 419; found false)
+check: 18514 records, 6719 reported, 16 missing
+-- cycle 4 at 2472 ms
+load: cycle 5: 6292 acknowledged, 6308 reported
+check: MISSING pc-process-crash-20261117212914-control/5/3/393 (want offset -1 revision 393; found false)
+check: 24821 records, 6308 reported, 1 missing
+-- cycle 5 at 2414 ms
+load: cycle 6: 4717 acknowledged, 4733 reported
+check: MISSING pc-process-crash-20261117212914-control/6/4/295 (want offset -1 revision 295; found false)
+check: MISSING pc-process-crash-20261117212914-control/6/5/295 (want offset -1 revision 295; found false)
+check: MISSING pc-process-crash-20261117212914-control/6/2/294 (want offset -1 revision 294; found false)
+check: MISSING pc-process-crash-20261117212914-control/6/9/295 (want offset -1 revision 295; found false)
+check: MISSING pc-process-crash-20261117212914-control/6/6/295 (want offset -1 revision 295; found false)
+check: 29538 records, 4733 reported, 16 missing
+-- cycle 6 at 1727 ms
+load: cycle 7: 6709 acknowledged, 6725 reported
+check: MISSING pc-process-crash-20261117212914-control/7/10/419 (want offset -1 revision 419; found false)
+check: MISSING pc-process-crash-20261117212914-control/7/3/419 (want offset -1 revision 419; found false)
+check: MISSING pc-process-crash-20261117212914-control/7/15/419 (want offset -1 revision 419; found false)
+check: MISSING pc-process-crash-20261117212914-control/7/9/419 (want offset -1 revision 419; found false)
+check: MISSING pc-process-crash-20261117212914-control/7/7/419 (want offset -1 revision 419; found false)
+check: 36247 records, 6725 reported, 16 missing
+-- cycle 7 at 2594 ms
+load: cycle 8: 1456 acknowledged, 1472 reported
+check: MISSING pc-process-crash-20261117212914-control/8/1/91 (want offset -1 revision 91; found false)
+check: MISSING pc-process-crash-20261117212914-control/8/7/91 (want offset -1 revision 91; found false)
+check: MISSING pc-process-crash-20261117212914-control/8/11/91 (want offset -1 revision 91; found false)
+check: MISSING pc-process-crash-20261117212914-control/8/3/91 (want offset -1 revision 91; found false)
+check: MISSING pc-process-crash-20261117212914-control/8/2/91 (want offset -1 revision 91; found false)
+check: 37703 records, 1472 reported, 16 missing
+-- cycle 8 at 654 ms
+load: cycle 9: 2013 acknowledged, 2029 reported
+check: MISSING pc-process-crash-20261117212914-control/9/6/126 (want offset -1 revision 126; found false)
+check: MISSING pc-process-crash-20261117212914-control/9/9/126 (want offset -1 revision 126; found false)
+check: MISSING pc-process-crash-20261117212914-control/9/15/127 (want offset -1 revision 127; found false)
+check: MISSING pc-process-crash-20261117212914-control/9/3/126 (want offset -1 revision 126; found false)
+check: MISSING pc-process-crash-20261117212914-control/9/1/126 (want offset -1 revision 126; found false)
+check: 39726 records, 2029 reported, 6 missing
+-- cycle 9 at 858 ms
+load: cycle 10: 5073 acknowledged, 5089 reported
+check: 44815 records, 5089 reported, 0 missing
+-- cycle 10 at 2025 ms
+== pc-process-crash-20261117212914-control: 9 of 10 cycles missed a reported record
+control detected (expected)
