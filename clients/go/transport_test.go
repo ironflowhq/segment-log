@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"slices"
@@ -320,4 +321,46 @@ func TestDialBurst(t *testing.T) {
 	if failed > 0 {
 		t.Fatalf("%d of %d callers failed", failed, callers)
 	}
+}
+
+// TRANSPORT-THREAD-EXHAUSTION: a connection that the server cannot start threads for is closed,
+// and the server keeps accepting. A 256 MiB guest's threads-max runs out under the burst of
+// TRANSPORT-DIAL-BURST, so only the Firecracker transport can cause it.
+func TestThreadExhaustion(t *testing.T) {
+	if os.Getenv("SEGMENT_LOG_TRANSPORT") != "firecracker" {
+		t.Skip("needs a guest small enough for a burst to exhaust its threads")
+	}
+	const callers = 1000
+	d := newLogDir(t)
+	d.start(t, "export M7_MEM_MIB=256", "--max-connections", fmt.Sprint(callers))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var conns []*Client
+	for range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if c, err := Dial(d.network, d.address); err == nil {
+				mu.Lock()
+				conns = append(conns, c)
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	if len(conns) == callers {
+		t.Fatal("every connection started, so the guest's threads never ran out and the case shows nothing")
+	}
+	for _, c := range conns {
+		c.Close()
+	}
+	var err error
+	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(200 * time.Millisecond) {
+		var c *Client
+		if c, err = Dial(d.network, d.address); err == nil {
+			c.Close()
+			return
+		}
+	}
+	t.Fatalf("%d of %d connections started, and after they closed a new one failed: %v", len(conns), callers, err)
 }
