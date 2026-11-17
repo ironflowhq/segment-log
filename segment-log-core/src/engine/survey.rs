@@ -158,6 +158,16 @@ pub(super) fn survey(
             return Err(OpenError::LogIdMismatch { segment: base });
         }
     }
+    // A writer never goes back a version (ADR 0064, rule 12), so this comes only from a hand
+    // copy or damage, and the older header is the bad one (ADR 0066).
+    for (pair, &base) in headers.windows(2).zip(&bases[1..]) {
+        if pair[1].version < pair[0].version {
+            return Err(OpenError::Corrupt {
+                segment: base,
+                position: 0,
+            });
+        }
+    }
     let hash = hash(log_id.clone());
 
     let mut kept = Kept {
