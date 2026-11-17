@@ -106,7 +106,7 @@ run() {
 			;;
 		host-cut)
 			: "${M7_ROBOT_CURLRC:?set M7_ROBOT_CURLRC}" "${M7_ROBOT_SERVER:?set M7_ROBOT_SERVER}"
-			for e in host-kernel-crash host-power-loss; do
+			for e in host-kernel-crash host-reset host-power-loss; do
 				step "hc-$e" "$here/m7-host-cut.sh" "$e" 30
 				step "hc-$e-control" "$here/m7-host-cut.sh" "$e" 30 --control
 			done

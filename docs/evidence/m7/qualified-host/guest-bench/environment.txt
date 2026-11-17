@@ -1,0 +1,15 @@
+Tue Nov 17 01:04:35 PM UTC 2026
+head=df23d9b111f510faa811b62d6d2142b619de2fe0
+callers=1000 rounds=1000 pairs=5 interval_us=20000 vcpus=2 mem_mib=1024
+Linux m7 6.1.0-54-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.190-1 (2026-10-16) x86_64 GNU/Linux
+CPU(s):                                  12
+Model name:                              Intel(R) Xeon(R) E-2176G CPU @ 3.70GHz
+BIOS Model name:                         Intel(R) Xeon(R) E-2176G CPU @ 3.70GHz To Be Filled By O.E.M. CPU @ 3.6GHz
+CPU(s) scaling MHz:                      92%
+               total        used        free      shared  buff/cache   available
+Mem:     67274928128  1045295104 61155885056     1036288  5820968960 66229633024
+Swap:              0           0           0
+TARGET SOURCE       FSTYPE OPTIONS
+/tmp   /dev/nvme1n1 ext4   rw,noatime
+Firecracker v1.18.0
+ 14:04:35 up 16 min,  0 user,  load average: 5.75, 3.39, 1.56
