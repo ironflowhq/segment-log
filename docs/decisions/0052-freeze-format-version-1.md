@@ -74,6 +74,7 @@ A changes nothing that has been tested, and B and C fix costs that no measuremen
 
 ## Consequences
 
+- [ADR 0064](0064-the-0-1-compatibility-promise.md) (Proposed) brings back this ADR's rule "a build reads every frozen version up to its own" from the 0.1 release, starting at format version 3, and adds segment-by-segment upgrades.
 - [ADR 0055](0055-format-version-2-aligns-key-index-pages.md) makes format version 2: key index pages start on a 4 KiB boundary (this ADR's option B, after a measurement), and format.md drops the sparse index.
 - Pull request 79 reworded the Enforcement section after acceptance: the fixture holds two copies, before and after `seal`, because a sealed log never checks a key, so key retries need the unsealed copy. The checks it requires are unchanged.
 - [ADR 0053](0053-format-changes-need-no-older-reader-before-production.md) replaces the rule for later changes until the first production release: a change increments `format_version` and replaces the `FORMAT-GOLDEN` fixture, and no build keeps a reader for older versions. The field choices and the scope here stand.
