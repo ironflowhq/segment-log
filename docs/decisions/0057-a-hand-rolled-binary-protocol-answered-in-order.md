@@ -90,6 +90,7 @@ This keeps the server without dependencies, gives group commit many appends from
 
 ## Consequences
 
+- [ADR 0064](0064-the-0-1-compatibility-promise.md) (Proposed) replaces "the server accepts one version" with range negotiation in protocol version 2, and from 0.1 the server speaks every version from 2 up to its own.
 - The server needs two blocking threads for each connection, and no async runtime.
 - The Go client must handle pipelining, in-order answers and the `Hello` cap. It also treats a closed connection as unknown, never as a rejection.
 - `FUZZ-PROTOCOL` fuzzes the decoder in protocol.md ([testing.md](../architecture/testing.md#fuzzing-m5)).
