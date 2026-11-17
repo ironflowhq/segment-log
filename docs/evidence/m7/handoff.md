@@ -12,6 +12,12 @@ The [handoff record](../../architecture/testing.md#surviving-volume-handoff-befo
 | Fencing (V5) | The launcher takes an exclusive `flock` on the image and passes the descriptor to the VMM through `exec`, so the lock lives exactly as long as the VMM process, also while it is paused. A second launcher on the same image exits 75 without booting anything. The kernel drops the lock when the VMM exits, cleanly or not. |
 | Drift (V10) | Before boot the launcher checks the VMM half of `scripts/m7/fingerprint`. The guest checks its half before the log opens. |
 
+## Guest size
+
+The launcher sizes the guest with `M7_VCPUS` and `M7_MEM_MIB`, 2 vCPUs and 256 MiB by default. The server runs two threads per connection ([ADR 0058](../../decisions/0058-one-server-process-serves-one-log.md)), and a guest kernel's `threads-max` grows with its memory. So the memory follows `--max-connections`: 256 MiB serves the default of 64, and 1,000 connections need about 1 GiB. A 256 MiB guest refuses part of a burst of 1,000, measured by `TRANSPORT-THREAD-EXHAUSTION`.
+
+A connection the guest has no thread for is closed at accept, with a line on the server's stderr, and the server goes on serving the others. File descriptors need no sizing: the server raises its own limit to cover `--max-connections`, and the launcher raises the VMM's before `exec`, because the VMM holds one host descriptor per vsock connection.
+
 ## Mount paths
 
 | Role | Host side | Guest drive | Guest mount | Log directory | Process |
