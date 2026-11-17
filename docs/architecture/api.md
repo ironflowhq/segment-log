@@ -292,7 +292,7 @@ The charge is fixed until the request is answered. It does not decrease when dat
 
 ## Operator repair
 
-Planned for 0.1 ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)); not built yet. This section is the only source for the command's subcommands, flags, exit codes and JSON output. After 0.1 they are public API. The core module behind it, `segment_log_core::repair`, is hidden and carries no promise.
+For 0.1 ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)). `verify` is built; `truncate` is not yet. This section is the only source for the command's subcommands, flags, exit codes and JSON output. After 0.1 they are public API. The core module behind it, `segment_log_core::repair`, is hidden and carries no promise.
 
 ```text
 segment-log-server repair verify   --dir <path> [--json]

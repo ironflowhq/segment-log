@@ -17,6 +17,7 @@ pub mod fuzzing;
 mod keys;
 mod reader;
 mod recovery;
+pub mod repair;
 mod reply;
 mod survey;
 mod view;
