@@ -81,13 +81,14 @@ We will use options A, C, E and H.
 
 1. **The append time is advisory.** It never decreases within a log (ADR 0064, rule 2) and has no upper bound. A clock reading in the future becomes the floor for every later group of the log. It is not a source of truth: a later feature that seeks by time treats it as a hint.
 2. **Readers do not reject a decreasing append time.** The writer keeps the order, a reader check would add a failure mode for an advisory field, and a frame CRC already catches a damaged time.
-3. **A segment's version is never lower than the version of the segment before it**, in base offset order. Open, and `LogReader::open`, fail with `OpenError::Corrupt { segment, position: 0 }` at the first segment that breaks this, before any file changes. format.md's rules for readers state the rule.
+3. **A segment's version is never lower than the version of the segment before it**, in base offset order. Open, and `LogReader::open`, fail with `OpenError::Corrupt { segment, position: 0 }` at the first segment that breaks this. Survey checks it with the other header rules, before open truncates, closes or rewrites any segment. format.md's rules for readers state the rule.
 4. **No version-dispatch point yet.** When a real version 4 exists, each segment's decoder, and the encoder of its closing run (roll, recovery and seal), are chosen by that segment's own version (ADR 0064, rule 12).
 
 A, C and H keep 0.1 free of rules that no measurement or real version asks for. E reuses the error and the repair class that a bad header already has, so the check costs one comparison per segment and no API.
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17, who decided all four points before it was written ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - This ADR amends ADR 0064 without replacing it; ADR 0064's Consequences link it.
 - A host with a bad clock can leave every later append time of a log stuck at a future value. Retention or seek by time must cope with that.
 - A log copied together by hand from two builds can fail open with `Corrupt` at a header whose bytes are all valid on their own. `verify` reports it as class E.
@@ -95,7 +96,7 @@ A, C and H keep 0.1 free of rules that no measurement or real version asks for. 
 
 ## Enforcement
 
-`an_older_version_after_a_newer_one_fails_open` in `segment-log-core/src/acceptance/mixed_versions.rs` (`FORMAT-MIXED` in [testing.md](../architecture/testing.md)). The crash scenario of the same file opens the log at every storage call of the version change, so it fails if a writer ever leaves an older segment after a newer one.
+`an_older_version_after_a_newer_one_fails_open` in `segment-log-core/src/acceptance/mixed_versions.rs` (`FORMAT-MIXED` in [testing.md](../architecture/testing.md)). With that check in place, the crash scenario of the same file, which opens the log after a cut at every storage call of the version change, fails if a writer ever leaves an older segment after a newer one.
 
 ## Revisit if
 
