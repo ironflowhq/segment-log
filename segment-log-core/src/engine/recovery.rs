@@ -31,6 +31,7 @@ pub(super) fn open(
     storage: &dyn Storage,
     dir: &Path,
     hash: impl FnOnce(codec::LogId) -> KeyHash,
+    version: u16,
 ) -> Result<Recovered, OpenError> {
     match call(storage, dir, Purpose::Open, Op::CreateDir) {
         Ok(_) => (),
@@ -77,6 +78,7 @@ pub(super) fn open(
             dir,
             Purpose::Open,
             &codec::Header {
+                version,
                 log_id,
                 base_offset: 0,
                 epoch: 1,
@@ -85,7 +87,7 @@ pub(super) fn open(
         bases.push(0);
     }
 
-    let mut found = survey::survey(&reader, dir, &bases, hash)?;
+    let mut found = survey::survey(&reader, dir, &bases, hash, version)?;
     let newest = *bases.last().unwrap();
     let epoch = match found.newest.ending {
         // A sealed log starts no writer, so it needs no next epoch.
@@ -119,17 +121,8 @@ pub(super) fn open(
                 Op::Truncate(rebuilt.start),
             )?;
         }
-        // In two steps, as the writer writes it, so that a crash here leaves a run that a later
-        // open either proves from its locator and footer or rebuilds again.
-        let [filter, index, footer, locator] = &rebuilt.run;
-        for (at, bytes) in [
-            (rebuilt.start, [filter, index]),
-            (rebuilt.summary.footer_at, [footer, locator]),
-        ] {
-            let bytes = bytes.map(Vec::as_slice).concat();
-            call(storage, &path, Purpose::Recovery, Op::Write(at, bytes))?;
-            call(storage, &path, Purpose::Recovery, Op::SyncAll)?;
-        }
+        write_run(storage, &path, &rebuilt.run, rebuilt.start)?;
+        let filter = &rebuilt.run[0];
         sealed_keys.push(SealedKeys::written(rebuilt.summary, &found.log_id, filter));
     }
 
@@ -142,10 +135,24 @@ pub(super) fn open(
             Op::Truncate(found.newest.end),
         )?;
     }
+    // A writer never appends to a segment of an older format version (ADR 0064, rule 12). An
+    // older active segment that holds only its header gets the build's header in its place, in
+    // this same one-sector rewrite, because a roll would reuse its file name. One with groups is
+    // closed in its own version and rolled below.
+    let older = found.newest_header.version < version;
     let (position, bytes) = match &found.newest.ending {
         Ending::Rolled { run, .. } | Ending::Sealed(run) => (run.start, run.frames.concat()),
-        Ending::Groups | Ending::Stopped => found.newest.last.unwrap_or((0, found.newest_header)),
+        Ending::Groups | Ending::Stopped => found.newest.last.take().unwrap_or_else(|| {
+            // A valid header encodes back to its own bytes, so an unchanged version rewrites the
+            // same bytes, as ADR 0015 needs.
+            let header = codec::Header {
+                version: version.max(found.newest_header.version),
+                ..found.newest_header
+            };
+            (0, codec::encode_header(&header).to_vec())
+        }),
     };
+    let close = older && position > 0 && !matches!(found.newest.ending, Ending::Sealed(_));
     // The V2 control: different bytes over one acknowledged sector in place of the identical
     // rewrite. The byte sits past the frame's envelope, so the frame's CRC fails at the next open.
     #[cfg(feature = "rewrite-control")]
@@ -179,18 +186,36 @@ pub(super) fn open(
                 state: State::Sealed,
             });
         }
+        (Ending::Groups | Ending::Stopped, Some(epoch)) if close => {
+            // The older segment's closing run, in its own version, under the new writer epoch.
+            // Written in two steps, as a writer writes it, so that a crash leaves a torn run that
+            // the next open truncates and writes again, or a whole one that it rolls past.
+            let (start, next) = (found.newest.end, found.published.watermark);
+            let mut entries = found.hash.entries(&found.newest.keys);
+            let run = closing::roll_run(
+                &found.log_id,
+                newest,
+                epoch,
+                next,
+                start,
+                &found.newest.tails,
+                &mut entries,
+            );
+            let footer_at = write_run(storage, &segment, &run, start)?;
+            let summary = keys::SealedSummary {
+                base: newest,
+                next,
+                filter_at: start,
+                footer_at,
+            };
+            sealed_keys.push(SealedKeys::written(summary, &found.log_id, &run[0]));
+            roll_into(storage, dir, version, &found.log_id, next, epoch)?;
+            found.published.roll(epoch, epoch);
+            (epoch, Active::new(next), BTreeMap::new())
+        }
         (Ending::Rolled { .. }, Some(epoch)) => {
             let next = found.published.watermark;
-            create_segment(
-                storage,
-                dir,
-                Purpose::Recovery,
-                &codec::Header {
-                    log_id: *found.log_id.bytes(),
-                    base_offset: next,
-                    epoch,
-                },
-            )?;
+            roll_into(storage, dir, version, &found.log_id, next, epoch)?;
             found.published.roll(found.epoch, epoch);
             (epoch, Active::new(next), BTreeMap::new())
         }
@@ -212,4 +237,41 @@ pub(super) fn open(
             sealed_keys,
         }),
     })
+}
+
+/// Starts the next segment, in the build's own format version.
+fn roll_into(
+    storage: &dyn Storage,
+    dir: &Path,
+    version: u16,
+    log_id: &codec::LogId,
+    next: u64,
+    epoch: u64,
+) -> io::Result<()> {
+    let header = codec::Header {
+        version,
+        log_id: *log_id.bytes(),
+        base_offset: next,
+        epoch,
+    };
+    create_segment(storage, dir, Purpose::Recovery, &header)
+}
+
+/// Writes a roll's run at `start` in two steps, as the writer writes it, so that a crash leaves a
+/// run that a later open either proves from its locator and footer, or truncates or rebuilds.
+/// Returns the footer's position.
+fn write_run(
+    storage: &dyn Storage,
+    path: &Path,
+    run: &[Vec<u8>; 4],
+    start: u64,
+) -> io::Result<u64> {
+    let [filter, index, footer, locator] = run;
+    let footer_at = start + (filter.len() + index.len()) as u64;
+    for (at, bytes) in [(start, [filter, index]), (footer_at, [footer, locator])] {
+        let bytes = bytes.map(Vec::as_slice).concat();
+        call(storage, path, Purpose::Recovery, Op::Write(at, bytes))?;
+        call(storage, path, Purpose::Recovery, Op::SyncAll)?;
+    }
+    Ok(footer_at)
 }

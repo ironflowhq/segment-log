@@ -71,7 +71,8 @@ pub(super) struct Survey {
     /// The append time of the newest group that open keeps, or 0 in a log with no group. The
     /// writer never stamps a lower one (ADR 0064, rule 2).
     pub append_time: u64,
-    pub newest_header: Vec<u8>,
+    /// Its format version may be older than the build's.
+    pub newest_header: codec::Header,
     pub newest: Scan,
     /// The second-newest segment's closing run, rebuilt because the writer had not written it
     /// (ADR 0061, rule 8). Its summary is the last in `sealed`, and its key filter is not on disk.
@@ -145,13 +146,14 @@ pub(super) fn survey(
     dir: &Path,
     bases: &[u64],
     hash: impl FnOnce(codec::LogId) -> KeyHash,
+    version: u16,
 ) -> Result<Survey, OpenError> {
     let headers = bases
         .iter()
-        .map(|&base| header(storage, dir, base))
+        .map(|&base| header(storage, dir, base, version))
         .collect::<Result<Vec<_>, _>>()?;
-    let log_id = codec::LogId::new(headers[0].0.log_id);
-    for (&base, (header, _)) in bases.iter().zip(&headers) {
+    let log_id = codec::LogId::new(headers[0].log_id);
+    for (&base, header) in bases.iter().zip(&headers) {
         if header.log_id != *log_id.bytes() {
             return Err(OpenError::LogIdMismatch { segment: base });
         }
@@ -166,9 +168,9 @@ pub(super) fn survey(
     let mut sealed = vec![];
     let mut pending = None;
     let newest_base = *bases.last().unwrap();
-    let newest_epoch = headers.last().unwrap().0.epoch;
+    let newest_epoch = headers.last().unwrap().epoch;
     let mut headers = headers.into_iter();
-    for (pair, (header, _)) in bases.windows(2).zip(headers.by_ref()) {
+    for (pair, header) in bases.windows(2).zip(headers.by_ref()) {
         let [base, successor] = *pair else {
             unreachable!()
         };
@@ -189,7 +191,7 @@ pub(super) fn survey(
         };
         sealed.push(summary);
     }
-    let (header, newest_header) = headers.next().unwrap();
+    let header = headers.next().unwrap();
     let base = *bases.last().unwrap();
     if kept.published.watermark != base {
         return Err(OpenError::Gap { segment: base });
@@ -236,7 +238,7 @@ pub(super) fn survey(
         sealed,
         epoch: kept.epoch,
         append_time,
-        newest_header,
+        newest_header: header,
         newest,
         pending,
     })
@@ -396,30 +398,25 @@ fn summarize(
     Ok(summary)
 }
 
+/// Each segment is checked against its own format version, from the oldest a build reads up to
+/// `version`, the build's own (ADR 0064, rules 11 and 12).
 fn header(
     storage: &ReadOnly<'_>,
     dir: &Path,
     base: u64,
-) -> Result<(codec::Header, Vec<u8>), OpenError> {
+    version: u16,
+) -> Result<codec::Header, OpenError> {
     let bytes = storage.read(
         &segment_path(dir, base),
         Purpose::Open,
         0,
         codec::HEADER_LEN,
     )?;
-    if bytes.len() == codec::HEADER_LEN
-        && &bytes[..4] == b"SGLG"
-        && bytes[6..8] == [64, 0]
-        && bytes[40..60] == [0; 20]
-        && codec::crc32c(&bytes[..60]) == u32::from_le_bytes(bytes[60..].try_into().unwrap())
-    {
-        let version = u16::from_le_bytes(bytes[4..6].try_into().unwrap());
-        if version != codec::FORMAT_VERSION {
-            return Err(OpenError::UnsupportedVersion(version));
-        }
-    }
     match codec::decode_header(&bytes) {
-        Ok(header) if header.base_offset == base => Ok((header, bytes)),
+        Ok(header) if !(codec::MIN_FORMAT_VERSION..=version).contains(&header.version) => {
+            Err(OpenError::UnsupportedVersion(header.version))
+        }
+        Ok(header) if header.base_offset == base => Ok(header),
         _ => Err(OpenError::Corrupt {
             segment: base,
             position: 0,

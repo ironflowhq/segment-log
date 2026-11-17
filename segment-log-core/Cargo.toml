@@ -3,6 +3,7 @@ name = "segment-log-core"
 description = "Embedded append-only segment log for Ironflow (pre-release; on-disk format may change until the first production release)."
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 readme = "README.md"

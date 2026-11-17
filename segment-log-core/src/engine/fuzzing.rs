@@ -84,6 +84,7 @@ pub fn recover_active_segment(data: &[u8]) {
     };
     let log = codec::LogId::new(LOG_ID);
     let header = codec::Header {
+        version: codec::FORMAT_VERSION,
         log_id: LOG_ID,
         base_offset: 0,
         epoch: 1,
@@ -105,7 +106,8 @@ pub fn recover_active_segment(data: &[u8]) {
     ] {
         call(&sim, path, Purpose::Open, op).unwrap();
     }
-    let first = match recovery::open(&sim, dir, keys::KeyHash::new) {
+    let version = codec::FORMAT_VERSION;
+    let first = match recovery::open(&sim, dir, keys::KeyHash::new, version) {
         Ok(recovered) => summary(recovered),
         // A frame epoch at the top of the range leaves no epoch for the next writer.
         Err(OpenError::Corrupt { .. } | OpenError::Exhausted) => return,
@@ -116,8 +118,9 @@ pub fn recover_active_segment(data: &[u8]) {
         files[0].len() <= segment.len() && segment.starts_with(&files[0]),
         "open kept bytes that were not in the segment"
     );
-    let second =
-        summary(recovery::open(&sim, dir, keys::KeyHash::new).expect("a second open fails"));
+    let second = summary(
+        recovery::open(&sim, dir, keys::KeyHash::new, version).expect("a second open fails"),
+    );
     assert_eq!(first, second, "a second open finds other records");
     assert_eq!(
         files,

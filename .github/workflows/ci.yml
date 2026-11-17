@@ -44,6 +44,41 @@ jobs:
           SEGMENT_LOG_TEST_ROLL_BYTES: 256
       - run: python3 -m unittest discover -s scripts -p 'test_m*.py'
 
+  # The workspace builds and passes its tests at the declared rust-version (ADR 0064, rule 16).
+  msrv:
+    timeout-minutes: 30
+    # Same pin as check: ubuntu-latest warns until 2026-11-19.
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - id: msrv
+        run: echo "version=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)" >> "$GITHUB_OUTPUT"
+      - run: rustup toolchain install ${{ steps.msrv.outputs.version }} --profile minimal
+      # `+toolchain` overrides rust-toolchain.toml.
+      - run: cargo +${{ steps.msrv.outputs.version }} test --workspace
+
+  # Public API changes against the last release tag (ADR 0064, rule 15): a patch release never
+  # breaks the API. Before the first tag there is no baseline, and the job says so and passes.
+  semver:
+    timeout-minutes: 30
+    # Same pin as check: ubuntu-latest warns until 2026-11-19.
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: baseline
+        run: echo "tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+      - if: steps.baseline.outputs.tag == ''
+        run: echo "::notice::No release tag yet; cargo-semver-checks runs once v0.1.0 exists."
+      - if: steps.baseline.outputs.tag != ''
+        run: rustup toolchain install
+      - if: steps.baseline.outputs.tag != ''
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          baseline-rev: ${{ steps.baseline.outputs.tag }}
+          rust-toolchain: manual
+
   # The shared conformance cases over the Unix socket, run by the Go test client (ADR 0058).
   conformance:
     timeout-minutes: 30
