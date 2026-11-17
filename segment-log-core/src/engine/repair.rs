@@ -113,7 +113,30 @@ pub(crate) fn verify_with(
     version: u16,
 ) -> Result<Report, Error> {
     let _lock = lock(storage, dir)?;
+    Ok(inspect(storage, dir, version)?.0)
+}
+
+/// What a class A cut needs from the newest segment's scan.
+struct Cut {
+    log_id: codec::LogId,
+    base: u64,
+    length: u64,
+    at: u64,
+    /// The first log offset after the records that the cut keeps.
+    next: u64,
+    /// The highest epoch of any header or kept frame.
+    epoch: u64,
+    tails: BTreeMap<Vec<u8>, closing::Tail>,
+}
+
+/// `verify` without the lock, and the class A cut when there is one.
+fn inspect(
+    storage: &dyn Storage,
+    dir: &Path,
+    version: u16,
+) -> Result<(Report, Option<Cut>), Error> {
     let reader = ReadOnly::new(storage);
+    let mut cut = None;
     let mut report = Report::default();
     let mut bases = survey::segment_bases(&reader, dir)?;
     if let Some(&newest) = bases.last()
@@ -136,7 +159,7 @@ pub(crate) fn verify_with(
         }
     }
     let Some(first) = headers.first() else {
-        return Ok(report);
+        return Ok((report, None));
     };
     let log_id = codec::LogId::new(first.log_id);
     for (&base, header) in bases.iter().zip(&headers) {
@@ -147,7 +170,7 @@ pub(crate) fn verify_with(
     }
     // Without every header, later checks would only repeat the same damage.
     if report.damaged() {
-        return Ok(report);
+        return Ok((report, None));
     }
     let hash = KeyHash::new(log_id.clone());
     let mut kept = Kept {
@@ -173,8 +196,8 @@ pub(crate) fn verify_with(
         let path = segment_path(dir, base);
         let length = reader.length(&path, Purpose::Recovery)?;
         let scanned = survey::scan(&reader, &log_id, &hash, base, &path, length, &mut kept);
-        let (ending, end) = match scanned {
-            Ok(scan) => (scan.ending, scan.end),
+        let scan = match scanned {
+            Ok(scan) => scan,
             Err(OpenError::Corrupt { position, .. }) => {
                 let message = "the closing run passes its checks but differs from the run its \
                                groups give (ADR 0054)";
@@ -187,9 +210,10 @@ pub(crate) fn verify_with(
             Err(OpenError::Io(e)) => return Err(e.into()),
             Err(other) => return Err(io::Error::other(format!("{other:?}")).into()),
         };
+        let end = scan.end;
         let behind = closing::sealed_behind(&reader, &path, &log_id, length, end)?;
         let damage = report.findings.len();
-        match (successor, ending) {
+        match (successor, scan.ending) {
             (Some(_), Ending::Rolled { .. }) => (),
             (Some(next), Ending::Groups | Ending::Stopped)
                 if next == newest && !behind && kept.published.watermark == next =>
@@ -210,6 +234,15 @@ pub(crate) fn verify_with(
                 let message = "open stops here: a frame that is not valid, before a closing run \
                                whose locator and footer are valid";
                 report.note(Class::A, base, end, message);
+                cut = Some(Cut {
+                    log_id: log_id.clone(),
+                    base,
+                    length,
+                    at: end,
+                    next: kept.published.watermark,
+                    epoch: kept.epoch,
+                    tails: scan.tails,
+                });
             }
             (None, Ending::Stopped) => {
                 report.note(Class::TornTail, base, end, "open truncates here");
@@ -240,7 +273,7 @@ pub(crate) fn verify_with(
             report.frames.extend(frames);
         }
     }
-    Ok(report)
+    Ok((report, cut))
 }
 
 /// Names the frame that stopped the scan of a segment with a successor at `end`.
@@ -352,4 +385,251 @@ fn frame_info(log: &codec::LogId, segment: u64, position: u64, bytes: &[u8]) -> 
         count: field(28..32) as u32,
         valid: codec::decode(log, bytes).is_ok(),
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlanKind {
+    /// No acknowledged record follows the cut. The log stays writable.
+    TornTail,
+    /// Acknowledged records follow the cut. The repair drops them and seals the log.
+    Lossy,
+}
+
+impl PlanKind {
+    /// The name in the JSON output of api.md.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::TornTail => "torn-tail",
+            Self::Lossy => "lossy",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Plan {
+    pub segment: LogOffset,
+    pub cut: u64,
+    pub kind: PlanKind,
+    /// The half-open range of log offsets that a lossy plan drops.
+    pub dropped_offsets: Option<(LogOffset, LogOffset)>,
+    pub closing_frames_removed: Vec<&'static str>,
+    pub backup: Option<PathBuf>,
+    pub applied: bool,
+}
+
+/// A `truncate` run: what `verify` found, the plan for a class A cut, and why the tool refused,
+/// if it did.
+#[derive(Debug)]
+pub struct Outcome {
+    pub report: Report,
+    pub plan: Option<Plan>,
+    pub refusal: Option<String>,
+}
+
+/// What `--apply` must match and may do.
+pub struct Apply<'a> {
+    /// The plan's cut, as `--at` names it: the segment's base offset and the position.
+    pub at: (LogOffset, u64),
+    pub drop_acknowledged: bool,
+    /// The backup directory's name inside the log directory.
+    pub backup: &'a str,
+}
+
+/// The plan for the damage `verify` finds, changing nothing.
+pub fn plan(dir: impl AsRef<Path>) -> Result<Outcome, Error> {
+    plan_with(
+        &storage::real::Real::default(),
+        dir.as_ref(),
+        codec::FORMAT_VERSION,
+    )
+}
+
+/// Carries out the plan, after a backup of the newest segment.
+pub fn apply(dir: impl AsRef<Path>, apply: Apply<'_>) -> Result<Outcome, Error> {
+    apply_with(
+        &storage::real::Real::default(),
+        dir.as_ref(),
+        codec::FORMAT_VERSION,
+        apply,
+    )
+}
+
+pub(crate) fn plan_with(storage: &dyn Storage, dir: &Path, version: u16) -> Result<Outcome, Error> {
+    let _lock = lock(storage, dir)?;
+    Ok(planned(storage, dir, version)?.0)
+}
+
+/// The cut, and the seal run that a lossy plan writes at it; empty for a torn tail.
+type Work = (Cut, Vec<u8>);
+
+/// The plan, and the work `--apply` does when it carries the plan out.
+fn planned(
+    storage: &dyn Storage,
+    dir: &Path,
+    version: u16,
+) -> Result<(Outcome, Option<Work>), Error> {
+    let (report, cut) = inspect(storage, dir, version)?;
+    let refuse = |report, refusal: String| {
+        let outcome = Outcome {
+            report,
+            plan: None,
+            refusal: Some(refusal),
+        };
+        Ok((outcome, None))
+    };
+    if let Some(f) = report
+        .findings
+        .iter()
+        .find(|f| f.class != Class::A && f.class != Class::TornTail)
+    {
+        let refusal = format!(
+            "class {} at segment {} position {} is not repairable in 0.1",
+            f.class.label(),
+            f.segment,
+            f.position
+        );
+        return refuse(report, refusal);
+    }
+    let Some(cut) = cut else {
+        return refuse(report, "no class A finding: nothing to truncate".into());
+    };
+    // `verify` found this locator and footer valid.
+    let reader = ReadOnly::new(storage);
+    let path = segment_path(dir, cut.base);
+    let locator_at = cut.length - codec::LOCATOR_LEN as u64;
+    let locator = reader.read(&path, Purpose::Repair, locator_at, codec::LOCATOR_LEN)?;
+    let Ok(codec::Body::Locator { footer_position }) =
+        codec::decode(&cut.log_id, &locator).map(|f| f.body)
+    else {
+        return Err(io::Error::other("the locator changed under the lock").into());
+    };
+    let footer = reader
+        .frame(&path, Purpose::Repair, footer_position, locator_at)?
+        .ok_or_else(|| io::Error::other("the footer changed under the lock"))?;
+    let Ok(codec::Frame {
+        base_offset: footer_next,
+        body: codec::Body::Footer(footer),
+        ..
+    }) = codec::decode(&cut.log_id, &footer)
+    else {
+        return Err(io::Error::other("the footer changed under the lock").into());
+    };
+    // The footer names the segment's last group frame for each of its streams, so any group
+    // after the cut makes the plan lossy. A lookalike footer can only err toward lossy.
+    let lossy = footer.streams.iter().any(|t| t.last_position >= cut.at);
+    let closing_frames_removed = match footer.key_filter_position {
+        Some(_) => vec!["key-filter", "key-index", "footer", "locator"],
+        None => vec!["footer", "seal", "locator"],
+    };
+    let mut plan = Plan {
+        segment: cut.base,
+        cut: cut.at,
+        kind: PlanKind::TornTail,
+        dropped_offsets: None,
+        closing_frames_removed,
+        backup: None,
+        applied: false,
+    };
+    if !lossy {
+        let outcome = Outcome {
+            report,
+            plan: Some(plan),
+            refusal: None,
+        };
+        return Ok((outcome, Some((cut, vec![]))));
+    }
+    plan.kind = PlanKind::Lossy;
+    plan.dropped_offsets = Some((cut.next, footer_next.max(cut.next)));
+    let mut outcome = Outcome {
+        report,
+        plan: Some(plan),
+        refusal: None,
+    };
+    let Some(epoch) = cut.epoch.checked_add(1) else {
+        outcome.refusal = Some("the highest epoch cannot be incremented for the seal run".into());
+        return Ok((outcome, None));
+    };
+    let run = closing::seal_run(&cut.log_id, epoch, cut.next, cut.at, &cut.tails).concat();
+    // Until the truncation, the old footer and locator must stay whole, so that open still proves
+    // the old run and every crash state fails closed with `Corrupt` (ADR 0065).
+    if cut.at + run.len() as u64 > footer_position {
+        let refusal = "the seal run would reach the old footer; this case stays manual";
+        outcome.refusal = Some(refusal.into());
+        return Ok((outcome, None));
+    }
+    Ok((outcome, Some((cut, run))))
+}
+
+pub(crate) fn apply_with(
+    storage: &dyn Storage,
+    dir: &Path,
+    version: u16,
+    apply: Apply<'_>,
+) -> Result<Outcome, Error> {
+    let _lock = lock(storage, dir)?;
+    let (mut outcome, cut) = planned(storage, dir, version)?;
+    let (Some(plan), Some((cut, run))) = (&mut outcome.plan, cut) else {
+        return Ok(outcome);
+    };
+    if apply.at != (plan.segment, plan.cut) {
+        let refusal = format!(
+            "--at {}:{} differs from the plan's cut {}:{}",
+            apply.at.0, apply.at.1, plan.segment, plan.cut
+        );
+        outcome.refusal = Some(refusal);
+        return Ok(outcome);
+    }
+    if plan.kind == PlanKind::Lossy && !apply.drop_acknowledged {
+        let refusal = "the plan drops acknowledged records; give --drop-acknowledged";
+        outcome.refusal = Some(refusal.into());
+        return Ok(outcome);
+    }
+    let segment = segment_path(dir, cut.base);
+    let backup = dir.join(apply.backup);
+    copy_durably(storage, &segment, &backup, cut.length)?;
+    call(storage, dir, Purpose::Repair, Op::SyncDir)?;
+    plan.backup = Some(backup);
+    if run.is_empty() {
+        call(storage, &segment, Purpose::Repair, Op::Truncate(cut.at))?;
+        call(storage, &segment, Purpose::Repair, Op::SyncAll)?;
+        call(storage, dir, Purpose::Repair, Op::SyncDir)?;
+    } else {
+        // The run lands over the damage before the truncation, so the old locator ends the file
+        // until the run is durable.
+        let end = cut.at + run.len() as u64;
+        call(storage, &segment, Purpose::Repair, Op::Write(cut.at, run))?;
+        call(storage, &segment, Purpose::Repair, Op::SyncAll)?;
+        call(storage, &segment, Purpose::Repair, Op::Truncate(end))?;
+        call(storage, &segment, Purpose::Repair, Op::SyncAll)?;
+    }
+    plan.applied = true;
+    Ok(outcome)
+}
+
+/// Copies the segment byte for byte into the backup directory, and returns once the copy and its
+/// directory entry are durable.
+fn copy_durably(
+    storage: &dyn Storage,
+    segment: &Path,
+    backup: &Path,
+    length: u64,
+) -> io::Result<()> {
+    const CHUNK: u64 = 1 << 20;
+    call(storage, backup, Purpose::Repair, Op::CreateDir)?;
+    let copy = backup.join(segment.file_name().expect("a segment path names a file"));
+    call(storage, &copy, Purpose::Repair, Op::Create)?;
+    let reader = ReadOnly::new(storage);
+    let mut at = 0;
+    while at < length {
+        let len = CHUNK.min(length - at) as usize;
+        let bytes = reader.read(segment, Purpose::Repair, at, len)?;
+        if bytes.len() != len {
+            return Err(io::ErrorKind::UnexpectedEof.into());
+        }
+        call(storage, &copy, Purpose::Repair, Op::Write(at, bytes))?;
+        at += len as u64;
+    }
+    call(storage, &copy, Purpose::Repair, Op::SyncAll)?;
+    call(storage, backup, Purpose::Repair, Op::SyncDir)?;
+    Ok(())
 }

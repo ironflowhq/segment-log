@@ -292,7 +292,7 @@ The charge is fixed until the request is answered. It does not decrease when dat
 
 ## Operator repair
 
-For 0.1 ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)). `verify` is built; `truncate` is not yet. This section is the only source for the command's subcommands, flags, exit codes and JSON output. After 0.1 they are public API. The core module behind it, `segment_log_core::repair`, is hidden and carries no promise.
+For 0.1 ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)). This section is the only source for the command's subcommands, flags, exit codes and JSON output. After 0.1 they are public API. The core module behind it, `segment_log_core::repair`, is hidden and carries no promise.
 
 ```text
 segment-log-server repair verify   --dir <path> [--json]
@@ -310,7 +310,7 @@ segment-log-server repair truncate --dir <path> --apply --at <segment>:<position
 | 0 | `verify`: no damage. A torn tail that open would truncate is not damage. `truncate --apply`: done. |
 | 1 | `verify`: damage found. `truncate` without `--apply`: a plan was printed. |
 | 2 | Usage error. |
-| 3 | Refused: no class A finding, a class B–E finding, `--at` that differs from the plan, a lossy plan without `--drop-acknowledged`, or a seal run that would reach the old locator. |
+| 3 | Refused: no class A finding, a class B–E finding, `--at` that differs from the plan, a lossy plan without `--drop-acknowledged`, or a seal run that would reach the old footer. |
 | 4 | Another process holds `LOCK`. |
 | 5 | I/O error. |
 
@@ -324,11 +324,12 @@ Text output is for people and can change. `--json` prints one JSON object on std
   "frames":   [ { "segment": u64, "position": u64, "kind": string, "epoch": u64, "base_offset": u64, "count": u32, "valid": bool } ],
   "plan":     null | { "cut": "<segment>:<position>", "kind": "torn-tail" | "lossy",
                        "dropped_offsets": null | [u64, u64], "closing_frames_removed": [string],
-                       "backup": null | string, "applied": bool }
+                       "backup": null | string, "applied": bool },
+  "refusal":  null | string
 }
 ```
 
-`frames` lists the frames around each finding. `dropped_offsets` is the half-open range of log offsets that a lossy plan drops. A later schema adds fields without renumbering; a field changes meaning or goes away only with a new `schema` number.
+`frames` lists the frames around each finding. `dropped_offsets` is the half-open range of log offsets that a lossy plan drops. `refusal` says why exit code 3 refused, and `plan` can be set beside it. A later schema adds fields without renumbering; a field changes meaning or goes away only with a new `schema` number.
 
 ## Implementation notes
 
