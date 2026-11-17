@@ -65,6 +65,7 @@ We accept a process per log and two threads per connection, in exchange for a sm
 ## Consequences
 
 - Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)). [ADR 0063](0063-the-guest-benchmark-shares-pipelined-connections.md) changes the answer thread: it collects answers that are ready with `Pending::try_wait` and writes them together, in request order, instead of waiting for and writing each answer alone. [ADR 0064](0064-the-0-1-compatibility-promise.md) makes the flags, exit statuses and process behavior public API, and gives the Go client semver tags.
+- [ADR 0065](0065-the-repair-tool-truncates-only-the-newest-segment.md) adds the offline `repair` subcommand (planned for 0.1). The serve command line, without a subcommand, does not change.
 - [ADR 0060](0060-the-server-reads-a-sealed-log-with-read-only.md) adds `--read-only`: the server opens a sealed log with `LogReader`, answers `Append` with `Sealed`, and keeps serving after `Seal`.
 - `segment-log-server` gains a `libc` dependency, and `unsafe` for the vsock, signal and socket calls that `libc` exposes. Each `unsafe` block states the invariant it relies on. CLAUDE.md's "no `unsafe` without an ADR" rule is met for those calls only.
 - Idle memory includes two thread stacks for each open connection. The footprint target measures an empty log with no connections.

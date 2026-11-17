@@ -224,7 +224,7 @@ pub enum SealError { Poisoned }
 - **Directory and volume ownership.** The deployment or runner provisions, mounts and preserves the volume, supplies the directory to `SegmentLog::open`, and arranges the post-guest reader handoff ([ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)). The core validates, recovers and reads files in that directory. Concrete mount paths and the reader component are pre-M7 integration choices. Required writable recovery follows the existing API rather than an automatic deployment action inside the core.
 - **Complete-history retention.** M1–M7 retain all valid history segments without segment-level retention or automatic expiry ([ADR 0037](../decisions/0037-retain-complete-logs-through-current-milestones.md)). Deployment owns whole-log archival and expiry. The core gains no retention option or deletion endpoint. Existing recovery cleanup remains unchanged and does not authorize deletion of valid history.
 - **A reader after the guest is gone** uses `LogReader`, not `SegmentLog::open`, so that it changes nothing on the volume. It opens only a sealed log. A directory with no segment, or whose newest segment does not end in a complete seal run, gives `NotSealed`. A missing directory gives `Io`. To read an unsealed log, open it with `SegmentLog::open` on a writable volume and call `seal`.
-- **Corrupt is for a human to resolve.** `OpenError::Corrupt { segment, position }` names the file and the byte where open stopped. Open never repairs it, because it cannot tell a torn tail from a bad frame in a sealed segment, and truncating a sealed segment drops acknowledged records. From M4, frame CRCs cover the log id, so a caller's payload cannot cause it ([ADR 0049](../decisions/0049-frame-crcs-cover-the-log-id.md)). Repair is manual for now. Copy the directory, inspect the segment at that position, and truncate the copy only if the bytes there are a torn tail. A repair tool is future work ([issue #1](https://github.com/ironflowx/segment-log/issues/1)).
+- **Corrupt is for a human to resolve.** `OpenError::Corrupt { segment, position }` names the file and the byte where open stopped. Open never repairs it, because it cannot tell a torn tail from a bad frame in a sealed segment, and truncating a sealed segment drops acknowledged records. From M4, frame CRCs cover the log id, so a caller's payload cannot cause it ([ADR 0049](../decisions/0049-frame-crcs-cover-the-log-id.md)). The [operator repair](#operator-repair) command diagnoses it and, for a bad frame in the newest segment, truncates it ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)).
 - **Options.** `open` checks the [option limits below](#option-validation) before creating or changing files. An invalid option returns `InvalidOptions`.
 - **Thread model.** One writer thread, owned by `SegmentLog`. Callers never write files.
 
@@ -289,6 +289,46 @@ charge = bookkeeping
 Unused record slots and unused byte-buffer capacity are charged. Result storage and a possible retry waiter are reserved even if a request will eventually be rejected or its result handle is dropped. Use checked multiplication and addition. An unrepresentable charge gets `TooLarge` before acceptance ([ADR 0028](../decisions/0028-too-large-is-distinct-from-temporary-full.md)).
 
 The charge is fixed until the request is answered. It does not decrease when data is moved or freed during processing. It varies with capacity and platform type sizes. It does not include caches, shared group-encoding buffers, allocator overhead, opaque standard-library channel internals, or results retained after the answer. It is not a limit on total process memory.
+
+## Operator repair
+
+Planned for 0.1 ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)); not built yet. This section is the only source for the command's subcommands, flags, exit codes and JSON output. After 0.1 they are public API. The core module behind it, `segment_log_core::repair`, is hidden and carries no promise.
+
+```text
+segment-log-server repair verify   --dir <path> [--json]
+segment-log-server repair truncate --dir <path> [--json]
+segment-log-server repair truncate --dir <path> --apply --at <segment>:<position> [--drop-acknowledged] [--json]
+```
+
+- Every subcommand takes `LOCK` without waiting. Neither runs from `SegmentLog::open`.
+- `verify` changes nothing. It reads every segment in full, by its own format version, and reports each finding with its segment, position and class (A–E in ADR 0065).
+- `truncate` without `--apply` prints the plan and changes nothing. The plan names the cut as `<segment>:<position>`, its kind (torn tail or lossy), the log offsets it drops and the closing frames it removes. `--apply` needs `--at` equal to the plan's cut. A lossy plan also needs `--drop-acknowledged`, and leaves the log sealed. Before any change, `--apply` copies the newest segment into `<dir>/repair-<unix seconds>/`.
+- `<segment>` is the segment's base offset in decimal, as in its file name without leading zeros. `<position>` is a byte position in that file.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | `verify`: no damage. A torn tail that open would truncate is not damage. `truncate --apply`: done. |
+| 1 | `verify`: damage found. `truncate` without `--apply`: a plan was printed. |
+| 2 | Usage error. |
+| 3 | Refused: no class A finding, a class B–E finding, `--at` that differs from the plan, a lossy plan without `--drop-acknowledged`, or a seal run that would reach the old locator. |
+| 4 | Another process holds `LOCK`. |
+| 5 | I/O error. |
+
+Text output is for people and can change. `--json` prints one JSON object on stdout:
+
+```text
+{
+  "schema": 1,
+  "command": "verify" | "truncate",
+  "findings": [ { "class": "A".."E" | "torn-tail", "segment": u64, "position": u64, "message": string } ],
+  "frames":   [ { "segment": u64, "position": u64, "kind": string, "epoch": u64, "base_offset": u64, "count": u32, "valid": bool } ],
+  "plan":     null | { "cut": "<segment>:<position>", "kind": "torn-tail" | "lossy",
+                       "dropped_offsets": null | [u64, u64], "closing_frames_removed": [string],
+                       "backup": null | string, "applied": bool }
+}
+```
+
+`frames` lists the frames around each finding. `dropped_offsets` is the half-open range of log offsets that a lossy plan drops. A later schema adds fields without renumbering; a field changes meaning or goes away only with a new `schema` number.
 
 ## Implementation notes
 
