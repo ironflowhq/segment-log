@@ -62,4 +62,8 @@ cat >"$host/vm.json" <<EOF
   "vsock": {"guest_cid": 3, "uds_path": "$host/v.sock"}
 }
 EOF
+# The VMM holds one host descriptor per vsock connection, up to its muxer's 1,023. At the usual
+# soft limit of 1,024 it fails to accept the rest, and they wait in the socket's queue forever.
+# shellcheck disable=SC3045 # dash and bash both have ulimit -n and -H
+ulimit -n 4096 2>/dev/null || ulimit -n "$(ulimit -Hn)"
 exec "$M7_CACHE/firecracker" --no-api --config-file "$host/vm.json" >"$host/console.log"
