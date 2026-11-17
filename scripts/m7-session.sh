@@ -38,7 +38,13 @@ bootstrap() {
 	wait_up
 	# shellcheck disable=SC2016 # expands on the host
 	on_host 'set -e
-		mkfs.ext4 -q -F -L m7log /dev/nvme1n1
+		# NVMe names can swap across the reboot, so the volume drive is whichever one / is not on.
+		root=$(lsblk -no PKNAME "$(findmnt -no SOURCE /)")
+		data=$(lsblk -dno NAME | grep "^nvme" | grep -vx "$root" | head -n 1)
+		if [ -z "$data" ] || [ -n "$(lsblk -no MOUNTPOINT "/dev/$data" | tr -d "[:space:]")" ]; then
+			echo "no unused NVMe drive for the volumes" >&2; exit 1
+		fi
+		mkfs.ext4 -q -F -L m7log "/dev/$data"
 		echo "LABEL=m7log /tmp ext4 defaults,noatime 0 2" >>/etc/fstab
 		mount /tmp && chmod 1777 /tmp
 		apt-get update -qq
@@ -129,7 +135,9 @@ collect() {
 	# shellcheck disable=SC2016 # expands on the host
 	on_host 'uname -a; lscpu | grep "Model name"; free -g | head -n 2; findmnt -T /tmp; cat /proc/mdstat
 		for d in /dev/nvme0 /dev/nvme1; do nvme id-ctrl "$d" | grep -E "^(mn|fr|vwc|awupf|oncs) "; done
-		nvme id-ns /dev/nvme1n1 | grep -E "^(nawupf|lbaf)"; cat /sys/block/nvme1n1/queue/write_cache
+		data=$(basename "$(findmnt -no SOURCE /tmp)")
+		nvme id-ns "/dev/$data" | grep -E "^(nawupf|lbaf)"; cat "/sys/block/$data/queue/write_cache"
+		for d in /dev/nvme0 /dev/nvme1; do nvme smart-log "$d" | grep -E "^(power_cycles|unsafe_shutdowns|power_on_hours)"; done
 		/root/.cache/segment-log-m7/firecracker --version | head -n 1' >"$out/host.txt" 2>&1
 	# The #49 capture on the qualified host, with the per-roll writer times (ADR 0061).
 	step m1-capture on_host "cd $repo && . \$HOME/.cargo/env && mkdir -p /root/m1/out /tmp/m1/data &&
