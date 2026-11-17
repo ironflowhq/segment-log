@@ -1,0 +1,26 @@
+kernel 6.1.155+
+fs /dev/vdb ext4 rw,relatime
+write_cache write back
+STEP 1-file ok
+READY-FAIL
+2026-11-17T14:04:04.194903126 [anonymous-instance:main] Failed to execute Out virtio block request: FileEngine(Sync(Transfer(IOError(Os { code: 5, kind: Uncategorized, message: "I/O error" }))))
+STEP 2-dirsync err sync /mnt/metaerr: input/output error
+READY-RECOVER
+STEP 4-dirsync-held ok
+STEP 4-dirsync-new ok
+STEP 4-file err open /mnt/metaerr/third: read-only file system
+DONE
+dmesg [    0.733252] EXT4-fs (vda): mounted filesystem with ordered data mode. Quota mode: none.
+dmesg [    0.751923] EXT4-fs (vdb): mounted filesystem with ordered data mode. Quota mode: none.
+dmesg [    0.861781] I/O error, dev vdb, sector 229408 op 0x1:(WRITE) flags 0xd800 phys_seg 1 prio class 2
+dmesg [    0.861786] I/O error, dev vdb, sector 229410 op 0x1:(WRITE) flags 0x9800 phys_seg 1 prio class 2
+dmesg [    0.861888] Aborting journal on device vdb-8.
+dmesg [    0.862135] I/O error, dev vdb, sector 229378 op 0x1:(WRITE) flags 0x9800 phys_seg 1 prio class 2
+dmesg [    0.862138] Buffer I/O error on dev vdb, logical block 114689, lost sync page write
+dmesg [    0.862180] JBD2: I/O error when updating journal superblock for vdb-8.
+dmesg [    1.011613] EXT4-fs error (device vdb): ext4_journal_check_start:83: comm segment-log-pro: Detected aborted journal
+dmesg [    1.014048] EXT4-fs (vdb): Remounting filesystem read-only
+mounted ro,relatime
+evidence: directory fsync after recovery: held ok, new ok
+== V3 control result: pass
+control: this kernel stops writes under errors=continue too, so no control could be built

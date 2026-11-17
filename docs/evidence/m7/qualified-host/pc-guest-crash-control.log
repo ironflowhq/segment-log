@@ -1,0 +1,87 @@
+== build the server
+info: component rust-std for target x86_64-unknown-linux-musl is up to date
+== build the powercut tool
+== build the guest rootfs
+== pc-guest-crash-20261117135628-control: 10 cycles, observer 178.156.201.194:7070
+load: cycle 1: 7619 acknowledged, 7635 reported
+check: MISSING pc-guest-crash-20261117135628-control/1/10/476 (want offset -1 revision 476; found false)
+check: MISSING pc-guest-crash-20261117135628-control/1/4/474 (want offset -1 revision 474; found false)
+check: MISSING pc-guest-crash-20261117135628-control/1/13/475 (want offset -1 revision 475; found false)
+check: MISSING pc-guest-crash-20261117135628-control/1/7/476 (want offset -1 revision 476; found false)
+check: MISSING pc-guest-crash-20261117135628-control/1/8/477 (want offset -1 revision 477; found false)
+check: 7619 records, 7635 reported, 16 missing
+-- cycle 1 at 3224 ms
+load: cycle 2: 7789 acknowledged, 7805 reported
+check: MISSING pc-guest-crash-20261117135628-control/2/9/486 (want offset -1 revision 486; found false)
+check: MISSING pc-guest-crash-20261117135628-control/2/5/485 (want offset -1 revision 485; found false)
+check: MISSING pc-guest-crash-20261117135628-control/2/15/489 (want offset -1 revision 489; found false)
+check: MISSING pc-guest-crash-20261117135628-control/2/8/486 (want offset -1 revision 486; found false)
+check: MISSING pc-guest-crash-20261117135628-control/2/0/485 (want offset -1 revision 485; found false)
+check: 15408 records, 7805 reported, 16 missing
+-- cycle 2 at 3426 ms
+load: cycle 3: 5642 acknowledged, 5658 reported
+check: MISSING pc-guest-crash-20261117135628-control/3/13/352 (want offset -1 revision 352; found false)
+check: MISSING pc-guest-crash-20261117135628-control/3/12/353 (want offset -1 revision 353; found false)
+check: MISSING pc-guest-crash-20261117135628-control/3/5/353 (want offset -1 revision 353; found false)
+check: MISSING pc-guest-crash-20261117135628-control/3/1/353 (want offset -1 revision 353; found false)
+check: MISSING pc-guest-crash-20261117135628-control/3/11/353 (want offset -1 revision 353; found false)
+check: 21050 records, 5658 reported, 16 missing
+-- cycle 3 at 2371 ms
+load: cycle 4: 4000 acknowledged, 4016 reported
+check: MISSING pc-guest-crash-20261117135628-control/4/7/250 (want offset -1 revision 250; found false)
+check: MISSING pc-guest-crash-20261117135628-control/4/10/250 (want offset -1 revision 250; found false)
+check: MISSING pc-guest-crash-20261117135628-control/4/11/250 (want offset -1 revision 250; found false)
+check: MISSING pc-guest-crash-20261117135628-control/4/0/250 (want offset -1 revision 250; found false)
+check: MISSING pc-guest-crash-20261117135628-control/4/8/250 (want offset -1 revision 250; found false)
+check: 25050 records, 4016 reported, 16 missing
+-- cycle 4 at 1903 ms
+load: cycle 5: 5442 acknowledged, 5458 reported
+check: MISSING pc-guest-crash-20261117135628-control/5/3/340 (want offset -1 revision 340; found false)
+check: MISSING pc-guest-crash-20261117135628-control/5/5/340 (want offset -1 revision 340; found false)
+check: MISSING pc-guest-crash-20261117135628-control/5/10/340 (want offset -1 revision 340; found false)
+check: MISSING pc-guest-crash-20261117135628-control/5/15/341 (want offset -1 revision 341; found false)
+check: MISSING pc-guest-crash-20261117135628-control/5/1/339 (want offset -1 revision 339; found false)
+check: 30492 records, 5458 reported, 16 missing
+-- cycle 5 at 2400 ms
+load: cycle 6: 3852 acknowledged, 3868 reported
+check: MISSING pc-guest-crash-20261117135628-control/6/10/240 (want offset -1 revision 240; found false)
+check: MISSING pc-guest-crash-20261117135628-control/6/9/240 (want offset -1 revision 240; found false)
+check: MISSING pc-guest-crash-20261117135628-control/6/4/240 (want offset -1 revision 240; found false)
+check: MISSING pc-guest-crash-20261117135628-control/6/6/240 (want offset -1 revision 240; found false)
+check: MISSING pc-guest-crash-20261117135628-control/6/1/241 (want offset -1 revision 241; found false)
+check: 34344 records, 3868 reported, 16 missing
+-- cycle 6 at 1751 ms
+load: cycle 7: 6141 acknowledged, 6157 reported
+check: MISSING pc-guest-crash-20261117135628-control/7/6/383 (want offset -1 revision 383; found false)
+check: MISSING pc-guest-crash-20261117135628-control/7/2/384 (want offset -1 revision 384; found false)
+check: MISSING pc-guest-crash-20261117135628-control/7/15/383 (want offset -1 revision 383; found false)
+check: MISSING pc-guest-crash-20261117135628-control/7/4/384 (want offset -1 revision 384; found false)
+check: MISSING pc-guest-crash-20261117135628-control/7/5/384 (want offset -1 revision 384; found false)
+check: 40485 records, 6157 reported, 16 missing
+-- cycle 7 at 2712 ms
+load: cycle 8: 4141 acknowledged, 4157 reported
+check: MISSING pc-guest-crash-20261117135628-control/8/11/259 (want offset -1 revision 259; found false)
+check: MISSING pc-guest-crash-20261117135628-control/8/3/259 (want offset -1 revision 259; found false)
+check: MISSING pc-guest-crash-20261117135628-control/8/13/260 (want offset -1 revision 260; found false)
+check: MISSING pc-guest-crash-20261117135628-control/8/8/258 (want offset -1 revision 258; found false)
+check: MISSING pc-guest-crash-20261117135628-control/8/7/259 (want offset -1 revision 259; found false)
+check: 44626 records, 4157 reported, 16 missing
+-- cycle 8 at 1885 ms
+load: cycle 9: 5565 acknowledged, 5581 reported
+check: MISSING pc-guest-crash-20261117135628-control/9/14/347 (want offset -1 revision 347; found false)
+check: MISSING pc-guest-crash-20261117135628-control/9/8/348 (want offset -1 revision 348; found false)
+check: MISSING pc-guest-crash-20261117135628-control/9/2/348 (want offset -1 revision 348; found false)
+check: MISSING pc-guest-crash-20261117135628-control/9/15/349 (want offset -1 revision 349; found false)
+check: MISSING pc-guest-crash-20261117135628-control/9/4/346 (want offset -1 revision 346; found false)
+check: 50202 records, 5581 reported, 5 missing
+-- cycle 9 at 2397 ms
+load: cycle 10: 6173 acknowledged, 6189 reported
+check: MISSING pc-guest-crash-20261117135628-control/10/12/386 (want offset -1 revision 386; found false)
+check: MISSING pc-guest-crash-20261117135628-control/10/14/385 (want offset -1 revision 385; found false)
+check: MISSING pc-guest-crash-20261117135628-control/10/11/387 (want offset -1 revision 387; found false)
+check: MISSING pc-guest-crash-20261117135628-control/10/9/385 (want offset -1 revision 385; found false)
+check: MISSING pc-guest-crash-20261117135628-control/10/10/386 (want offset -1 revision 386; found false)
+check: 56375 records, 6189 reported, 16 missing
+-- cycle 10 at 2579 ms
+== pc-guest-crash-20261117135628-control: 10 of 10 cycles missed a reported record
+control detected (expected)

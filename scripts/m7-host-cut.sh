@@ -5,13 +5,16 @@
 #
 #   powercut observe -listen :7070 -dir <store>        on the observer, neither host nor controller
 #   M7_HOST=root@<host> M7_OBSERVER=<observer>:7070 \
-#     scripts/m7-host-cut.sh host-kernel-crash|host-power-loss [cycles] [--control]
+#     scripts/m7-host-cut.sh host-kernel-crash|host-reset|host-power-loss [cycles] [--control]
 #
 # host-kernel-crash: `echo c > /proc/sysrq-trigger` on the host; kernel.panic reboots it.
 # host-power-loss: the Robot web service presses the power button long, then again, so the host
 #   loses power and boots. Needs M7_ROBOT_CURLRC (a curl config with `user = "<ws user>:<pass>"`)
 #   and M7_ROBOT_SERVER (the server number). Volume-requirements.md counts it as a power cut only
-#   with evidence that it removes power from the drives; record what the hardware does.
+#   with evidence that it removes power from the drives; record what the hardware does. Some
+#   servers offer no power button reset; the script then refuses to run this event.
+# host-reset: the Robot web service presses the reset button (`hw`). The drives keep power, so it is
+#   a host reboot without a kernel shutdown, never a power cut. Needs the same two variables.
 #
 # The host needs the repo at M7_REPO (default /root/segment-log) and scripts/m7/setup.sh run once.
 # Each cycle starts a load on new streams, causes the event at a uniformly random time in the load
@@ -21,14 +24,14 @@
 # a reported record, and stops at the first one.
 set -euo pipefail
 
-event=${1:?usage: m7-host-cut.sh host-kernel-crash|host-power-loss [cycles] [--control]}
+event=${1:?usage: m7-host-cut.sh host-kernel-crash|host-reset|host-power-loss [cycles] [--control]}
 cycles=${2:-30}
 control=${3:-}
-case $event in host-kernel-crash | host-power-loss) ;; *) echo "unknown event $event" >&2; exit 64 ;; esac
+case $event in host-kernel-crash | host-reset | host-power-loss) ;; *) echo "unknown event $event" >&2; exit 64 ;; esac
 case $control in "" | --control) ;; *) echo "unknown option $control" >&2; exit 64 ;; esac
 : "${M7_HOST:?set M7_HOST to the VMM host, as user@address}"
 : "${M7_OBSERVER:?set M7_OBSERVER to the observer host:port}"
-if [ "$event" = host-power-loss ]; then
+if [ "$event" != host-kernel-crash ]; then
 	: "${M7_ROBOT_CURLRC:?set M7_ROBOT_CURLRC}" "${M7_ROBOT_SERVER:?set M7_ROBOT_SERVER}"
 fi
 repo=${M7_REPO:-/root/segment-log}
@@ -54,6 +57,10 @@ wait_for() { # wait_for up|down <seconds>
 	exit 1
 }
 
+if [ "$event" = host-power-loss ]; then
+	types=$(curl -fsS -K "$M7_ROBOT_CURLRC" "https://robot-ws.your-server.de/reset/$M7_ROBOT_SERVER")
+	case $types in *'"power_long"'*) ;; *) echo "FAIL: the Robot offers no power button reset: $types" >&2; exit 2 ;; esac
+fi
 echo "== $run: $cycles cycles, host $M7_HOST, observer $M7_OBSERVER, cache_type $cache"
 on_host "$repo/scripts/m7/host-cycle" prep "$work"
 lost=0
@@ -71,6 +78,7 @@ for cycle in $(seq "$cycles"); do
 		sleep 10 # let the power supply drain before it comes back
 		robot power
 		;;
+	host-reset) robot hw ;;
 	esac
 	wait_for down 120
 	wait_for up 900

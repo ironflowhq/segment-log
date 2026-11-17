@@ -1,0 +1,14 @@
+== build the server
+info: component rust-std for target x86_64-unknown-linux-musl is up to date
+== build the powercut tool
+== build the guest rootfs
+== VOL-FLUSH-LATENCY: 8 guest(s), rate 0/s each, 60 s, 16384-byte writes, host disk nvme1n1
+guest 1: PROBE cycles=92935 syncs_per_s=1548.9 mean_us=645 p50_us=636 p99_us=874 p999_us=1011 max_us=4661 bytes=16384
+guest 2: PROBE cycles=92985 syncs_per_s=1549.8 mean_us=644 p50_us=635 p99_us=874 p999_us=1020 max_us=4710 bytes=16384
+guest 3: PROBE cycles=92852 syncs_per_s=1547.5 mean_us=645 p50_us=636 p99_us=872 p999_us=1002 max_us=4491 bytes=16384
+guest 4: PROBE cycles=93101 syncs_per_s=1551.7 mean_us=644 p50_us=634 p99_us=873 p999_us=1009 max_us=4674 bytes=16384
+guest 5: PROBE cycles=93318 syncs_per_s=1555.3 mean_us=642 p50_us=633 p99_us=871 p999_us=1009 max_us=4362 bytes=16384
+guest 6: PROBE cycles=92890 syncs_per_s=1548.2 mean_us=645 p50_us=636 p99_us=878 p999_us=1010 max_us=4875 bytes=16384
+guest 7: PROBE cycles=93145 syncs_per_s=1552.4 mean_us=643 p50_us=634 p99_us=877 p999_us=1002 max_us=4587 bytes=16384
+guest 8: PROBE cycles=94656 syncs_per_s=1577.6 mean_us=633 p50_us=622 p99_us=865 p999_us=1007 max_us=5203 bytes=16384
+host: 0 flushes in 66 s (boot and warm-up included), 0 per second
