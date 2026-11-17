@@ -10,7 +10,8 @@ use segment_log_core::{
 pub const HEADER_LEN: usize = 8;
 pub const MAGIC: [u8; 4] = *b"SGLP";
 /// The protocol versions this server speaks. From 0.1 the range only grows at the top: a server
-/// speaks every version from 2 up to its own (ADR 0064, rule 5).
+/// speaks every version from 2 up to its own, and no 0.x release raises `MIN_VERSION` (ADR 0064,
+/// rule 5).
 pub const MIN_VERSION: u16 = 2;
 pub const MAX_VERSION: u16 = 2;
 

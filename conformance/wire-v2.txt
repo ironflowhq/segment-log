@@ -1,7 +1,7 @@
 # Golden wire bytes for protocol version 2, written by hand from the tables in
 # docs/architecture/protocol.md. Each line is `name: hex`, one whole message with its 8-byte header;
 # spaces split fields and mean nothing. From the 0.1 tag this file never changes: a later version
-# adds its own wire-vN.txt beside it (ADR 0064).
+# adds its own wire-vN.txt beside it, and only a major release (1.0 or later) may drop one (ADR 0064).
 # The Rust server tests (segment-log-server/src/protocol/tests.rs) encode each answer and encode
 # and decode each request; the Go client tests (clients/go/wire_test.go) encode each request and
 # decode each answer. Each side fails if it has no check for a line, or a check for a missing line.

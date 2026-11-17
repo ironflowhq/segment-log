@@ -363,7 +363,8 @@ fn shared_vectors() -> Vec<(&'static str, Vec<u8>)> {
 }
 
 /// The golden fixtures are exactly the supported versions. A new version adds its file and a test
-/// like the one below; removing one needs an ADR and a major release (ADR 0064, rule 5).
+/// like the one below; removing one needs an ADR and a major release, 1.0 or later, never a 0.x
+/// release (ADR 0064, rule 5).
 #[test]
 fn every_supported_version_has_a_golden_fixture() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../conformance");
