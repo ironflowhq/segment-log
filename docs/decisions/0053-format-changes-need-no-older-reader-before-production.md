@@ -63,6 +63,7 @@ B gives the correct layout at production for the cost of each fix alone, and kee
 
 ## Consequences
 
+- [ADR 0064](0064-the-0-1-compatibility-promise.md) (Proposed) supersedes this ADR at the 0.1 tag. Until then, this ADR governs format version 3, the last pre-production break.
 - ADR 0052 gains a bullet that links here. ADR 0013's bullet about data outliving later builds is corrected.
 - format.md's status says: version 1 as of M5; until production, a change increments the version and keeps no older reader.
 - The PRD records the policy beside M5 and in the risk table. M5 stays passed: its gate needed an Accepted format ADR and a fuzz run, and both stand.

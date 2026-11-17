@@ -1,7 +1,7 @@
 ---
 id: "0058"
 title: "One server process serves one log, with blocking threads and libc as its only dependency"
-status: proposed
+status: accepted
 date: 2026-11-14
 deciders: [Altug Sahin]
 supersedes: null
@@ -58,12 +58,13 @@ We will run one server process for one log directory, with blocking threads, and
 - **`SIGTERM` and `SIGINT`.** The server stops reading requests, answers the requests it has read, closes every connection, drops the log without sealing and exits with status 0. A signal never seals: sealing stays the caller's decision (ADR 0033).
 - **Exit status.** 0 after a seal or a signal. 1 when the log does not open or a flag is invalid, with the reason on stderr. 2 after a poisoned writer.
 - **Platforms.** The Unix-socket server builds and runs on Linux and macOS. The vsock adapter compiles only on Linux.
-- **Go client and cases.** The Go client is a test harness in `clients/go/`, with its own module and a pinned Go version. It makes no promise of a stable API. The conformance cases are JSON files in `conformance/`, read by the Go client. The Rust server never reads them.
+- **Go client and cases.** The Go client is a test harness in `clients/go/`, with its own module and a pinned Go version. From 0.1 it follows 0.x semver and is tagged `clients/go/vX.Y.Z` ([ADR 0064](0064-the-0-1-compatibility-promise.md) rule 15). The conformance cases are JSON files in `conformance/`, read by the Go client. The Rust server never reads them.
 
 We accept a process per log and two threads per connection, in exchange for a small server with nothing but `std` and `libc` in it.
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)). [ADR 0063](0063-the-guest-benchmark-shares-pipelined-connections.md) changes the answer thread: it collects answers that are ready with `Pending::try_wait` and writes them together, in request order, instead of waiting for and writing each answer alone. [ADR 0064](0064-the-0-1-compatibility-promise.md) makes the flags, exit statuses and process behavior public API, and gives the Go client semver tags.
 - [ADR 0065](0065-the-repair-tool-truncates-only-the-newest-segment.md) adds the offline `repair` subcommand (planned for 0.1). The serve command line, without a subcommand, does not change.
 - [ADR 0060](0060-the-server-reads-a-sealed-log-with-read-only.md) adds `--read-only`: the server opens a sealed log with `LogReader`, answers `Append` with `Sealed`, and keeps serving after `Seal`.
 - `segment-log-server` gains a `libc` dependency, and `unsafe` for the vsock, signal and socket calls that `libc` exposes. Each `unsafe` block states the invariant it relies on. CLAUDE.md's "no `unsafe` without an ADR" rule is met for those calls only.

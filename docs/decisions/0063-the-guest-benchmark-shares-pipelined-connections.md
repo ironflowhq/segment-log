@@ -1,7 +1,7 @@
 ---
 id: "0063"
 title: "The guest is held to the throughput target, and its callers share pipelined connections"
-status: proposed
+status: accepted
 date: 2026-11-17
 deciders: [Altug Sahin]
 supersedes: null
@@ -53,6 +53,7 @@ Option B keeps the qualified stack and the wire protocol, and cuts the cost on t
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)). The guest benchmark that counts for M7 is the run on the qualified host, in the requalification that ADR 0059 requires; the run on the power-loss host (50,644 records/s) is evidence that the change works, not the M7 result. Known 0.1 limits: the guest's paced p99 misses the latency target near saturation (77 ms on the power-loss host), and the Go client cannot pool connections yet ([issue 134](https://github.com/ironflowx/segment-log/issues/134)), so a Go caller with one connection per caller gets the unpooled rate.
 - The PRD's M7 "done when" requires the guest benchmark to meet the throughput target at the stated C. The paced p99 is reported against the latency target. A miss there is its own finding.
 - The wire protocol's layout does not change. protocol.md now says that answers that are ready together may share one write, still in request order: a fact about the bytes on the stream, not a new message.
 - `Pending::try_wait` joins the core API ([api.md](../architecture/api.md)), so the server can send ready answers without blocking on the next one.

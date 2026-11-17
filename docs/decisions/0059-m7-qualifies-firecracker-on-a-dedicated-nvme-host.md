@@ -1,7 +1,7 @@
 ---
 id: "0059"
 title: "M7 qualifies Firecracker on a dedicated local-NVMe host; a Mac stack only rehearses"
-status: proposed
+status: accepted
 date: 2026-11-15
 deciders: [Altug Sahin]
 supersedes: null
@@ -62,6 +62,7 @@ Firecracker beat Cloud Hypervisor because the log needs no hotplug, and V5 alrea
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)), with one amendment. The M7 record must come from one host: the first session's host offered no power button reset, so host power loss and the ADR 0063 benchmark ran on a second host with other drives and CPU, which this ADR's rule "a different machine is a different stack" forbids. The whole record is rerun on one host that offers `power_long`, after format version 3 lands. The fingerprint gains host and media keys (host kernel, the volume filesystem's mount options, drive model and firmware, `vwc`), checked by the launcher before boot, so that V10 refuses a swapped machine.
 - PRD open items 3 and 4 name this stack. Their evidence stays open until the qualification and handoff records pass.
 - The M7 work runs in three stages: the Mac rehearsal, qualification on the dedicated host, then the guest benchmark. Only the last two count toward the gate.
 - The power-cut harness observer runs on a second machine, as V7 requires.

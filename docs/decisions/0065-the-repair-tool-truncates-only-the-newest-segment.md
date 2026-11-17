@@ -22,7 +22,7 @@ These facts are fixed:
 - The storage trait, the frame scan and the closing-run builder are `pub(crate)` in `segment-log-core`. Every file write in the core goes through the storage trait, so that the crash simulation can cover it.
 - Open reads only the locator, footer and key filter of each older sealed segment ([open step 5](../architecture/overview.md#open-and-recovery)). A bad group frame or key index page there surfaces later, as `ReadError::Corrupt` or as a poisoned writer at a key lookup.
 - One known trigger for `Corrupt` in the newest segment is a power loss that tears its last group frame when that record's payload ends with bytes that form a valid footer and locator of this log. Frame CRCs cover the log id ([ADR 0049](0049-frame-crcs-cover-the-log-id.md)), so only a payload that holds this log's own closing bytes can do this.
-- After 0.1, every build reads every format version from 0.1's onward, and a log can hold segments of several versions. A writer rolls rather than append to an older segment. CLI flags and exit codes are public API.
+- After 0.1, every build reads every format version from 0.1's onward, and a log can hold segments of several versions. A writer rolls rather than append to an older segment. The server's flags and exit codes are public API ([ADR 0064](0064-the-0-1-compatibility-promise.md)).
 - `segment-log-server` has one command line, flags only ([ADR 0058](0058-one-server-process-serves-one-log.md)). The handoff reader is the same binary with `--read-only` ([ADR 0060](0060-the-server-reads-a-sealed-log-with-read-only.md)).
 
 ## Options & trade-offs

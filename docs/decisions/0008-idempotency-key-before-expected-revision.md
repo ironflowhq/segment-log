@@ -1,7 +1,7 @@
 ---
 id: "0008"
 title: "Idempotency key before expected revision"
-status: proposed
+status: accepted
 date: 2026-11-07
 deciders: []
 supersedes: null
@@ -57,6 +57,7 @@ The exact signatures are in [api.md](../architecture/api.md).
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)), as amended by ADRs 0019–0024, 0030 and 0031. The lookup gap is resolved by ADR 0048.
 - [ADR 0031](0031-keys-live-with-retained-segments.md) confirms segment-lifetime keys across roll and reopen. Only the optimized lookup mechanism and key-cache memory budget remain open for M4 under PRD item 1.
 - [ADR 0030](0030-expected-revisions-use-empty-and-at.md) confirms `Empty` and `At(n)` without `Any` for M1 and resolves PRD open item 2. Other proposed material in this ADR is not accepted by that confirmation alone.
 - [ADR 0024](0024-fully-matching-retries-ignore-original-grouping.md) accepts fully matching retries regardless of original submit membership, ordering or grouping from M1 and resolves PRD open item 9.
@@ -66,7 +67,7 @@ The exact signatures are in [api.md](../architecture/api.md).
 - [ADR 0020](0020-reject-repeated-keys-within-a-submit.md) amends this decision by rejecting repeated keys within a submit before admission, starting in M1.
 - [ADR 0019](0019-idempotency-keys-are-scoped-to-the-whole-log.md) amends this decision by confirming whole-log key scope.
 - The key map is a cache. Open rebuilds it from the segments.
-- **Lookup gap (blocks M4):** footers do not hold keys. M4 must choose a retained-key lookup mechanism and key-cache memory budget under ADR 0031 before it stops scanning old records. It cannot resolve that gap by expiring keys on roll.
+- **Lookup gap (resolved by [ADR 0048](0048-sealed-segments-carry-a-key-filter-and-index.md)):** footers do not hold keys. M4 must choose a retained-key lookup mechanism and key-cache memory budget under ADR 0031 before it stops scanning old records. It cannot resolve that gap by expiring keys on roll.
 
 ## Enforcement
 
