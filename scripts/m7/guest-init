@@ -9,12 +9,14 @@ case " $* " in *" --read-only "*) mode=ro ;; *) mode=rw ;; esac
 # V3: a metadata write error must stop the filesystem; ext4's default is to continue.
 # m7.mount= on the kernel command line adds options, so that VOL-DRIFT can change one.
 extra=
+alert=
 server=/segment-log-server
 # shellcheck disable=SC2013 # the command line is words
 for word in $(cat /proc/cmdline); do
 	case $word in
 	m7.mount=*) extra=,${word#m7.mount=} ;;
 	m7.control=rewrite) server=/segment-log-server-control ;; # the V2 control build
+	m7.alert=*) alert=${word#m7.alert=} ;;                    # V9: the guest layer's alert
 	esac
 done
 mount -t ext4 -o "$mode,errors=remount-ro$extra" /dev/vdb /mnt || { echo "m7: cannot mount /dev/vdb"; ls -l /dev/vd*; dmesg | tail -n 5; reboot -f; }
@@ -60,6 +62,8 @@ if [ "${1:-}" = --probe ]; then
 	reboot -f
 fi
 mount -t tmpfs run /run
+# Samples twice a second, so that a fill test of a few seconds shows where it fired.
+[ -z "$alert" ] || /segment-log-capacity-alert guest /mnt "$alert" 0.5 &
 echo 1 >/proc/sys/kernel/sysrq
 # Power-cut harness events arrive as lines on the serial console (scripts/m7-power-cut.sh).
 while read -r event; do

@@ -1,9 +1,16 @@
 # The qualified stack's fingerprint (V10, volume-requirements.md#v10-the-running-stack-matches-the-qualified-fingerprint).
-# Machine-readable: one key=value per line. scripts/m7/fc-server checks vmm.* before boot; the guest
-# (scripts/m7/guest-init) checks guest.* before the log opens. Values from the M7 guest build
-# (scripts/m7/setup.sh); the qualification record names the host they were confirmed on.
+# Machine-readable: one key=value per line. scripts/m7/fc-server checks vmm.* and host.* before boot;
+# the guest (scripts/m7/guest-init) checks guest.* before the log opens. Guest and VMM values from
+# the M7 guest build (scripts/m7/setup.sh). Host values are the qualified host's, printed by
+# scripts/m7/fingerprint-host: `m7-session.sh bootstrap` pins them in the host's checkout, and the
+# record commits that copy. Until then a host value is `unpinned`, which the launcher does not check
+# and `m7-session.sh run` refuses.
 guest.kernel=6.1.155+
 guest.fs=/dev/vdb ext4 rw,relatime,errors=remount-ro
 guest.write_cache=write back
 vmm.cache_type=Writeback
 vmm.firecracker=Firecracker v1.18.0
+host.kernel=unpinned
+host.fs=unpinned
+host.drive=unpinned
+host.write_cache=unpinned

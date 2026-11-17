@@ -51,6 +51,7 @@ sudo unsquashfs -q -d rootfs.d "ubuntu-$ci.squashfs" >/dev/null
 sudo mkdir -p rootfs.d/mnt && sudo install -m 0755 "$server" rootfs.d/segment-log-server
 sudo install -m 0755 "$control_server" rootfs.d/segment-log-server-control
 sudo install -m 0755 "$repo/scripts/m7/guest-init" rootfs.d/segment-log-init
+sudo install -m 0755 "$repo/scripts/m7/capacity-alert" rootfs.d/segment-log-capacity-alert
 sudo install -m 0755 "$M7_CACHE/powercut" rootfs.d/segment-log-probe
 sudo install -m 0644 "$repo/scripts/m7/fingerprint" rootfs.d/etc/m7-fingerprint
 rm -f rootfs.ext4
