@@ -392,3 +392,137 @@ fn a_crash_at_each_step_of_apply_fails_closed_or_finds_the_repaired_log() {
         }
     });
 }
+
+/// A build that writes `version` and reads 3 up to it (ADR 0064, Enforcement).
+fn open_at(sim: &Sim, version: u16) -> SegmentLog {
+    let hooks = crate::engine::Hooks {
+        limits: crate::engine::Limits {
+            format_version: version,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let options = Options {
+        roll_bytes: EVERY_GROUP,
+        ..options()
+    };
+    SegmentLog::with_hooks(Path::new("/log"), options, Arc::new(sim.clone()), hooks).unwrap()
+}
+
+/// Given a log of version 3 segments and a version 4 segment
+/// When `verify` runs in a build at version 4
+/// Then it reads each segment by its own version and finds no damage
+/// And a build at version 3 names the version 4 segment as class E
+///
+/// Given the damaged newest segment is version 3, with a torn-tail plan or a lossy plan
+/// When a build at version 4 runs `truncate --apply`
+/// Then it writes the same bytes as a build at version 3: the segment stays version 3
+///
+/// Cases: REPAIR-MIXED-VERSION
+#[test]
+fn a_later_build_repairs_a_segment_in_its_own_version() {
+    bounded(|| {
+        const NEXT: u16 = VERSION + 1;
+        let sim = Sim::new(663);
+        let record = |log: &SegmentLog, stream: &[u8]| {
+            let mut submit = submit(stream);
+            submit.records[0].key = Some(stream.to_vec());
+            log.append(submit).unwrap().wait().unwrap();
+        };
+        let log = open_at(&sim, VERSION);
+        record(&log, b"a");
+        record(&log, b"b");
+        drop(log);
+        let log = open_at(&sim, NEXT);
+        record(&log, b"c");
+        drop(log);
+        let segments = raw::segments(&sim);
+        let versions: Vec<u16> = segments
+            .iter()
+            .map(|(_, s)| u16::from_le_bytes([s[4], s[5]]))
+            .collect();
+        assert_eq!(versions, [VERSION, VERSION, NEXT]);
+        let report = crate::repair::verify_with(&sim, Path::new("/log"), NEXT).unwrap();
+        assert!(report.findings.is_empty(), "{:?}", report.findings);
+        let report = crate::repair::verify_with(&sim, Path::new("/log"), VERSION).unwrap();
+        let newest = segments[2].0;
+        let found: Vec<_> = report
+            .findings
+            .iter()
+            .map(|f| (f.class, f.segment))
+            .collect();
+        assert_eq!(found, [(crate::repair::Class::E, newest)]);
+
+        for lossy in [false, true] {
+            let fixture = || {
+                if lossy {
+                    let (sim, cut, _) = bad_group_before_run(false);
+                    (sim, cut)
+                } else {
+                    lookalike()
+                }
+            };
+            let repaired = |version| {
+                let (sim, cut) = fixture();
+                let apply = Apply {
+                    at: (0, cut),
+                    drop_acknowledged: lossy,
+                    backup: "repair-1",
+                };
+                let outcome = apply_with(&sim, Path::new("/log"), version, apply).unwrap();
+                assert!(outcome.plan.unwrap().applied, "lossy {lossy} at {version}");
+                raw::segments(&sim)
+            };
+            let later = repaired(NEXT);
+            assert_eq!(later, repaired(VERSION), "lossy {lossy}");
+            assert_eq!(u16::from_le_bytes([later[0].1[4], later[0].1[5]]), VERSION);
+        }
+    });
+}
+
+/// Given the second-newest segment lacks its closing run, because a crash came after the roll and
+/// before the run was written (ADR 0061), and the newest segment ends in a torn group whose
+/// payload holds the log's own closing run, so open fails with `Corrupt` in the newest segment
+/// When `verify` runs
+/// Then it reports the missing run as a state open recovers, and class A in the newest segment
+/// When `truncate --apply` cuts the newest segment
+/// Then open rebuilds the second-newest segment's run and keeps both acknowledged records
+///
+/// Cases: REPAIR-PENDING-RUN
+#[test]
+fn a_repair_with_a_pending_closing_run_lets_open_rebuild_it() {
+    bounded(|| {
+        use crate::repair::Class;
+        let first = [raw::header(raw::VERSION, 0, 1), raw::group(1, 0, &[b"a"])].concat();
+        let kept = [raw::header(raw::VERSION, 1, 1), raw::group(1, 1, &[b"b"])].concat();
+        let torn_at = kept.len();
+        let prefix = vec![b'p'; 3 * 4096];
+        let filter_at = torn_at + 8 + 32 + 16 + b"s".len() + prefix.len();
+        let log_id = codec::LogId::new(raw::LOG_ID);
+        let run = super::closing_runs::closing_run_at(&log_id, filter_at, 3);
+        let mut torn = raw::group(1, 2, &[&[prefix, run].concat()]);
+        torn[4096..2 * 4096].fill(0);
+        let sim = Sim::new(664);
+        raw::install_segments(&sim, &[(0, first.clone()), (1, [kept, torn].concat())]);
+        assert!(matches!(
+            try_open(&sim),
+            Err(OpenError::Corrupt { segment: 1, position }) if position == torn_at as u64
+        ));
+        let report = crate::repair::verify_with(&sim, Path::new("/log"), VERSION).unwrap();
+        let found: Vec<_> = report
+            .findings
+            .iter()
+            .map(|f| (f.class, f.segment, f.position))
+            .collect();
+        let missing = (Class::TornTail, 0, first.len() as u64);
+        assert_eq!(found, [missing, (Class::A, 1, torn_at as u64)]);
+
+        let outcome = apply(&sim, (1, torn_at as u64), false, "repair-1");
+        assert_eq!(outcome.plan.unwrap().kind, PlanKind::TornTail);
+        let log = try_open(&sim).unwrap();
+        assert_eq!(payloads(log.read(0, 10).unwrap()), [b"a", b"b"]);
+        drop(log);
+        let rebuilt = [first.clone(), raw::roll_run(&first, 1)].concat();
+        assert_eq!(raw::segments(&sim)[0], (0, rebuilt));
+    });
+}
