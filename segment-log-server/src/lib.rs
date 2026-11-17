@@ -164,8 +164,11 @@ fn accept(incoming: Incoming, server: &Arc<Server>, log: &Weak<Log>, frame_cap: 
             let _ = closer.shutdown(Shutdown::Read);
         });
         // Without a slot, dropping the stream closes it.
-        if let (Some(slot), Some(log)) = (server.admit(close_reads), log.upgrade()) {
-            connection::serve(stream, writer, log, frame_cap, slot);
+        if let (Some(slot), Some(log)) = (server.admit(close_reads), log.upgrade())
+            && let Err(error) = connection::serve(stream, writer, log, frame_cap, slot)
+        {
+            // The accept loop must outlive one connection's failure, or the server stops serving.
+            eprintln!("segment-log-server: connection closed: cannot start its threads: {error}");
         }
     }
 }

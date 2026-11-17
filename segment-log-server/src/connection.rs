@@ -21,15 +21,19 @@ enum Job {
 }
 
 /// Starts both threads. `slot` is released when both have finished with the connection.
-pub fn serve<S>(stream: S, writer: S, log: Arc<Log>, frame_cap: usize, slot: Slot)
+///
+/// A thread that cannot start fails only this connection: what it would have owned is dropped,
+/// which closes the stream and, through the closed queue, ends the other thread.
+pub fn serve<S>(stream: S, writer: S, log: Arc<Log>, frame_cap: usize, slot: Slot) -> io::Result<()>
 where
     S: Read + Write + Send + 'static,
 {
     let (jobs, queue) = sync_channel(PIPELINE_DEPTH);
     let slot = Arc::new(slot);
     let answer_slot = Arc::clone(&slot);
-    thread::spawn(move || write_answers(writer, queue, &answer_slot));
-    thread::spawn(move || read_requests(stream, &log, frame_cap, &jobs, &slot));
+    thread::Builder::new().spawn(move || write_answers(writer, queue, &answer_slot))?;
+    thread::Builder::new().spawn(move || read_requests(stream, &log, frame_cap, &jobs, &slot))?;
+    Ok(())
 }
 
 /// A poisoned writer cannot recover in place (ADR 0004): the server stops, and a new open recovers.
