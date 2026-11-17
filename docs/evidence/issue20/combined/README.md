@@ -1,6 +1,6 @@
 # The six issue-20 changes together: append evidence
 
-[Issue 20](https://github.com/ironflowhq/segment-log/issues/20) listed no proven throughput or p99 improvement. Six changes then landed, each with its own record: the [ack relay](../ack-relay/README.md), the [CRC by eight bytes](../crc-slicing/README.md), [stream heads](../stream-heads/README.md), [key positions](../key-positions/README.md), [positioned reads](../positioned-reads/README.md) and the [paced benchmark](../paced-benchmark/README.md). This record measures them together against the `main` before them.
+[Issue 20](https://github.com/ironflowx/segment-log/issues/20) listed no proven throughput or p99 improvement. Six changes then landed, each with its own record: the [ack relay](../ack-relay/README.md), the [CRC by eight bytes](../crc-slicing/README.md), [stream heads](../stream-heads/README.md), [key positions](../key-positions/README.md), [positioned reads](../positioned-reads/README.md) and the [paced benchmark](../paced-benchmark/README.md). This record measures them together against the `main` before them.
 
 ## Result
 

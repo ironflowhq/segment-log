@@ -1,6 +1,6 @@
 # CRC by eight bytes: encode, reopen and read evidence for issue 20
 
-[Issue 20](https://github.com/ironflowhq/segment-log/issues/20) lists no proven throughput improvement, and the [earlier latency work](../../m1/latency/README.md) replaced the bitwise CRC with a one-byte table. This record measures the next step: the checksum takes eight input bytes for each step, and a frame is checked in two parts instead of being copied first.
+[Issue 20](https://github.com/ironflowx/segment-log/issues/20) lists no proven throughput improvement, and the [earlier latency work](../../m1/latency/README.md) replaced the bitwise CRC with a one-byte table. This record measures the next step: the checksum takes eight input bytes for each step, and a frame is checked in two parts instead of being copied first.
 
 ## Result
 

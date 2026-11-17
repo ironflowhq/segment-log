@@ -1,6 +1,6 @@
 # A long-run failure at seed 10030: a crash canceled a reader's read
 
-A long run failed for the first time. [Issue 20](https://github.com/ironflowhq/segment-log/issues/20) section 4 asks that such a failure is reproduced from its saved pair before anyone decides where the defect is. This record does that.
+A long run failed for the first time. [Issue 20](https://github.com/ironflowx/segment-log/issues/20) section 4 asks that such a failure is reproduced from its saved pair before anyone decides where the defect is. This record does that.
 
 ## Result
 

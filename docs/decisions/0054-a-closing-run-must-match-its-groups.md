@@ -58,7 +58,7 @@ These facts are fixed:
 
 We will use option A. A closing run is valid only if its bytes equal the run that the writer builds from the segment's groups, with the run's own epoch and start position. Open applies this rule to the newest segment in step 6. A run that is complete, passes every CRC and has the right shape, but differs from the rebuilt run, fails open with `Corrupt` at the run's start, and open changes no file. A run that is not complete or fails a CRC keeps today's handling in step 7.
 
-The rule holds for every sealed segment. Open checks only the newest, because older segments are read through their summaries (option D rejected). An operator check that scans a whole log applies the same rule to every segment; it belongs with the repair tool ([issue #1](https://github.com/ironflowhq/segment-log/issues/1)).
+The rule holds for every sealed segment. Open checks only the newest, because older segments are read through their summaries (option D rejected). An operator check that scans a whole log applies the same rule to every segment; it belongs with the repair tool ([issue #1](https://github.com/ironflowx/segment-log/issues/1)).
 
 A covers every field with the writer's own code, and costs time only in the rare case where the newest segment ends in a run. We accept that recovery holds one rebuilt key index in memory in that case.
 

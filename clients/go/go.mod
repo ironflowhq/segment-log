@@ -1,4 +1,4 @@
-module github.com/ironflowhq/segment-log/clients/go
+module github.com/ironflowx/segment-log/clients/go
 
 go 1.27
 

@@ -17,7 +17,7 @@ enforced_by: test
 
 [ADR 0048](0048-sealed-segments-carry-a-key-filter-and-index.md) seals each rolled segment with a key filter frame and a key index frame, and the writer builds them at roll. It estimated about 8 ms of writer work per roll at S1 and accepted that "appends wait for that roll".
 
-The [issue 49 record](../evidence/issue49/README.md) measured that work on bare metal (i7-7700, Samsung PM981, 64 MiB segments, every record keyed): every roll stalls the writer for about 70–130 ms. The storage calls of a roll take about 5 ms of it. At 50,000 records/s the paced p99 is 83 ms against a bound of 14.6 ms, 0 of 5 runs within it ([issue 107](https://github.com/ironflowhq/segment-log/issues/107)). In every run the slow groups land exactly at the roll boundaries.
+The [issue 49 record](../evidence/issue49/README.md) measured that work on bare metal (i7-7700, Samsung PM981, 64 MiB segments, every record keyed): every roll stalls the writer for about 70–130 ms. The storage calls of a roll take about 5 ms of it. At 50,000 records/s the paced p99 is 83 ms against a bound of 14.6 ms, 0 of 5 runs within it ([issue 107](https://github.com/ironflowx/segment-log/issues/107)). In every run the slow groups land exactly at the roll boundaries.
 
 A profile in a Linux VM (about 32 ms per roll) splits the work: hashing every key of the active map into index entries about 27 %, sorting, building the filter and encoding the pages about 18 %, clearing the map and dropping about 200,000 heap keys about 20 %, and unattributed allocation, free and copy about 33 %. No step dominates. Every step is O(keys in the segment), so speeding up steps lowers the stall but leaves it growing with the roll size, the key count and the rate.
 

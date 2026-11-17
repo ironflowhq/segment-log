@@ -1,6 +1,6 @@
 # Linux memory, read, and reopen growth diagnostics
 
-The goal is to complete the retained-history evidence for issue [#20](https://github.com/ironflowhq/segment-log/issues/20) after [PR #22](https://github.com/ironflowhq/segment-log/pull/22). PASS for the bounded diagnostic run and validation. This evidence does not qualify M1 for production or close the issue.
+The goal is to complete the retained-history evidence for issue [#20](https://github.com/ironflowx/segment-log/issues/20) after [PR #22](https://github.com/ironflowx/segment-log/pull/22). PASS for the bounded diagnostic run and validation. This evidence does not qualify M1 for production or close the issue.
 
 ## Source and scope
 

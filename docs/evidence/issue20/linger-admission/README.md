@@ -1,6 +1,6 @@
 # A group's linger from its first submit's admission: append evidence
 
-[Issue 20](https://github.com/ironflowhq/segment-log/issues/20) left the paced p99 above the PRD bound by 0.13 to 0.25 ms. [ADR 0046](../../../decisions/0046-linger-runs-from-the-first-submits-admission.md) proposes to count a group's linger from the admission of its first submit. This record measures that change against the tree before it.
+[Issue 20](https://github.com/ironflowx/segment-log/issues/20) left the paced p99 above the PRD bound by 0.13 to 0.25 ms. [ADR 0046](../../../decisions/0046-linger-runs-from-the-first-submits-admission.md) proposes to count a group's linger from the admission of its first submit. This record measures that change against the tree before it.
 
 ## Result
 
@@ -18,7 +18,7 @@ This is evidence from virtual machines. It does not show that a PRD target passe
 
 - "Before" is the tree without the change and "after" is the tree with it. Both include the benchmark additions of the same pull-request stack.
 - Hosted comparisons 1 and 2: `c5d3ed03` against `dd4b9d18`. Hosted comparison 3 and the first version below used earlier commits of the same two branches. Each `environment.txt` names its commits, and each `binaries.sha256` identifies the binaries.
-- Hosted runner: GitHub `ubuntu-24.04`, AMD EPYC 7763, 4 processors, 16.8 GB, Linux 7.0.0-1017-azure. The data was on ext4 on `/dev/root`, mounted with `nobarrier`, so `fdatasync` sends no cache flush to the device there. Runs [42763514037](https://github.com/ironflowhq/segment-log/actions/runs/42763514037), [42763537029](https://github.com/ironflowhq/segment-log/actions/runs/42763537029) and [42759874347](https://github.com/ironflowhq/segment-log/actions/runs/42759874347).
+- Hosted runner: GitHub `ubuntu-24.04`, AMD EPYC 7763, 4 processors, 16.8 GB, Linux 7.0.0-1017-azure. The data was on ext4 on `/dev/root`, mounted with `nobarrier`, so `fdatasync` sends no cache flush to the device there. Runs [42763514037](https://github.com/ironflowx/segment-log/actions/runs/42763514037), [42763537029](https://github.com/ironflowx/segment-log/actions/runs/42763537029) and [42759874347](https://github.com/ironflowx/segment-log/actions/runs/42759874347).
 - Docker guest: the pinned `rust:1.99.1-bookworm` image on Docker Desktop for Mac, Linux 7.0.14-linuxkit, aarch64, 10 processors, 8.3 GB, data on the container's overlay. The host is an Apple M4. [docker/gated.sh](docker/gated.sh) waited before each run until the other containers used less than 10% of a processor and the host's other processes less than two processors. `pairs.txt` in each directory holds what it saw.
 - The Mac was saturated by unrelated work for most of 10 November 2026. Guest runs from that time are not in this record: group flushes took 2 to 3 ms there in place of 0.3 ms. The guest comparison ran in a quiet window.
 - None of this is local NVMe or a deployment storage stack.

@@ -4,7 +4,7 @@ ADR 0052 rejected aligned key index pages (option B) without a measurement. This
 
 A lookup in a sealed segment opens the file, reads one 4,096-byte page at its file position, and closes the file (`segment-log-core/src/storage/real.rs`). Format version 1 puts no page on a 4 KiB boundary. `scripts/key-page-alignment.py` copies that I/O on 2,000 distinct random pages of an 8 GiB file, after dropping the page cache. Each variant ran 5 times, in a rotating order. The unaligned offset is random within the page.
 
-[Format evidence run 43471859438](https://github.com/ironflowhq/segment-log/actions/runs/43471859438), at `fc202ba` on a hosted ubuntu-24.04 runner. [`environment.txt`](environment.txt) records the kernel, the device (local NVMe, ext4) and a readahead of 128 KiB. A hosted runner is a shared virtual machine; these are measurements under its conditions.
+[Format evidence run 43471859438](https://github.com/ironflowx/segment-log/actions/runs/43471859438), at `fc202ba` on a hosted ubuntu-24.04 runner. [`environment.txt`](environment.txt) records the kernel, the device (local NVMe, ext4) and a readahead of 128 KiB. A hosted runner is a shared virtual machine; these are measurements under its conditions.
 
 Medians over the 5 trials ([`summary.tsv`](summary.tsv); every run in [`runs.tsv`](runs.tsv)):
 

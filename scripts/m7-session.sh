@@ -46,7 +46,7 @@ bootstrap() {
 			musl-tools nvme-cli fio blktrace dmsetup sudo time python3 >/dev/null
 		curl -fsSL https://go.dev/dl/go1.27.3.linux-amd64.tar.gz | tar -C /usr/local -xz
 		curl -fsSL https://sh.rustup.rs | sh -s -- -y -q --default-toolchain none >/dev/null 2>&1
-		git clone -q https://github.com/ironflowhq/segment-log.git '"$repo"'
+		git clone -q https://github.com/ironflowx/segment-log.git '"$repo"'
 		cd '"$repo"' && . "$HOME/.cargo/env" && rustup toolchain install >/dev/null 2>&1
 		bash -c "source scripts/m7/setup.sh" >/root/setup.log 2>&1
 		echo bootstrapped: $(git -C '"$repo"' rev-parse --short HEAD)'

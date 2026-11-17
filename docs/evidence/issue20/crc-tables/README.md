@@ -18,7 +18,7 @@ The scenario is `binary_groups_round_trip_and_encoding_enforces_limits`. Each sc
 
 ## How it showed
 
-CI runs [42757290131](https://github.com/ironflowhq/segment-log/actions/runs/42757290131) (two attempts) and [42758310337](https://github.com/ironflowhq/segment-log/actions/runs/42758310337) ended with `SIGABRT` about 10.4 s after the tests started. Every other test had passed by then. Only this scenario was unfinished, and its ten-second watchdog ended the process. In passing runs on other runners the same scenario took 1.0 to 1.7 s.
+CI runs [42757290131](https://github.com/ironflowx/segment-log/actions/runs/42757290131) (two attempts) and [42758310337](https://github.com/ironflowx/segment-log/actions/runs/42758310337) ended with `SIGABRT` about 10.4 s after the tests started. Every other test had passed by then. Only this scenario was unfinished, and its ten-second watchdog ended the process. In passing runs on other runners the same scenario took 1.0 to 1.7 s.
 
 A temporary branch ran the test binary on a hosted runner and attached a debugger after seven seconds. [hosted-stack.txt](hosted-stack.txt) holds the frames: the scenario's thread is in `memcpy` under `crc_update`, under the 8 MiB `encode`. A second thread, in the seeded trace oracle, is in the same place under `decode`.
 
