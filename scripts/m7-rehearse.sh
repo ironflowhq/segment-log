@@ -109,6 +109,6 @@ echo "exactly one of two simultaneous launches attached, in 20 of 20 rounds"
 echo "== conformance over Firecracker vsock"
 cd "$repo/clients/go"
 SEGMENT_LOG_TRANSPORT=firecracker SEGMENT_LOG_SERVER="$repo/scripts/m7/fc-server" \
-	go test -count=1 -run 'TestConformance|TestTransportUnknown|TestTransportRestart|TestHandoff' -v ./... |
+	go test -count=1 -run 'TestConformance|TestTransportUnknown|TestTransportRestart|TestDialBurst|TestHandoff' -v ./... |
 	grep -E '^(=== RUN|--- |ok|FAIL|PASS)'
 echo "== rehearsal passed"
