@@ -95,6 +95,9 @@ run() {
 		guest-bench)
 			host_step guest-bench bash scripts/m7-guest-bench.sh /root/m7-guest-bench
 			scp -rq "$M7_HOST:/root/m7-guest-bench" "$out/guest-bench" || true
+			# The diagnostic beside it: each caller on its own connection (ADR 0063).
+			host_step guest-bench-per-caller M7_CONNECTIONS=1000 bash scripts/m7-guest-bench.sh /root/m7-guest-bench-per-caller
+			scp -rq "$M7_HOST:/root/m7-guest-bench-per-caller" "$out/guest-bench-per-caller" || true
 			;;
 		workloads)
 			host_step workloads bash scripts/m7-workloads.sh /root/m7-workloads

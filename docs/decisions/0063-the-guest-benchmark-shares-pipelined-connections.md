@@ -7,7 +7,7 @@ deciders: [Altug Sahin]
 supersedes: null
 superseded_by: null
 tags: [m7, benchmark, server, vsock]
-touches: [scripts/m7-guest-bench.sh, segment-log-server/examples/socket_bench.rs, segment-log-server/src/connection.rs, docs/prd.md, docs/architecture/testing.md]
+touches: [scripts/m7-guest-bench.sh, scripts/m7-session.sh, segment-log-server/examples/socket_bench.rs, segment-log-server/src/connection.rs, segment-log-core/src/engine/reply.rs, docs/architecture/api.md, docs/architecture/protocol.md, docs/prd.md, docs/architecture/testing.md]
 enforced_by: test
 ---
 
@@ -54,13 +54,14 @@ Option B keeps the qualified stack and the wire protocol, and cuts the cost on t
 ## Consequences
 
 - The PRD's M7 "done when" requires the guest benchmark to meet the throughput target at the stated C. The paced p99 is reported against the latency target. A miss there is its own finding.
+- The wire protocol's layout does not change. protocol.md now says that answers that are ready together may share one write, still in request order: a fact about the bytes on the stream, not a new message.
 - `Pending::try_wait` joins the core API ([api.md](../architecture/api.md)), so the server can send ready answers without blocking on the next one.
 - A caller that wants the guest rate must pool connections and pipeline on them. The Go client cannot yet: [#134](https://github.com/ironflowx/segment-log/issues/134) tracks a pooled client.
 - On one connection, `PIPELINE_DEPTH` (64) bounds the requests in flight, so C must be at least 1,000 / 64 for all callers to be in flight.
 
 ## Enforcement
 
-`segment-log-server/src/connection.rs` tests that 201 answers that are ready together go out in far fewer writes, in request order, and that a burst of requests costs a few reads. `segment-log-core/src/acceptance/delivery.rs` covers `try_wait` in `ACK-DELIVERY`. `scripts/m7-guest-bench.sh` passes `M7_CONNECTIONS` to the benchmark and records it in `environment.txt`.
+`segment-log-server/src/connection.rs` tests that 201 answers that are ready together go out in far fewer writes, in request order, and that a burst of requests costs a few reads. `segment-log-core/src/acceptance/delivery.rs` covers `try_wait` in `ACK-DELIVERY`. `scripts/m7-guest-bench.sh` passes `M7_CONNECTIONS` to the benchmark and records it in `environment.txt`, and `scripts/m7-session.sh` runs the guest benchmark at C = 16 and again with one connection per caller.
 
 ## Revisit if
 
