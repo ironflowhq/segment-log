@@ -8,13 +8,16 @@
 #   scripts/m7-guest-bench.sh OUT_DIR
 #
 # M7_CALLERS, M7_ROUNDS, M7_PAIRS and M7_INTERVAL_US change the workload; M7_VCPUS and M7_MEM_MIB
-# size the guest (defaults 2 and 1024 here, so 1,000 connections fit).
+# size the guest (defaults 2 and 1024 here, so 1,000 connections fit). The guest's callers share
+# M7_CONNECTIONS pipelined connections (ADR 0063); M7_CONNECTIONS=$M7_CALLERS gives each caller its
+# own connection, the diagnostic run.
 set -euo pipefail
 out=${1:?usage: m7-guest-bench.sh OUT_DIR}
 callers=${M7_CALLERS:-1000}
 rounds=${M7_ROUNDS:-1000}
 pairs=${M7_PAIRS:-5}
 interval_us=${M7_INTERVAL_US:-20000}
+connections=${M7_CONNECTIONS:-16}
 export M7_VCPUS=${M7_VCPUS:-2} M7_MEM_MIB=${M7_MEM_MIB:-1024} M7_LOG_BYTES=${M7_LOG_BYTES:-4G}
 # shellcheck source=m7/setup.sh
 source "$(dirname "$0")/m7/setup.sh"
@@ -33,7 +36,7 @@ bench=$CARGO_TARGET_DIR/release/examples/socket_bench
 {
 	date -u
 	echo "head=$(git -C "$repo" rev-parse HEAD)"
-	echo "callers=$callers rounds=$rounds pairs=$pairs interval_us=$interval_us vcpus=$M7_VCPUS mem_mib=$M7_MEM_MIB"
+	echo "callers=$callers connections=$connections rounds=$rounds pairs=$pairs interval_us=$interval_us vcpus=$M7_VCPUS mem_mib=$M7_MEM_MIB"
 	uname -a
 	lscpu | grep -E "Model name|^CPU\\(s\\)"
 	free -b
@@ -43,9 +46,10 @@ bench=$CARGO_TARGET_DIR/release/examples/socket_bench
 } >"$out/environment.txt"
 
 run() { # run <side> <mode> <log>
-	local side=$1 mode=$2 log=$3 dir interval=()
+	local side=$1 mode=$2 log=$3 dir interval=() shared=()
 	dir=$(mktemp -d "$work/run-XXXX")
 	[ "$mode" = paced ] && interval=("$interval_us")
+	[ "$connections" = "$callers" ] || shared=(--connections "$connections")
 	uptime >"${log%.log}.load.txt"
 	if [ "$side" = inproc ]; then
 		"$bench" --inproc "$dir/log" "$callers" "$rounds" "${interval[@]}" >"$log"
@@ -58,7 +62,7 @@ run() { # run <side> <mode> <log>
 		# vsock muxer bounds the run; busy fc_vcpu threads mean the guest's CPU or its exits do.
 		(sleep 10 && top -H -b -n 1 -d 1 -p "$vm" | sed -n '7,20p') >"${log%.log}.threads.txt" 2>&1 &
 		local sampler=$!
-		"$bench" --firecracker "$dir/v.sock:5000" "$callers" "$rounds" "${interval[@]}" >"$log"
+		"$bench" --firecracker "$dir/v.sock:5000" "$callers" "$rounds" "${interval[@]}" "${shared[@]}" >"$log"
 		wait "$sampler" 2>/dev/null || true
 		kill -KILL "$vm"
 		wait "$vm" 2>/dev/null || true

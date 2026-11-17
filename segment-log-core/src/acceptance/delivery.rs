@@ -15,6 +15,8 @@ enum Caller {
     Idle,
     /// Dropped the handle.
     Gone,
+    /// Calls `try_wait` before the group is answered, and again after.
+    Polled,
 }
 
 #[derive(Clone, Copy)]
@@ -83,6 +85,12 @@ fn deliver(size: usize, role: impl Fn(usize) -> Caller, end: End) {
                 parked.push((place, thread));
             }
             Caller::Gone => drop(handle),
+            Caller::Polled => {
+                let handle = handle
+                    .try_wait()
+                    .expect_err("an unanswered group has no answer");
+                kept.push((place, Caller::Polled, handle));
+            }
             role => {
                 assert!(handle.probe().is_none(), "place {place}");
                 kept.push((place, role, handle));
@@ -132,6 +140,9 @@ fn deliver(size: usize, role: impl Fn(usize) -> Caller, end: End) {
     for (place, role, handle) in kept {
         let answer = match role {
             Caller::Late => handle.wait(),
+            Caller::Polled => handle
+                .try_wait()
+                .unwrap_or_else(|_| panic!("place {place}: an answered group answers a poll")),
             _ => handle
                 .probe()
                 .expect("an answered group leaves no caller without an answer"),
@@ -168,7 +179,15 @@ fn deliver(size: usize, role: impl Fn(usize) -> Caller, end: End) {
 fn mixes() -> [fn(usize) -> Caller; 4] {
     [
         |_| Caller::Parked,
-        |place| [Caller::Parked, Caller::Late, Caller::Idle, Caller::Gone][place % 4],
+        |place| {
+            [
+                Caller::Parked,
+                Caller::Late,
+                Caller::Idle,
+                Caller::Gone,
+                Caller::Polled,
+            ][place % 5]
+        },
         // The writer's own places are not parked, so it must reach the callers below them.
         |place| {
             if place < 4 {
@@ -188,10 +207,12 @@ fn mixes() -> [fn(usize) -> Caller; 4] {
 }
 
 /// Given one group at its flush whose callers are parked in `wait`, will wait later,
-/// only hold their handle, or dropped it, in several mixes and in groups of 1 to 85
+/// poll with `try_wait`, only hold their handle, or dropped it, in several mixes and in
+/// groups of 1 to 85
 /// When the flush succeeds
 /// Then every parked caller wakes with its own position, whatever the callers above it do
-/// And a later `wait` returns its own position at once, and an unused handle holds its answer
+/// And a later `wait` or `try_wait` returns its own position at once, a `try_wait` before the
+/// answer hands the handle back, and an unused handle holds its answer
 /// And every acknowledged record survives each crash mode
 /// Cases: ACK-DELIVERY, ORACLE-1, GROUP-FORMATION
 #[test]
@@ -205,7 +226,7 @@ fn every_caller_of_a_durable_group_gets_its_own_answer() {
     });
 }
 
-/// Given one group of 21 at its flush with parked, late, idle and gone callers
+/// Given one group of 21 at its flush with parked, late, polled, idle and gone callers
 /// When the flush fails
 /// Then every caller gets `Indeterminate`, parked or not, and the writer is poisoned
 /// And the written group is still a whole group after reopen
@@ -219,7 +240,7 @@ fn every_caller_of_a_failed_group_gets_an_unknown_outcome() {
     });
 }
 
-/// Given one group of 21 at its flush with parked, late, idle and gone callers
+/// Given one group of 21 at its flush with parked, late, polled, idle and gone callers
 /// When Kill, PowerLoss or PowerLossTorn interrupts the flush
 /// Then no caller gets a success, every caller gets `Indeterminate`
 /// And reopen exposes the whole group or none of it, with Kill retaining it
