@@ -1,10 +1,10 @@
 # Wire protocol
 
-Status: protocol version 1, M6 ([ADR 0057](../decisions/0057-a-hand-rolled-binary-protocol-answered-in-order.md)). Until the first production release, a change to these bytes increments the version, and a server accepts only its own version.
+Status: protocol version 2, the 0.1 baseline ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md); the protocol itself is [ADR 0057](../decisions/0057-a-hand-rolled-binary-protocol-answered-in-order.md)). A server speaks a range of versions, and the client and server agree on one at `Hello`. Until the 0.1 tag, a change may still replace version 2. From the 0.1 tag, a change to these bytes is a new version, and a server speaks every version from 2 up to its own (ADR 0064, rules 5–10). No 0.x release removes a version: removing one needs an ADR and a major release, 1.0 or later.
 
 This file is the only source for the protocol's message layout, widths, status codes and size caps. The server's process behavior is in [ADR 0058](../decisions/0058-one-server-process-serves-one-log.md). The record limits (stream id and key lengths) are in [format.md](format.md#limits) and are not copied here.
 
-[`conformance/wire.txt`](../../conformance/wire.txt) holds example messages written from these tables. The server tests and the Go client check them, each in the direction it implements. When a table here changes, change those examples in the same change.
+[`conformance/wire-v2.txt`](../../conformance/wire-v2.txt) holds example messages for version 2, written from these tables. The server tests and the Go client check them, each in the direction it implements. Until the 0.1 tag, when a table here changes, change those examples in the same change. From the 0.1 tag, each version keeps its own file for good, and a new version adds one.
 
 ## Conventions
 
@@ -16,7 +16,7 @@ This file is the only source for the protocol's message layout, widths, status c
 ## Session
 
 1. The client connects and sends `Hello`. Any other first message is malformed.
-2. The server answers `Hello`. If the versions differ, the answer carries `UnsupportedVersion`, and the server closes the connection.
+2. The server answers `Hello` with the highest version in both its range and the client's. If the ranges share no version, the answer carries `UnsupportedVersion` with the server's range, and the server closes the connection.
 3. The client may then send any number of requests without waiting for answers (pipelining). The server answers each connection's requests in the order it read them, one answer for each request.
 4. A malformed message gets a `Malformed` answer, and the server closes the connection. Requests read before it are still answered first, in order.
 
@@ -69,14 +69,14 @@ Request body (8 bytes):
 | Offset | Size | Field |
 | --- | --- | --- |
 | 0 | 4 | `magic` — the bytes `S G L P` (`0x53 0x47 0x4C 0x50`) |
-| 4 | 2 | `version` — `1` |
-| 6 | 2 | reserved |
+| 4 | 2 | `min_version` — the lowest version the client speaks |
+| 6 | 2 | `max_version` — the highest version the client speaks |
 
-A wrong `magic` is malformed. Answer fields after the status (8 bytes):
+This layout never changes in any version. A wrong `magic` is malformed. A `min_version` above `max_version` names no version, so the server answers `UnsupportedVersion`. A version 1 client sends `version` 1 and a zero reserved field in these bytes, which read as `min_version` 1 and `max_version` 0, so it gets status `UnsupportedVersion` too. Its detail fields are two bytes longer than a version 1 client expects, so such a client reports a refusal it cannot fully decode, never a session. Answer fields after the status (8 bytes):
 
 | Offset | Size | Field |
 | --- | --- | --- |
-| 2 | 2 | `version` — the server's version |
+| 2 | 2 | `version` — the chosen version: the highest in both ranges |
 | 4 | 4 | `frame_cap` |
 | 8 | 2 | reserved |
 
@@ -160,6 +160,6 @@ Each core outcome has its own code. Detail fields follow the status in the answe
 | 12 | `Corrupt` | `ReadError::Corrupt` | `segment` (8), `position` (8) |
 | 13 | `Io` | `ReadError::Io` | `kind_len` (2), `kind` (UTF-8, the `std::io::ErrorKind` name) |
 | 14 | `Malformed` | none: the server could not decode the request | none |
-| 15 | `UnsupportedVersion` | none: the `Hello` version is not the server's | `version` (2), the server's |
+| 15 | `UnsupportedVersion` | none: the `Hello` range shares no version with the server's | `min_version` (2), `max_version` (2): the server's range |
 
 `Indeterminate` is the only code that leaves an append's outcome unknown. Every other code is a known outcome, as in [api.md](api.md#target-signatures-and-defaults). `Io` carries no operating-system message.

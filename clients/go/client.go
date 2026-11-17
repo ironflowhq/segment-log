@@ -14,8 +14,13 @@ import (
 	"syscall"
 )
 
+// The protocol versions this client speaks (ADR 0064). Dial offers the whole range.
 const (
-	Version   = 1
+	MinVersion = 2
+	MaxVersion = 2
+)
+
+const (
 	headerLen = 8
 	answerBit = 0x80
 
@@ -72,6 +77,7 @@ type Answer struct {
 	Kind   byte
 	Status Status
 
+	// Version is the chosen version of a Hello answer.
 	Version      uint16
 	FrameCap     uint32
 	Deduplicated bool
@@ -86,6 +92,8 @@ type Answer struct {
 	Segment  uint64
 	Position uint64
 	IoKind   string
+	// MinVersion and MaxVersion are the server's range in an UnsupportedVersion answer.
+	MinVersion, MaxVersion uint16
 }
 
 // Request is one encoded request message, header included.
@@ -98,10 +106,10 @@ func message(kind byte, body []byte) Request {
 	return append(m, body...)
 }
 
-func Hello(version uint16) Request {
+func Hello(min, max uint16) Request {
 	body := []byte("SGLP")
-	body = binary.LittleEndian.AppendUint16(body, version)
-	return message(KindHello, binary.LittleEndian.AppendUint16(body, 0))
+	body = binary.LittleEndian.AppendUint16(body, min)
+	return message(KindHello, binary.LittleEndian.AppendUint16(body, max))
 }
 
 func Append(records []NewRecord) Request {
@@ -137,28 +145,43 @@ type Client struct {
 	conn     io.ReadWriteCloser
 	reader   *bufio.Reader
 	FrameCap uint32
+	// Version is the protocol version the server chose at Hello.
+	Version uint16
 }
 
 // ErrUnknown means the connection closed before an answer: the request's outcome is unknown,
 // never a rejection.
 var ErrUnknown = errors.New("connection closed before the answer; outcome unknown")
 
-// Dial connects as DialRaw does and sends Hello.
+// Dial connects as DialRaw does and sends Hello with every version the client speaks.
 func Dial(network, address string) (*Client, error) {
+	return DialVersions(network, address, MinVersion, MaxVersion)
+}
+
+// DialVersions connects and sends Hello offering versions min to max.
+func DialVersions(network, address string, min, max uint16) (*Client, error) {
 	c, err := DialRaw(network, address)
 	if err != nil {
 		return nil, err
 	}
-	a, err := c.Do(Hello(Version))
+	a, err := c.Do(Hello(min, max))
 	if err != nil {
 		c.Close()
 		return nil, err
+	}
+	if a.Status.String() == "UnsupportedVersion" {
+		c.Close()
+		return nil, fmt.Errorf("hello: %v (server speaks %d to %d)", a.Status, a.MinVersion, a.MaxVersion)
 	}
 	if a.Status != 0 {
 		c.Close()
 		return nil, fmt.Errorf("hello: %v", a.Status)
 	}
-	c.FrameCap = a.FrameCap
+	if a.Version < min || a.Version > max {
+		c.Close()
+		return nil, fmt.Errorf("hello: server chose version %d outside %d to %d", a.Version, min, max)
+	}
+	c.FrameCap, c.Version = a.FrameCap, a.Version
 	return c, nil
 }
 
@@ -293,7 +316,7 @@ func decode(kind byte, body []byte) (Answer, error) {
 		case "Io":
 			a.IoKind = string(c.take(int(c.u16())))
 		case "UnsupportedVersion":
-			a.Version = c.u16()
+			a.MinVersion, a.MaxVersion = c.u16(), c.u16()
 		}
 	}
 	if c.err == nil && len(c.b) != 0 {

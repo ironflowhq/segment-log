@@ -9,7 +9,11 @@ use segment_log_core::{
 
 pub const HEADER_LEN: usize = 8;
 pub const MAGIC: [u8; 4] = *b"SGLP";
-pub const VERSION: u16 = 1;
+/// The protocol versions this server speaks. From 0.1 the range only grows at the top: a server
+/// speaks every version from 2 up to its own, and no 0.x release raises `MIN_VERSION` (ADR 0064,
+/// rule 5).
+pub const MIN_VERSION: u16 = 2;
+pub const MAX_VERSION: u16 = 2;
 
 pub const HELLO: u8 = 1;
 pub const APPEND: u8 = 2;
@@ -28,6 +32,14 @@ const READ_ENTRY_LEN: usize = 24;
 /// The peer sent bytes that are not a request. The server answers `Malformed` and closes.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Malformed;
+
+/// The highest version in both ranges, or `None` when they share none. A `min` above its `max`
+/// is an empty range. So a version 1 `Hello` (`version` 1, then a zero reserved field, read as
+/// `min` 1 and `max` 0) gets `UnsupportedVersion`, never a misread (ADR 0064, rule 4).
+pub fn negotiate(client: (u16, u16), server: (u16, u16)) -> Option<u16> {
+    let high = client.1.min(server.1);
+    (high >= client.0.max(server.0)).then_some(high)
+}
 
 /// The largest message body either side sends or buffers.
 pub fn frame_cap(group_byte_cap: usize) -> usize {
@@ -71,7 +83,7 @@ pub fn admit(header: Header, frame_cap: usize) -> Result<Admit, Malformed> {
 
 #[derive(Debug)]
 pub enum Request {
-    Hello { version: u16 },
+    Hello { min: u16, max: u16 },
     Append(Submit),
     Read { from: u64, max: u32 },
     Watermark,
@@ -87,11 +99,10 @@ pub fn decode_request(kind: u8, body: &[u8]) -> Result<Request, Malformed> {
             if r.take(4)? != MAGIC {
                 return Err(Malformed);
             }
-            let version = r.u16()?;
-            if r.u16()? != 0 {
-                return Err(Malformed);
+            Request::Hello {
+                min: r.u16()?,
+                max: r.u16()?,
             }
-            Request::Hello { version }
         }
         APPEND => Request::Append(decode_submit(&mut r)?),
         READ => Request::Read {
@@ -142,10 +153,10 @@ fn decode_submit(r: &mut Reader) -> Result<Submit, Malformed> {
 pub fn encode_request(request: &Request) -> Vec<u8> {
     let mut w = Writer::new();
     let kind = match request {
-        Request::Hello { version } => {
+        Request::Hello { min, max } => {
             w.bytes(&MAGIC);
-            w.u16(*version);
-            w.u16(0);
+            w.u16(*min);
+            w.u16(*max);
             HELLO
         }
         Request::Append(submit) => {
@@ -281,6 +292,7 @@ impl From<SealError> for Status {
 
 pub enum Answer<'a> {
     Hello {
+        version: u16,
         frame_cap: usize,
     },
     Append(&'a Committed),
@@ -298,8 +310,8 @@ pub fn encode_answer(kind: u8, answer: &Answer) -> Vec<u8> {
     let Answer::Failed(status) = answer else {
         w.u16(0);
         match answer {
-            Answer::Hello { frame_cap } => {
-                w.u16(VERSION);
+            Answer::Hello { version, frame_cap } => {
+                w.u16(*version);
                 w.u32(len32(*frame_cap));
                 w.u16(0);
             }
@@ -359,7 +371,10 @@ pub fn encode_answer(kind: u8, answer: &Answer) -> Vec<u8> {
             w.u16(len16(name.len()));
             w.bytes(name.as_bytes());
         }
-        Status::UnsupportedVersion => w.u16(VERSION),
+        Status::UnsupportedVersion => {
+            w.u16(MIN_VERSION);
+            w.u16(MAX_VERSION);
+        }
         _ => {}
     }
     w.finish(kind | ANSWER_BIT)

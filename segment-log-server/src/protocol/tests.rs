@@ -36,10 +36,43 @@ fn record(
 #[test]
 fn hello_request_matches_the_layout() {
     let bytes = [
-        8, 0, 0, 0, HELLO, 0, 0, 0, b'S', b'G', b'L', b'P', 1, 0, 0, 0,
+        8, 0, 0, 0, HELLO, 0, 0, 0, b'S', b'G', b'L', b'P', 2, 0, 9, 0,
     ];
-    assert_eq!(encode_request(&Request::Hello { version: 1 }), bytes);
-    assert!(matches!(roundtrip(&bytes), Request::Hello { version: 1 }));
+    assert_eq!(encode_request(&Request::Hello { min: 2, max: 9 }), bytes);
+    assert!(matches!(
+        roundtrip(&bytes),
+        Request::Hello { min: 2, max: 9 }
+    ));
+}
+
+/// Given a server that speaks versions 2 to 4
+/// When a client's range overlaps it
+/// Then the server chooses the highest version both speak
+#[test]
+fn overlapping_ranges_choose_the_highest_common_version() {
+    let server = (2, 4);
+    assert_eq!(negotiate((2, 2), server), Some(2));
+    assert_eq!(negotiate((1, 3), server), Some(3));
+    assert_eq!(negotiate((3, 9), server), Some(4));
+    assert_eq!(negotiate((4, 4), server), Some(4));
+    assert_eq!(negotiate((0, u16::MAX), server), Some(4));
+}
+
+/// Given a server that speaks versions 2 to 4
+/// When a client's range shares no version with it, or is empty
+/// Then there is no version, and the server answers `UnsupportedVersion`
+#[test]
+fn disjoint_or_empty_ranges_choose_no_version() {
+    let server = (2, 4);
+    assert_eq!(negotiate((5, 9), server), None);
+    assert_eq!(negotiate((0, 1), server), None);
+    assert_eq!(negotiate((3, 2), server), None);
+    // A version 1 Hello: `version` 1, then a reserved zero, read as min 1 and max 0.
+    let v1 = decode_request(HELLO, b"SGLP\x01\x00\x00\x00").unwrap();
+    let Request::Hello { min, max } = v1 else {
+        panic!("{v1:?}")
+    };
+    assert_eq!(negotiate((min, max), (MIN_VERSION, MAX_VERSION)), None);
 }
 
 #[test]
@@ -85,11 +118,11 @@ fn non_canonical_requests_are_malformed() {
     assert_eq!(decode_header(nonzero_reserved), Err(Malformed));
 
     let cases: [(u8, &[u8]); 9] = [
-        (HELLO, b"SGLQ\x01\x00\x00\x00"), // wrong magic
-        (HELLO, b"SGLP\x01\x00\x01\x00"), // nonzero reserved
-        (HELLO, b"SGLP\x01\x00"),         // short
-        (READ, &[0; 13]),                 // long
-        (WATERMARK, &[0]),                // a body where none belongs
+        (HELLO, b"SGLQ\x02\x00\x02\x00"),     // wrong magic
+        (HELLO, b"SGLP\x02\x00\x02\x00\x00"), // long
+        (HELLO, b"SGLP\x02\x00"),             // short
+        (READ, &[0; 13]),                     // long
+        (WATERMARK, &[0]),                    // a body where none belongs
         (SEAL, &[0]),
         (APPEND, &[1, 0, 0, 0]),    // count names a missing entry
         (APPEND, &[0, 0, 0, 0, 9]), // trailing bytes
@@ -160,9 +193,15 @@ fn success_answers_match_the_layout() {
     expected.extend([5, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]);
     assert_eq!(bytes, expected);
 
-    let hello = encode_answer(HELLO, &Answer::Hello { frame_cap: 65536 });
+    let hello = encode_answer(
+        HELLO,
+        &Answer::Hello {
+            version: 2,
+            frame_cap: 65536,
+        },
+    );
     assert_eq!(hello[4], 0x81);
-    assert_eq!(hello[HEADER_LEN..], [0, 0, 1, 0, 0, 0, 1, 0, 0, 0]);
+    assert_eq!(hello[HEADER_LEN..], [0, 0, 2, 0, 0, 0, 1, 0, 0, 0]);
 
     let head = StreamHead {
         revision: 3,
@@ -263,7 +302,7 @@ fn failure_answers_carry_their_details() {
         body(READ, Status::Io(std::io::ErrorKind::Other)),
         [13, 0, 5, 0, b'O', b't', b'h', b'e', b'r']
     );
-    assert_eq!(body(HELLO, Status::UnsupportedVersion), [15, 0, 1, 0]);
+    assert_eq!(body(HELLO, Status::UnsupportedVersion), [15, 0, 2, 0, 2, 0]);
     let malformed = encode_answer(MALFORMED_KIND, &Answer::Failed(Status::Malformed));
     assert_eq!(malformed, [2, 0, 0, 0, 0x80, 0, 0, 0, 14, 0]);
 }
@@ -306,9 +345,9 @@ fn the_read_limit_never_asks_for_more_records_than_an_answer_holds() {
     assert!(fitting_records(&records, 65536) <= read_limit(u32::MAX, 65536));
 }
 
-/// The vectors in conformance/wire.txt, which the Go client checks too.
+/// The vectors in conformance/wire-v2.txt, which the Go client checks too.
 fn shared_vectors() -> Vec<(&'static str, Vec<u8>)> {
-    include_str!("../../../conformance/wire.txt")
+    include_str!("../../../conformance/wire-v2.txt")
         .lines()
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(|line| {
@@ -321,6 +360,26 @@ fn shared_vectors() -> Vec<(&'static str, Vec<u8>)> {
             (name, bytes)
         })
         .collect()
+}
+
+/// The golden fixtures are exactly the supported versions. A new version adds its file and a test
+/// like the one below; removing one needs an ADR and a major release, 1.0 or later, never a 0.x
+/// release (ADR 0064, rule 5).
+#[test]
+fn every_supported_version_has_a_golden_fixture() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../conformance");
+    let mut fixtures: Vec<u16> = std::fs::read_dir(dir)
+        .unwrap()
+        .filter_map(|entry| {
+            let name = entry.unwrap().file_name().into_string().unwrap();
+            name.strip_prefix("wire-v")?
+                .strip_suffix(".txt")?
+                .parse()
+                .ok()
+        })
+        .collect();
+    fixtures.sort_unstable();
+    assert_eq!(fixtures, (MIN_VERSION..=MAX_VERSION).collect::<Vec<_>>());
 }
 
 #[test]
@@ -373,7 +432,7 @@ fn the_shared_wire_vectors_match_the_encoder_and_decoder() {
         ],
     });
     let requests = [
-        ("hello", Request::Hello { version: 1 }),
+        ("hello", Request::Hello { min: 2, max: 2 }),
         ("append", append),
         ("read", Request::Read { from: 3, max: 9 }),
         ("watermark", Request::Watermark),
@@ -383,7 +442,13 @@ fn the_shared_wire_vectors_match_the_encoder_and_decoder() {
     let answers = [
         (
             "hello-ok",
-            encode_answer(HELLO, &Answer::Hello { frame_cap: 65536 }),
+            encode_answer(
+                HELLO,
+                &Answer::Hello {
+                    version: 2,
+                    frame_cap: 65536,
+                },
+            ),
         ),
         (
             "append-ok",

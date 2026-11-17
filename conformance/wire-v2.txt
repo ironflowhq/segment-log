@@ -1,12 +1,14 @@
-# Golden wire bytes, written by hand from the tables in docs/architecture/protocol.md. Each line is
-# `name: hex`, one whole message with its 8-byte header; spaces split fields and mean nothing.
+# Golden wire bytes for protocol version 2, written by hand from the tables in
+# docs/architecture/protocol.md. Each line is `name: hex`, one whole message with its 8-byte header;
+# spaces split fields and mean nothing. From the 0.1 tag this file never changes: a later version
+# adds its own wire-vN.txt beside it, and only a major release (1.0 or later) may drop one (ADR 0064).
 # The Rust server tests (segment-log-server/src/protocol/tests.rs) encode each answer and encode
 # and decode each request; the Go client tests (clients/go/wire_test.go) encode each request and
 # decode each answer. Each side fails if it has no check for a line, or a check for a missing line.
 # Every status code appears in at least one answer; the Rust test fails when one is missing.
 
 # Requests
-hello: 08000000 01 000000 53474c50 0100 0000
+hello: 08000000 01 000000 53474c50 0200 0200
 append: 2a000000 02 000000 02000000 0100 0000 01000000 00 0000000000000000 73 70 0100 0100 00000000 01 0700000000000000 74 6b
 read: 0c000000 03 000000 0300000000000000 09000000
 watermark: 00000000 04 000000
@@ -14,7 +16,7 @@ stream-head: 06000000 05 000000 6f7264657273
 seal: 00000000 06 000000
 
 # Answers
-hello-ok: 0a000000 81 000000 0000 0100 00000100 0000
+hello-ok: 0a000000 81 000000 0000 0200 00000100 0000
 append-ok: 1a000000 82 000000 0000 01 000000 01000000 0500000000000000 0200000000000000
 append-ok-two: 2a000000 82 000000 0000 00 000000 02000000 0500000000000000 0200000000000000 0600000000000000 0000000000000000
 read-ok: 22000000 83 000000 0000 01000000 0100000000000000 0000000000000000 0100 0100 02000000 73 6b 7070
@@ -38,5 +40,5 @@ indeterminate: 02000000 82 000000 0a00
 poisoned-before-write: 02000000 82 000000 0b00
 corrupt: 12000000 83 000000 0c00 0100000000000000 4000000000000000
 io: 09000000 83 000000 0d00 0500 4f74686572
-unsupported-version: 04000000 81 000000 0f00 0100
+unsupported-version: 06000000 81 000000 0f00 0200 0200
 malformed: 02000000 80 000000 0e00

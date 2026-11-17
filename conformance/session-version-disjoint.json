@@ -1,0 +1,8 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "a Hello whose range shares no version with the server's gets UnsupportedVersion with the server's range, and the connection closes",
+  "no_hello": true,
+  "steps": [
+    {"hello": {"min": 3, "max": 9}, "expect": {"status": "UnsupportedVersion", "min_version": 2, "max_version": 2}, "closed": true}
+  ]
+}

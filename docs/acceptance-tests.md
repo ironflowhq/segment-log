@@ -71,7 +71,7 @@ Paths marked with a later milestone do not exist yet.
 | `segment-log-core/tests/process_crash.rs` | The [real-process harness](#real-process-harness) for `SIGKILL` and locking |
 | `fuzz/` (M5) | `cargo fuzz` targets, built with a nightly toolchain |
 | `clients/go/` (M6) | The Go test client that runs the conformance cases over each transport |
-| `conformance/` (M6) | The shared conformance cases, as JSON, and the golden wire bytes in `wire.txt` |
+| `conformance/` (M6) | The shared conformance cases, as JSON, and the golden wire bytes of each protocol version in `wire-vN.txt` |
 
 Simulator self-tests (`SIM-MODEL`) sit next to the simulated storage. The real-versus-simulated check (`SIM-CONFORMANCE`) sits in the storage module's tests, because it needs both private implementations. The Go client lives in `clients/go/` and the shared conformance cases in `conformance/` ([ADR 0058](decisions/0058-one-server-process-serves-one-log.md)).
 
