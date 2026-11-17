@@ -12,6 +12,10 @@ mod engine;
 #[cfg(fuzzing)]
 #[doc(hidden)]
 pub use engine::fuzzing;
+/// The operator repair tool's core (ADR 0065). Not part of the API promise: use
+/// `segment-log-server repair`.
+#[doc(hidden)]
+pub use engine::repair;
 pub use engine::{LogReader, Pending, SegmentLog};
 
 #[cfg(test)]

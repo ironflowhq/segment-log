@@ -24,7 +24,7 @@ mod read_only {
             read_bytes(self.0, path, purpose, position, length)
         }
 
-        pub(super) fn length(&self, path: &Path, purpose: Purpose) -> io::Result<u64> {
+        pub(in crate::engine) fn length(&self, path: &Path, purpose: Purpose) -> io::Result<u64> {
             match call(self.0, path, purpose, Op::Open)? {
                 Value::Length(length) => Ok(length),
                 _ => Err(io::Error::other("storage did not return length")),
@@ -107,12 +107,12 @@ pub(super) struct Run {
 }
 
 /// What the scan has kept so far, across the segments it has read.
-struct Kept {
-    published: Published,
+pub(super) struct Kept {
+    pub published: Published,
     /// The epoch that the next frame must not be lower than.
-    epoch: u64,
+    pub epoch: u64,
     /// The segment base and position of the newest group kept so far.
-    last_group: Option<(u64, u64)>,
+    pub last_group: Option<(u64, u64)>,
 }
 
 pub(super) fn segment_bases(storage: &ReadOnly<'_>, dir: &Path) -> io::Result<Vec<u64>> {
@@ -400,7 +400,7 @@ fn summarize(
 
 /// Each segment is checked against its own format version, from the oldest a build reads up to
 /// `version`, the build's own (ADR 0064, rules 11 and 12).
-fn header(
+pub(super) fn header(
     storage: &ReadOnly<'_>,
     dir: &Path,
     base: u64,
@@ -424,7 +424,7 @@ fn header(
     }
 }
 
-fn scan(
+pub(super) fn scan(
     storage: &ReadOnly<'_>,
     log: &codec::LogId,
     hash: &KeyHash,

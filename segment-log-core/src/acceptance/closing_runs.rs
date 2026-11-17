@@ -63,7 +63,7 @@ fn frames_at(run: &[u8], start: usize) -> Vec<(usize, usize)> {
     out
 }
 
-fn closing_run_at(log_id: &codec::LogId, filter_at: usize, next: u64) -> Vec<u8> {
+pub(super) fn closing_run_at(log_id: &codec::LogId, filter_at: usize, next: u64) -> Vec<u8> {
     let mut entries = [codec::KeyEntry {
         hash: log_id.key_hash(b"k"),
         position: 64,
