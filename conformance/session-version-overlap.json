@@ -1,0 +1,9 @@
+{
+  "case": "TRANSPORT-CONFORMANCE",
+  "name": "a Hello whose range overlaps the server's gets the highest common version, and requests follow",
+  "no_hello": true,
+  "steps": [
+    {"hello": {"min": 1, "max": 9}, "expect": {"status": "Ok", "version": 2}},
+    {"watermark": {}, "expect": {"status": "Ok", "watermark": 0}}
+  ]
+}

@@ -151,18 +151,19 @@ fn read_requests(
             return malformed();
         };
         let job = match request {
-            Request::Hello { version } if !greeted => {
-                if version != protocol::VERSION {
+            Request::Hello { min, max } if !greeted => {
+                let server = (protocol::MIN_VERSION, protocol::MAX_VERSION);
+                let Some(version) = protocol::negotiate((min, max), server) else {
                     let _ = jobs.send(Job::Ready(failed(
                         protocol::HELLO,
                         Status::UnsupportedVersion,
                     )));
                     return;
-                }
+                };
                 greeted = true;
                 Job::Ready(protocol::encode_answer(
                     protocol::HELLO,
-                    &Answer::Hello { frame_cap },
+                    &Answer::Hello { version, frame_cap },
                 ))
             }
             _ if !greeted => return malformed(),
@@ -278,7 +279,8 @@ mod tests {
         let frame_cap = protocol::frame_cap(options.group_byte_cap);
         let log = Arc::new(Log::Writer(SegmentLog::open(&dir, options).unwrap()));
         let mut input = protocol::encode_request(&Request::Hello {
-            version: protocol::VERSION,
+            min: protocol::MIN_VERSION,
+            max: protocol::MAX_VERSION,
         });
         (0..appends).for_each(|place| input.extend(protocol::encode_request(&append(place))));
         let stream = Stream {

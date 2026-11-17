@@ -1,6 +1,6 @@
 package segmentlog
 
-// Checks the client against conformance/wire.txt, the golden bytes written from protocol.md that
+// Checks the client against conformance/wire-v2.txt, the golden bytes written from protocol.md that
 // the Rust server tests check too. The client encodes requests and decodes answers, so it checks
 // those directions; the server checks the others.
 
@@ -16,7 +16,7 @@ import (
 
 func vectors(t *testing.T) (names []string, wire map[string][]byte) {
 	t.Helper()
-	data, err := os.ReadFile("../../conformance/wire.txt")
+	data, err := os.ReadFile("../../conformance/wire-v2.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func vectors(t *testing.T) (names []string, wire map[string][]byte) {
 		name, digits, ok := strings.Cut(line, ":")
 		b, err := hex.DecodeString(strings.ReplaceAll(digits, " ", ""))
 		if !ok || err != nil {
-			t.Fatalf("wire.txt line %q: %v", line, err)
+			t.Fatalf("wire-v2.txt line %q: %v", line, err)
 		}
 		names = append(names, name)
 		wire[name] = b
@@ -41,7 +41,7 @@ func u64(v uint64) *uint64 { return &v }
 func TestWireVectors(t *testing.T) {
 	names, wire := vectors(t)
 	requests := map[string]Request{
-		"hello": Hello(1),
+		"hello": Hello(2, 2),
 		"append": Append([]NewRecord{
 			{Stream: []byte("s"), Expected: Expected{Empty: true}, Payload: []byte("p")},
 			{Stream: []byte("t"), Expected: Expected{Revision: 7}, Key: []byte("k"), Payload: []byte{}},
@@ -52,7 +52,7 @@ func TestWireVectors(t *testing.T) {
 		"seal":        Seal(),
 	}
 	answers := map[string]Answer{
-		"hello-ok":      {Kind: 0x81, Version: 1, FrameCap: 65536},
+		"hello-ok":      {Kind: 0x81, Version: 2, FrameCap: 65536},
 		"append-ok":     {Kind: 0x82, Deduplicated: true, Positions: []Position{{5, 2}}},
 		"append-ok-two": {Kind: 0x82, Positions: []Position{{5, 2}, {6, 0}}},
 		"read-ok-two": {Kind: 0x83, Records: []Record{
@@ -79,7 +79,7 @@ func TestWireVectors(t *testing.T) {
 		"key-conflict":          {Kind: 0x82, Status: 8, Index: 3},
 		"corrupt":               {Kind: 0x83, Status: 12, Segment: 1, Position: 64},
 		"io":                    {Kind: 0x83, Status: 13, IoKind: "Other"},
-		"unsupported-version":   {Kind: 0x81, Status: 15, Version: 1},
+		"unsupported-version":   {Kind: 0x81, Status: 15, MinVersion: 2, MaxVersion: 2},
 		"malformed":             {Kind: 0x80, Status: 14},
 	}
 	// The status names from protocol.md's table. The numbers above come straight off the wire,
