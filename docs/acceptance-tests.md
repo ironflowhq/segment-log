@@ -57,7 +57,7 @@ Keep `cargo test --workspace` fast enough to run on every pull request on both p
 
 ## Place the code
 
-Paths marked with a later milestone do not exist yet.
+A path marked with a milestone exists from that milestone.
 
 | Path | Responsibility |
 | --- | --- |

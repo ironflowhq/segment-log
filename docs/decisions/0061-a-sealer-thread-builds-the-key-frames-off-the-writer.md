@@ -24,7 +24,7 @@ A profile in a Linux VM (about 32 ms per roll) splits the work: hashing every ke
 These facts are fixed:
 
 - Key frames are derived data. Every key in them comes from a record in the same segment, so they can be rebuilt from the records (I9).
-- Recovery today requires every segment except the newest to be sealed. One without closing frames fails open with `Corrupt` ([overview.md](../architecture/overview.md#recovery) step 5), and `LogReader` fails the same way. Nothing rebuilds key frames (ADR 0048 rule 6).
+- Recovery today requires every segment except the newest to be sealed. One without closing frames fails open with `Corrupt` ([overview.md](../architecture/overview.md#open-and-recovery) step 5), and `LogReader` fails the same way. Nothing rebuilds key frames (ADR 0048 rule 6).
 - After a roll, a retry of a key in the rolled segment is found only through that segment's key index on disk ([ADR 0048](0048-sealed-segments-carry-a-key-filter-and-index.md) rule 1). A failed lookup poisons the writer ([ADR 0004](0004-io-errors-poison-the-writer.md)).
 - Only the writer thread writes segment files ([ADR 0051](0051-a-log-key-filter-in-memory-in-front-of-the-segment-filters.md)). An I/O error anywhere on the write path poisons the writer, and only the writer thread can answer queued submits.
 - The log-filter builder reads each rolled segment's index pages after the writer tells it about the roll. It stops silently on a bad read (ADR 0051 rule 5).

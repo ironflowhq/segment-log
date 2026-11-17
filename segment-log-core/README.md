@@ -1,3 +1,3 @@
 # segment-log-core
 
-Embedded append-only segment log for Ironflow. Pre-release: the byte layout is format version 1 since M5, and until the first production release a format change increments the version without a reader for older ones ([ADR 0053](../docs/decisions/0053-format-changes-need-no-older-reader-before-production.md)). The API can change.
+Embedded append-only segment log for Ironflow. The byte layout is format version 3, the baseline of 0.1, the first production release. From the 0.1 tag, every later build reads every format version from 3, and the API follows 0.x semver ([ADR 0064](../docs/decisions/0064-the-0-1-compatibility-promise.md)).
