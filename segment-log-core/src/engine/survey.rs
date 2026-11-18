@@ -1,6 +1,6 @@
 use super::*;
 use closing::{RunState, Step, Tail};
-use keys::{ActiveKey, KeyHash, SealedSummary};
+use keys::{ActiveKey, KeyHash, KeyMap, SealedSummary};
 
 pub(super) use read_only::ReadOnly;
 
@@ -91,7 +91,7 @@ pub(super) struct Scan {
     pub ending: Ending,
     pub last: Option<(u64, Vec<u8>)>,
     pub tails: BTreeMap<Vec<u8>, Tail>,
-    pub keys: BTreeMap<Vec<u8>, ActiveKey>,
+    pub keys: KeyMap,
 }
 
 pub(super) enum Ending {
@@ -449,7 +449,7 @@ pub(super) fn scan(
     let mut run = vec![];
     let mut last = None;
     let mut tails = BTreeMap::new();
-    let mut keys = BTreeMap::new();
+    let mut keys = KeyMap::new();
     let end = |at, ending, last, tails, keys| Scan {
         end: at,
         ending,
