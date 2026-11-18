@@ -1,6 +1,6 @@
 [package]
 name = "segment-log-server"
-description = "Socket server for the Ironflow segment log over a Unix socket or vsock (pre-release)."
+description = "Socket server for segment-log: one process serves one log over a Unix socket or vsock."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,4 +14,4 @@ rewrite-control = ["segment-log-core/rewrite-control"]
 
 [dependencies]
 libc = "0.2"
-segment-log-core = { path = "../segment-log-core", version = "0.0.1" }
+segment-log-core = { path = "../segment-log-core", version = "0.1.0" }

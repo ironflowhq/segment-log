@@ -1,6 +1,6 @@
 [package]
 name = "segment-log-core"
-description = "Embedded append-only segment log for Ironflow (pre-release; on-disk format may change until the first production release)."
+description = "Embedded append-only event log: one writer thread, one fsync per group of appends, per-stream revisions and idempotent retries."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

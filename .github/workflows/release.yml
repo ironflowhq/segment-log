@@ -1,0 +1,39 @@
+name: release
+
+# A `vX.Y.Z` tag publishes a GitHub release with the musl server binary and the tag's CHANGELOG
+# section. The rest stays manual, after CI passes on the release commit:
+#   cargo publish -p segment-log-core && cargo publish -p segment-log-server
+#   git tag vX.Y.Z && git tag clients/go/vX.Y.Z && git push origin vX.Y.Z clients/go/vX.Y.Z
+on:
+  push:
+    tags: ["v[0-9]*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    timeout-minutes: 30
+    # Same pin as ci.yml.
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: The tag matches the workspace version
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME, Cargo.toml $version" >&2; exit 1; }
+      - run: rustup toolchain install && rustup target add x86_64-unknown-linux-musl
+      - run: cargo build --release --locked -p segment-log-server --target x86_64-unknown-linux-musl
+      - name: Package
+        run: |
+          name=segment-log-server-$GITHUB_REF_NAME-x86_64-unknown-linux-musl
+          cp target/x86_64-unknown-linux-musl/release/segment-log-server "$name"
+          strip "$name"
+          sha256sum "$name" >"$name.sha256"
+          # The notes are the CHANGELOG section of this version, up to the next "## " heading.
+          awk -v v="## ${GITHUB_REF_NAME#v} " 'index($0, v) == 1 { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md >notes.md
+          test -s notes.md || { echo "no CHANGELOG section for $GITHUB_REF_NAME" >&2; exit 1; }
+          echo "NAME=$name" >>"$GITHUB_ENV"
+      - run: gh release create "$GITHUB_REF_NAME" "$NAME" "$NAME.sha256" --title "$GITHUB_REF_NAME" --notes-file notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
