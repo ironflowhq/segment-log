@@ -8,5 +8,5 @@ edition = "2024"
 # The oldest Rust that builds and tests the workspace (ADR 0064, rule 16). It rises only in a minor
 # release, and the `msrv` CI job tests it.
 rust-version = "1.95"
-license = "Apache-2.0"
+license = "MIT"
 repository = "https://github.com/ironflowx/segment-log"
