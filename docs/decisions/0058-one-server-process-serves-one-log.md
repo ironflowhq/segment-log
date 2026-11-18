@@ -64,6 +64,7 @@ We accept a process per log and two threads per connection, in exchange for a sm
 
 ## Consequences
 
+- 2026-11-18: the `repair` subcommand that [ADR 0065](0065-the-repair-tool-truncates-only-the-newest-segment.md) adds is built ([#146](https://github.com/ironflowx/segment-log/pull/146), [#147](https://github.com/ironflowx/segment-log/pull/147), [#148](https://github.com/ironflowx/segment-log/pull/148)). Its flags and exit codes are in [api.md](../architecture/api.md#operator-repair). The serve command line is unchanged.
 - Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)). [ADR 0063](0063-the-guest-benchmark-shares-pipelined-connections.md) changes the answer thread: it collects answers that are ready with `Pending::try_wait` and writes them together, in request order, instead of waiting for and writing each answer alone. [ADR 0064](0064-the-0-1-compatibility-promise.md) makes the flags, exit statuses and process behavior public API, and gives the Go client semver tags.
 - [ADR 0065](0065-the-repair-tool-truncates-only-the-newest-segment.md) adds the offline `repair` subcommand (planned for 0.1). The serve command line, without a subcommand, does not change.
 - [ADR 0060](0060-the-server-reads-a-sealed-log-with-read-only.md) adds `--read-only`: the server opens a sealed log with `LogReader`, answers `Append` with `Sealed`, and keeps serving after `Seal`.
