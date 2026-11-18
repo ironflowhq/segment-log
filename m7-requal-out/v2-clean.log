@@ -1,0 +1,11 @@
+== v2-clean-20261117224447: 10 cycles, delay 3000 ms, host root@168.119.4.92, observer 178.156.201.194:7070
+-- cycle 1: check: 5280 records, 5280 reported, 0 missing; evidence: BLK Q WS 273552 8
+-- cycle 2: check: 10289 records, 10289 reported, 0 missing; evidence: BLK Q WS 276592 8
+-- cycle 3: check: 15451 records, 15451 reported, 0 missing; evidence: BLK Q WS 279760 8
+-- cycle 4: check: 20485 records, 20485 reported, 0 missing; evidence: BLK Q WS 282808 8
+-- cycle 5: check: 25421 records, 25421 reported, 0 missing; evidence: BLK Q WS 285824 8
+-- cycle 6: check: 30786 records, 30786 reported, 0 missing; evidence: BLK Q WS 289088 8
+-- cycle 7: check: 36395 records, 36395 reported, 0 missing; evidence: BLK Q WS 292504 8
+-- cycle 8: check: 41664 records, 41664 reported, 0 missing; evidence: BLK Q WS 295712 8
+-- cycle 9: check: 46624 records, 46624 reported, 0 missing; evidence: BLK Q WS 298728 8
+FAIL: cycle 10: check exit 255

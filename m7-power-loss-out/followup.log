@@ -1,0 +1,26 @@
+== baseline guest-bench at 0a41cff 20:15:00
+== guest-bench
+   exit 0: 
+== update the host to main 20:25:03
+2b378c7
+setup ok
+== after #135 20:25:16
+== rehearse
+   exit 0: == rehearsal passed
+== pc-process-crash
+   exit 0: pass: zero acknowledged records missing in 30 cycles
+== pc-process-crash-control
+   exit 0: control detected (expected)
+== pc-guest-crash
+   exit 0: pass: zero acknowledged records missing in 30 cycles
+== pc-guest-crash-control
+   exit 0: control detected (expected)
+== pc-guest-destroy
+   exit 0: pass: zero acknowledged records missing in 30 cycles
+== pc-guest-destroy-control
+   exit 0: control detected (expected)
+== guest-bench
+   exit 0: 
+== guest-bench-per-caller
+   exit 0: 
+== followup done 20:56:09

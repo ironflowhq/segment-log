@@ -1,0 +1,13 @@
+== v2-clean-20261118005244: 10 cycles, delay 3000 ms, host root@168.119.4.92, observer 178.156.201.194:7070
+-- cycle 1: check: 5112 records, 5112 reported, 0 missing; evidence: BLK Q WS 273456 8
+-- cycle 2: check: 10290 records, 10290 reported, 0 missing; evidence: BLK Q WS 276608 8
+-- cycle 3: check: 15490 records, 15490 reported, 0 missing; evidence: BLK Q WS 279760 8
+-- cycle 4: check: 20456 records, 20456 reported, 0 missing; evidence: BLK Q WS 282792 8
+-- cycle 5: check: 25433 records, 25433 reported, 0 missing; evidence: BLK Q WS 285832 8
+-- cycle 6: check: 30573 records, 30573 reported, 0 missing; evidence: BLK Q WS 288968 8
+-- cycle 7: check: 35582 records, 35582 reported, 0 missing; evidence: BLK Q WS 292032 8
+-- cycle 8: check: 40656 records, 40656 reported, 0 missing; evidence: BLK Q WS 295136 8
+-- cycle 9: check: 45748 records, 45748 reported, 0 missing; evidence: BLK Q WS 298232 8
+-- cycle 10: check: 50948 records, 50948 reported, 0 missing; evidence: BLK Q WS 301416 8
+== v2-clean-20261118005244: 0 of 10 counted cycles failed (open Corrupt or a reported record missing)
+pass: 10 counted cycles, zero records missing, open never Corrupt

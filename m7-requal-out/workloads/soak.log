@@ -1,0 +1,298 @@
+
+running 1 test
+DIAGNOSTIC measured_storage=true phase_cpu=false
+CONFIG callers=1000 rounds=60000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=100 min=325845 p50=334855 p99=546479 p999=569328 max=569328 sum=34399289
+DEVICE start_bytes=0 end_bytes=26214400 append_bytes=262144 failures=0
+OPEN initial_ns=870623 records=0 segments=1 bytes=64
+test acceptance::evidence::measured_appends_survive_reopen has been running for over 60 seconds
+APPEND records=60000000 elapsed_ns=469064264294 records_per_second=127914.242 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=544000 admission_call_sum_ns=475609633461
+METRIC append_ns count=60000000 min=919264 p50=7260536 p99=15269678 p999=43816117 max=3072091981 sum=468602311588723
+METRIC group_submits count=119699 min=1 p50=501 p99=866 p999=913 max=1000 sum=60000000
+METRIC group_frame_bytes count=119699 min=336 p50=148336 p99=256376 p999=270288 max=296040 sum=17764787960
+METRIC group_fdatasync_ns count=119699 min=78181 p50=376335 p99=625459 p999=739031 max=3136137 sum=45765943480
+STORAGE kind=Group.Append count=119699 sum_ns=35825109246
+STORAGE kind=Group.SyncData count=119699 sum_ns=45765943480
+STORAGE kind=KeyIndex.Other count=108334 sum_ns=2746168597
+STORAGE kind=LogFilter.Other count=7462 sum_ns=355778587
+STORAGE kind=Lookup.Other count=223519 sum_ns=12259252841
+STORAGE kind=Open.Other count=7 sum_ns=191802
+STORAGE kind=Open.SyncData count=1 sum_ns=153942
+STORAGE kind=Open.SyncDir count=1 sum_ns=9010
+STORAGE kind=Recovery.Other count=2 sum_ns=7310
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=28380
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=11491
+STORAGE kind=Roll.Append count=1056 sum_ns=1493941099
+STORAGE kind=Roll.Other count=528 sum_ns=32176415
+STORAGE kind=Roll.SyncData count=792 sum_ns=1136098570
+STORAGE kind=Roll.SyncDir count=264 sum_ns=4228212
+END records=60000000 segments=265 bytes=18859428680
+ROLL index=0 writer_ns=619680
+ROLL index=1 writer_ns=513318
+ROLL index=2 writer_ns=612029
+ROLL index=3 writer_ns=518278
+ROLL index=4 writer_ns=589429
+ROLL index=5 writer_ns=608820
+ROLL index=6 writer_ns=587979
+ROLL index=7 writer_ns=730261
+ROLL index=8 writer_ns=728321
+ROLL index=9 writer_ns=534868
+ROLL index=10 writer_ns=539688
+ROLL index=11 writer_ns=721041
+ROLL index=12 writer_ns=761101
+ROLL index=13 writer_ns=594459
+ROLL index=14 writer_ns=768102
+ROLL index=15 writer_ns=636190
+ROLL index=16 writer_ns=662140
+ROLL index=17 writer_ns=709450
+ROLL index=18 writer_ns=637919
+ROLL index=19 writer_ns=582478
+ROLL index=20 writer_ns=617529
+ROLL index=21 writer_ns=660030
+ROLL index=22 writer_ns=586439
+ROLL index=23 writer_ns=711681
+ROLL index=24 writer_ns=537758
+ROLL index=25 writer_ns=526477
+ROLL index=26 writer_ns=494758
+ROLL index=27 writer_ns=589449
+ROLL index=28 writer_ns=674351
+ROLL index=29 writer_ns=498227
+ROLL index=30 writer_ns=684951
+ROLL index=31 writer_ns=535098
+ROLL index=32 writer_ns=608969
+ROLL index=33 writer_ns=460807
+ROLL index=34 writer_ns=517517
+ROLL index=35 writer_ns=546049
+ROLL index=36 writer_ns=508978
+ROLL index=37 writer_ns=636519
+ROLL index=38 writer_ns=533128
+ROLL index=39 writer_ns=908274
+ROLL index=40 writer_ns=638549
+ROLL index=41 writer_ns=626579
+ROLL index=42 writer_ns=670990
+ROLL index=43 writer_ns=627729
+ROLL index=44 writer_ns=638329
+ROLL index=45 writer_ns=560299
+ROLL index=46 writer_ns=630529
+ROLL index=47 writer_ns=623089
+ROLL index=48 writer_ns=617629
+ROLL index=49 writer_ns=454407
+ROLL index=50 writer_ns=601519
+ROLL index=51 writer_ns=489057
+ROLL index=52 writer_ns=545598
+ROLL index=53 writer_ns=568298
+ROLL index=54 writer_ns=472537
+ROLL index=55 writer_ns=498977
+ROLL index=56 writer_ns=517238
+ROLL index=57 writer_ns=535998
+ROLL index=58 writer_ns=603039
+ROLL index=59 writer_ns=574838
+ROLL index=60 writer_ns=564148
+ROLL index=61 writer_ns=488138
+ROLL index=62 writer_ns=569818
+ROLL index=63 writer_ns=592629
+ROLL index=64 writer_ns=555128
+ROLL index=65 writer_ns=610879
+ROLL index=66 writer_ns=513568
+ROLL index=67 writer_ns=516347
+ROLL index=68 writer_ns=592089
+ROLL index=69 writer_ns=477117
+ROLL index=70 writer_ns=537548
+ROLL index=71 writer_ns=518477
+ROLL index=72 writer_ns=526448
+ROLL index=73 writer_ns=560269
+ROLL index=74 writer_ns=624940
+ROLL index=75 writer_ns=591729
+ROLL index=76 writer_ns=623820
+ROLL index=77 writer_ns=619559
+ROLL index=78 writer_ns=632159
+ROLL index=79 writer_ns=608459
+ROLL index=80 writer_ns=560949
+ROLL index=81 writer_ns=480827
+ROLL index=82 writer_ns=566078
+ROLL index=83 writer_ns=628369
+ROLL index=84 writer_ns=653229
+ROLL index=85 writer_ns=552508
+ROLL index=86 writer_ns=519758
+ROLL index=87 writer_ns=701060
+ROLL index=88 writer_ns=687720
+ROLL index=89 writer_ns=600049
+ROLL index=90 writer_ns=630590
+ROLL index=91 writer_ns=560789
+ROLL index=92 writer_ns=557899
+ROLL index=93 writer_ns=749121
+ROLL index=94 writer_ns=725730
+ROLL index=95 writer_ns=727341
+ROLL index=96 writer_ns=716971
+ROLL index=97 writer_ns=664420
+ROLL index=98 writer_ns=695610
+ROLL index=99 writer_ns=563449
+ROLL index=100 writer_ns=539878
+ROLL index=101 writer_ns=616509
+ROLL index=102 writer_ns=462937
+ROLL index=103 writer_ns=2091541
+ROLL index=104 writer_ns=549028
+ROLL index=105 writer_ns=572448
+ROLL index=106 writer_ns=597739
+ROLL index=107 writer_ns=530338
+ROLL index=108 writer_ns=531868
+ROLL index=109 writer_ns=463697
+ROLL index=110 writer_ns=621489
+ROLL index=111 writer_ns=636020
+ROLL index=112 writer_ns=589168
+ROLL index=113 writer_ns=576948
+ROLL index=114 writer_ns=591549
+ROLL index=115 writer_ns=582888
+ROLL index=116 writer_ns=570029
+ROLL index=117 writer_ns=642360
+ROLL index=118 writer_ns=419527
+ROLL index=119 writer_ns=479398
+ROLL index=120 writer_ns=740010
+ROLL index=121 writer_ns=503328
+ROLL index=122 writer_ns=496028
+ROLL index=123 writer_ns=551928
+ROLL index=124 writer_ns=618509
+ROLL index=125 writer_ns=988084
+ROLL index=126 writer_ns=884643
+ROLL index=127 writer_ns=541998
+ROLL index=128 writer_ns=561968
+ROLL index=129 writer_ns=583238
+ROLL index=130 writer_ns=592889
+ROLL index=131 writer_ns=534218
+ROLL index=132 writer_ns=1913847
+ROLL index=133 writer_ns=954354
+ROLL index=134 writer_ns=530428
+ROLL index=135 writer_ns=649360
+ROLL index=136 writer_ns=587548
+ROLL index=137 writer_ns=618879
+ROLL index=138 writer_ns=837142
+ROLL index=139 writer_ns=589149
+ROLL index=140 writer_ns=546718
+ROLL index=141 writer_ns=517607
+ROLL index=142 writer_ns=651860
+ROLL index=143 writer_ns=643579
+ROLL index=144 writer_ns=600179
+ROLL index=145 writer_ns=1991499
+ROLL index=146 writer_ns=600078
+ROLL index=147 writer_ns=588178
+ROLL index=148 writer_ns=679060
+ROLL index=149 writer_ns=648189
+ROLL index=150 writer_ns=670390
+ROLL index=151 writer_ns=546228
+ROLL index=152 writer_ns=628369
+ROLL index=153 writer_ns=611658
+ROLL index=154 writer_ns=674510
+ROLL index=155 writer_ns=648200
+ROLL index=156 writer_ns=539068
+ROLL index=157 writer_ns=543568
+ROLL index=158 writer_ns=569448
+ROLL index=159 writer_ns=664490
+ROLL index=160 writer_ns=628389
+ROLL index=161 writer_ns=616179
+ROLL index=162 writer_ns=497638
+ROLL index=163 writer_ns=660870
+ROLL index=164 writer_ns=598228
+ROLL index=165 writer_ns=511267
+ROLL index=166 writer_ns=561168
+ROLL index=167 writer_ns=545877
+ROLL index=168 writer_ns=513108
+ROLL index=169 writer_ns=503158
+ROLL index=170 writer_ns=518308
+ROLL index=171 writer_ns=459627
+ROLL index=172 writer_ns=571858
+ROLL index=173 writer_ns=538038
+ROLL index=174 writer_ns=543307
+ROLL index=175 writer_ns=518967
+ROLL index=176 writer_ns=685549
+ROLL index=177 writer_ns=482527
+ROLL index=178 writer_ns=581649
+ROLL index=179 writer_ns=618179
+ROLL index=180 writer_ns=626349
+ROLL index=181 writer_ns=603148
+ROLL index=182 writer_ns=548148
+ROLL index=183 writer_ns=573228
+ROLL index=184 writer_ns=544968
+ROLL index=185 writer_ns=593349
+ROLL index=186 writer_ns=511597
+ROLL index=187 writer_ns=624359
+ROLL index=188 writer_ns=546778
+ROLL index=189 writer_ns=629490
+ROLL index=190 writer_ns=582188
+ROLL index=191 writer_ns=473137
+ROLL index=192 writer_ns=641159
+ROLL index=193 writer_ns=552018
+ROLL index=194 writer_ns=517767
+ROLL index=195 writer_ns=498277
+ROLL index=196 writer_ns=523188
+ROLL index=197 writer_ns=528238
+ROLL index=198 writer_ns=514188
+ROLL index=199 writer_ns=708650
+ROLL index=200 writer_ns=614939
+ROLL index=201 writer_ns=573438
+ROLL index=202 writer_ns=498317
+ROLL index=203 writer_ns=532278
+ROLL index=204 writer_ns=587338
+ROLL index=205 writer_ns=555528
+ROLL index=206 writer_ns=561418
+ROLL index=207 writer_ns=515418
+ROLL index=208 writer_ns=640260
+ROLL index=209 writer_ns=564058
+ROLL index=210 writer_ns=598409
+ROLL index=211 writer_ns=587068
+ROLL index=212 writer_ns=492067
+ROLL index=213 writer_ns=562188
+ROLL index=214 writer_ns=572418
+ROLL index=215 writer_ns=536378
+ROLL index=216 writer_ns=671340
+ROLL index=217 writer_ns=556788
+ROLL index=218 writer_ns=545788
+ROLL index=219 writer_ns=650240
+ROLL index=220 writer_ns=677799
+ROLL index=221 writer_ns=632349
+ROLL index=222 writer_ns=490627
+ROLL index=223 writer_ns=547408
+ROLL index=224 writer_ns=486947
+ROLL index=225 writer_ns=490047
+ROLL index=226 writer_ns=551947
+ROLL index=227 writer_ns=478727
+ROLL index=228 writer_ns=584439
+ROLL index=229 writer_ns=547067
+ROLL index=230 writer_ns=578809
+ROLL index=231 writer_ns=891563
+ROLL index=232 writer_ns=560088
+ROLL index=233 writer_ns=517688
+ROLL index=234 writer_ns=540898
+ROLL index=235 writer_ns=515027
+ROLL index=236 writer_ns=748721
+ROLL index=237 writer_ns=473816
+ROLL index=238 writer_ns=480497
+ROLL index=239 writer_ns=554167
+ROLL index=240 writer_ns=635249
+ROLL index=241 writer_ns=519548
+ROLL index=242 writer_ns=519677
+ROLL index=243 writer_ns=581918
+ROLL index=244 writer_ns=528738
+ROLL index=245 writer_ns=555378
+ROLL index=246 writer_ns=606849
+ROLL index=247 writer_ns=591939
+ROLL index=248 writer_ns=536788
+ROLL index=249 writer_ns=652639
+ROLL index=250 writer_ns=576558
+ROLL index=251 writer_ns=717300
+ROLL index=252 writer_ns=602438
+ROLL index=253 writer_ns=582958
+ROLL index=254 writer_ns=667319
+ROLL index=255 writer_ns=704040
+ROLL index=256 writer_ns=638890
+ROLL index=257 writer_ns=795291
+ROLL index=258 writer_ns=594188
+ROLL index=259 writer_ns=593959
+ROLL index=260 writer_ns=534307
+ROLL index=261 writer_ns=662730
+ROLL index=262 writer_ns=619939
+ROLL index=263 writer_ns=592268
+REOPEN ns=219332163 start_records=60000000 end_records=60000000 start_segments=265 end_segments=265 start_bytes=18859428680 end_bytes=18859428680 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 267 filtered out; finished in 613.35s
+

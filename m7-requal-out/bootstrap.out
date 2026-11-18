@@ -1,0 +1,8 @@
+[0;1m   You can now reboot and log in to your new system with the[00m
+[0;1m same credentials that you used to log into the rescue system.
+[00m
+bootstrapped: 386695f
+host.kernel=6.1.0-54-amd64
+host.fs=ext4 rw,noatime
+host.drive=SAMSUNG MZQLB960HAJR-00007 EDA5502Q
+host.write_cache=write through
