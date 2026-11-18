@@ -103,6 +103,8 @@ cargo test --workspace
 env SEGMENT_LOG_TEST_ROLL_BYTES=256 cargo test --workspace   # the scenarios again, rolling often
 ```
 
+`make check` runs the first three. A release is `make release VERSION=X.Y.Z` ([scripts/release.sh](scripts/release.sh)); try it first with `make release-dry-run VERSION=X.Y.Z`.
+
 The Go client runs the shared conformance cases against a server binary (the same lines work in fish, zsh and bash):
 
 ```sh
