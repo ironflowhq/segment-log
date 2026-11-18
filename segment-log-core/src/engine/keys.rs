@@ -369,7 +369,10 @@ impl Keys {
     /// until its closing run is durable. Returns the map for the sealer.
     pub(super) fn roll(&mut self, base: u64, next: u64, filter_at: u64) -> Arc<KeyMap> {
         debug_assert!(self.pending.is_none(), "one closing run pends at a time");
-        let keys = Arc::new(std::mem::take(&mut self.active));
+        // The next segment likely holds as many keys; sized now, it never rehashes them all on the
+        // writer at once.
+        let next_map = KeyMap::with_capacity(self.active.len());
+        let keys = Arc::new(std::mem::replace(&mut self.active, next_map));
         self.pending = Some(PendingKeys {
             base,
             next,
@@ -555,4 +558,29 @@ fn active_record(
         })
         .ok_or(LookupFailure)?;
     compare(&group, record, incoming)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Issue 154: a map that grows from empty rehashes every key at once on the writer each time it
+    // doubles, a stall of milliseconds at 8, 16 and 32 MiB into a segment.
+    #[test]
+    fn a_roll_sizes_the_next_map_for_as_many_keys_as_the_rolled_one() {
+        let active: KeyMap = (0..10_000u32)
+            .map(|i| {
+                (
+                    i.to_le_bytes().to_vec(),
+                    ActiveKey {
+                        position: 0,
+                        record: i,
+                    },
+                )
+            })
+            .collect();
+        let mut keys = Keys::new(KeyHash::new(codec::LogId::new([7; 16])), active, Vec::new());
+        keys.roll(0, 1, 1);
+        assert!(keys.active.capacity() >= 10_000);
+    }
 }
