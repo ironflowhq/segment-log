@@ -19,4 +19,4 @@ Medians over the 5 trials ([`summary.tsv`](summary.tsv); every run in [`runs.tsv
 - Its p50 is about 3% (4 µs) higher. The p99 differences are within the run-to-run spread.
 - Readahead does not change random page reads: the kernel did not read ahead in either mode.
 
-To rerun: dispatch the `format-evidence` workflow, or run `scripts/key-page-alignment.sh DATA_DIR OUT_DIR` on Linux with passwordless sudo.
+To rerun: `scripts/key-page-alignment.sh DATA_DIR OUT_DIR` on Linux with passwordless sudo.
