@@ -5,7 +5,7 @@ Start here to deploy, run and repair a log. Each entry links the only source for
 | Topic | Document | What it gives you |
 | --- | --- | --- |
 | Storage under the log | [Volume requirements](architecture/volume-requirements.md) | Requirements V1–V11 that the volume must meet for an acknowledgment to mean durable, with a test for each. |
-| Qualified stack | [Qualification record](evidence/m7/qualification.md) | The Firecracker stack of [ADR 0059](decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md), its fingerprint, its failure domain and the result of each requirement. Status: not qualified; the whole record reruns in the M7 requalification. |
+| Qualified stack | [Qualification record](evidence/m7/qualification.md) | The Firecracker stack of [ADR 0059](decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md), its fingerprint, its failure domain and the result of each requirement. Status: qualified on one host (2026-11-18). |
 | Handoff | [Handoff record](evidence/m7/handoff.md) | The surviving volume, the writer and reader mount paths, guest sizing, and the procedure after the guest ends, sealed or not. |
 | Server command line | [Server README](../segment-log-server/README.md) | Flags, defaults, signals and exit statuses. The process model is [ADR 0058](decisions/0058-one-server-process-serves-one-log.md); the reader mode is [ADR 0060](decisions/0060-the-server-reads-a-sealed-log-with-read-only.md). |
 | Options and defaults | [api.md](architecture/api.md#target-signatures-and-defaults) | Every `Options` field and its default. Each has a server flag. |

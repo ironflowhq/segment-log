@@ -2,7 +2,7 @@
 
 An embedded, append-only event log in Rust. Many callers append records to many streams in one directory. One writer thread packs their submits into groups, and one `fsync` makes a whole group durable before any caller gets an acknowledgment. Each stream keeps revisions and checks the caller's expected revision. An idempotency key makes a retry safe after a crash. When the work ends, the log seals, and the sealed segments stay on disk as the history. A Rust program links the library; other languages reach the same library through `segment-log-server` over a Unix socket or vsock.
 
-> **Status: preparing 0.1, the first production release** ([release tracker](https://github.com/ironflowx/segment-log/issues/133)). Milestones M0–M6 have passed. M7 validates the server on the guest deployment and is in progress. From the 0.1 tag, the [compatibility promise](docs/decisions/0064-the-0-1-compatibility-promise.md) applies.
+> **Status: preparing 0.1, the first production release** ([release tracker](https://github.com/ironflowx/segment-log/issues/133)). Milestones M0–M7 have passed ([M7 record](docs/evidence/m7/completion.md)). From the 0.1 tag, the [compatibility promise](docs/decisions/0064-the-0-1-compatibility-promise.md) applies.
 
 ![Without segment-log, every agent flushes its own file and the disk does one flush per agent. With segment-log, one writer packs many appends into one frame and one flush covers the group. Acks go out only after that flush returns.](docs/images/one-fsync-per-group.svg)
 
@@ -27,11 +27,12 @@ The targets and their conditions are in the [PRD](docs/prd.md#footprint-and-perf
 | Open time, keyed, warm page cache, 100 sealed segments | 38.6 ms (p50) | [M4](docs/evidence/m4/completion.md) |
 | Server binary, stripped musl | 1,049,384 bytes | [M6](docs/evidence/m6/completion.md) |
 | Server idle resident set, empty log | 1,240 KiB | [M6](docs/evidence/m6/completion.md) |
-| Guest append throughput, Firecracker over hybrid vsock | TBD (M7 requalification) | [ADR 0063](docs/decisions/0063-the-guest-benchmark-shares-pipelined-connections.md) |
-| Guest append latency p99, paced at the target rate | TBD (M7 requalification) | [ADR 0063](docs/decisions/0063-the-guest-benchmark-shares-pipelined-connections.md) |
-| Storage qualification of the guest stack | TBD (M7 requalification) | [qualification record](docs/evidence/m7/qualification.md) |
+| Guest append throughput, Firecracker over hybrid vsock | 52,860 records/s (target ≥ 50,000), 1,000 callers over 16 connections | [guest benchmark](docs/evidence/m7/qualification.md#guest-benchmark-and-49) |
+| Guest append latency p99, paced at the target rate | 69.2 ms; misses the target, a known 0.1 limit ([ADR 0063](docs/decisions/0063-the-guest-benchmark-shares-pipelined-connections.md)) | [guest benchmark](docs/evidence/m7/qualification.md#guest-benchmark-and-49) |
+| Soak, in process, 60 million keyed records across 265 segments | 127,914 records/s, reopen in 219 ms, 0 correctness errors | [issue 47](docs/evidence/issue47/README.md) |
+| Storage qualification of the guest stack | Qualified: every MUST requirement passes on one host, including 30 host power losses | [qualification record](docs/evidence/m7/qualification.md) |
 
-The issue 49 host's paced p99 missed its bound because sealing at roll stalled the writer ([issue 107](https://github.com/ironflowx/segment-log/issues/107)). [ADR 0061](docs/decisions/0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md) moved that work to a sealer thread; the M7 requalification measures the latency again.
+The issue 49 host's paced p99 missed its bound because sealing at roll stalled the writer ([issue 107](https://github.com/ironflowx/segment-log/issues/107)). [ADR 0061](docs/decisions/0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md) moved that work to a sealer thread. On the M7 requalification host (EPYC 7401P) rolls keep the writer for under 1 ms, but the paced p99 is still 29 ms against a 1.94 ms bound, a known 0.1 limit ([issue 154](https://github.com/ironflowx/segment-log/issues/154)).
 
 ## Build
 
