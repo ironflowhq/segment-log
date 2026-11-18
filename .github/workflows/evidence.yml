@@ -1,0 +1,236 @@
+name: Evidence capture
+
+# On-demand benchmark and evidence captures on hosted runners. Each job is one capture. Dispatch
+# the workflow with `capture`, or put the capture's label on a pull request to measure its head.
+# A hosted runner is a shared virtual machine: record it as the conditions, never as a target pass.
+on:
+  workflow_dispatch:
+    inputs:
+      capture:
+        description: Which capture to run
+        required: true
+        type: choice
+        options: [m1-evidence, m1-compare, m3-evidence, m4-evidence, m6-socket]
+      base:
+        description: "m1-compare: commit to measure as before (required). m4-evidence: the M3 code (default 0ffc772)"
+        required: false
+      head:
+        description: "m1-compare, m4-evidence: commit to measure as after (default is the dispatched ref)"
+        required: false
+      pairs:
+        description: "m6-socket: alternating in-process and socket pairs for each mode"
+        required: false
+        default: "5"
+      sealed:
+        description: "m4-evidence: sealed segments in each fixture (a changed size is a named variant, ADR 0036)"
+        required: false
+        default: "100"
+      roll_bytes:
+        description: "m4-evidence: roll size of the fixtures, in bytes"
+        required: false
+        default: "67108864"
+      settle_ms:
+        description: "m4-evidence: wait after open before each timed append run, in milliseconds"
+        required: false
+        default: "0"
+  pull_request:
+    types: [labeled]
+
+# One group per capture, so two labels on one pull request do not cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-${{ inputs.capture || github.event.label.name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # M1 completion evidence: the checks, the Linux syscall trace, both directory-sync results and
+  # the Linux benchmark, on Linux and macOS.
+  m1-evidence:
+    name: Linux capture
+    if: ${{ inputs.capture == 'm1-evidence' || github.event.label.name == 'm1-evidence' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: rustup toolchain install
+      # The benchmark data goes to the runner's local disk under /mnt, not to the workspace.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          bash scripts/m1-evidence-guest.sh
+        env:
+          M1_OUT: ${{ runner.temp }}/m1-evidence
+          CARGO_TARGET_DIR: ${{ runner.temp }}/m1-build
+          SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: m1-evidence-linux
+          path: ${{ runner.temp }}/m1-evidence
+          retention-days: 3
+          compression-level: 9
+
+  m1-evidence-macos:
+    name: macOS capture
+    if: ${{ inputs.capture == 'm1-evidence' || github.event.label.name == 'm1-evidence' }}
+    timeout-minutes: 30
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: rustup toolchain install
+      - run: scripts/m1-evidence-macos.sh "$RUNNER_TEMP/m1-evidence"
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/m1-build
+          SEGMENT_LOG_EVIDENCE_DIR: ${{ runner.temp }}/m1-data
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: m1-evidence-macos
+          path: ${{ runner.temp }}/m1-evidence
+          retention-days: 3
+          compression-level: 9
+
+  # The append benchmark of two commits in alternating pairs; a pull request compares its base
+  # with its head.
+  m1-compare:
+    name: Compare base and head
+    if: ${{ inputs.capture == 'm1-compare' || github.event.label.name == 'm1-compare' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends time
+      # The benchmark data goes to the runner's local disk under /mnt, not to the workspace.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          scripts/m1-compare-refs.sh "$BASE" "$HEAD" "$RUNNER_TEMP/m1-compare"
+        env:
+          BASE: ${{ inputs.base || github.event.pull_request.base.sha }}
+          HEAD: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
+          SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: m1-compare
+          path: ${{ runner.temp }}/m1-compare
+          retention-days: 3
+          compression-level: 9
+
+  # The M3 roll evidence: the Linux syscall trace of a roll and the verifier's result.
+  m3-evidence:
+    name: Linux roll syscall capture
+    if: ${{ inputs.capture == 'm3-evidence' || github.event.label.name == 'm3-evidence' }}
+    timeout-minutes: 30
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace
+      - run: scripts/m3-evidence.sh "$RUNNER_TEMP/m3-evidence"
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/m3-build
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: m3-evidence-linux
+          path: ${{ runner.temp }}/m3-evidence
+          retention-days: 3
+          compression-level: 9
+
+  # The M4 gate measurements: open time cold and warm, key-cache memory, and keyed appends beside
+  # the M3 code (ADR 0048).
+  m4-evidence:
+    name: Linux open, memory and append capture
+    if: ${{ inputs.capture == 'm4-evidence' || github.event.label.name == 'm4-evidence' }}
+    timeout-minutes: 150
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      # The fixtures are about 20 GB. A standard runner documents 14 GB of SSD, and a 72 GB
+      # instance can start with less free than the fixtures need. Drop SDKs this capture does not use.
+      - run: |
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /opt/hostedtoolcache \
+            /usr/local/share/boost \
+            /usr/local/share/powershell \
+            /usr/local/share/chromium \
+            /usr/share/swift \
+            /usr/share/miniconda \
+            /usr/local/.ghcup \
+            /opt/az
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          sudo apt-get clean
+          df -h /
+          avail_kb="$(df --output=avail -k / | tail -1 | tr -dc 0-9)"
+          # Fixtures are about 20 GB, and each side keeps a release target directory.
+          need_kb="$((30 * 1024 * 1024))"
+          echo "available_kib=$avail_kb need_kib=$need_kb"
+          test "$avail_kb" -ge "$need_kb"
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends time
+      # The fixtures, about 20 GB, go to the runner's local disk under /mnt, not to the workspace.
+      # Cold opens drop the page cache through passwordless sudo.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          scripts/m4-evidence.sh "$RUNNER_TEMP/m4-evidence" "$HEAD" "$BASE"
+        env:
+          BASE: ${{ inputs.base || '0ffc77259ade423091eea503b282f28bf674745c' }}
+          HEAD: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
+          SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
+          M4_SEALED: ${{ inputs.sealed || '100' }}
+          M4_ROLL_BYTES: ${{ inputs.roll_bytes || '67108864' }}
+          M4_SETTLE_MS: ${{ inputs.settle_ms || '0' }}
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: m4-evidence-linux
+          path: ${{ runner.temp }}/m4-evidence
+          retention-days: 3
+          compression-level: 9
+
+  # The M6 socket diagnostic: appends over the Unix socket beside the same workload in process
+  # (ADR 0056, diagnostics under ADR 0029).
+  m6-socket:
+    name: Linux socket and in-process capture
+    if: ${{ inputs.capture == 'm6-socket' || github.event.label.name == 'm6-socket' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: rustup toolchain install
+      # The logs go to the runner's local disk under /mnt, as in the M4 capture.
+      - run: |
+          sudo mkdir -p /mnt/segment-log
+          sudo chown "$USER" /mnt/segment-log
+          scripts/m6-socket-report.sh "$RUNNER_TEMP/m6-socket"
+        env:
+          SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
+          M6_PAIRS: ${{ inputs.pairs || '5' }}
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: m6-socket-linux
+          path: ${{ runner.temp }}/m6-socket
+          retention-days: 3

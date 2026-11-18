@@ -21,7 +21,7 @@ Every run starts on a fresh log. A repeated key is a deduplicated retry that com
 
 ## Capture
 
-Put the `m6-socket` label on a pull request, or dispatch the `m6-socket` workflow. It runs on a GitHub-hosted `ubuntu-26.04` runner, writes the logs under `/mnt`, and uploads the `m6-socket-linux` artifact for 3 days. On another host, run `scripts/m6-socket-report.sh OUT_DIR` from the repository root. `SEGMENT_LOG_EVIDENCE_DIR` puts the logs on the disk under test. `M6_SOCKET_SMALL=1` shrinks the sizes to check the tooling; never report its numbers. `M6_CALLERS`, `M6_ROUNDS`, `M6_PAIRS` and `M6_INTERVAL_US` set each size.
+Put the `m6-socket` label on a pull request, or dispatch the [evidence workflow](../../../../.github/workflows/evidence.yml) with `capture: m6-socket`. It runs on a GitHub-hosted `ubuntu-26.04` runner, writes the logs under `/mnt`, and uploads the `m6-socket-linux` artifact for 3 days. On another host, run `scripts/m6-socket-report.sh OUT_DIR` from the repository root. `SEGMENT_LOG_EVIDENCE_DIR` puts the logs on the disk under test. `M6_SOCKET_SMALL=1` shrinks the sizes to check the tooling; never report its numbers. `M6_CALLERS`, `M6_ROUNDS`, `M6_PAIRS` and `M6_INTERVAL_US` set each size.
 
 ## Results
 
