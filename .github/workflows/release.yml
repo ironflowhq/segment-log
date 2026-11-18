@@ -1,9 +1,8 @@
 name: release
 
 # A `vX.Y.Z` tag publishes a GitHub release with the musl server binary and the tag's CHANGELOG
-# section. The rest stays manual, after CI passes on the release commit:
-#   cargo publish -p segment-log-core && cargo publish -p segment-log-server
-#   git tag vX.Y.Z && git tag clients/go/vX.Y.Z && git push origin vX.Y.Z clients/go/vX.Y.Z
+# section. scripts/release.sh (`make release VERSION=X.Y.Z`) publishes the crates and pushes the
+# tags that start it.
 on:
   push:
     tags: ["v[0-9]*"]
