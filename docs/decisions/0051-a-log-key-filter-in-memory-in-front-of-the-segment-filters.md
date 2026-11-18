@@ -100,6 +100,7 @@ Option C passes if keyed closed-loop throughput is within 10% of unkeyed at both
 
 ## Consequences
 
+- [ADR 0067](0067-the-sealer-writes-and-flushes-the-closing-run.md) (proposed) amends the Context fact that only the writer writes segment files: the sealer writes a rolled segment's closing run.
 - [ADR 0061](0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md) amends rule 2: the writer tells the builder about a segment once its closing run is durable, not at roll.
 - Up to 1,000 sealed segments, the writer cost per new key no longer depends on history. That becomes a stated operating limit.
 - ADR 0048 rule 5 changes. Key-cache memory adds the log filter: between 1 and 2 bytes for each sealed key.

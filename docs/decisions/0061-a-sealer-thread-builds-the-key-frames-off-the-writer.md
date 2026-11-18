@@ -75,6 +75,7 @@ Option D beat A and B because only moving the work off the writer bounds it, and
 
 ## Consequences
 
+- [ADR 0067](0067-the-sealer-writes-and-flushes-the-closing-run.md) (proposed) amends rule 3: the sealer, not the writer, writes and flushes the closing run.
 - ADR 0048 is amended. Rule 6's "Nothing rebuilds key frames" gains the exception of decision 8. Its consequence "Appends wait for that roll" no longer holds: appends wait only for writing the closing run.
 - ADR 0051 is amended. Rule 2's "After each roll, the writer tells the builder" becomes "after each rolled segment's closing run is durable".
 - overview.md changes with the code: roll step 1 moves to the sealer and the next group boundary, recovery steps 5, 7 and 11 gain the second-newest case, and seal gains the wait. testing.md's M3 roll verifier, which requires no write to the old segment after the roll, changes to allow exactly one closing run.
