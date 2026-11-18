@@ -9,7 +9,7 @@ Start here to deploy, run and repair a log. Each entry links the only source for
 | Handoff | [Handoff record](evidence/m7/handoff.md) | The surviving volume, the writer and reader mount paths, guest sizing, and the procedure after the guest ends, sealed or not. |
 | Server command line | [Server README](../segment-log-server/README.md) | Flags, defaults, signals and exit statuses. The process model is [ADR 0058](decisions/0058-one-server-process-serves-one-log.md); the reader mode is [ADR 0060](decisions/0060-the-server-reads-a-sealed-log-with-read-only.md). |
 | Options and defaults | [api.md](architecture/api.md#target-signatures-and-defaults) | Every `Options` field and its default. Each has a server flag. |
-| Repair | [Operator repair](architecture/api.md#operator-repair) | `segment-log-server repair verify` and `truncate`, planned for 0.1: what each changes, its flags and exit codes ([ADR 0065](decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)). |
+| Repair | [Operator repair](architecture/api.md#operator-repair) | `segment-log-server repair verify` and `truncate`: what each changes, its flags, exit codes and JSON output ([ADR 0065](decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)). |
 | Upgrades | [ADR 0064](decisions/0064-the-0-1-compatibility-promise.md) | The compatibility promise from 0.1: which format and protocol versions a build keeps, and why an upgrade of the format is one-way. |
 
 ## Rules to keep
