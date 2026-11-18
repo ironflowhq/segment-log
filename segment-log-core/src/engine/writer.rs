@@ -113,8 +113,12 @@ impl Writer {
     /// Hands the segment's closing run to the sealer and starts the next segment. The writer
     /// writes the run later (`write_pending`), and never appends a group to the old segment.
     fn roll(&mut self, view: &View, next: u64) -> io::Result<()> {
+        #[cfg(test)]
+        let started = crate::pipeline::clock();
         // At most one closing run pends, so recovery has one case to rebuild (ADR 0061, rule 4).
         self.write_pending(view, true)?;
+        #[cfg(test)]
+        let waited = crate::pipeline::clock();
         let base = self.active.base;
         let filter_at = self.active.length;
         let keys = self.keys.roll(base, next, filter_at);
@@ -141,6 +145,8 @@ impl Writer {
         let spans = view.published.lock().unwrap().roll(self.epoch, self.epoch);
         view.tables.lock().unwrap().keep(base, spans);
         self.active = Active::new(next);
+        #[cfg(test)]
+        crate::pipeline::event("roll", [started, waited, crate::pipeline::clock()]);
         Ok(())
     }
 
@@ -150,6 +156,8 @@ impl Writer {
         let Some(Pending { base, sealing }) = self.pending.take() else {
             return Ok(());
         };
+        #[cfg(test)]
+        let started = crate::pipeline::clock();
         let built = match sealing {
             Sealing::Built(built) => built,
             Sealing::Running(sealer) if wait || sealer.is_finished() => sealer
@@ -171,6 +179,8 @@ impl Writer {
             }
             call(storage, &path, Purpose::Roll, Op::SyncData)?;
         }
+        #[cfg(test)]
+        let written = crate::pipeline::clock();
         if let Some(keys) = self.keys.sealed(built.keys) {
             // Freeing every key of a segment costs as much as hashing them.
             if self.background_seal {
@@ -179,6 +189,8 @@ impl Writer {
                     .spawn(move || drop(keys));
             }
         }
+        #[cfg(test)]
+        crate::pipeline::event("pending", [started, written, crate::pipeline::clock()]);
         Ok(())
     }
 
