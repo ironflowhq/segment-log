@@ -40,5 +40,5 @@ refused while attached and while paused; attached after the owner died
 === RUN   TestTransportRestart
 --- PASS: TestTransportRestart (4.35s)
 PASS
-ok  	github.com/ironflowhq/segment-log/clients/go	23.314s
+ok  	github.com/ironflowx/segment-log/clients/go	23.314s
 == rehearsal passed
