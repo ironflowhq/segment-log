@@ -8,7 +8,7 @@ Read these before you change code. Start with the PRD.
 
 - [docs/prd.md](docs/prd.md): requirements (R1–R23), targets, milestones M0–M7, open items.
 - [docs/architecture/overview.md](docs/architecture/overview.md): invariants I1–I10, write path, commit protocol, recovery, roll, seal.
-- [docs/architecture/format.md](docs/architecture/format.md): byte layout, version 1 since M5 (ADR 0052); breaking changes allowed until production (ADR 0053). The only source for field widths.
+- [docs/architecture/format.md](docs/architecture/format.md): byte layout, format version 3 since 0.1; every later build reads every version from 3 (ADR 0064). The only source for field widths.
 - [docs/architecture/api.md](docs/architecture/api.md): public API and defaults. The only source for signatures.
 - [docs/architecture/protocol.md](docs/architecture/protocol.md): the server's wire protocol (M6). The only source for its message layout and status codes.
 - [docs/architecture/testing.md](docs/architecture/testing.md): crash model, oracle, benchmarks.
@@ -48,4 +48,4 @@ CI (`.github/workflows/ci.yml`) runs the same three commands on Linux and macOS.
 
 - Docs use short, active sentences, with one meaning for each word (as in the glossary).
 - Comments say why, not what. A comment states a constraint or an invariant that the code cannot show.
-- Keep a CHANGELOG once a release exists. Before the first release, there is none.
+- Every release updates [CHANGELOG.md](CHANGELOG.md): API breaks with a migration note, format version bumps, and the protocol versions it speaks ([ADR 0064](docs/decisions/0064-the-0-1-compatibility-promise.md)).

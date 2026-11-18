@@ -2,7 +2,7 @@
 
 An embedded, append-only event log in Rust. Many callers append records to many streams in one directory. One writer thread packs their submits into groups, and one `fsync` makes a whole group durable before any caller gets an acknowledgment. Each stream keeps revisions and checks the caller's expected revision. An idempotency key makes a retry safe after a crash. When the work ends, the log seals, and the sealed segments stay on disk as the history. A Rust program links the library; other languages reach the same library through `segment-log-server` over a Unix socket or vsock.
 
-> **Status: preparing 0.1, the first production release** ([release tracker](https://github.com/ironflowx/segment-log/issues/133)). Milestones M0–M7 have passed ([M7 record](docs/evidence/m7/completion.md)). From the 0.1 tag, the [compatibility promise](docs/decisions/0064-the-0-1-compatibility-promise.md) applies.
+> **Status: 0.1, the first production release** ([changelog](CHANGELOG.md)). Milestones M0–M7 have passed ([M7 record](docs/evidence/m7/completion.md)). The [compatibility promise](docs/decisions/0064-the-0-1-compatibility-promise.md) applies: every later release reads 0.1 logs and serves 0.1 clients.
 
 ![Without segment-log, every agent flushes its own file and the disk does one flush per agent. With segment-log, one writer packs many appends into one frame and one flush covers the group. Acks go out only after that flush returns.](docs/images/one-fsync-per-group.svg)
 
@@ -33,6 +33,41 @@ The targets and their conditions are in the [PRD](docs/prd.md#footprint-and-perf
 | Storage qualification of the guest stack | Qualified: every MUST requirement passes on one host, including 30 host power losses | [qualification record](docs/evidence/m7/qualification.md) |
 
 The issue 49 host's paced p99 missed its bound because sealing at roll stalled the writer ([issue 107](https://github.com/ironflowx/segment-log/issues/107)). [ADR 0061](docs/decisions/0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md) moved that work to a sealer thread. On the M7 requalification host (EPYC 7401P) rolls keep the writer for under 1 ms, but the paced p99 is still 29 ms against a 1.94 ms bound, a known 0.1 limit ([issue 154](https://github.com/ironflowx/segment-log/issues/154)).
+
+## Quickstart
+
+```sh
+cargo add segment-log-core                  # the library
+cargo install segment-log-server            # the server; or the Linux musl binary from the GitHub release
+go get github.com/ironflowx/segment-log/clients/go@v0.1.0   # the Go client
+```
+
+```rust
+use segment_log_core::{ExpectedRevision, NewRecord, Options, SegmentLog, Submit};
+
+fn main() {
+    let log = SegmentLog::open("data/log", Options::default()).expect("open");
+    let committed = log
+        .append(Submit {
+            records: vec![NewRecord {
+                stream: b"order-42".to_vec(),
+                key: Some(b"order-42/created".to_vec()), // a retry with this key is safe
+                payload: b"{\"total\":10}".to_vec(),
+                expected: ExpectedRevision::Empty, // the stream must not exist yet
+            }],
+        })
+        .expect("admitted")
+        .wait() // returns after the group's fsync
+        .expect("durable");
+    println!("offset {}", committed.records[0].offset);
+    for record in log.read(0, 100).expect("read") {
+        println!("{} {:?}", record.offset, record.payload);
+    }
+    log.seal().expect("seal");
+}
+```
+
+The signatures and defaults are in [api.md](docs/architecture/api.md).
 
 ## Build
 
