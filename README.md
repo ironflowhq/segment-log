@@ -4,7 +4,7 @@ An embedded, append-only event log in Rust. Many callers append records to many 
 
 > **Status: 0.1, the first production release** ([changelog](CHANGELOG.md)). Milestones M0–M7 have passed ([M7 record](docs/evidence/m7/completion.md)). The [compatibility promise](docs/decisions/0064-the-0-1-compatibility-promise.md) applies: every later release reads 0.1 logs and serves 0.1 clients.
 
-![Without segment-log, every agent flushes its own file and the disk does one flush per agent. With segment-log, one writer packs many appends into one frame and one flush covers the group. Acks go out only after that flush returns.](docs/images/one-fsync-per-group.svg)
+![Without segment-log, every agent flushes its own file and the disk does one flush per agent. With segment-log, the same agents put their appends in the accept queue, one writer thread packs them into one group, and one flush covers the group. Acks go out only after that fsync returns.](docs/images/one-fsync-per-group.svg)
 
 ## Use cases
 
@@ -15,7 +15,7 @@ An embedded, append-only event log in Rust. Many callers append records to many 
 
 It is not a broker. It has no replication, consumer groups, retention or compaction ([PRD non-goals](docs/prd.md#non-goals)).
 
-![A Rust program calls append in its own process. A Go program sends requests over a Unix socket, or vsock from a guest, to segment-log-server, one process per log, which runs the same core. Either way, one writer thread packs appends into a group and one fsync makes it durable in the segment files, on a volume that outlives the guest. After the guest exits, LogReader reads the sealed history.](docs/images/two-ways-in-one-writer.svg)
+![A Rust program calls append in its own process. A Go program sends requests over a Unix socket, or vsock from a guest, to segment-log-server, one process per log, which runs the same core. Both ways lead to the accept queue. One writer thread packs appends into a group and one fsync makes it durable in the segment files, on a volume that outlives the guest. After the guest exits, LogReader reads the sealed history.](docs/images/two-ways-in-one-writer.svg)
 
 ## Benchmarks
 
