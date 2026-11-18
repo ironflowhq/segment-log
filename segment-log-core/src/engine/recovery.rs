@@ -1,5 +1,5 @@
 use super::*;
-use keys::{ActiveKey, KeyHash, SealedKeys};
+use keys::{KeyHash, KeyMap, SealedKeys};
 use survey::{Ending, ReadOnly};
 pub(super) struct Recovered {
     pub log_id: codec::LogId,
@@ -18,7 +18,7 @@ pub(super) struct Writable {
     pub epoch: u64,
     pub append_time: u64,
     pub active: Active,
-    pub active_keys: BTreeMap<Vec<u8>, ActiveKey>,
+    pub active_keys: KeyMap,
     pub sealed_keys: Vec<SealedKeys>,
 }
 impl From<io::Error> for OpenError {
@@ -211,13 +211,13 @@ pub(super) fn open(
             sealed_keys.push(SealedKeys::written(summary, &found.log_id, &run[0]));
             roll_into(storage, dir, version, &found.log_id, next, epoch)?;
             found.published.roll(epoch, epoch);
-            (epoch, Active::new(next), BTreeMap::new())
+            (epoch, Active::new(next), KeyMap::new())
         }
         (Ending::Rolled { .. }, Some(epoch)) => {
             let next = found.published.watermark;
             roll_into(storage, dir, version, &found.log_id, next, epoch)?;
             found.published.roll(found.epoch, epoch);
-            (epoch, Active::new(next), BTreeMap::new())
+            (epoch, Active::new(next), KeyMap::new())
         }
         (Ending::Groups | Ending::Stopped, Some(epoch)) => {
             let active = Active::recovered(newest, found.newest.end, found.newest.tails);
