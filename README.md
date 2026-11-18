@@ -1,5 +1,9 @@
 # segment-log
 
+[![CI](https://github.com/ironflowx/segment-log/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ironflowx/segment-log/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ironflowx/segment-log)](https://github.com/ironflowx/segment-log/releases/latest)
+[![crates.io](https://img.shields.io/crates/v/segment-log-core.svg)](https://crates.io/crates/segment-log-core)
+
 An embedded, append-only event log in Rust. Many callers append records to many streams in one directory. One writer thread packs their submits into groups, and one `fsync` makes a whole group durable before any caller gets an acknowledgment. Each stream keeps revisions and checks the caller's expected revision. An idempotency key makes a retry safe after a crash. When the work ends, the log seals, and the sealed segments stay on disk as the history. A Rust program links the library; other languages reach the same library through `segment-log-server` over a Unix socket or vsock.
 
 > **Status: 0.1, the first production release** ([changelog](CHANGELOG.md)). Milestones M0–M7 have passed ([M7 record](docs/evidence/m7/completion.md)). The [compatibility promise](docs/decisions/0064-the-0-1-compatibility-promise.md) applies: every later release reads 0.1 logs and serves 0.1 clients.
