@@ -1,0 +1,139 @@
+Wed Nov 18 11:41:09 PM UTC 2026
+cca4b34ba690a4d324d6c8597425832bfe98f3cf
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+binary: rustc
+commit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a
+commit-date: 2026-11-09
+host: x86_64-unknown-linux-gnu
+release: 1.100.0
+LLVM version: 23.1.5
+cargo 1.100.0 (3acc79c0c 2026-11-05)
+strace -- version 6.1
+Copyright (c) 1991-2022 The strace developers <https://strace.io>.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Optional features enabled: stack-trace=libunwind stack-demangle m32-mpers mx32-mpers
+Linux m7 6.1.0-54-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.190-1 (2026-10-16) x86_64 GNU/Linux
+PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
+NAME="Debian GNU/Linux"
+VERSION_ID="12"
+VERSION="12 (bookworm)"
+VERSION_CODENAME=bookworm
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Address sizes:                           43 bits physical, 48 bits virtual
+Byte Order:                              Little Endian
+CPU(s):                                  64
+On-line CPU(s) list:                     0-63
+Vendor ID:                               AuthenticAMD
+BIOS Vendor ID:                          Advanced Micro Devices, Inc.
+Model name:                              AMD EPYC 7502P 32-Core Processor
+BIOS Model name:                         AMD EPYC 7502P 32-Core Processor                Unknown CPU @ 2.5GHz
+BIOS CPU family:                         107
+CPU family:                              23
+Model:                                   49
+Thread(s) per core:                      2
+Core(s) per socket:                      32
+Socket(s):                               1
+Stepping:                                0
+Frequency boost:                         enabled
+CPU(s) scaling MHz:                      80%
+CPU max MHz:                             2500.0000
+CPU min MHz:                             1500.0000
+BogoMIPS:                                4990.77
+Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd amd_ppin arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es ibpb_exit_to_user
+Virtualization:                          AMD-V
+L1d cache:                               1 MiB (32 instances)
+L1i cache:                               1 MiB (32 instances)
+L2 cache:                                16 MiB (32 instances)
+L3 cache:                                128 MiB (8 instances)
+NUMA node(s):                            1
+NUMA node0 CPU(s):                       0-63
+Vulnerability Gather data sampling:      Not affected
+Vulnerability Indirect target selection: Not affected
+Vulnerability Itlb multihit:             Not affected
+Vulnerability L1tf:                      Not affected
+Vulnerability Mds:                       Not affected
+Vulnerability Meltdown:                  Not affected
+Vulnerability Mmio stale data:           Not affected
+Vulnerability Reg file data sampling:    Not affected
+Vulnerability Retbleed:                  Mitigation; untrained return thunk; SMT enabled with STIBP protection
+Vulnerability Spec rstack overflow:      Mitigation; safe RET
+Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:                Mitigation; Retpolines; IBPB conditional; STIBP always-on; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected
+Vulnerability Srbds:                     Not affected
+Vulnerability Tsa:                       Not affected
+Vulnerability Tsx async abort:           Not affected
+Vulnerability Vmscape:                   Mitigation; IBPB before exit to userspace
+               total        used        free      shared  buff/cache   available
+Mem:     134916534272  2129850368 127406608384    16003072  6674952192 132786683904
+Swap:              0           0           0
+Filesystem     Type  1K-blocks    Used  Available Use% Mounted on
+/dev/nvme1n1   ext4 1844813676    1012 1751027560   1% /tmp
+/dev/nvme0n1p2 ext4 1843779500 6175120 1743871808   1% /
+/dev/nvme0n1p2 ext4 1843779500 6175120 1743871808   1% /
+TARGET SOURCE       FSTYPE OPTIONS
+/tmp   /dev/nvme1n1 ext4   rw,noatime,stripe=32
+NAME        TYPE  SIZE ROTA MODEL                      MOUNTPOINTS
+nvme0n1     disk  1.7T    0 SAMSUNG MZQL21T9HCJR-00A07 
+├─nvme0n1p1 part    1G    0                            /boot
+└─nvme0n1p2 part  1.7T    0                            /
+nvme1n1     disk  1.7T    0 SAMSUNG MZQL21T9HCJR-00A07 /tmp
+sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
+proc /proc proc rw,relatime 0 0
+udev /dev devtmpfs rw,nosuid,relatime,size=65847744k,nr_inodes=16461936,mode=755,inode64 0 0
+devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000 0 0
+tmpfs /run tmpfs rw,nosuid,nodev,noexec,relatime,size=13175444k,mode=755,inode64 0 0
+/dev/nvme0n1p2 / ext4 rw,relatime,stripe=32 0 0
+securityfs /sys/kernel/security securityfs rw,nosuid,nodev,noexec,relatime 0 0
+tmpfs /dev/shm tmpfs rw,nosuid,nodev,inode64 0 0
+tmpfs /run/lock tmpfs rw,nosuid,nodev,noexec,relatime,size=5120k,inode64 0 0
+cgroup2 /sys/fs/cgroup cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0
+pstore /sys/fs/pstore pstore rw,nosuid,nodev,noexec,relatime 0 0
+bpf /sys/fs/bpf bpf rw,nosuid,nodev,noexec,relatime,mode=700 0 0
+systemd-1 /proc/sys/fs/binfmt_misc autofs rw,relatime,fd=30,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=73971 0 0
+hugetlbfs /dev/hugepages hugetlbfs rw,relatime,pagesize=2M 0 0
+mqueue /dev/mqueue mqueue rw,nosuid,nodev,noexec,relatime 0 0
+debugfs /sys/kernel/debug debugfs rw,nosuid,nodev,noexec,relatime 0 0
+tracefs /sys/kernel/tracing tracefs rw,nosuid,nodev,noexec,relatime 0 0
+fusectl /sys/fs/fuse/connections fusectl rw,nosuid,nodev,noexec,relatime 0 0
+configfs /sys/kernel/config configfs rw,nosuid,nodev,noexec,relatime 0 0
+ramfs /run/credentials/systemd-sysctl.service ramfs ro,nosuid,nodev,noexec,relatime,mode=700 0 0
+ramfs /run/credentials/systemd-sysusers.service ramfs ro,nosuid,nodev,noexec,relatime,mode=700 0 0
+ramfs /run/credentials/systemd-tmpfiles-setup-dev.service ramfs ro,nosuid,nodev,noexec,relatime,mode=700 0 0
+/dev/nvme0n1p1 /boot ext4 rw,relatime,stripe=32 0 0
+ramfs /run/credentials/systemd-tmpfiles-setup.service ramfs ro,nosuid,nodev,noexec,relatime,mode=700 0 0
+binfmt_misc /proc/sys/fs/binfmt_misc binfmt_misc rw,nosuid,nodev,noexec,relatime 0 0
+tmpfs /run/user/0 tmpfs rw,nosuid,nodev,relatime,size=13175440k,nr_inodes=3293860,mode=700,inode64 0 0
+/dev/nvme1n1 /tmp ext4 rw,noatime,stripe=32 0 0
+cat: /sys/fs/cgroup/pids.max: No such file or directory
+cat: /sys/fs/cgroup/memory.max: No such file or directory
+cat: /sys/fs/cgroup/cpu.max: No such file or directory
+ 00:41:10 up 5 min,  0 user,  load average: 4.56, 5.98, 2.78
+64
+    PID COMMAND         %CPU %MEM
+  41249 ps               300  0.0
+    335 kworker/u128:1-  1.4  0.0
+   1613 jbd2/nvme1n1-8   1.4  0.0
+      1 systemd          0.8  0.0
+    361 kworker/u128:27  0.8  0.0
+  40645 bash             0.3  0.0
+    352 kworker/u128:18  0.3  0.0
+   1003 systemd-udevd    0.0  0.0
+     15 rcu_preempt      0.0  0.0
+   1225 dbus-daemon      0.0  0.0
+    330 migration/63     0.0  0.0
+    320 migration/61     0.0  0.0
+    325 migration/62     0.0  0.0
+    364 kworker/u128:30  0.0  0.0
+    305 migration/58     0.0  0.0
+    310 migration/59     0.0  0.0
+    315 migration/60     0.0  0.0
+    300 migration/57     0.0  0.0
+    931 jbd2/nvme0n1p2-  0.0  0.0

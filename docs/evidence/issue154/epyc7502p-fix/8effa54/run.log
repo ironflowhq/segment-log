@@ -1,0 +1,110 @@
+Hit:1 http://deb.debian.org/debian bookworm InRelease
+Hit:2 http://deb.debian.org/debian bookworm-updates InRelease
+Hit:3 http://security.debian.org/debian-security bookworm-security InRelease
+Hit:4 http://mirror.hetzner.com/debian/packages bookworm InRelease
+Hit:5 http://mirror.hetzner.com/debian/packages bookworm-backports InRelease
+Hit:6 http://mirror.hetzner.com/debian/packages bookworm-updates InRelease
+Hit:7 http://mirror.hetzner.com/debian/security bookworm-security InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+time is already the newest version (1.9-0.2).
+python3 is already the newest version (3.11.2-1+b1).
+The following additional packages will be installed:
+  libsensors-config libsensors5 libunwind8
+Suggested packages:
+  lm-sensors isag
+The following NEW packages will be installed:
+  libsensors-config libsensors5 libunwind8 strace sysstat
+0 upgraded, 5 newly installed, 0 to remove and 5 not upgraded.
+Need to get 2,009 kB of archives.
+After this operation, 5,059 kB of additional disk space will be used.
+Get:1 http://mirror.hetzner.com/debian/packages bookworm/main amd64 libsensors-config all 1:3.6.0-7.1 [14.3 kB]
+Get:2 http://mirror.hetzner.com/debian/packages bookworm/main amd64 libsensors5 amd64 1:3.6.0-7.1 [34.2 kB]
+Get:3 http://mirror.hetzner.com/debian/packages bookworm/main amd64 libunwind8 amd64 1.6.2-3 [51.2 kB]
+Get:4 http://mirror.hetzner.com/debian/packages bookworm/main amd64 strace amd64 6.1-0.1 [1,314 kB]
+Get:5 http://mirror.hetzner.com/debian/packages bookworm/main amd64 sysstat amd64 12.6.1-1 [596 kB]
+debconf: unable to initialize frontend: Dialog
+debconf: (TERM is not set, so the dialog frontend is not usable.)
+debconf: falling back to frontend: Readline
+debconf: unable to initialize frontend: Readline
+debconf: (This frontend requires a controlling tty.)
+debconf: falling back to frontend: Teletype
+dpkg-preconfigure: unable to re-open stdin: 
+Fetched 2,009 kB in 0s (5,094 kB/s)
+Selecting previously unselected package libsensors-config.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 35638 files and directories currently installed.)
+Preparing to unpack .../libsensors-config_1%3a3.6.0-7.1_all.deb ...
+Unpacking libsensors-config (1:3.6.0-7.1) ...
+Selecting previously unselected package libsensors5:amd64.
+Preparing to unpack .../libsensors5_1%3a3.6.0-7.1_amd64.deb ...
+Unpacking libsensors5:amd64 (1:3.6.0-7.1) ...
+Selecting previously unselected package libunwind8:amd64.
+Preparing to unpack .../libunwind8_1.6.2-3_amd64.deb ...
+Unpacking libunwind8:amd64 (1.6.2-3) ...
+Selecting previously unselected package strace.
+Preparing to unpack .../strace_6.1-0.1_amd64.deb ...
+Unpacking strace (6.1-0.1) ...
+Selecting previously unselected package sysstat.
+Preparing to unpack .../sysstat_12.6.1-1_amd64.deb ...
+Unpacking sysstat (12.6.1-1) ...
+Setting up libsensors-config (1:3.6.0-7.1) ...
+Setting up libunwind8:amd64 (1.6.2-3) ...
+Setting up strace (6.1-0.1) ...
+Setting up libsensors5:amd64 (1:3.6.0-7.1) ...
+Setting up sysstat (12.6.1-1) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (TERM is not set, so the dialog frontend is not usable.)
+debconf: falling back to frontend: Readline
+debconf: unable to initialize frontend: Readline
+debconf: (This frontend requires a controlling tty.)
+debconf: falling back to frontend: Teletype
+
+Creating config file /etc/default/sysstat with new version
+update-alternatives: using /usr/bin/sar.sysstat to provide /usr/bin/sar (sar) in auto mode
+Created symlink /etc/systemd/system/sysstat.service.wants/sysstat-collect.timer → /lib/systemd/system/sysstat-collect.timer.
+Created symlink /etc/systemd/system/sysstat.service.wants/sysstat-summary.timer → /lib/systemd/system/sysstat-summary.timer.
+Created symlink /etc/systemd/system/multi-user.target.wants/sysstat.service → /lib/systemd/system/sysstat.service.
+Processing triggers for man-db (2.11.2-2) ...
+Processing triggers for libc-bin (2.36-9+deb12u14) ...
+ Downloading crates ...
+  Downloaded cfg-if v1.0.5
+  Downloaded core_detect v1.0.0
+  Downloaded chacha20 v0.10.2
+  Downloaded bitflags v2.13.2
+  Downloaded scopeguard v1.2.0
+  Downloaded autocfg v1.5.1
+  Downloaded cpufeatures v0.3.1
+  Downloaded unarray v0.1.4
+  Downloaded allocator-api2 v0.4.0
+  Downloaded rand_xorshift v0.5.0
+  Downloaded rand_core v0.10.1
+  Downloaded lock_api v0.4.14
+  Downloaded num-traits v0.2.19
+  Downloaded getrandom v0.4.3
+  Downloaded talc v5.1.1
+  Downloaded rand v0.10.3
+  Downloaded proptest v1.12.0
+  Downloaded regex-syntax v0.8.11
+   Compiling rand_core v0.10.1
+   Compiling libc v0.2.191
+   Compiling autocfg v1.5.1
+   Compiling getrandom v0.4.3
+   Compiling cfg-if v1.0.5
+   Compiling scopeguard v1.2.0
+   Compiling cpufeatures v0.3.1
+   Compiling core_detect v1.0.0
+   Compiling regex-syntax v0.8.11
+   Compiling unarray v0.1.4
+   Compiling allocator-api2 v0.4.0
+   Compiling bitflags v2.13.2
+   Compiling lock_api v0.4.14
+   Compiling chacha20 v0.10.2
+   Compiling rand_xorshift v0.5.0
+   Compiling num-traits v0.2.19
+   Compiling talc v5.1.1
+   Compiling rand v0.10.3
+   Compiling proptest v1.12.0
+   Compiling segment-log-core v0.1.0 (/root/sl/segment-log-core)
+    Finished `release` profile [optimized] target(s) in 28.10s

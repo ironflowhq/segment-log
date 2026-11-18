@@ -42,3 +42,17 @@ which is why 8b1a2d1 beats ab86546.
 The roll sizes the next segment's map for as many keys as the rolled one, so a steady load never
 grows it on the writer. The roll-time closing-run stall remains; moving its flushes off the group
 path needs an ADR.
+
+## Rerun with the fix ([epyc7502p-fix](epyc7502p-fix))
+
+Hetzner auction #3116582, 2026-11-19: EPYC 7502P, 2x Samsung PM9A3 MZQL21T9HCJR GDC5A02Q (not the
+PM983 of the first box), otherwise the same setup. Both commits ran on this box.
+
+| Commit | Closed-loop records/s | Paced p99 ms | Paced runs within the bound | Mid-segment large groups per run |
+|---|---|---|---|---|
+| cca4b34 (main) | 218,022 | 8.95 (8.40–9.16) | 0 of 5 | 13–14 |
+| 8effa54 (main + the fix) | 219,213 | 4.14 (2.49–5.04) | 0 of 5 | 3 |
+
+The bound is about 1.8 ms. The 3 large groups left in the middle of a segment fall in the first
+segment after open, whose map has no rolled map to take its size from. The rest of the gap to the
+bound is the closing run at each roll.
