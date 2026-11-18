@@ -1,11 +1,11 @@
 ---
 id: "0053"
 title: "Format changes need no reader for older versions until the first production release"
-status: accepted
+status: superseded
 date: 2026-11-13
 deciders: [Altug Sahin]
 supersedes: null
-superseded_by: null
+superseded_by: "0064"
 tags: [format, compatibility]
 touches: [docs/architecture/format.md, docs/architecture/testing.md, docs/prd.md, segment-log-core/src/codec/header.rs, segment-log-core/src/acceptance/format_golden.rs, segment-log-core/tests/fixtures/**]
 enforced_by: test

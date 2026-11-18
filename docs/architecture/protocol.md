@@ -1,10 +1,10 @@
 # Wire protocol
 
-Status: protocol version 2, the 0.1 baseline ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md); the protocol itself is [ADR 0057](../decisions/0057-a-hand-rolled-binary-protocol-answered-in-order.md)). A server speaks a range of versions, and the client and server agree on one at `Hello`. Until the 0.1 tag, a change may still replace version 2. From the 0.1 tag, a change to these bytes is a new version, and a server speaks every version from 2 up to its own (ADR 0064, rules 5–10). No 0.x release removes a version: removing one needs an ADR and a major release, 1.0 or later.
+Status: protocol version 2, the 0.1 baseline ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md); the protocol itself is [ADR 0057](../decisions/0057-a-hand-rolled-binary-protocol-answered-in-order.md)). A server speaks a range of versions, and the client and server agree on one at `Hello`. A change to these bytes is a new version, and a server speaks every version from 2 up to its own (ADR 0064, rules 5–10). No 0.x release removes a version: removing one needs an ADR and a major release, 1.0 or later.
 
 This file is the only source for the protocol's message layout, widths, status codes and size caps. The server's process behavior is in [ADR 0058](../decisions/0058-one-server-process-serves-one-log.md). The record limits (stream id and key lengths) are in [format.md](format.md#limits) and are not copied here.
 
-[`conformance/wire-v2.txt`](../../conformance/wire-v2.txt) holds example messages for version 2, written from these tables. The server tests and the Go client check them, each in the direction it implements. Until the 0.1 tag, when a table here changes, change those examples in the same change. From the 0.1 tag, each version keeps its own file for good, and a new version adds one.
+[`conformance/wire-v2.txt`](../../conformance/wire-v2.txt) holds example messages for version 2, written from these tables. The server tests and the Go client check them, each in the direction it implements. Each version keeps its own file for good, and a new version adds one.
 
 ## Conventions
 
