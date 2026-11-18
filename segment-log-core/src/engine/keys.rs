@@ -6,7 +6,7 @@ use log_filter::{Builder, LogFilter};
 
 pub(super) struct Keys {
     hash: KeyHash,
-    active: BTreeMap<Vec<u8>, ActiveKey>,
+    active: KeyMap,
     /// The rolled segment whose closing run is not durable yet (ADR 0061, rule 5).
     pending: Option<PendingKeys>,
     sealed: Vec<Arc<SealedKeys>>,
@@ -29,7 +29,7 @@ pub(super) struct SealedKeys {
     filter: codec::KeyFilter,
 }
 
-pub(super) type KeyMap = BTreeMap<Vec<u8>, ActiveKey>;
+pub(super) type KeyMap = std::collections::HashMap<Vec<u8>, ActiveKey>;
 
 struct PendingKeys {
     base: u64,
@@ -105,7 +105,7 @@ impl KeyHash {
     }
 
     /// The key index entries of a segment's keyed records, as a roll writes them.
-    pub(super) fn entries(&self, keys: &BTreeMap<Vec<u8>, ActiveKey>) -> Vec<codec::KeyEntry> {
+    pub(super) fn entries(&self, keys: &KeyMap) -> Vec<codec::KeyEntry> {
         keys.iter()
             .map(|(key, at)| codec::KeyEntry {
                 hash: self.of(key),
@@ -307,11 +307,7 @@ fn compare(
 }
 
 impl Keys {
-    pub(super) fn new(
-        hash: KeyHash,
-        active: BTreeMap<Vec<u8>, ActiveKey>,
-        sealed: Vec<SealedKeys>,
-    ) -> Self {
+    pub(super) fn new(hash: KeyHash, active: KeyMap, sealed: Vec<SealedKeys>) -> Self {
         Self {
             hash,
             active,
