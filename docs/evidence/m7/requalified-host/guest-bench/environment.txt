@@ -1,0 +1,15 @@
+Tue Nov 17 10:58:16 PM UTC 2026
+head=386695f037b901902c2612783485b81c7bc6159b
+callers=1000 connections=16 rounds=1000 pairs=5 interval_us=20000 vcpus=2 mem_mib=1024
+Linux m7 6.1.0-54-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.190-1 (2026-10-16) x86_64 GNU/Linux
+CPU(s):                                  48
+Model name:                              AMD EPYC 7401P 24-Core Processor
+BIOS Model name:                         AMD EPYC 7401P 24-Core Processor                Unknown CPU @ 2.0GHz
+CPU(s) scaling MHz:                      72%
+               total        used        free      shared  buff/cache   available
+Mem:     135042404352  1834131456 128390668288     1220608  5829812224 133208272896
+Swap:              0           0           0
+TARGET SOURCE       FSTYPE OPTIONS
+/tmp   /dev/nvme0n1 ext4   rw,noatime
+Firecracker v1.18.0
+ 23:58:16 up 21 min,  0 user,  load average: 1.83, 2.62, 1.64

@@ -1,0 +1,9 @@
+== nvme0
+power_cycles				: 16
+power_on_hours				: 62,652
+unsafe_shutdowns			: 2
+== nvme1
+power_cycles				: 16
+power_on_hours				: 62,653
+unsafe_shutdowns			: 2
+2

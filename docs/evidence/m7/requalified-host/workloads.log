@@ -1,0 +1,55 @@
+ Downloading crates ...
+  Downloaded cfg-if v1.0.5
+  Downloaded bitflags v2.13.2
+  Downloaded chacha20 v0.10.2
+  Downloaded autocfg v1.5.1
+  Downloaded lock_api v0.4.14
+  Downloaded allocator-api2 v0.4.0
+  Downloaded scopeguard v1.2.0
+  Downloaded rand_xorshift v0.5.0
+  Downloaded cpufeatures v0.3.1
+  Downloaded core_detect v1.0.0
+  Downloaded rand_core v0.10.1
+  Downloaded unarray v0.1.4
+  Downloaded getrandom v0.4.3
+  Downloaded num-traits v0.2.19
+  Downloaded talc v5.1.1
+  Downloaded rand v0.10.3
+  Downloaded proptest v1.12.0
+  Downloaded regex-syntax v0.8.11
+   Compiling rand_core v0.10.1
+   Compiling getrandom v0.4.3
+   Compiling cfg-if v1.0.5
+   Compiling autocfg v1.5.1
+   Compiling cpufeatures v0.3.1
+   Compiling scopeguard v1.2.0
+   Compiling allocator-api2 v0.4.0
+   Compiling core_detect v1.0.0
+   Compiling bitflags v2.13.2
+   Compiling regex-syntax v0.8.11
+   Compiling unarray v0.1.4
+   Compiling lock_api v0.4.14
+   Compiling chacha20 v0.10.2
+   Compiling rand_xorshift v0.5.0
+   Compiling num-traits v0.2.19
+   Compiling rand v0.10.3
+   Compiling talc v5.1.1
+   Compiling proptest v1.12.0
+   Compiling segment-log-core v0.0.1 (/root/segment-log/segment-log-core)
+    Finished `release` profile [optimized] target(s) in 36.74s
+== callers: 4000 callers x 1000 rounds
+APPEND records=4000000 elapsed_ns=32826972024 records_per_second=121851.019 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=2176000 admission_call_sum_ns=40710449352
+END records=4000000 segments=18 bytes=1256709392
+REOPEN ns=177604440 start_records=4000000 end_records=4000000 start_segments=18 end_segments=18 start_bytes=1256709392 end_bytes=1256709392 correctness_errors=0
+	Maximum resident set size (kbytes): 1957192
+== history: 1000 callers x 10000 rounds
+APPEND records=10000000 elapsed_ns=75458841237 records_per_second=132522.576 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=544000 admission_call_sum_ns=80727707893
+END records=10000000 segments=45 bytes=3143262384
+REOPEN ns=40124214 start_records=10000000 end_records=10000000 start_segments=45 end_segments=45 start_bytes=3143262384 end_bytes=3143262384 correctness_errors=0
+	Maximum resident set size (kbytes): 4790516
+== soak: 1000 callers x 60000 rounds
+APPEND records=60000000 elapsed_ns=469064264294 records_per_second=127914.242 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=544000 admission_call_sum_ns=475609633461
+END records=60000000 segments=265 bytes=18859428680
+REOPEN ns=219332163 start_records=60000000 end_records=60000000 start_segments=265 end_segments=265 start_bytes=18859428680 end_bytes=18859428680 correctness_errors=0
+	Maximum resident set size (kbytes): 27754180
+== workloads passed

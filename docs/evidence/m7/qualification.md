@@ -1,10 +1,10 @@
 # Qualification record: the ADR 0059 stack
 
-**Status: not qualified. Two MUST rows are `Not verified`: V9 `VOL-CAPACITY` and V10 `VOL-DRIFT`, whose cases now exist (`m7-capacity.sh`, and the host keys in `m7-drift.sh`) but have not run on a qualified host. The record also mixes two hosts, which [ADR 0059](../../decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md)'s amendment forbids, so the whole record reruns on one host that offers a power button reset, after format version 3 lands. The rows below are the first session's results until then.** The stage 2 session ran every case on the qualified host on 2026-11-17 ([issue 112](https://github.com/ironflowx/segment-log/issues/112)), with `scripts/m7-session.sh` at `df23d9b` plus the `host-reset` event added to `scripts/m7-host-cut.sh` in the same change. That host's Robot web service offers no power button reset, so host power loss ran the same day on a second auction host whose Robot does ([power-loss-host/](power-loss-host/README.md)). Its drives are Samsung PM963, not the PM983 of the qualified host: the same vendor and class (U.2 datacenter drives with no volatile write cache), but a different model. The stack qualifies when every MUST row is `Pass`, or `Not applicable` where V8 allows it ([volume-requirements.md](../../architecture/volume-requirements.md#qualification-record)). The first session's logs and the host description are in [qualified-host/](qualified-host/README.md).
+**Status: qualified. Every MUST row is `Pass`, and V8 is `Not applicable`, on one host.** The requalification session ran every case on Hetzner auction host #3115170 on 2026-11-17 and 2026-11-18 ([issue 112](https://github.com/ironflowx/segment-log/issues/112), [issue 133](https://github.com/ironflowx/segment-log/issues/133)), with `scripts/m7-session.sh` at `386695f`, format version 3 and protocol version 2. Its logs and the host description are in [requalified-host/](requalified-host/README.md). The stack qualifies when every MUST row is `Pass`, or `Not applicable` where V8 allows it ([volume-requirements.md](../../architecture/volume-requirements.md#qualification-record)). Two earlier sessions fill no row: the [first qualified host](qualified-host/README.md) offered no power button reset, and the [power-loss host](power-loss-host/README.md) was a second machine, which [ADR 0059](../../decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md)'s amendment forbids.
 
 ## Fingerprint
 
-The machine-readable copy that the launcher and the guest check before every open (V10) is [`scripts/m7/fingerprint`](../../../scripts/m7/fingerprint). Host values come from the session's [host.txt](qualified-host/host.txt). Since the ADR 0059 amendment the launcher also checks four host keys before boot, printed by [`scripts/m7/fingerprint-host`](../../../scripts/m7/fingerprint-host) for the filesystem that holds the image: `host.kernel` (`uname -r`), `host.fs` (type and mount options), `host.drive` (model and firmware) and `host.write_cache` (for NVMe, the kernel's view of `vwc`). They are `unpinned` until the rerun: `m7-session.sh bootstrap` pins them in the host's checkout, `run` refuses to start while any is unpinned, and `collect` saves the pinned file for this record to commit.
+The machine-readable copy that the launcher and the guest check before every open (V10) is [`scripts/m7/fingerprint`](../../../scripts/m7/fingerprint), committed from this session's pinned copy. The launcher checks `vmm.*` and `host.*` before boot; the guest checks `guest.*` before the log opens. Host values come from [host.txt](requalified-host/host.txt) and [`scripts/m7/fingerprint-host`](../../../scripts/m7/fingerprint-host).
 
 | Layer | Component and version | Configuration |
 | --- | --- | --- |
@@ -13,10 +13,10 @@ The machine-readable copy that the launcher and the guest check before every ope
 | Guest block device | virtio-blk `/dev/vdb` | `write_cache`: `write back` |
 | VMM | Firecracker v1.18.0 | log drive `cache_type: Writeback`, one VMM per volume, `flock` on the image |
 | Guest size | 2 vCPUs, 256 MiB (launcher default) | 1 GiB for the guest benchmark and the transport tests with 1,000 connections; 1 vCPU for the flush-latency guests ([sizing](handoff.md#guest-size)). Not in the fingerprint: size changes capacity, not durability |
-| Host kernel | Debian 12, `6.1.0-54-amd64` (Debian `6.1.190-1`) | distribution defaults; `kernel.panic` reboots after a crash |
-| Host filesystem | ext4 on the second NVMe drive (`nvme1n1`), whole device, no RAID | `rw,noatime`, default barriers |
+| Host kernel | Debian 12, `6.1.0-54-amd64` (`host.kernel`) | distribution defaults; `kernel.panic` reboots after a crash |
+| Host filesystem | ext4 on the NVMe drive that does not hold `/`, whole device, no RAID | `rw,noatime`, default barriers (`host.fs`) |
 | Backing file | raw sparse image per log, on the host filesystem above | created by the launcher |
-| Media | 2× Samsung PM983 `MZQLB960HAJR-00007`, 960 GB U.2, firmware `EDA5502Q` (auction #3114789, Xeon E-2176G, 64 GB) | `vwc 0`: no volatile write cache, so the block layer reports `write through` and sends no flush to the drive. `awupf 7`, `nawupf 7` (4 KiB at 512-byte blocks), 512-byte LBA format in use |
+| Media | 2× Samsung PM983 `MZQLB960HAJR-00007`, 960 GB U.2, firmware `EDA5502Q` (`host.drive`); auction #3115170, AMD EPYC 7401P, 128 GB | `vwc 0`: no volatile write cache, so the block layer reports `write through` (`host.write_cache`) and sends no flush to the drive. `awupf 7`, `nawupf 7` (4 KiB at 512-byte blocks), 512-byte LBA format in use |
 | Planned density | 8 guests per host, 200 groups/s each, 16 KiB groups | **Provisional** (issue 112) |
 
 ## Failure domain (V7)
@@ -27,8 +27,8 @@ The machine-readable copy that the launcher and the guest check before every ope
 | Guest crash | yes | `sysrq c` in the guest |
 | Guest destroy | yes | `SIGKILL` the VMM |
 | Host kernel crash | yes | `sysrq c` on the host, `kernel.panic` reboots it |
-| Host reset | yes | Robot web service, `hw`: the reset button. The drives keep power ([evidence](qualified-host/README.md#host-reset-is-not-a-power-cut)), so this is never a power cut |
-| Host power loss | yes | Robot web service: long press, then press, of the power button. Run on the [power-loss host](power-loss-host/README.md); the qualified host's Robot offers no power button reset. Each cut removed drive power: SMART `power_cycles` rose by exactly the number of cuts |
+| Host reset | yes | Robot web service, `hw`: the reset button. The drives keep power, so this is never a power cut |
+| Host power loss | yes | Robot web service: long press, then press, of the power button. Each cut removed drive power: both drives' SMART `power_cycles` rose by exactly the number of cuts ([before](requalified-host/smart-before.txt), [after](requalified-host/host.txt)) |
 | Host loss | no | The image lives on one host's local drive |
 | Device loss | no | One drive, no RAID |
 | Zone loss | no | One host |
@@ -40,34 +40,33 @@ Which events beyond the minimum a product needs is [PRD open item 12](../../prd.
 These stand in for deployment numbers that are not set yet. Each is labeled where it is used.
 
 - V8: the deployment never copies a log volume.
-- V9, the workload profile (owner, issue 133): 8 logs per host; a peak write rate per log of the density run's 200 groups/s × 16 KiB = 3,276,800 bytes/s; a planned peak history per log of 50 GiB encoded; 256-byte payloads, 16-byte stream ids and 16-byte keys on every record, as many records per group as fit in 16 KiB (53), and one stream per record (the footer's worst case); a response time of 1 hour; 20 % headroom. These are the defaults of [`scripts/m7-capacity.py`](../../../scripts/m7-capacity.py), which takes every width from [format.md](../../architecture/format.md) and counts each segment closed, with the key filter's worst padding.
-- V9, what the profile gives (format version 3, with its 8-byte append time per group frame): 146,335,728 records per log; a planned allocated size of 64.4 GB per log at an allocation ratio of 1.0; an alert threshold of 11.8 GB free in each guest and 94.4 GB free on the host filesystem. The guest volume needs the planned allocated size plus its alert threshold free after `mkfs`, 76.2 GB, so that the alert stays quiet until the history passes its plan: a 77 GiB image, at the 92.6 % of an image that `df` shows free after `mkfs.ext4` (measured at that size in the Lima rehearsal; the session measures it on the host). The host filesystem needs eight whole images plus its threshold, 756 GB, since a sparse image allocates at most its size.
-- V9, the fit: the first session's volume drive was 960 GB (894 GiB); ext4 on the whole drive holds about 890 GB of files (`df` used plus avail, estimated from the rehearsal's `mkfs` overhead), so 50 GiB per log fits with about 134 GB to spare. The largest history per log that fits that drive is about 61 GiB. The rerun host's drive decides: `m7-capacity.sh` fails when the host filesystem cannot hold every image.
+- V9, the workload profile (owner, issue 133): 8 logs per host; a peak write rate per log of the density run's 200 groups/s × 16 KiB = 3,276,800 bytes/s; a planned peak history per log of 50 GiB encoded; 256-byte payloads, 16-byte stream ids and 16-byte keys on every record, as many records per group as fit in 16 KiB (53), and one stream per record (the footer's worst case); a response time of 1 hour; 20 % headroom. These are the defaults of [`scripts/m7-capacity.py`](../../../scripts/m7-capacity.py), which takes every width from [format.md](../../architecture/format.md).
+- V9, what the profile gives on this host (format version 3): 146,335,728 records per log; a planned allocated size of 64.4 GB per log at the measured allocation ratio; an alert threshold of 11.8 GB free in each guest and 94.4 GB free on the host filesystem; a 82.7 GB image per log; 755.8 GB needed on the host filesystem, which has 895.9 GB ([capacity.log](requalified-host/capacity.log)).
 - V11: the density above.
 
 ## Requirements
 
-Logs are in [qualified-host/](qualified-host/), one per step, named after the step; `results.tsv` has each step's exit status. Rehearsals in Lima or on the earlier host fill no row; they are noted under Limitations where they shaped the case.
+Logs are in [requalified-host/](requalified-host/), one per step, named after the step; `results.tsv` has each step's exit status.
 
 | ID | Case | Evidence class | Commands or script | Control result | Result | Limitations |
 | --- | --- | --- | --- | --- | --- | --- |
-| V1 | `VOL-FLUSH-CONFIG` | Tested | `m7-rehearse.sh` (guest `write_cache`, mount options), `host.txt` (drive `vwc`) | `Unsafe` shows `write through` | Pass | Guest: `write back`, ext4 `rw,relatime,errors=remount-ro`. Host: ext4 `rw,noatime` with default barriers on a drive with no volatile cache (`vwc 0`), so the host sends no flush to the drive (0 flushes in every [latency](qualified-host/latency-density.log) run) |
+| V1 | `VOL-FLUSH-CONFIG` | Tested | `m7-rehearse.sh` (guest `write_cache`, mount options), `host.txt` (drive `vwc`) | `Unsafe` shows `write through` | Pass | Guest: `write back`, ext4 `rw,relatime,errors=remount-ro`. Host: ext4 `rw,noatime` with default barriers on a drive with no volatile cache (`vwc 0`), so the host sends no flush to the drive (0 flushes in every [latency](requalified-host/latency-density.log) run) |
 | V1 | `VOL-FLUSH-TRACE` | Not verified | none | | Not verified | A trace alone never qualifies V1; `VOL-POWER-CUT` decides |
-| V1 | `VOL-POWER-CUT`, guest-side events | Tested | `m7-power-cut.sh process-crash\|guest-crash\|guest-destroy 30` | `--control`, 10 cycles each: caught 10, 10 and 9 of 10 | Pass | 0 of 30 cycles lost a record for each event; the last checks covered 139,883, 143,756 and 127,719 reported records |
-| V1 | `VOL-POWER-CUT`, host kernel crash | Tested | `m7-host-cut.sh host-kernel-crash 30` | `--control` (`Unsafe`): first cycle lost all 11,558 reported records | Pass | 0 of 30 cycles lost a record; 249,682 reported records checked |
-| V1 | `VOL-POWER-CUT`, host reset | Tested | `m7-host-cut.sh host-reset 30` | `--control` (`Unsafe`): first cycle lost all 10,084 reported records | Pass | 0 of 30 cycles lost a record; 183,477 reported records checked. Not a power cut: the drives' `power_cycles` stayed below the session's 31 resets |
-| V1 | `VOL-POWER-CUT`, host power loss | Tested | `m7-host-cut.sh host-power-loss 30` on the [power-loss host](power-loss-host/README.md) | `--control` (`Unsafe`): first cycle lost all 25,313 reported records | Pass | 0 of 30 cycles lost a record. Both drives' `power_cycles` went from 54 to 85 and `unsafe_shutdowns` from 28 to 59: one per cut, 30 real and 1 control. Ran on Samsung PM963 drives, not the qualified host's PM983 (see Status). The qualified host's Robot offers no power button reset ([log](qualified-host/hc-host-power-loss.log)) |
-| V2 | `VOL-POWER-CUT-RECOVERY` | Tested | `m7-recovery-cut.sh clean\|sealed\|header 10` | `--control` (`rewrite-control` build): first cycle, 4 reported records missing | Pass | 0 of 10 counted cycles failed for each window, open never `Corrupt`. Cut by host kernel crash on block-trace evidence; dm-delay widens the window |
+| V1 | `VOL-POWER-CUT`, guest-side events | Tested | `m7-power-cut.sh process-crash\|guest-crash\|guest-destroy 30` | `--control`, 10 cycles each: caught 9, 9 and 7 of 10 | Pass | 0 of 30 cycles lost a record for each event; the last checks covered 151,924, 155,164 and 141,349 reported records |
+| V1 | `VOL-POWER-CUT`, host kernel crash | Tested | `m7-host-cut.sh host-kernel-crash 30` | `--control` (`Unsafe`): first cycle lost all 11,451 reported records | Pass | 0 of 30 cycles lost a record; 257,717 reported records checked |
+| V1 | `VOL-POWER-CUT`, host reset | Tested | `m7-host-cut.sh host-reset 30` | `--control` (`Unsafe`): first cycle lost all 12,298 reported records | Pass | 0 of 30 cycles lost a record; 322,595 reported records checked |
+| V1 | `VOL-POWER-CUT`, host power loss | Tested | `m7-host-cut.sh host-power-loss 30` | `--control` (`Unsafe`): first cycle lost all 19,167 reported records | Pass | 0 of 30 cycles lost a record; 576,495 reported records checked. Both drives' `power_cycles` went from 16 to 47 and `unsafe_shutdowns` from 2 to 33: one per cut, 30 real and 1 control |
+| V2 | `VOL-POWER-CUT-RECOVERY` | Tested | `m7-recovery-cut.sh clean\|sealed\|header 10` | `--control` (`rewrite-control` build): first cycle, 5 reported records missing | Pass | 0 of 10 counted cycles failed for each window, open never `Corrupt`; the `clean` check covered 50,948 reported records. `clean` is from its [rerun](requalified-host/v2-clean-rerun.log): the first run stopped at cycle 10 when the ssh session to the host timed out before the check ran, after 9 clean cycles ([details](requalified-host/README.md#the-first-v2-clean-run)). Cut by host kernel crash on block-trace evidence; dm-delay widens the window |
 | V2 | `VOL-ATOMIC-WRITE` | Supporting | `host.txt` (`awupf`, `nawupf`, logical block size) | | `awupf 7`, `nawupf 7`: 4 KiB | Supporting only |
-| V3 | `VOL-METADATA-ERROR` | Tested | `m7-metadata-error.sh`, `--control`, `--panic` | No control could be built (`errors=continue` also goes read-only), as expected | Pass | Under [ADR 0062](../../decisions/0062-v3-requires-refused-writes-not-failed-syncs.md); the failing target is a dm table on the host, under the guest's drive. `--panic` exits 1 (`fail`), as in Lima and ADR 0062: evidence only, since the stack mounts `errors=remount-ro` and ext4 panics only at the next write |
+| V3 | `VOL-METADATA-ERROR` | Tested | `m7-metadata-error.sh`, `--control`, `--panic` | No control could be built (`errors=continue` also goes read-only), as expected | Pass | Under [ADR 0062](../../decisions/0062-v3-requires-refused-writes-not-failed-syncs.md); the failing target is a dm table on the host, under the guest's drive. `--panic` exits 1 (`fail`), as in every earlier run and ADR 0062: evidence only, since the stack mounts `errors=remount-ro` |
 | V4 | `VOL-FS-CHECK` | Tested | `m7-rehearse.sh` (`/dev/vdb ext4`) | the same rule rejects `/dev/shm` (`tmpfs`) | Pass | |
-| V5 | `VOL-EXCLUSIVE` | Tested | `m7-rehearse.sh` (steps 2, 3 and 4 on one host) | `M7_FENCE=0`: a second VMM attached the held volume | Pass | 20 of 20 races attached exactly one VMM. Step 1's read-only attach is the same `flock`; two hosts never share an image |
+| V5 | `VOL-EXCLUSIVE` | Tested | `m7-rehearse.sh` (steps 2, 3 and 4 on one host) | `M7_FENCE=0`: a second VMM attaches the held volume | Pass | 20 of 20 races attached exactly one VMM. Step 1's read-only attach is the same `flock`; two hosts never share an image |
 | V6 | `HANDOFF` | Tested | `m7-rehearse.sh` (`TestHandoffSealed`, `TestHandoffUnsealed`) | | Pass | [Handoff record](handoff.md) |
-| V7 | `VOL-FAILURE-DOMAIN` | Tested | the V1 power-cut rows, one per declared event | as in V1 | Pass | Every declared event passes. Host power loss ran on the power-loss host's PM963 drives; host kernel crash and host reset passed on both hosts |
+| V7 | `VOL-FAILURE-DOMAIN` | Tested | the V1 power-cut rows, one per declared event | as in V1 | Pass | Every declared event passes on this host |
 | V8 | `VOL-COPY` | Not applicable | none | | Not applicable | Provisional: the deployment never copies a log volume |
-| V9 | `VOL-CAPACITY` | Tested | `m7-capacity.sh` (allocation ratio of a sealed test log; sizing record from the provisional profile; `df` after `mkfs` of the sized image and of the host filesystem; fill tests of the guest and host alerts with scaled thresholds) | | Not verified | Provisional profile (see Provisional values). Not yet run on a qualified host; passes in the Lima rehearsal with a scaled profile |
-| V9 | `VOL-ENOSPC` | Tested | `m7-enospc.sh guest\|host` | | Pass | Guest full: 20,744 of 20,744 reported records survived; host full: 27,317 of 27,317 |
-| V10 | `VOL-DRIFT` | Tested | `m7-drift.sh` (cache mode, host mount option, host drive, guest mount option, guest kernel) | the unchanged stack opens with every key checked | Not verified | The first session's pass (unchanged stack opened; `Unsafe`, `noatime` and guest kernel 5.10 each refused) predates the host keys. In the Lima rehearsal the image directory bind-mounted `noexec` refused as `host.fs`, and a fingerprint naming another drive refused as `host.drive` |
+| V9 | `VOL-CAPACITY` | Tested | `m7-capacity.sh` | | Pass | Guest: `df` shows 76.6 GB free after `mkfs` of the 82.7 GB image, against 76.2 GB needed. Host: 895.9 GB capacity against 755.8 GB needed for 8 images and the alert threshold. Both alerts fired at their (scaled) thresholds in the fill tests. Provisional profile |
+| V9 | `VOL-ENOSPC` | Tested | `m7-enospc.sh guest\|host` | | Pass | Both layers: every acknowledged record survived, and open succeeded |
+| V10 | `VOL-DRIFT` | Tested | `m7-drift.sh` (cache mode, host mount option, host drive, guest mount option, guest kernel) | the unchanged stack opens with every key checked | Pass | Refused: `vmm.cache_type` `Unsafe`, `host.fs` with `noexec`, `host.drive` naming another drive, guest `noatime`, guest kernel 5.10 |
 | V11 | `VOL-FLUSH-LATENCY` | Measured | `m7-flush-latency.sh 1 0 60`, `8 200 60`, `8 0 60` | | Measured, below | Density provisional |
 
 ### Flush latency (V11)
@@ -76,41 +75,28 @@ A guest `fsync` of 16 KiB on the log drive, through virtio-blk and the host file
 
 | Run | Guests | Rate each | syncs/s each | mean µs | p50 µs | p99 µs | p999 µs | max µs |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| [alone](qualified-host/latency-alone.log) | 1 | unpaced | 2,514 | 397 | 394 | 532 | 677 | 1,556 |
-| [density](qualified-host/latency-density.log) | 8 | 200/s | 200 | 659 | 646 | 946 | 1,127 | 1,601–3,383 |
-| [saturation](qualified-host/latency-saturation.log) | 8 | unpaced | 1,550 | 644 | 635 | 874 | 1,009 | 4,362–5,203 |
+| [alone](requalified-host/latency-alone.log) | 1 | unpaced | 1,479 | 675 | 658 | 898 | 999 | 2,103 |
+| [density](requalified-host/latency-density.log) | 8 | 200/s | 200 | 1,626 | 1,599 | 2,104 | 2,497 | 2,813–3,925 |
+| [saturation](requalified-host/latency-saturation.log) | 8 | unpaced | 1,184 | 844 | 771 | 1,486 | 1,726 | 2,309–13,019 |
 
 ## Throughput estimate (V11)
 
-`records/s ≈ callers × records per submit / (linger + mean cycle at planned density)`, with 1,000 callers, 1 record per submit and 1 ms linger ([PRD](../../prd.md#footprint-and-performance-targets)). With the density run's mean cycle of 0.66 ms: 1,000 / 1.66 ms ≈ 600,000 records/s. The flush is not the bound; the guest benchmark below is.
+`records/s ≈ callers × records per submit / (linger + mean cycle at planned density)`, with 1,000 callers, 1 record per submit and 1 ms linger ([PRD](../../prd.md#footprint-and-performance-targets)). With the density run's mean cycle of 1.63 ms: 1,000 / 2.63 ms ≈ 380,000 records/s. The flush is not the bound; the guest benchmark below is.
 
 ## Guest benchmark and #49
 
-The guest benchmark ([summary](qualified-host/guest-bench/summary.md)) runs the M6 socket workload, 1,000 callers and 256-byte keyed records, against the server in a guest over hybrid vsock, paired with the same workload in process on the host's volume filesystem, 5 pairs each.
+The guest benchmark ([summary](requalified-host/guest-bench/summary.md)) runs the M6 socket workload, 1,000 callers and 256-byte keyed records, against the server in a guest over hybrid vsock, with the callers sharing 16 pipelined connections ([ADR 0063](../../decisions/0063-the-guest-benchmark-shares-pipelined-connections.md)), paired with the same workload in process on the host's volume filesystem, 5 pairs each. The [one-connection-per-caller diagnostic](requalified-host/guest-bench-per-caller/summary.md) runs the old topology.
 
-| Mode | In process | Firecracker guest |
-| --- | --- | --- |
-| Closed loop, records/s (median) | 261,793 | 46,187 |
-| Closed loop, p99 ms | 7.5 | 33.5 |
-| Paced at 50,000/s, achieved records/s | 49,972 | 46,014 |
-| Paced, p99 ms | 1.4 | 1,731 |
-
-**The guest topology misses the PRD's 50,000 records/s target by about 8 %.** It cannot reach the paced rate, so the paced latencies show a queue that grows for the whole run, not the log's latency. The bound is the VMM's main thread: in [the thread sample](qualified-host/guest-bench/closed/guest-1.threads.txt) the `firecracker` thread runs at 99.9 % CPU while the two `fc_vcpu` threads run at 87–93 %. That thread runs Firecracker's vsock muxer, so the bound is the hybrid vsock transport, not the log, the drive or the guest's CPU. The in-process run on the same volume does 5.7× the guest's rate.
-
-### After ADR 0063, on the power-loss host
-
-[ADR 0063](../../decisions/0063-the-guest-benchmark-shares-pipelined-connections.md) sends answers that are ready together in one write, and the benchmark's 1,000 callers share 16 connections. The power-loss host ran the guest benchmark before the change (`0a41cff`) and after it (`2b378c7`), on the same machine ([before](power-loss-host/before/guest-bench/summary.md), [after](power-loss-host/after/guest-bench/summary.md), [one connection per caller](power-loss-host/after/guest-bench-per-caller/summary.md)). That host has an AMD EPYC 7401P, whose cores are slower than the qualified host's Xeon E-2176G, so its numbers are lower in both columns.
-
-| Guest, median of 5 pairs | Before, 1,000 connections | After, 16 connections | After, 1,000 connections |
+| Median of 5 pairs | In process | Guest, 16 connections | Guest, 1,000 connections |
 | --- | ---: | ---: | ---: |
-| Closed loop, records/s | 32,217 | 50,644 (49,560 to 51,691) | 30,848 |
-| Paced at 50,000/s, achieved records/s | 33,343 | 49,777 | 29,486 |
-| Paced, p99 ms | 9,782 | 77 | 13,656 |
+| Closed loop, records/s | 130,665 | **52,860** (51,631 to 53,338) | 32,439 |
+| Closed loop, p99 ms | 15.3 | 34.0 | 48.1 |
+| Paced at 50,000/s, achieved records/s | 49,794 | 49,809 | 32,377 |
+| Paced, p99 ms | 3.2 | 69.2 | 10,724 |
 
-**The change lifts the guest by 57 % and reaches the throughput target on the slower host.** The `firecracker` thread is still at 99.9 % CPU, so the vsock muxer is still the bound; the change moves more records per unit of its work. At 50,000/s the guest runs at about 98 % of its closed-loop rate, so the paced p99 of 77 ms is queueing near saturation and misses the latency target. The qualified host's faster cores should leave more headroom; that run is still to do.
+**The guest meets the PRD's 50,000 records/s target in every pair**, by about 6 % at the median. The bound is still the VMM's main thread, which runs Firecracker's vsock muxer: in [the thread sample](requalified-host/guest-bench/closed/guest-1.threads.txt) the `firecracker` thread runs at 99.9 % CPU and the two `fc_vcpu` threads at 63–69 %. **The guest misses the latency target at 50,000/s**: it runs at about 94 % of its closed-loop rate there, so the paced p99 of 69 ms is queueing near saturation. ADR 0063 records this as a known 0.1 limit, together with the Go client's lack of connection pooling ([issue 134](https://github.com/ironflowx/segment-log/issues/134)).
 
-The issue 49 capture on this host ([summary](qualified-host/m1-capture/summary.md)), with `ROLL writer_ns` per roll ([ADR 0061](../../decisions/0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md)):
+The issue 49 capture on this host ([summary](requalified-host/m1-capture/summary.md)), with `ROLL writer_ns` per roll ([ADR 0061](../../decisions/0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md)):
 
-- Closed loop: 258,188 records/s median, p99 7.4 ms, device flush p99 0.52 ms.
-- Paced at 50,000 records/s: p99 1.47 ms median, within the bound of the same run (2.03 ms) in 5 of 5 runs, and within the bound from the run's own group flushes in 3 of 5.
-- Every roll keeps the writer for 0.27–0.49 ms (`ROLL writer_ns`), against the ~70 ms roll stall that issue 107 found before ADR 0061.
+- Closed loop: 131,329 records/s median, append p99 14.9 ms, device flush p99 0.45 ms.
+- Paced at 50,000 records/s: p50 1.02 ms, but p99 29.1 ms median against a bound of 1.94 ms, so 0 of 5 runs are within the bound. The tail is long (p999 about 74 ms, max about 88 ms). Rolls are not the cause: every roll keeps the writer for 0.42–0.80 ms. The first qualified host (Xeon E-2176G) met the bound in 5 of 5 runs with the same build family, so this is a finding about the core's tail on this CPU ([issue 154](https://github.com/ironflowx/segment-log/issues/154)). Latency is a measured target, not a qualification row.

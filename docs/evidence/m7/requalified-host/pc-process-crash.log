@@ -1,0 +1,97 @@
+== build the server
+info: component rust-std for target x86_64-unknown-linux-musl is up to date
+== build the powercut tool
+== build the guest rootfs
+== pc-process-crash-20261117234112: 30 cycles, observer 178.156.201.194:7070
+load: cycle 1: 4279 acknowledged, 4279 reported
+check: 4279 records, 4279 reported, 0 missing
+-- cycle 1 at 1586 ms
+load: cycle 2: 8022 acknowledged, 8022 reported
+check: 12304 records, 12301 reported, 0 missing
+-- cycle 2 at 2993 ms
+load: cycle 3: 7243 acknowledged, 7243 reported
+check: 19547 records, 19544 reported, 0 missing
+-- cycle 3 at 2711 ms
+load: cycle 4: 2240 acknowledged, 2240 reported
+check: 21803 records, 21784 reported, 0 missing
+-- cycle 4 at 883 ms
+load: cycle 5: 6720 acknowledged, 6720 reported
+check: 28539 records, 28504 reported, 0 missing
+-- cycle 5 at 2517 ms
+load: cycle 6: 3703 acknowledged, 3703 reported
+check: 32258 records, 32207 reported, 0 missing
+-- cycle 6 at 1410 ms
+load: cycle 7: 6708 acknowledged, 6708 reported
+check: 38982 records, 38915 reported, 0 missing
+-- cycle 7 at 2608 ms
+load: cycle 8: 3012 acknowledged, 3012 reported
+check: 42010 records, 41927 reported, 0 missing
+-- cycle 8 at 1253 ms
+load: cycle 9: 4481 acknowledged, 4481 reported
+check: 46507 records, 46408 reported, 0 missing
+-- cycle 9 at 1782 ms
+load: cycle 10: 4676 acknowledged, 4676 reported
+check: 51183 records, 51084 reported, 0 missing
+-- cycle 10 at 1859 ms
+load: cycle 11: 4953 acknowledged, 4953 reported
+check: 56136 records, 56037 reported, 0 missing
+-- cycle 11 at 1959 ms
+load: cycle 12: 1494 acknowledged, 1494 reported
+check: 57646 records, 57531 reported, 0 missing
+-- cycle 12 at 663 ms
+load: cycle 13: 1949 acknowledged, 1949 reported
+check: 59595 records, 59480 reported, 0 missing
+-- cycle 13 at 824 ms
+load: cycle 14: 5989 acknowledged, 5989 reported
+check: 65584 records, 65469 reported, 0 missing
+-- cycle 14 at 2334 ms
+load: cycle 15: 4187 acknowledged, 4187 reported
+check: 69787 records, 69656 reported, 0 missing
+-- cycle 15 at 1673 ms
+load: cycle 16: 4045 acknowledged, 4045 reported
+check: 73848 records, 73701 reported, 0 missing
+-- cycle 16 at 1614 ms
+load: cycle 17: 3285 acknowledged, 3285 reported
+check: 77133 records, 76986 reported, 0 missing
+-- cycle 17 at 1284 ms
+load: cycle 18: 5915 acknowledged, 5915 reported
+check: 83054 records, 82901 reported, 0 missing
+-- cycle 18 at 2359 ms
+load: cycle 19: 2732 acknowledged, 2732 reported
+check: 85786 records, 85633 reported, 0 missing
+-- cycle 19 at 1153 ms
+load: cycle 20: 4776 acknowledged, 4776 reported
+check: 90562 records, 90409 reported, 0 missing
+-- cycle 20 at 1878 ms
+load: cycle 21: 8121 acknowledged, 8121 reported
+check: 98683 records, 98530 reported, 0 missing
+-- cycle 21 at 3066 ms
+load: cycle 22: 7479 acknowledged, 7479 reported
+check: 106162 records, 106009 reported, 0 missing
+-- cycle 22 at 2787 ms
+load: cycle 23: 3216 acknowledged, 3216 reported
+check: 109378 records, 109225 reported, 0 missing
+-- cycle 23 at 1232 ms
+load: cycle 24: 5584 acknowledged, 5584 reported
+check: 114962 records, 114809 reported, 0 missing
+-- cycle 24 at 1913 ms
+load: cycle 25: 7524 acknowledged, 7524 reported
+check: 122486 records, 122333 reported, 0 missing
+-- cycle 25 at 2945 ms
+load: cycle 26: 8270 acknowledged, 8270 reported
+check: 130759 records, 130603 reported, 0 missing
+-- cycle 26 at 3196 ms
+load: cycle 27: 7446 acknowledged, 7446 reported
+check: 138213 records, 138049 reported, 0 missing
+-- cycle 27 at 2835 ms
+load: cycle 28: 5557 acknowledged, 5557 reported
+check: 143770 records, 143606 reported, 0 missing
+-- cycle 28 at 2193 ms
+load: cycle 29: 1730 acknowledged, 1730 reported
+check: 145500 records, 145336 reported, 0 missing
+-- cycle 29 at 736 ms
+load: cycle 30: 6588 acknowledged, 6588 reported
+check: 152088 records, 151924 reported, 0 missing
+-- cycle 30 at 2593 ms
+== pc-process-crash-20261117234112: 0 of 30 cycles missed a reported record
+pass: zero acknowledged records missing in 30 cycles

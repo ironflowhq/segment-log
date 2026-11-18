@@ -1,0 +1,65 @@
+== run 2026-11-17T22:39:08Z
+== rehearse
+   exit 0: == rehearsal passed
+== pc-process-crash
+   exit 0: pass: zero acknowledged records missing in 30 cycles
+== pc-process-crash-control
+   exit 0: control detected (expected)
+== pc-guest-crash
+   exit 0: pass: zero acknowledged records missing in 30 cycles
+== pc-guest-crash-control
+   exit 0: control detected (expected)
+== pc-guest-destroy
+   exit 0: pass: zero acknowledged records missing in 30 cycles
+== pc-guest-destroy-control
+   exit 0: control detected (expected)
+== drift
+   exit 0: == drift cases passed
+== latency-alone
+   exit 0: host: 0 flushes in 67 s (boot and warm-up included), 0 per second
+== latency-density
+   exit 0: host: 0 flushes in 66 s (boot and warm-up included), 0 per second
+== latency-saturation
+   exit 0: host: 0 flushes in 66 s (boot and warm-up included), 0 per second
+== metadata
+   exit 0: == V3 result: pass
+== metadata-control
+   exit 0: control: this kernel stops writes under errors=continue too, so no control could be built
+== metadata-panic
+   exit 1: == V3 errors=panic result: fail: the guest did not halt before a later call returned
+== enospc-guest
+   exit 0: pass: guest filesystem full: every acknowledged record survived, and open succeeded
+== enospc-host
+   exit 0: pass: host filesystem full: every acknowledged record survived, and open succeeded
+== capacity
+   exit 0: pass: VOL-CAPACITY: each layer holds the planned history, and each alert fired at its threshold
+== guest-bench
+   exit 0: 
+== guest-bench-per-caller
+   exit 0: 
+== workloads
+   exit 0: == workloads passed
+== hc-host-kernel-crash
+   exit 0: pass: zero acknowledged records missing in 30 cycles
+== hc-host-kernel-crash-control
+   exit 0: control detected (expected)
+== hc-host-reset
+   exit 0: pass: zero acknowledged records missing in 30 cycles
+== hc-host-reset-control
+   exit 0: control detected (expected)
+== hc-host-power-loss
+   exit 0: pass: zero acknowledged records missing in 30 cycles
+== hc-host-power-loss-control
+   exit 0: control detected (expected)
+== v2-clean
+   exit 1: FAIL: cycle 10: check exit 255
+== v2-sealed
+   exit 0: pass: 10 counted cycles, zero records missing, open never Corrupt
+== v2-header
+   exit 0: pass: 10 counted cycles, zero records missing, open never Corrupt
+== v2-control
+   exit 0: control detected (expected)
+== collect 2026-11-18T05:20:00Z
+== m1-capture
+   exit 0:     Finished `release` profile [optimized] target(s) in 36.81s
+== session done 2026-11-18T05:25:29Z
