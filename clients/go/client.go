@@ -1,5 +1,6 @@
-// Package segmentlog is a test client for segment-log-server. It exists to run the conformance
-// cases and the socket benchmark, and makes no promise of a stable API (ADR 0058).
+// Package segmentlog is the Go client for segment-log-server. It runs the conformance cases and
+// the socket benchmark (ADR 0058). From 0.1 it follows 0.x semver and is tagged
+// clients/go/vX.Y.Z in step with the crates (ADR 0064 rule 15).
 //
 // docs/architecture/protocol.md is the only source for the bytes it sends and reads.
 package segmentlog
