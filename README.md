@@ -158,4 +158,4 @@ No. It keeps one copy. Surviving host or device loss needs replicated storage un
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
