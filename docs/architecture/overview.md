@@ -10,7 +10,7 @@ A segment log for each agent, with each agent calling `fsync`, is the shape this
 
 The sealed segments must be on a volume that outlives the guest. When the microVM is destroyed, a file on an ephemeral disk is lost. Recovery never needs the old process to still be there.
 
-The deployment or runner layer owns volume provisioning, mounting, preservation and post-guest reader handoff ([ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)). The core operates on the directory supplied to `SegmentLog::open`. Before M7, the deployment must identify the mount paths, reader component and handoff procedure, including access for writable recovery of unsealed crash logs. Those integration choices do not block M1.
+The deployment or runner layer owns volume provisioning, mounting, preservation and post-guest reader handoff ([ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)). The core operates on the directory supplied to `SegmentLog::open`. Each deployment names its mount paths, reader component and handoff procedure, including access for writable recovery of unsealed crash logs. The [handoff record](../evidence/m7/handoff.md) does this for the M7 stack.
 
 Orchestration is above the log. Leases, waiting for events, dashboards and SDKs are a different layer, in another process and possibly another language. The log does not store subscribers. Waiting cursors, their positions, cancellation, timeouts and scheduling also belong above the core ([ADR 0035](../decisions/0035-waiting-cursors-belong-above-the-core.md)). M1 provides `watermark()` and bounded `read()` without a native watermark-wait API. Per-submit `Pending::wait` remains unchanged.
 
@@ -199,7 +199,7 @@ Recovery still keeps the valid prefix and removes invalid, uncommitted tails or 
 
 The library is Rust. It has no async runtime, SQL or protobuf on the write path. A caller in another language reaches it over a Unix socket or vsock through `segment-log-server` (M6). There is no in-process C ABI. A separate process can be sealed and killed without the orchestrator. A guest can be just the Rust server, with no other runtime in it. See [ADR 0001](../decisions/0001-rust-library-first-socket-boundary-later.md).
 
-M6 implements Unix socket first, followed by vsock with the same protocol ([ADR 0034](../decisions/0034-m6-builds-unix-socket-before-vsock.md)). Both transports remain required for M6, and vsock on the guest topology for M7 ([ADR 0056](../decisions/0056-m6-builds-the-server-m7-validates-the-guest-deployment.md)). This sequence establishes a local Go-client protocol path before guest transport integration. Actual caller placement still determines the deployed transport, and the wire format remains a separate M6 decision. M1 remains library-only.
+M6 built the Unix socket first, then vsock with the same protocol ([ADR 0034](../decisions/0034-m6-builds-unix-socket-before-vsock.md)), and M7 validates vsock on the guest topology ([ADR 0056](../decisions/0056-m6-builds-the-server-m7-validates-the-guest-deployment.md)). Actual caller placement determines the deployed transport. The wire format is in [protocol.md](protocol.md) ([ADR 0057](../decisions/0057-a-hand-rolled-binary-protocol-answered-in-order.md)).
 
 ## What a library build must still show
 
