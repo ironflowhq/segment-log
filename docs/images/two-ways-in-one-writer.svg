@@ -1,98 +1,93 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 436" role="img" aria-labelledby="title desc">
   <title id="title">Two ways in, one writer</title>
-  <desc id="desc">A Rust program links segment-log-core and calls append directly. A Go program, or one in any other language, sends requests over a Unix socket, or over vsock from a guest, to segment-log-server, which runs one process per log and the same core inside it. Either way, the core's single writer thread packs appends into a group and one fsync makes the group durable in the segment files. The files sit on a volume that outlives the guest, and after the guest exits LogReader reads the sealed history.</desc>
+  <desc id="desc">A Rust program links segment-log-core and calls append directly. A Go program, or one in any other language, sends requests over a Unix socket, or over vsock from a guest, to segment-log-server, which runs one process per log and the same core inside it. Both ways lead to the core's accept queue. The core's single writer thread packs appends into a group and one fsync makes the group durable in the segment files. The files sit on a volume that outlives the guest, and after the guest exits LogReader reads the sealed history.</desc>
   <style>
+    text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .t { font-size: 20px; font-weight: 600; }
+    .s { font-size: 14px; }
+    .m { font-size: 13px; fill: #59636e; }
+    .code { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 13px; }
     .bg { fill: #ffffff; }
-    .panel { fill: #f6f8fa; stroke: #d0d7de; }
-    .t { font: 600 18px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
-    .s { font: 14px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
-    .m { font: 13px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #59636e; }
-    .agent { fill: #ffffff; stroke: #8c959f; }
-    .line { stroke: #8c959f; stroke-width: 1.5; fill: none; }
-    .ack { stroke: #0969da; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
-    .head { fill: #8c959f; }
-    .headg { fill: #0969da; }
-    .bad { fill: #bc4c00; }
-    .badbox { fill: #ffffff; stroke: #bc4c00; stroke-width: 1.5; }
-    .good { fill: #0969da; }
-    .goodbox { fill: #ffffff; stroke: #0969da; stroke-width: 1.5; }
-    .soft { fill: #ddf4ff; }
+    .card { fill: #f6f8fa; stroke: #afb8c1; }
+    .core { fill: #f6f8fa; stroke: #0969da; stroke-width: 1.5; }
+    .node { fill: #ffffff; stroke: #afb8c1; }
+    .line { fill: none; stroke: #6e7781; stroke-width: 1.5; }
+    .head { fill: #6e7781; }
+    .sync { fill: none; stroke: #0969da; stroke-width: 1.5; }
+    .synchead { fill: #0969da; }
+    .good { fill: #0969da; font-size: 14px; font-weight: 600; }
     @media (prefers-color-scheme: dark) {
-      .bg { fill: #0d1117; }
-      .panel { fill: #161b22; stroke: #30363d; }
-      .t, .s { fill: #e6edf3; }
+      text { fill: #e6edf3; }
       .m { fill: #9198a1; }
-      .agent { fill: #0d1117; stroke: #6e7681; }
-      .line { stroke: #6e7681; }
-      .ack { stroke: #4493f8; }
-      .head { fill: #6e7681; }
-      .headg { fill: #4493f8; }
-      .bad { fill: #f0883e; }
-      .badbox { fill: #0d1117; stroke: #f0883e; }
+      .bg { fill: #0d1117; }
+      .card { fill: #161b22; stroke: #545d68; }
+      .core { fill: #161b22; stroke: #4493f8; }
+      .node { fill: #0d1117; stroke: #545d68; }
+      .line { stroke: #7d8590; }
+      .head { fill: #7d8590; }
+      .sync { stroke: #4493f8; }
+      .synchead { fill: #4493f8; }
       .good { fill: #4493f8; }
-      .goodbox { fill: #0d1117; stroke: #4493f8; }
-      .soft { fill: #1f2a44; }
     }
   </style>
   <defs>
-    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
-    <marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="headg"/></marker>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="head" d="M0,1 L10,5 L0,9 z"/></marker>
+    <marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="synchead" d="M0,1 L10,5 L0,9 z"/></marker>
   </defs>
-  <rect class="bg" width="960" height="440"/>
-  <text class="t" x="24" y="38">Two ways in, one writer</text>
-  <text class="m" x="24" y="62">Rust links the library. Other languages talk to the server, which runs the same library.</text>
 
-  <!-- callers -->
-  <rect class="agent" x="24" y="104" width="180" height="60" rx="6"/>
-  <text class="s" x="40" y="130">your Rust code</text>
-  <text class="m" x="40" y="150">links the library</text>
-  <rect class="agent" x="24" y="262" width="180" height="60" rx="6"/>
-  <text class="s" x="40" y="288">your Go code</text>
-  <text class="m" x="40" y="308">or any language</text>
+  <rect class="bg" width="960" height="436" rx="14"/>
+  <text class="t" x="40" y="46">Two ways in, one writer</text>
+  <text class="m" x="40" y="70">Rust links the library. Other languages talk to the server, which runs the same library.</text>
 
-  <!-- embedded path -->
-  <path class="line" d="M204,134 L626,134" marker-end="url(#ah)"/>
-  <text class="m" x="380" y="124">append(), in the same process</text>
+  <!-- Callers -->
+  <rect class="card" x="40" y="106" width="156" height="60" rx="8"/>
+  <text class="s" x="56" y="131">your Rust code</text>
+  <text class="m" x="56" y="151">links the library</text>
+  <rect class="card" x="40" y="236" width="156" height="60" rx="8"/>
+  <text class="s" x="56" y="261">your Go code</text>
+  <text class="m" x="56" y="281">or any language</text>
 
-  <!-- socket path -->
-  <path class="line" d="M204,292 L240,292" marker-end="url(#ah)"/>
-  <rect class="soft" x="244" y="270" width="150" height="44" rx="22"/>
-  <text class="s" x="319" y="290" text-anchor="middle">Unix socket</text>
-  <text class="m" x="319" y="306" text-anchor="middle">or vsock from a guest</text>
-  <path class="line" d="M394,292 L420,292" marker-end="url(#ah)"/>
-  <rect class="panel" x="424" y="244" width="182" height="96" rx="6"/>
-  <text class="s" x="440" y="270">segment-log-server</text>
-  <text class="m" x="440" y="292">one process per log</text>
-  <text class="m" x="440" y="312">a reader and a writer</text>
-  <text class="m" x="440" y="330">thread per connection</text>
-  <path class="line" d="M606,292 L626,292" marker-end="url(#ah)"/>
+  <!-- Embedded path -->
+  <path class="line" d="M198,136 H558 Q566,136 566,144 V193 Q566,201 574,201 H587" marker-end="url(#ah)"/>
+  <text class="m" x="381" y="127" text-anchor="middle"><tspan class="code">append()</tspan>, in the same process</text>
 
-  <!-- core -->
-  <rect class="goodbox" x="630" y="96" width="170" height="250" rx="6"/>
-  <text class="s" x="646" y="122">segment-log-core</text>
-  <text class="m" x="646" y="140">in your process, or</text>
-  <text class="m" x="646" y="156">in the server's</text>
-  <rect class="agent" x="646" y="172" width="138" height="34" rx="4"/>
-  <text class="s" x="715" y="194" text-anchor="middle">accept queue</text>
-  <path class="line" d="M715,206 L715,226" marker-end="url(#ah)"/>
-  <rect class="agent" x="646" y="230" width="138" height="34" rx="4"/>
-  <text class="s" x="715" y="252" text-anchor="middle">writer thread</text>
-  <text class="m" x="715" y="290" text-anchor="middle">packs appends into</text>
-  <text class="m" x="715" y="308" text-anchor="middle">one group, then</text>
-  <text class="good" x="715" y="330" text-anchor="middle" style="font: 600 14px system-ui, -apple-system, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif">one fsync</text>
+  <!-- Server path -->
+  <path class="line" d="M198,266 H363" marker-end="url(#ah)"/>
+  <text class="m" x="281" y="257" text-anchor="middle">Unix socket</text>
+  <text class="m" x="281" y="284" text-anchor="middle">or vsock from a guest</text>
+  <rect class="card" x="366" y="218" width="176" height="96" rx="8"/>
+  <text class="code" x="382" y="244">segment-log-server</text>
+  <text class="m" x="382" y="266">one process per log</text>
+  <text class="m" x="382" y="284">a reader and a writer</text>
+  <text class="m" x="382" y="302">thread per connection</text>
+  <path class="line" d="M544,266 H558 Q566,266 566,258 V209 Q566,201 574,201"/>
 
-  <!-- files and reader -->
-  <path class="ack" d="M800,246 L824,246" marker-end="url(#ahg)"/>
-  <rect class="agent" x="828" y="196" width="122" height="100" rx="6"/>
-  <text class="s" x="889" y="222" text-anchor="middle">segment</text>
-  <text class="s" x="889" y="240" text-anchor="middle">files</text>
-  <text class="m" x="889" y="262" text-anchor="middle">on a volume that</text>
-  <text class="m" x="889" y="280" text-anchor="middle">outlives the guest</text>
-  <path class="line" d="M889,296 L889,334" marker-end="url(#ah)"/>
-  <rect class="agent" x="828" y="338" width="122" height="52" rx="6"/>
-  <text class="s" x="889" y="360" text-anchor="middle">LogReader</text>
-  <text class="m" x="889" y="378" text-anchor="middle">after the guest</text>
+  <!-- Core -->
+  <rect class="core" x="590" y="106" width="164" height="244" rx="8"/>
+  <text class="code" x="606" y="132">segment-log-core</text>
+  <text class="m" x="606" y="152">in your process, or</text>
+  <text class="m" x="606" y="169">in the server's</text>
+  <rect class="node" x="606" y="184" width="132" height="34" rx="6"/>
+  <text class="s" x="672" y="206" text-anchor="middle">accept queue</text>
+  <path class="line" d="M672,220 V241" marker-end="url(#ah)"/>
+  <rect class="node" x="606" y="244" width="132" height="34" rx="6"/>
+  <text class="s" x="672" y="266" text-anchor="middle">writer thread</text>
+  <text class="m" x="606" y="300">packs appends into</text>
+  <text class="m" x="606" y="318">one group, then</text>
+  <text class="good" x="606" y="336">one fsync</text>
 
-  <text class="s" x="24" y="396">Both ways get the same guarantee: an ack means the group is on disk.</text>
-  <text class="m" x="24" y="420">Over the socket, a connection lost before its answer means the outcome is unknown: retry with the same key.</text>
+  <!-- Segment files and reader -->
+  <path class="sync" d="M756,261 H785" marker-end="url(#ahb)"/>
+  <rect class="card" x="788" y="214" width="132" height="94" rx="8"/>
+  <text class="s" x="804" y="240">segment files</text>
+  <text class="m" x="804" y="260">on a volume</text>
+  <text class="m" x="804" y="277">that outlives</text>
+  <text class="m" x="804" y="294">the guest</text>
+  <path class="line" d="M854,310 V333" marker-end="url(#ah)"/>
+  <rect class="card" x="788" y="336" width="132" height="52" rx="8"/>
+  <text class="code" x="804" y="358">LogReader</text>
+  <text class="m" x="804" y="376">after the guest</text>
+
+  <text class="s" x="40" y="380">Both ways get the same guarantee: an ack means the group is on disk.</text>
+  <text class="m" x="40" y="404">Over the socket, a connection lost before its answer means the outcome is unknown: retry with the same key.</text>
 </svg>
