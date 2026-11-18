@@ -93,6 +93,7 @@ B beat A because A turns every future feature into a coordinated outage, and bea
 
 ## Consequences
 
+- Amended by [ADR 0066](0066-append-time-is-advisory-and-versions-never-go-back.md): the append time of rule 2 has no upper bound and readers do not check its order; open fails with `Corrupt` when a segment's version is lower than the one before it, which rule 12 never produces; version dispatch waits for a real version 4.
 - Accepted by the owner on 2026-11-17 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)), with three clarifications made before acceptance: a major release is 1.0 and later (rule 5), the append time never decreases within a log (rule 2), and the header rewrite of rule 12 is one sector-sized write covered by crash cases.
 - ADR 0053 is superseded at the 0.1 tag. Until then it governs rules 1–4. ADR 0052's rule "a build reads every frozen version from 1 up to its own" returns in rule 11, starting at version 3. ADR 0057's "the server accepts one version" ends with rule 5.
 - protocol.md and format.md change their Status lines, and change their bytes for rules 1–3, in the implementation pull request. `FORMAT-GOLDEN` gets a `format-v3` fixture.

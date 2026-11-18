@@ -244,3 +244,50 @@ fn a_crash_at_each_step_of_the_version_change_keeps_every_record() {
         }
     });
 }
+
+/// Given a log whose version 4 segment is followed by a version 3 segment, which a writer never
+/// produces (ADR 0064, rule 12), as after a hand copy
+/// And the version 3 segment is the newest and holds only its header, or is a rolled segment
+/// with groups in the middle of the log
+/// When a build at version 4 opens it, with a writer or with `LogReader`
+/// Then open fails with `Corrupt` at the older segment's header and changes no file
+///
+/// Cases: FORMAT-MIXED
+#[test]
+fn an_older_version_after_a_newer_one_fails_open() {
+    bounded(|| {
+        let first = [raw::header(NEXT, 0, 1), raw::group(1, 0, &[b"a", b"b"])].concat();
+        let middle = [raw::header(raw::VERSION, 2, 1), raw::group(1, 2, &[b"c"])].concat();
+        let newest = vec![
+            (0, raw::rolled(first.clone(), 1)),
+            (2, raw::header(raw::VERSION, 2, 1)),
+        ];
+        let inner = vec![
+            (0, raw::rolled(first, 1)),
+            (2, raw::rolled(middle, 1)),
+            (3, raw::header(NEXT, 3, 1)),
+        ];
+        for segments in [newest, inner] {
+            check_older_after_newer(&segments);
+        }
+    });
+}
+
+fn check_older_after_newer(segments: &[(u64, Vec<u8>)]) {
+    let sim = Sim::new(664);
+    raw::install_segments(&sim, segments);
+    let corrupt = |result: Result<_, OpenError>| {
+        matches!(
+            result,
+            Err(OpenError::Corrupt {
+                segment: 2,
+                position: 0
+            })
+        )
+    };
+    assert!(corrupt(open_at(&sim, NEXT, EVERY_GROUP).map(drop)));
+    assert_eq!(raw::segments(&sim), segments);
+    let storage: Arc<dyn crate::storage::Storage> = Arc::new(sim.clone());
+    let reader = LogReader::at_version(Path::new("/log"), storage, NEXT);
+    assert!(corrupt(reader.map(drop)));
+}
