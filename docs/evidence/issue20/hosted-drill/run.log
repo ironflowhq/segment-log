@@ -33,7 +33,7 @@ M1 long run (macos-latest)	Set up job	2026-11-10T04:17:41.4528740Z Download acti
 M1 long run (macos-latest)	Set up job	2026-11-10T04:17:42.2326890Z Complete job name: M1 long run (macos-latest)
 M1 long run (macos-latest)	Run actions/checkout@v7	﻿2026-11-10T04:17:42.4911490Z ##[group]Run actions/checkout@v7
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4917430Z with:
-M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4919070Z   repository: ironflowhq/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4919070Z   repository: ironflowx/segment-log
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4936690Z   token: ***
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4938490Z   ssh-strict: true
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4939900Z   ssh-user: git
@@ -56,7 +56,7 @@ M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4971390Z 
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4973110Z   SEGMENT_LOG_TRACE_DRILL: 1
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4974740Z   SEGMENT_LOG_PROCESS_DRILL: 1
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:42.4976300Z ##[endgroup]
-M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9070040Z Syncing repository: ironflowhq/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9070040Z Syncing repository: ironflowx/segment-log
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9075340Z ##[group]Getting Git version info
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9076030Z Working directory is '/Users/runner/work/segment-log/segment-log'
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:45.9081370Z [command]/opt/homebrew/bin/git version
@@ -85,7 +85,7 @@ M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1101350Z 
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1101940Z hint:
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1103670Z hint: Disable this message with "git config set advice.defaultBranchName false"
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1212190Z Initialized empty Git repository in /Users/runner/work/segment-log/segment-log/.git/
-M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1227160Z [command]/opt/homebrew/bin/git remote add origin https://github.com/ironflowhq/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1227160Z [command]/opt/homebrew/bin/git remote add origin https://github.com/ironflowx/segment-log
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1420400Z ##[endgroup]
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1422240Z ##[group]Disabling automatic garbage collection
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.1425760Z [command]/opt/homebrew/bin/git config --local gc.auto 0
@@ -108,7 +108,7 @@ M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8605050Z 
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8612630Z ##[endgroup]
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8613170Z ##[group]Fetching the repository
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:46.8615080Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7d8c483b3c27bdc88e621e397aa460aa39114bd2:refs/remotes/origin/t3/m1-failed-artifact-drill
-M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0384720Z From https://github.com/ironflowhq/segment-log
+M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0384720Z From https://github.com/ironflowx/segment-log
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0406350Z  * [new ref]         7d8c483b3c27bdc88e621e397aa460aa39114bd2 -> origin/t3/m1-failed-artifact-drill
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0620110Z [command]/opt/homebrew/bin/git branch --list --remote origin/t3/m1-failed-artifact-drill
 M1 long run (macos-latest)	Run actions/checkout@v7	2026-11-10T04:17:48.0644040Z   origin/t3/m1-failed-artifact-drill
@@ -244,7 +244,7 @@ M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.32
 M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.3237650Z Finalizing artifact upload
 M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.6469390Z Artifact trace-failures-macos-latest.zip successfully finalized. Artifact ID 13734723212
 M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.6471130Z Artifact trace-failures-macos-latest has been successfully uploaded! Final size is 10648 bytes. Artifact ID is 13734723212
-M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.6486660Z Artifact download URL: https://github.com/ironflowhq/segment-log/actions/runs/42754924923/artifacts/13734723212
+M1 long run (macos-latest)	Run actions/upload-artifact@v4	2026-11-10T04:18:12.6486660Z Artifact download URL: https://github.com/ironflowx/segment-log/actions/runs/42754924923/artifacts/13734723212
 M1 long run (macos-latest)	Post Run actions/checkout@v7	﻿2026-11-10T04:18:12.6743060Z Post job cleanup.
 M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7710880Z [command]/opt/homebrew/bin/git version
 M1 long run (macos-latest)	Post Run actions/checkout@v7	2026-11-10T04:18:12.7818130Z git version 2.56.0
@@ -315,7 +315,7 @@ M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.5165463Z Download acti
 M1 long run (ubuntu-24.04)	Set up job	2026-11-10T04:17:39.7562450Z Complete job name: M1 long run (ubuntu-24.04)
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	﻿2026-11-10T04:17:39.8046655Z ##[group]Run actions/checkout@v7
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8047143Z with:
-M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8047400Z   repository: ironflowhq/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8047400Z   repository: ironflowx/segment-log
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8049615Z   token: ***
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8049861Z   ssh-strict: true
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8050109Z   ssh-user: git
@@ -338,7 +338,7 @@ M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8054910Z 
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8055205Z   SEGMENT_LOG_TRACE_DRILL: 1
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8055493Z   SEGMENT_LOG_PROCESS_DRILL: 1
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:39.8055871Z ##[endgroup]
-M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0435061Z Syncing repository: ironflowhq/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0435061Z Syncing repository: ironflowx/segment-log
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0437169Z ##[group]Getting Git version info
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0437904Z Working directory is '/home/runner/work/segment-log/segment-log'
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0438780Z [command]/usr/bin/git version
@@ -366,7 +366,7 @@ M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0755972Z 
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0756400Z hint:
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0756996Z hint: Disable this message with "git config set advice.defaultBranchName false"
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0758003Z Initialized empty Git repository in /home/runner/work/segment-log/segment-log/.git/
-M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0766797Z [command]/usr/bin/git remote add origin https://github.com/ironflowhq/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0766797Z [command]/usr/bin/git remote add origin https://github.com/ironflowx/segment-log
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0824375Z ##[endgroup]
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0825036Z ##[group]Disabling automatic garbage collection
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.0828461Z [command]/usr/bin/git config --local gc.auto 0
@@ -389,7 +389,7 @@ M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.2021651Z 
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.2063040Z ##[endgroup]
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.2063834Z ##[group]Fetching the repository
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.2070130Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7d8c483b3c27bdc88e621e397aa460aa39114bd2:refs/remotes/origin/t3/m1-failed-artifact-drill
-M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8868238Z From https://github.com/ironflowhq/segment-log
+M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8868238Z From https://github.com/ironflowx/segment-log
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8870209Z  * [new ref]         7d8c483b3c27bdc88e621e397aa460aa39114bd2 -> origin/t3/m1-failed-artifact-drill
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8875714Z [command]/usr/bin/git branch --list --remote origin/t3/m1-failed-artifact-drill
 M1 long run (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:17:40.8911016Z   origin/t3/m1-failed-artifact-drill
@@ -523,7 +523,7 @@ M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.16
 M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.1694486Z Finalizing artifact upload
 M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.5230738Z Artifact trace-failures-ubuntu-24.04.zip successfully finalized. Artifact ID 13734733210
 M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.5231429Z Artifact trace-failures-ubuntu-24.04 has been successfully uploaded! Final size is 10634 bytes. Artifact ID is 13734733210
-M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.5237103Z Artifact download URL: https://github.com/ironflowhq/segment-log/actions/runs/42754924923/artifacts/13734733210
+M1 long run (ubuntu-24.04)	Run actions/upload-artifact@v4	2026-11-10T04:17:54.5237103Z Artifact download URL: https://github.com/ironflowx/segment-log/actions/runs/42754924923/artifacts/13734733210
 M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	﻿2026-11-10T04:17:54.5460705Z Post job cleanup.
 M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6059099Z [command]/usr/bin/git version
 M1 long run (ubuntu-24.04)	Post Run actions/checkout@v7	2026-11-10T04:17:54.6106707Z git version 2.56.0
@@ -593,7 +593,7 @@ Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:19.9155767Z Download act
 Drill replay (ubuntu-24.04)	Set up job	2026-11-10T04:18:20.6034342Z Complete job name: Drill replay (ubuntu-24.04)
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	﻿2026-11-10T04:18:20.6696596Z ##[group]Run actions/checkout@v7
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6697450Z with:
-Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6697815Z   repository: ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6697815Z   repository: ironflowx/segment-log
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6700786Z   token: ***
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6701145Z   ssh-strict: true
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6701502Z   ssh-user: git
@@ -608,7 +608,7 @@ Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6704427Z
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6704788Z   set-safe-directory: true
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6705193Z   allow-unsafe-pr-checkout: false
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.6705754Z ##[endgroup]
-Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8603183Z Syncing repository: ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8603183Z Syncing repository: ironflowx/segment-log
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8604817Z ##[group]Getting Git version info
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8605433Z Working directory is '/home/runner/work/segment-log/segment-log'
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8606357Z [command]/usr/bin/git version
@@ -636,7 +636,7 @@ Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8841654Z
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8842229Z hint:
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8842994Z hint: Disable this message with "git config set advice.defaultBranchName false"
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8844286Z Initialized empty Git repository in /home/runner/work/segment-log/segment-log/.git/
-Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8848746Z [command]/usr/bin/git remote add origin https://github.com/ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8848746Z [command]/usr/bin/git remote add origin https://github.com/ironflowx/segment-log
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8889591Z ##[endgroup]
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8890297Z ##[group]Disabling automatic garbage collection
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.8893232Z [command]/usr/bin/git config --local gc.auto 0
@@ -659,7 +659,7 @@ Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9933985Z
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9970569Z ##[endgroup]
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9971482Z ##[group]Fetching the repository
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:20.9976895Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7d8c483b3c27bdc88e621e397aa460aa39114bd2:refs/remotes/origin/t3/m1-failed-artifact-drill
-Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8452450Z From https://github.com/ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8452450Z From https://github.com/ironflowx/segment-log
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8454780Z  * [new ref]         7d8c483b3c27bdc88e621e397aa460aa39114bd2 -> origin/t3/m1-failed-artifact-drill
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8460952Z [command]/usr/bin/git branch --list --remote origin/t3/m1-failed-artifact-drill
 Drill replay (ubuntu-24.04)	Run actions/checkout@v7	2026-11-10T04:18:21.8493320Z   origin/t3/m1-failed-artifact-drill
@@ -695,7 +695,7 @@ Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29
 Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8358359Z   name: trace-failures-ubuntu-24.04
 Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8358627Z   path: .audit/drill
 Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8358858Z   merge-multiple: false
-Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8359096Z   repository: ironflowhq/segment-log
+Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8359096Z   repository: ironflowx/segment-log
 Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8359343Z   run-id: 42754924923
 Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.8359560Z ##[endgroup]
 Drill replay (ubuntu-24.04)	Run actions/download-artifact@v4	2026-11-10T04:18:29.9584326Z Downloading single artifact
@@ -805,7 +805,7 @@ Drill replay (macos-latest)	Set up job	2026-11-10T04:18:20.9983290Z Download act
 Drill replay (macos-latest)	Set up job	2026-11-10T04:18:21.5310690Z Complete job name: Drill replay (macos-latest)
 Drill replay (macos-latest)	Run actions/checkout@v7	﻿2026-11-10T04:18:21.6065460Z ##[group]Run actions/checkout@v7
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6066090Z with:
-Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6066440Z   repository: ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6066440Z   repository: ironflowx/segment-log
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6069470Z   token: ***
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6069790Z   ssh-strict: true
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6070120Z   ssh-user: git
@@ -820,7 +820,7 @@ Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6072860Z
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6073220Z   set-safe-directory: true
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6073610Z   allow-unsafe-pr-checkout: false
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:21.6074290Z ##[endgroup]
-Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1188870Z Syncing repository: ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1188870Z Syncing repository: ironflowx/segment-log
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1190510Z ##[group]Getting Git version info
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1191160Z Working directory is '/Users/runner/work/segment-log/segment-log'
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.1192190Z [command]/opt/homebrew/bin/git version
@@ -849,7 +849,7 @@ Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2154850Z
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2155260Z hint:
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2155830Z hint: Disable this message with "git config set advice.defaultBranchName false"
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2156660Z Initialized empty Git repository in /Users/runner/work/segment-log/segment-log/.git/
-Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2158600Z [command]/opt/homebrew/bin/git remote add origin https://github.com/ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2158600Z [command]/opt/homebrew/bin/git remote add origin https://github.com/ironflowx/segment-log
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2238820Z ##[endgroup]
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2239520Z ##[group]Disabling automatic garbage collection
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.2241720Z [command]/opt/homebrew/bin/git config --local gc.auto 0
@@ -872,7 +872,7 @@ Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.6082920Z
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.6146180Z ##[endgroup]
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.6147130Z ##[group]Fetching the repository
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:22.6151820Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7d8c483b3c27bdc88e621e397aa460aa39114bd2:refs/remotes/origin/t3/m1-failed-artifact-drill
-Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3079960Z From https://github.com/ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3079960Z From https://github.com/ironflowx/segment-log
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3081250Z  * [new ref]         7d8c483b3c27bdc88e621e397aa460aa39114bd2 -> origin/t3/m1-failed-artifact-drill
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3086400Z [command]/opt/homebrew/bin/git branch --list --remote origin/t3/m1-failed-artifact-drill
 Drill replay (macos-latest)	Run actions/checkout@v7	2026-11-10T04:18:23.3158990Z   origin/t3/m1-failed-artifact-drill
@@ -910,7 +910,7 @@ Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30
 Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5500430Z   name: trace-failures-macos-latest
 Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5501990Z   path: .audit/drill
 Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5502740Z   merge-multiple: false
-Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5503660Z   repository: ironflowhq/segment-log
+Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5503660Z   repository: ironflowx/segment-log
 Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5504660Z   run-id: 42754924923
 Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.5505430Z ##[endgroup]
 Drill replay (macos-latest)	Run actions/download-artifact@v4	2026-11-10T04:18:30.8701840Z Downloading single artifact
