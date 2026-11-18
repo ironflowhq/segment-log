@@ -1,0 +1,44 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (/root/issue154-build/debug/build/segment-log-core/0f2a6d7f322cfbb0/out/segment_log_core-0f2a6d7f322cfbb0)
+
+running 1 test
+uncited case FUZZ-PROTOCOL
+uncited case HANDOFF
+uncited case PROC-LAZYFS
+uncited case REPAIR-BACKUP
+uncited case REPAIR-CLI
+uncited case REPAIR-CRASH
+uncited case REPAIR-LOSSY-NO-ROOM
+uncited case REPAIR-LOSSY-REFUSED
+uncited case REPAIR-LOSSY-SEALS
+uncited case REPAIR-MIXED-VERSION
+uncited case REPAIR-PENDING-RUN
+uncited case REPAIR-PLAN-MISMATCH
+uncited case REPAIR-TORN-LOOKALIKE
+uncited case TRANSPORT-CONFORMANCE
+uncited case TRANSPORT-DIAL-BURST
+uncited case TRANSPORT-RESTART
+uncited case TRANSPORT-THREAD-EXHAUSTION
+uncited case TRANSPORT-UNKNOWN
+test acceptance::support::coverage::cited_cases_are_defined_and_uncited_cases_are_reported ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 267 filtered out; finished in 0.02s
+
+     Running tests/process_crash.rs (/root/issue154-build/debug/build/segment-log-core/e36bcfd4e707d540/out/process_crash-e36bcfd4e707d540)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/read_ranges.rs (/root/issue154-build/debug/build/segment-log-core/0cbdd4366c971d25/out/read_ranges-0cbdd4366c971d25)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/real_storage.rs (/root/issue154-build/debug/build/segment-log-core/2dc4c188448fe21b/out/real_storage-2dc4c188448fe21b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+

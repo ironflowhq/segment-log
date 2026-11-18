@@ -1,0 +1,144 @@
+27389 22:23:10.629686 write(1</root/issue154/8b1a2d1/sync-phases.log>, "\nrunning 1 test\n", 16) = 16 <0.000038>
+27390 22:23:10.632462 write(2</root/issue154/8b1a2d1/sync-phases.log>, "PHASE provision\n", 16) = 16 <0.000031>
+27390 22:23:10.632909 fsync(3</tmp/m1/data/evidence-27389-0>) = 0 <0.001602>
+27390 22:23:10.634662 fsync(3</tmp/m1/data>) = 0 <0.000014>
+27390 22:23:10.634772 fsync(3</tmp/m1>) = 0 <0.000012>
+27390 22:23:10.634875 fsync(3</tmp>)    = 0 <0.000013>
+27390 22:23:10.634988 fsync(3</>)       = 0 <0.000893>
+27390 22:23:10.635958 write(2</root/issue154/8b1a2d1/sync-phases.log>, "PHASE create\n", 13) = 13 <0.000017>
+27390 22:23:10.636560 write(5</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>, "SGLG\3\0@\0;\37\354d\25\246\232\234\362\326Il}\366\354u\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0 \230\240m", 64) = 64 <0.000021>
+27390 22:23:10.636639 fdatasync(5</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>) = 0 <0.000373>
+27390 22:23:10.637060 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000018>
+27390 22:23:10.637134 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Open.SyncData", 13) = 13 <0.000016>
+27390 22:23:10.637202 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000015>
+27390 22:23:10.637264 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg", 58) = 58 <0.000014>
+27390 22:23:10.637329 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000013>
+27390 22:23:10.637387 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000014>
+27390 22:23:10.637446 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000014>
+27390 22:23:10.637506 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000013>
+27390 22:23:10.637564 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000013>
+27390 22:23:10.637623 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000013>
+27390 22:23:10.637717 fsync(3</tmp/m1/data/evidence-27389-0/log>) = 0 <0.000012>
+27390 22:23:10.637796 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000014>
+27390 22:23:10.637855 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Open.SyncDir", 12) = 12 <0.000013>
+27390 22:23:10.637918 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000016>
+27390 22:23:10.637989 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0/log", 33) = 33 <0.000016>
+27390 22:23:10.638061 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000016>
+27390 22:23:10.638133 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000016>
+27390 22:23:10.638204 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000016>
+27390 22:23:10.638275 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000015>
+27390 22:23:10.638346 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000016>
+27390 22:23:10.638418 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000016>
+27390 22:23:10.639505 write(5</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>, "SGLG\3\0@\0;\37\354d\25\246\232\234\362\326Il}\366\354u\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0 \230\240m", 64) = 64 <0.000021>
+27390 22:23:10.639590 fsync(5</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>) = 0 <0.000172>
+27390 22:23:10.639815 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000016>
+27390 22:23:10.639887 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Recovery.SyncAll", 16) = 16 <0.000016>
+27390 22:23:10.639965 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000016>
+27390 22:23:10.640043 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg", 58) = 58 <0.000016>
+27390 22:23:10.640122 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000016>
+27390 22:23:10.640195 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000016>
+27390 22:23:10.640285 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000016>
+27390 22:23:10.640357 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000016>
+27390 22:23:10.640429 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000016>
+27390 22:23:10.640500 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000016>
+27390 22:23:10.640605 fsync(3</tmp/m1/data/evidence-27389-0/log>) = 0 <0.000015>
+27390 22:23:10.640703 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000016>
+27390 22:23:10.640775 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000016>
+27390 22:23:10.640847 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000015>
+27390 22:23:10.640918 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0/log", 33) = 33 <0.000016>
+27390 22:23:10.641002 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000017>
+27390 22:23:10.641078 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000017>
+27390 22:23:10.641155 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000017>
+27390 22:23:10.641231 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000015>
+27390 22:23:10.641302 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000016>
+27390 22:23:10.641373 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000015>
+27390 22:23:10.641477 fsync(3</tmp/m1/data/evidence-27389-0>) = 0 <0.000014>
+27390 22:23:10.641574 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000016>
+27390 22:23:10.641646 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000016>
+27390 22:23:10.641718 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000016>
+27390 22:23:10.641790 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0", 29) = 29 <0.000016>
+27390 22:23:10.641861 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000016>
+27390 22:23:10.641933 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000015>
+27390 22:23:10.642004 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000015>
+27390 22:23:10.642075 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000015>
+27390 22:23:10.642146 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000015>
+27390 22:23:10.642217 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000016>
+27390 22:23:10.642791 write(2</root/issue154/8b1a2d1/sync-phases.log>, "PHASE commit-0\n", 15) = 15 <0.000027>
+27392 22:23:10.644106 write(5</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>, "H\1\0\0\312\347\302\247\1\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\264\314\212\360\241\1\0\0\10\0\20\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 336) = 336 <0.000034>
+27392 22:23:10.644244 fdatasync(5</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>) = 0 <0.000202>
+27392 22:23:10.644506 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000021>
+27392 22:23:10.644595 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Group.SyncData", 14) = 14 <0.000019>
+27392 22:23:10.644674 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000019>
+27392 22:23:10.644752 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg", 58) = 58 <0.000019>
+27392 22:23:10.644832 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000020>
+27392 22:23:10.644913 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000019>
+27392 22:23:10.645024 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000019>
+27392 22:23:10.645108 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000023>
+27392 22:23:10.645213 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000021>
+27392 22:23:10.645300 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000020>
+27390 22:23:10.645442 write(2</root/issue154/8b1a2d1/sync-phases.log>, "PHASE commit-1\n", 15) = 15 <0.000030>
+27392 22:23:10.646656 write(5</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>, "H\1\0\0\227\265,r\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\266\314\212\360\241\1\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 336) = 336 <0.000024>
+27392 22:23:10.646747 fdatasync(5</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>) = 0 <0.000200>
+27392 22:23:10.647010 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000024>
+27392 22:23:10.647103 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Group.SyncData", 14) = 14 <0.000023>
+27392 22:23:10.647191 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000019>
+27392 22:23:10.647268 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg", 58) = 58 <0.000019>
+27392 22:23:10.647346 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000019>
+27392 22:23:10.647424 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000019>
+27392 22:23:10.647501 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000019>
+27392 22:23:10.647579 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000019>
+27392 22:23:10.647655 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000019>
+27392 22:23:10.647733 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000019>
+27390 22:23:10.647860 write(2</root/issue154/8b1a2d1/sync-phases.log>, "PHASE retry\n", 12) = 12 <0.000057>
+27390 22:23:10.648150 write(2</root/issue154/8b1a2d1/sync-phases.log>, "PHASE drop\n", 11) = 11 <0.000053>
+27392 22:23:10.648696 +++ exited with 0 +++
+27390 22:23:10.648818 write(2</root/issue154/8b1a2d1/sync-phases.log>, "PHASE recovery\n", 15) = 15 <0.000016>
+27390 22:23:10.650878 write(4</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>, "H\1\0\0\227\265,r\1\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0\266\314\212\360\241\1\0\0\10\0\20\0\0\1\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"..., 336) = 336 <0.000024>
+27390 22:23:10.650987 fsync(4</tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg>) = 0 <0.000181>
+27390 22:23:10.651226 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000018>
+27390 22:23:10.651302 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Recovery.SyncAll", 16) = 16 <0.000015>
+27390 22:23:10.651375 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000015>
+27390 22:23:10.651446 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0/log/00000000000000000000.seg", 58) = 58 <0.000015>
+27390 22:23:10.651518 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000015>
+27390 22:23:10.651589 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000015>
+27390 22:23:10.651661 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000015>
+27390 22:23:10.651732 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000015>
+27390 22:23:10.651804 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000015>
+27390 22:23:10.651875 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000017>
+27390 22:23:10.651989 fsync(6</tmp/m1/data/evidence-27389-0/log>) = 0 <0.000017>
+27390 22:23:10.652105 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000017>
+27390 22:23:10.652198 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000015>
+27390 22:23:10.652270 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000015>
+27390 22:23:10.652341 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0/log", 33) = 33 <0.000015>
+27390 22:23:10.652414 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000015>
+27390 22:23:10.652485 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000015>
+27390 22:23:10.652555 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000015>
+27390 22:23:10.652627 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000015>
+27390 22:23:10.652698 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000015>
+27390 22:23:10.652768 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000015>
+27390 22:23:10.652872 fsync(6</tmp/m1/data/evidence-27389-0>) = 0 <0.000015>
+27390 22:23:10.652980 write(2</root/issue154/8b1a2d1/sync-phases.log>, "STORAGE ", 8) = 8 <0.000017>
+27390 22:23:10.653058 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Recovery.SyncDir", 16) = 16 <0.000015>
+27390 22:23:10.653130 write(2</root/issue154/8b1a2d1/sync-phases.log>, " path=", 6) = 6 <0.000019>
+27390 22:23:10.653209 write(2</root/issue154/8b1a2d1/sync-phases.log>, "/tmp/m1/data/evidence-27389-0", 29) = 29 <0.000015>
+27390 22:23:10.653283 write(2</root/issue154/8b1a2d1/sync-phases.log>, " result=", 8) = 8 <0.000015>
+27390 22:23:10.653354 write(2</root/issue154/8b1a2d1/sync-phases.log>, "Ok", 2) = 2 <0.000015>
+27390 22:23:10.653425 write(2</root/issue154/8b1a2d1/sync-phases.log>, "(", 1) = 1 <0.000015>
+27390 22:23:10.653497 write(2</root/issue154/8b1a2d1/sync-phases.log>, "()", 2) = 2 <0.000015>
+27390 22:23:10.653567 write(2</root/issue154/8b1a2d1/sync-phases.log>, ")", 1) = 1 <0.000015>
+27390 22:23:10.653639 write(2</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000015>
+27390 22:23:10.654221 write(2</root/issue154/8b1a2d1/sync-phases.log>, "PHASE recovered-drop\n", 21) = 21 <0.000021>
+27393 22:23:10.654913 +++ exited with 0 +++
+27390 22:23:10.655019 write(2</root/issue154/8b1a2d1/sync-phases.log>, "PHASE done\n", 11) = 11 <0.000019>
+27391 22:23:10.656710 +++ exited with 0 +++
+27390 22:23:10.657072 +++ exited with 0 +++
+27389 22:23:10.657163 write(1</root/issue154/8b1a2d1/sync-phases.log>, "test acceptance::evidence::real_storage_sync_phases ... ", 56) = 56 <0.000048>
+27389 22:23:10.657299 write(1</root/issue154/8b1a2d1/sync-phases.log>, "ok", 2) = 2 <0.000019>
+27389 22:23:10.657375 write(1</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000019>
+27389 22:23:10.657451 write(1</root/issue154/8b1a2d1/sync-phases.log>, "\n", 1) = 1 <0.000017>
+27389 22:23:10.657519 write(1</root/issue154/8b1a2d1/sync-phases.log>, "test result: ", 13) = 13 <0.000017>
+27389 22:23:10.657587 write(1</root/issue154/8b1a2d1/sync-phases.log>, "ok", 2) = 2 <0.000017>
+27389 22:23:10.657656 write(1</root/issue154/8b1a2d1/sync-phases.log>, ". 1 passed; 0 failed; 0 ignored; 0 measured; 278 filtered out", 61) = 61 <0.000017>
+27389 22:23:10.657727 write(1</root/issue154/8b1a2d1/sync-phases.log>, "; finished in 0.03s", 19) = 19 <0.000017>
+27389 22:23:10.657795 write(1</root/issue154/8b1a2d1/sync-phases.log>, "\n\n", 2) = 2 <0.000017>
+27389 22:23:10.658540 +++ exited with 0 +++
