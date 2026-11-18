@@ -12,4 +12,6 @@ Omitted options keep the defaults in [api.md](../docs/architecture/api.md#target
 
 A successful `Seal` is answered, then the server closes every connection and exits 0. `SIGTERM` or `SIGINT` stops it the same way without sealing. Either way, the server first answers the requests it has read.
 
+`segment-log-server repair <verify|truncate> --dir <path>` diagnoses a log that open refuses with `Corrupt`, and repairs only the newest segment. It runs offline, takes `LOCK`, and has its own flags and exit codes, in [api.md](../docs/architecture/api.md#operator-repair) ([ADR 0065](../docs/decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)).
+
 Exit status 1 means the log did not open, the socket did not bind, or a flag was invalid. The reason is on stderr. Exit status 2 means the writer was poisoned: the server answered the requests it had read, and a restart recovers the log.
