@@ -10,7 +10,7 @@ guest.fs=/dev/vdb ext4 rw,relatime,errors=remount-ro
 guest.write_cache=write back
 vmm.cache_type=Writeback
 vmm.firecracker=Firecracker v1.18.0
-host.kernel=unpinned
-host.fs=unpinned
-host.drive=unpinned
-host.write_cache=unpinned
+host.kernel=6.1.0-54-amd64
+host.fs=ext4 rw,noatime
+host.drive=SAMSUNG MZQLB960HAJR-00007 EDA5502Q
+host.write_cache=write through

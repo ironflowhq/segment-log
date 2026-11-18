@@ -1,0 +1,23 @@
+	Command being timed: "/root/.cache/segment-log-target/release/build/segment-log-core/04fbaec4519b9138/out/segment_log_core-04fbaec4519b9138 --exact acceptance::evidence::measured_appends_survive_reopen --nocapture"
+	User time (seconds): 1553.63
+	System time (seconds): 1805.22
+	Percent of CPU this job got: 547%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 10:13.65
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 27754180
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 219
+	Minor (reclaiming a frame) page faults: 13592370
+	Voluntary context switches: 61615933
+	Involuntary context switches: 2132077
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 37844088
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

@@ -1,0 +1,64 @@
+== hc-host-reset-20261117195122: 30 cycles, host root@168.119.4.92, observer 178.156.201.194:7070, cache_type Writeback
+/dev/nvme0n1 ext4   rw,noatime
+check: 7940 records, 7930 reported, 0 missing
+-- cycle 1 at 1345 ms
+check: 17117 records, 17107 reported, 0 missing
+-- cycle 2 at 1881 ms
+check: 28305 records, 28284 reported, 0 missing
+-- cycle 3 at 2604 ms
+check: 38396 records, 38375 reported, 0 missing
+-- cycle 4 at 2372 ms
+check: 45836 records, 45815 reported, 0 missing
+-- cycle 5 at 1190 ms
+check: 55819 records, 55798 reported, 0 missing
+-- cycle 6 at 2207 ms
+check: 65128 records, 65107 reported, 0 missing
+-- cycle 7 at 2002 ms
+check: 76949 records, 76927 reported, 0 missing
+-- cycle 8 at 2676 ms
+check: 89117 records, 89095 reported, 0 missing
+-- cycle 9 at 3168 ms
+check: 101301 records, 101279 reported, 0 missing
+-- cycle 10 at 3174 ms
+check: 110199 records, 110177 reported, 0 missing
+-- cycle 11 at 1938 ms
+check: 121493 records, 121471 reported, 0 missing
+-- cycle 12 at 2755 ms
+check: 131484 records, 131462 reported, 0 missing
+-- cycle 13 at 2239 ms
+check: 142083 records, 142061 reported, 0 missing
+-- cycle 14 at 2601 ms
+check: 153772 records, 153750 reported, 0 missing
+-- cycle 15 at 3000 ms
+check: 160594 records, 160566 reported, 0 missing
+-- cycle 16 at 1066 ms
+check: 168034 records, 168006 reported, 0 missing
+-- cycle 17 at 1306 ms
+check: 176591 records, 176563 reported, 0 missing
+-- cycle 18 at 1767 ms
+check: 188687 records, 188659 reported, 0 missing
+-- cycle 19 at 3053 ms
+check: 198448 records, 198420 reported, 0 missing
+-- cycle 20 at 2166 ms
+check: 212141 records, 212097 reported, 0 missing
+-- cycle 21 at 3304 ms
+check: 221021 records, 220977 reported, 0 missing
+-- cycle 22 at 1872 ms
+check: 233508 records, 233464 reported, 0 missing
+-- cycle 23 at 3278 ms
+check: 245393 records, 245349 reported, 0 missing
+-- cycle 24 at 3197 ms
+check: 254607 records, 254555 reported, 0 missing
+-- cycle 25 at 2088 ms
+check: 262108 records, 262040 reported, 0 missing
+-- cycle 26 at 1117 ms
+check: 269710 records, 269642 reported, 0 missing
+-- cycle 27 at 1445 ms
+check: 301692 records, 301624 reported, 0 missing
+-- cycle 28 at 2014 ms
+check: 313670 records, 313602 reported, 0 missing
+-- cycle 29 at 3138 ms
+check: 322671 records, 322595 reported, 0 missing
+-- cycle 30 at 1950 ms
+== hc-host-reset-20261117195122: 0 of 30 cycles missed a reported record
+pass: zero acknowledged records missing in 30 cycles

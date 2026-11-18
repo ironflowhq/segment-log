@@ -1,0 +1,12 @@
+kernel 6.1.155+
+fs /dev/vdb ext4 rw,relatime,errors=panic
+write_cache write back
+STEP 1-file ok
+READY-FAIL
+STEP 2-create ok
+STEP 2-dirsync err sync /mnt/metaerr: input/output error
+READY-RECOVER
+STEP 4-dirsync-held ok
+STEP 4-dirsync-new ok
+[    1.226339] Kernel panic - not syncing: EXT4-fs (device vdb): panic forced after error
+== V3 errors=panic result: fail: the guest did not halt before a later call returned

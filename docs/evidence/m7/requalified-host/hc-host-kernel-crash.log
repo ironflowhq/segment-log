@@ -1,0 +1,64 @@
+== hc-host-kernel-crash-20261117182932: 30 cycles, host root@168.119.4.92, observer 178.156.201.194:7070, cache_type Writeback
+/dev/nvme0n1 ext4   rw,noatime
+check: 8764 records, 8684 reported, 0 missing
+-- cycle 1 at 1839 ms
+check: 19171 records, 19075 reported, 0 missing
+-- cycle 2 at 2489 ms
+check: 25660 records, 25555 reported, 0 missing
+-- cycle 3 at 1154 ms
+check: 35224 records, 35119 reported, 0 missing
+-- cycle 4 at 2410 ms
+check: 41254 records, 41149 reported, 0 missing
+-- cycle 5 at 969 ms
+check: 48202 records, 48097 reported, 0 missing
+-- cycle 6 at 1348 ms
+check: 59817 records, 59712 reported, 0 missing
+-- cycle 7 at 3045 ms
+check: 67857 records, 67752 reported, 0 missing
+-- cycle 8 at 1756 ms
+check: 79282 records, 79164 reported, 0 missing
+-- cycle 9 at 3116 ms
+check: 85488 records, 85370 reported, 0 missing
+-- cycle 10 at 1134 ms
+check: 94747 records, 94629 reported, 0 missing
+-- cycle 11 at 2291 ms
+check: 102294 records, 102176 reported, 0 missing
+-- cycle 12 at 1552 ms
+check: 112973 records, 112855 reported, 0 missing
+-- cycle 13 at 2761 ms
+check: 120397 records, 120279 reported, 0 missing
+-- cycle 14 at 1608 ms
+check: 130971 records, 130853 reported, 0 missing
+-- cycle 15 at 2750 ms
+check: 141886 records, 141768 reported, 0 missing
+-- cycle 16 at 2798 ms
+check: 150581 records, 150463 reported, 0 missing
+-- cycle 17 at 2043 ms
+check: 156549 records, 156431 reported, 0 missing
+-- cycle 18 at 1036 ms
+check: 161592 records, 161474 reported, 0 missing
+-- cycle 19 at 686 ms
+check: 171747 records, 171629 reported, 0 missing
+-- cycle 20 at 2646 ms
+check: 182379 records, 182261 reported, 0 missing
+-- cycle 21 at 2831 ms
+check: 194788 records, 194663 reported, 0 missing
+-- cycle 22 at 3432 ms
+check: 199975 records, 199850 reported, 0 missing
+-- cycle 23 at 716 ms
+check: 208729 records, 208604 reported, 0 missing
+-- cycle 24 at 2109 ms
+check: 214793 records, 214668 reported, 0 missing
+-- cycle 25 at 985 ms
+check: 226384 records, 226259 reported, 0 missing
+-- cycle 26 at 3101 ms
+check: 238077 records, 237952 reported, 0 missing
+-- cycle 27 at 3131 ms
+check: 243089 records, 242887 reported, 0 missing
+-- cycle 28 at 675 ms
+check: 249593 records, 249391 reported, 0 missing
+-- cycle 29 at 1157 ms
+check: 257919 records, 257717 reported, 0 missing
+-- cycle 30 at 1871 ms
+== hc-host-kernel-crash-20261117182932: 0 of 30 cycles missed a reported record
+pass: zero acknowledged records missing in 30 cycles
