@@ -1,0 +1,14 @@
+{
+  "scope": "diagnostic only; sampled cumulative CPU lower bounds; exited tasks can lose their last interval",
+  "elapsed_seconds": 8.509391787999903,
+  "ticks_per_second": 1000000000,
+  "observed_tasks": 1009,
+  "cpu_seconds_lower_bounds": {
+    "segment_log_cor": 0.002718566,
+    "acceptance::evi": 2.536613192,
+    "segment-log-wri": 5.104551788,
+    "callers": 36.835126503,
+    "segment-log-sea": 0.149924244,
+    "segment-log-key": 0.074827718
+  }
+}
