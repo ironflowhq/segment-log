@@ -351,9 +351,11 @@ fn measured_appends_survive_reopen() {
     } else {
         Arc::new(Real::default())
     };
-    // The closing runs are built off the writer, as `SegmentLog::open` builds them (ADR 0061).
+    // The closing runs and the log filter are built off the writer, as `SegmentLog::open` builds
+    // them (ADR 0061).
     let hooks = crate::engine::Hooks {
         background_seal: true,
+        log_filter: crate::engine::LogFilterMode::Background,
         ..Default::default()
     };
     let log = Arc::new(SegmentLog::with_hooks(&path, options(), backend, hooks).unwrap());

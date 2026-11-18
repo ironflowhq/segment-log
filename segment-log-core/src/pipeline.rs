@@ -26,6 +26,8 @@ struct Trace {
     rounds: usize,
     slots: Vec<[AtomicU64; 11]>,
     groups: Mutex<Vec<Group>>,
+    /// Writer work outside the group cycle: a name, then start, middle and end times.
+    events: Mutex<Vec<(&'static str, [u64; 3])>>,
     path: std::path::PathBuf,
 }
 static TRACE: OnceLock<Trace> = OnceLock::new();
@@ -43,6 +45,7 @@ pub(crate) fn init(callers: usize, rounds: usize) {
                     .map(|_| std::array::from_fn(|_| AtomicU64::new(0)))
                     .collect(),
                 groups: Mutex::new(Vec::new()),
+                events: Mutex::new(Vec::new()),
                 path: path.into(),
             })
             .is_ok(),
@@ -102,6 +105,15 @@ pub(crate) fn group_id(submit: &Submit, base: u64) {
         trace.slots[id(trace, submit)][GROUP].store(base + 1, Ordering::Relaxed);
     }
 }
+/// The trace clock, or 0 when no trace runs.
+pub(crate) fn clock() -> u64 {
+    TRACE.get().map_or(0, now)
+}
+pub(crate) fn event(name: &'static str, times: [u64; 3]) {
+    if let Some(trace) = TRACE.get() {
+        trace.events.lock().unwrap().push((name, times));
+    }
+}
 pub(crate) struct Group {
     base: u64,
     count: usize,
@@ -153,6 +165,12 @@ pub(crate) fn report() {
             write!(out, "\t{value}").unwrap();
         }
         writeln!(out).unwrap();
+    }
+    out.flush().unwrap();
+    let mut out = BufWriter::new(File::create(trace.path.with_extension("events.tsv")).unwrap());
+    writeln!(out, "event\tstart\tmiddle\tend").unwrap();
+    for (name, [start, middle, end]) in trace.events.lock().unwrap().iter() {
+        writeln!(out, "{name}\t{start}\t{middle}\t{end}").unwrap();
     }
     out.flush().unwrap();
     println!(
