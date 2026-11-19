@@ -1,0 +1,10 @@
+requests 1000000  p50 0.80 ms  p99 1.31 ms
+roll        0.5 ms (to middle   0.0, after   0.5); longest gap between group writes  19.5 ms, then a group of 412
+pending     8.0 ms (to middle   7.9, after   0.0); longest gap between group writes  19.5 ms, then a group of 412; drained 0.0 ms after
+roll        0.4 ms (to middle   0.0, after   0.4); longest gap between group writes  19.4 ms, then a group of 408
+pending     7.9 ms (to middle   7.8, after   0.0); longest gap between group writes  19.4 ms, then a group of 408; drained 0.0 ms after
+roll        0.4 ms (to middle   0.0, after   0.4); longest gap between group writes  19.3 ms, then a group of 407
+pending     7.9 ms (to middle   7.8, after   0.0); longest gap between group writes  19.3 ms, then a group of 407; drained 0.0 ms after
+roll        0.4 ms (to middle   0.0, after   0.4); longest gap between group writes  19.0 ms, then a group of 403
+pending     7.8 ms (to middle   7.8, after   0.0); longest gap between group writes  19.0 ms, then a group of 403; drained 0.0 ms after
+median group 51 submits; slowest 1% = 10000 requests, 1836 (18%) started in a closing run or its drain

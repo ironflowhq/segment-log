@@ -1,0 +1,61 @@
+
+running 1 test
+PACED interval_ns=20000000 offered_records_per_second=50000.000 latency_from=scheduled_send
+DIAGNOSTIC measured_storage=true phase_cpu=false
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=321532 p50=356443 p99=451363 p999=591364 max=626505 sum=366414174
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=579274 records=0 segments=1 bytes=64
+APPEND records=1000000 elapsed_ns=20007676175 records_per_second=49980.817 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=544000 admission_call_sum_ns=1475569988
+METRIC append_ns count=1000000 min=272226 p50=846952 p99=1368099 p999=23262364 max=28920827 sum=933563089678
+METRIC group_submits count=19403 min=15 p50=51 p99=53 p999=82 max=602 sum=1000000
+METRIC group_frame_bytes count=19403 min=4480 p50=15136 p99=15728 p999=24312 max=178232 sum=296776120
+METRIC group_fdatasync_ns count=19403 min=146171 p50=175952 p99=235672 p999=281112 max=381962 sum=3518097652
+STORAGE kind=Group.Append count=19403 sum_ns=451528931
+STORAGE kind=Group.SyncData count=19403 sum_ns=3518097652
+STORAGE kind=KeyIndex.Other count=310 sum_ns=8957581
+STORAGE kind=LogFilter.Other count=70 sum_ns=2491581
+STORAGE kind=Lookup.Other count=19403 sum_ns=130579514
+STORAGE kind=Open.Other count=7 sum_ns=129861
+STORAGE kind=Open.SyncData count=1 sum_ns=171671
+STORAGE kind=Open.SyncDir count=1 sum_ns=5450
+STORAGE kind=Recovery.Other count=2 sum_ns=4380
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=36780
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=7520
+STORAGE kind=Roll.Append count=16 sum_ns=16183791
+STORAGE kind=Roll.Other count=8 sum_ns=235393
+STORAGE kind=Roll.SyncData count=12 sum_ns=16188739
+STORAGE kind=Roll.SyncDir count=4 sum_ns=25270
+END records=1000000 segments=5 bytes=313300048
+ROLL index=0 writer_ns=423053
+ROLL index=1 writer_ns=411143
+ROLL index=2 writer_ns=436373
+ROLL index=3 writer_ns=408483
+REOPEN ns=56660784 start_records=1000000 end_records=1000000 start_segments=5 end_segments=5 start_bytes=313300048 end_bytes=313300048 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 279 filtered out; finished in 22.59s
+
+	Command being timed: "/root/issue154-build/release/build/segment-log-core/b0b6e36a32271852/out/segment_log_core-b0b6e36a32271852 --exact acceptance::evidence::measured_appends_survive_reopen --nocapture"
+	User time (seconds): 7.72
+	System time (seconds): 16.54
+	Percent of CPU this job got: 107%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:22.59
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 518468
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 108456
+	Voluntary context switches: 2750182
+	Involuntary context switches: 623
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 1279792
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

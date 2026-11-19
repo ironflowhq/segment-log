@@ -1,0 +1,37 @@
+
+running 1 test
+DIAGNOSTIC measured_storage=true phase_cpu=false
+CONFIG callers=1000 rounds=1000 payload=256 records_per_submit=1 seed=none_literal_formula linger_ns=1000000 group_byte_cap=1048576 roll_bytes=67108864 queue_capacity=4096 pending_byte_budget=16777216
+METRIC device_fdatasync_ns count=1000 min=325917 p50=384269 p99=449029 p999=473851 max=604053 sum=378348821
+DEVICE start_bytes=0 end_bytes=262144000 append_bytes=262144 failures=0
+OPEN initial_ns=585353 records=0 segments=1 bytes=64
+APPEND records=1000000 elapsed_ns=3211016562 records_per_second=311427.855 full=0 other_admission_errors=0 commit_errors=0 correctness_errors=0 peak_reserved_bytes=544000 admission_call_sum_ns=1747730950
+METRIC append_ns count=1000000 min=701154 p50=3070516 p99=5689331 p999=17548372 max=18535886 sum=3180323304831
+METRIC group_submits count=1247 min=1 p50=1000 p99=1000 p999=1000 max=1000 sum=1000000
+METRIC group_frame_bytes count=1247 min=336 p50=296040 p99=296040 p999=296040 max=296040 sum=296049880
+METRIC group_fdatasync_ns count=1247 min=160073 p50=438959 p99=519101 p999=2765709 max=2791211 sum=514817677
+STORAGE kind=Group.Append count=1247 sum_ns=277149654
+STORAGE kind=Group.SyncData count=1247 sum_ns=514817677
+STORAGE kind=KeyIndex.Other count=307 sum_ns=3980518
+STORAGE kind=LogFilter.Other count=70 sum_ns=3566866
+STORAGE kind=Lookup.Other count=1247 sum_ns=48682164
+STORAGE kind=Open.Other count=7 sum_ns=125802
+STORAGE kind=Open.SyncData count=1 sum_ns=157573
+STORAGE kind=Open.SyncDir count=1 sum_ns=5270
+STORAGE kind=Recovery.Other count=2 sum_ns=4260
+STORAGE kind=Recovery.SyncAll count=1 sum_ns=36631
+STORAGE kind=Recovery.SyncDir count=2 sum_ns=7130
+STORAGE kind=Roll.Append count=16 sum_ns=16007631
+STORAGE kind=Roll.Other count=8 sum_ns=287776
+STORAGE kind=Roll.SyncData count=12 sum_ns=18597538
+STORAGE kind=Roll.SyncDir count=4 sum_ns=31640
+END records=1000000 segments=5 bytes=312656208
+ROLL index=0 writer_ns=537232
+ROLL index=1 writer_ns=523661
+ROLL index=2 writer_ns=556792
+ROLL index=3 writer_ns=435169
+REOPEN ns=41116279 start_records=1000000 end_records=1000000 start_segments=5 end_segments=5 start_bytes=312656208 end_bytes=312656208 correctness_errors=0
+test acceptance::evidence::measured_appends_survive_reopen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 283 filtered out; finished in 5.61s
+
