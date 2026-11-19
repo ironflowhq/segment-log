@@ -56,3 +56,17 @@ PM983 of the first box), otherwise the same setup. Both commits ran on this box.
 The bound is about 1.8 ms. The 3 large groups left in the middle of a segment fall in the first
 segment after open, whose map has no rolled map to take its size from. The rest of the gap to the
 bound is the closing run at each roll.
+
+## The sealer writes the closing run ([ryzen3900-sealer](ryzen3900-sealer))
+
+Hetzner auction #3116708, 2026-11-19: Ryzen 9 3900, 2x Toshiba KXD51RUE1T92 1CEE6111, write cache
+write through, otherwise the same setup. No EPYC was offered. Both commits ran on this box.
+
+| Commit | Closed-loop records/s | Paced p99 ms | Paced p999 ms | Paced max ms | Runs within the bound | Large groups at rolls per run |
+|---|---|---|---|---|---|---|
+| 9280322 (main) | 312,232 | 1.36 (1.35–1.37) | 23.3 (22.9–23.5) | 28.9 (28.0–29.7) | 5 of 5 | 13–16 |
+| 50c2125 (ADR 0067) | 315,150 | 1.35 (1.34–1.37) | 15.2 (14.7–15.9) | 21.1 (20.1–21.7) | 5 of 5 | 8–11 |
+
+The bound is about 1.9 ms. On this faster CPU main already passes, because the roll stalls hold
+fewer than 1% of the records, so p99 does not move. The stalls show in p999 and the maximum, which
+fall by about a third. On main the traced runs time the writer's closing run at 7.9 ms per roll.

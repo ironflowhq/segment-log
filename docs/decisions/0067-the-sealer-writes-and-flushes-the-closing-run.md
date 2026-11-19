@@ -62,7 +62,7 @@ After it builds the run, the sealer appends it to the old segment and does both 
 
 We will use option D.
 
-1. **The sealer writes.** After it builds the closing run (ADR 0061 rule 2), the sealer appends the key filter and key index frames to the rolled segment through the storage trait, calls `sync_all`, then appends the footer and locator frames and calls `sync_all` again. It uses the storage purposes the writer uses for these writes today.
+1. **The sealer writes.** After it builds the closing run (ADR 0061 rule 2), the sealer appends the key filter and key index frames to the rolled segment through the storage trait, flushes it (`sync_data`, as the writer does today), then appends the footer and locator frames and flushes it again. It starts only after the roll has made the next segment durable. It uses the storage purposes the writer uses for these writes today.
 2. **One writing thread per file.** From the roll on, only the sealer writes the rolled segment, and only the writer writes the active one. The writer never touches the rolled file again, as today.
 3. **Hand-off.** The sealer reports `Durable` or `Failed` to the writer. The writer checks at each group boundary, without waiting. On `Durable` it does what ADR 0061 does once a closing run is durable: it drops the pending key map, so lookups use the segment's filter and index, and tells the log-filter builder about the segment.
 4. **Failure.** On `Failed`, or if the sealer panics, the writer poisons itself at the next group boundary ([ADR 0004](0004-io-errors-poison-the-writer.md)). Nothing is retried. Groups acknowledged after the roll stay acknowledged: they are durable in the active segment, and recovery rebuilds a missing closing run in the second-newest segment (ADR 0061 rule 8).
@@ -84,9 +84,9 @@ Option D beat A because only taking the I/O off the writer bounds the writer's t
 
 The implementing change adds these, and testing.md names them:
 
-- A failing scenario first: in a traced `measured_appends_survive_reopen` run, the writer's time at each roll (the `pending` and `roll` events in `t.events.tsv`) stays within a slack that does not grow with the closing run's size.
-- Simulator crash cases: a crash between the sealer's two flushes while the writer commits groups, and a crash during each while a group flush is in flight. Each checks that every acknowledged record and every retry survive.
-- A case where the sealer's `sync_all` fails: the writer poisons at the next group boundary, and earlier acks survive reopen.
+- A failing scenario first (`ROLL-BOUNDED`, `segment-log-core/src/acceptance/sealed_keys/sealer_io.rs`): with the sealer's first flush held, groups into the new segment still commit. The writer before this change waits for that flush.
+- Simulator crash cases (`KEY-FRAMES-CRASH`, same file): a crash in each mode at the sealer's first flush and between its two flushes, after groups were acknowledged in the new segment. Each checks that every acknowledged record and every retry survive, and that open completes the run its groups produce. The simulator holds one call at a time, so these cases cannot also hold a group flush in flight.
+- A case where the sealer's flush fails (`ORACLE-7`, same file): the writer poisons at a later group boundary, the flush is not retried, and earlier acks survive reopen.
 - The issue 154 capture on an EPYC 7401P or 7502P host, with paced p99 within its bound.
 
 ## Revisit if

@@ -1,4 +1,4 @@
-//! A rolled segment whose closing run the writer has not written yet (ADR 0061).
+//! A rolled segment whose closing run is not durable yet (ADR 0061).
 use super::*;
 use crate::storage::{Call, Op};
 
