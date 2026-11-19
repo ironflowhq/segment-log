@@ -1,7 +1,7 @@
 ---
 id: "0067"
 title: "Appends do not wait for a roll's closing run: the sealer writes and flushes it"
-status: proposed
+status: accepted
 date: 2026-11-19
 deciders: [Altug Sahin]
 supersedes: null
@@ -73,6 +73,7 @@ Option D beat A because only taking the I/O off the writer bounds the writer's t
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-19 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - ADR 0061 is amended. Rule 3 ("the writer writes the closing run") is replaced by decision 1–4 here. Its sentence that the sealer does no I/O no longer holds. Its option C is the option chosen here.
 - ADR 0051 is amended. Its Context fact "Only the writer thread writes segment files" becomes "only the writer writes the active segment; the sealer writes a rolled segment's closing run". The builder still writes no file.
 - overview.md changes with the code: roll step 4 moves to the sealer, and the roll failure paragraph gains the sealer's `Failed`.

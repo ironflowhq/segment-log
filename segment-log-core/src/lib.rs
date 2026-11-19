@@ -1,4 +1,5 @@
-//! Embedded append-only segment log foundations.
+// The README is the crate's front page on docs.rs; its links are absolute so they resolve there.
+#![doc = include_str!("../README.md")]
 #![forbid(unsafe_code)]
 
 mod codec;
