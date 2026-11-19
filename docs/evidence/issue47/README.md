@@ -26,10 +26,10 @@ The soak sampled the process's resident set every 5 s ([soak.rss.tsv](https://gi
 
 - One log sustains about 120,000–130,000 keyed records/s on local NVMe in process, from 1,000 to 4,000 callers, across hundreds of rolls.
 - A 60-million-record, 19 GB, 265-segment log reopens in well under a second.
-- Plan resident memory for the log's retained state at about 34 bytes per record of history for keyed records over few streams, on top of the [idle resident set](../m6/completion.md). A log with many streams retains per-stream state as well; these runs do not measure that case.
+- Plan resident memory for the log's retained state at about 34 bytes per record of history for keyed records over few streams, on top of the [idle resident set](../m6/completion.md). Add about 230 bytes per stream ([issue 156 record](../issue156/README.md#resident-set-by-stream-count), measured on a Mac).
 - `read(from, max)` returns its records in one allocation; a reader of a large history reads in bounded batches.
+- Up to 4 readers showed no cost to 1,000 appenders on a Mac, and 16 readers of history raised the append p99 to 33–38 ms there. A reader at random offsets over more than 16 sealed segments pays 1.5–6 ms per call of 64 records, because each call rereads a segment's frame headers ([issue 156 record](../issue156/README.md)).
 
-## Not measured
+## Measured later
 
-- **Several readers with several appenders.** No case runs concurrent readers; the M7 transport tests run one reader per connection. [Issue 156](https://github.com/ironflowx/segment-log/issues/156) tracks it.
-- **Many streams in a large history.** Each case uses one stream per caller.
+Each case here uses one stream per caller and runs no reader. The [issue 156 record](../issue156/README.md) measures several readers beside several appenders and the memory of many streams, on a Mac. Those figures still need a run on the qualified host.

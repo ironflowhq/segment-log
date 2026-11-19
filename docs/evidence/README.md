@@ -55,6 +55,7 @@ Raw run output (logs, traces, TSVs) is not kept in this repository, nor in its h
 | [issue49](issue49/README.md) | M1 capture on bare-metal local NVMe, main versus the M1 tree | i7-7700, PM981 | 2026-11-16 | Throughput met: 62,203 records/s. Paced p99 on main 83.13 ms, 0 of 5 within bound, from roll stalls (issue 107). |
 | [issue70](issue70/README.md) | How key lookup cost grows with sealed history, before and after ADR 0051 | GitHub runner | — | 4.65 → 30.86 µs per record from 100 to 1,000 segments (29,105 records/s). The log key filter holds it at 1.2–2.5 µs. |
 | [issue154](issue154/README.md) | Why paced p99 misses the bound on the EPYC host | EPYC 7502P, PM983 and PM9A3; Ryzen 9 3900 | 2026-11-18 | Key map sizing (#168) cut paced p99 8.95 → 4.14 ms on EPYC; 1.8 ms bound still missed. ADR 0067 (#170) cut p999 23.3 → 15.2 ms on Ryzen, where main already passes. Not yet rerun on EPYC. |
+| [issue156](issue156/README.md) | Several readers beside several appenders on a large history, and resident memory per stream | Apple M4 Mac mini, internal SSD | 2026-11-19 | Diagnostics. Up to 4 readers show no cost to 1,000 appenders; 16 history readers raise append p99 to 33–38 ms. Random reads past 16 sealed segments take 1.5–6 ms, because each rereads a segment's frame headers. About 230 bytes per stream. |
 
 ## Other
 
