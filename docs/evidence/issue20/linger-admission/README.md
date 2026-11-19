@@ -126,11 +126,11 @@ The final version notes the time when the writer first sees the linger over, and
 
 Three scenarios in `segment-log-core/src/acceptance/durability.rs`, each written before the code that it checks.
 
-- `linger_runs_from_the_admission_of_a_groups_first_submit` failed on the earlier writer with `the late group waited another linger after 1.001113292s` ([red-linger.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/linger-admission/red-linger.log)).
+- `linger_runs_from_the_admission_of_a_groups_first_submit` failed on the earlier writer with `the late group waited another linger after 1.001113292s` ([red-linger.log](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/linger-admission/red-linger.log)).
 - `a_group_takes_only_submits_admitted_before_its_gathering_ended` failed on the first version with three flushes where four are expected: the late submit had joined the group.
 - `a_group_formed_after_its_linger_ended_fails_and_recovers_whole` fails a late group's flush and replays each of its storage boundaries through every crash mode. It passes before and after.
 
-A variant that stops at the end of the linger without taking the queued submits fails the first and the third: four flushes where two are expected ([variant-stop-at-the-end.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/linger-admission/variant-stop-at-the-end.log)).
+A variant that stops at the end of the linger without taking the queued submits fails the first and the third: four flushes where two are expected ([variant-stop-at-the-end.log](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/linger-admission/variant-stop-at-the-end.log)).
 
 ## Limits
 
@@ -142,7 +142,7 @@ A variant that stops at the end of the linger without taking the queued submits 
 
 ## Checks
 
-On the Mac host and in the Linux container, for the final version: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, the script tests, and the long run with 100 trace seeds from 10000 (2,700 scenarios) and 30 process-kill repetitions. [checks/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/linger-admission/checks) holds the Mac results.
+On the Mac host and in the Linux container, for the final version: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, the script tests, and the long run with 100 trace seeds from 10000 (2,700 scenarios) and 30 process-kill repetitions. [checks/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/linger-admission/checks) holds the Mac results.
 
 One long run in the Linux container failed at seed 10030. Its cause was in the test harness's reader and exists on `main` without this change. [Its record](../reader-crash-cancel/README.md) has the saved pair, the replay and the correction. With that correction the long run passes in the container.
 

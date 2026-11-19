@@ -1,6 +1,6 @@
 # What the key lookup costs as sealed history grows (issue 70)
 
-Two captures of the [`m4-evidence` workflow](../m4/README.md) at `15dd21d`, on hosted ubuntu-24.04 runners. Each compares the M4 code ("after") with the M3 code at `0ffc772` ("before"). A hosted runner is a shared virtual machine. These are measurements under its conditions, not a target pass.
+Two captures of the [`m4-evidence` workflow](../m4/README.md) at `bfdcb35`, on hosted ubuntu-24.04 runners. Each compares the M4 code ("after") with the M3 code at `0e40c93` ("before"). A hosted runner is a shared virtual machine. These are measurements under its conditions, not a target pass.
 
 | Capture | Fixture | Run |
 | --- | --- | --- |
@@ -33,12 +33,12 @@ Four more captures measure the log key filter of pull request 75 beside the same
 
 | Capture | Wait after open | Run |
 | --- | --- | --- |
-| [`log-filter-100`](log-filter-100/summary.md) | none | [43300711775](https://github.com/ironflowx/segment-log/actions/runs/43300711775), at `2c3bfcc` |
-| [`log-filter-1000`](log-filter-1000/summary.md) | none | [43300699281](https://github.com/ironflowx/segment-log/actions/runs/43300699281), at `2c3bfcc` |
-| [`log-filter-100-settled`](log-filter-100-settled/summary.md) | 15 s | [43305119312](https://github.com/ironflowx/segment-log/actions/runs/43305119312), at `4744340` |
-| [`log-filter-1000-settled`](log-filter-1000-settled/summary.md) | 15 s | [43305124391](https://github.com/ironflowx/segment-log/actions/runs/43305124391), at `4744340` |
+| [`log-filter-100`](log-filter-100/summary.md) | none | [43300711775](https://github.com/ironflowx/segment-log/actions/runs/43300711775), at `fdf975e` |
+| [`log-filter-1000`](log-filter-1000/summary.md) | none | [43300699281](https://github.com/ironflowx/segment-log/actions/runs/43300699281), at `fdf975e` |
+| [`log-filter-100-settled`](log-filter-100-settled/summary.md) | 15 s | [43305119312](https://github.com/ironflowx/segment-log/actions/runs/43305119312), at `c2ba0eb` |
+| [`log-filter-1000-settled`](log-filter-1000-settled/summary.md) | 15 s | [43305124391](https://github.com/ironflowx/segment-log/actions/runs/43305124391), at `c2ba0eb` |
 
-`4744340` changes only the probe and the scripts: `SEALED_PROBE_SETTLE_MS` waits between open and the first append on both sides, so that the builder has finished before the timed run.
+`c2ba0eb` changes only the probe and the scripts: `SEALED_PROBE_SETTLE_MS` waits between open and the first append on both sides, so that the builder has finished before the timed run.
 
 Closed loop, 1,000 callers, medians of 5 runs:
 

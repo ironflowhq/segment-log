@@ -86,7 +86,7 @@ Option C keeps the lookup that ADR 0048 chose and adds a cache in front of it, s
 
 Before this ADR is accepted, the `m4-evidence` workflow measures on the same commit:
 
-1. Keyed and unkeyed closed-loop appends on the keyed PRD fixture, on the M3 and the M4 code. If M4 is also slow without keys, the lookup is not the main cost, and this decision is wrong. **Done** at `15dd21d`: the lookup is the cost (see Context).
+1. Keyed and unkeyed closed-loop appends on the keyed PRD fixture, on the M3 and the M4 code. If M4 is also slow without keys, the lookup is not the main cost, and this decision is wrong. **Done** at `bfdcb35`: the lookup is the cost (see Context).
 2. Keyed against unkeyed closed-loop appends with option C, at 100 sealed segments and at 1,000. The second fixture uses a smaller `roll_bytes` and keeps about the same number of keys, so that it fits on the runner's disk.
 
 Option C passes if keyed closed-loop throughput is within 10% of unkeyed at both sizes, with open time, `ORACLE-13` and the key-cache memory formula still met. The owner replaced this criterion on 2026-11-12, after the result below.

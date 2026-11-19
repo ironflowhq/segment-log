@@ -37,7 +37,7 @@ All ADRs are `Proposed` until the owner accepts them. A Proposed ADR is still th
 - **Raw run output never goes in the repository.** Benchmark and capture scripts write logs, traces, TSVs and build output to a scratch directory outside `docs/evidence/`; `docs/evidence/.gitignore` refuses anything but `.md`, `.sh` and `.py`.
 - **Commit one record per investigation:** a `README.md` that states the question, the host (CPU, drive model and firmware), the date, the commits measured, the numbers it relies on as a table, and the verdict. Commit the driver script beside it if one produced the run.
 - **Add a row to [docs/evidence/README.md](docs/evidence/README.md)** for every new record, and update the row when a later run changes the verdict.
-- To cite a raw file that is not in the tree, link a GitHub permalink at the commit that last had it.
+- Older records cite their raw files in the frozen [segment-log-evidence](https://github.com/ironflowx/segment-log-evidence) archive. Do not add to it, and do not commit raw files here: the history was rewritten once to remove them.
 
 ## Build and test
 

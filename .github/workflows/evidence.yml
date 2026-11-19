@@ -12,7 +12,7 @@ on:
         type: choice
         options: [m1-evidence, m1-compare, m3-evidence, m4-evidence, m6-socket]
       base:
-        description: "m1-compare: commit to measure as before (required). m4-evidence: the M3 code (default 0ffc772)"
+        description: "m1-compare: commit to measure as before (required). m4-evidence: the M3 code (default 0e40c93)"
         required: false
       head:
         description: "m1-compare, m4-evidence: commit to measure as after (default is the dispatched ref)"
@@ -194,7 +194,7 @@ jobs:
           sudo chown "$USER" /mnt/segment-log
           scripts/m4-evidence.sh "$RUNNER_TEMP/m4-evidence" "$HEAD" "$BASE"
         env:
-          BASE: ${{ inputs.base || '0ffc77259ade423091eea503b282f28bf674745c' }}
+          BASE: ${{ inputs.base || '0e40c937f41eea18bacd1ec6b5ebf5d085d36760' }}
           HEAD: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
           SEGMENT_LOG_EVIDENCE_DIR: /mnt/segment-log/data
           M4_SEALED: ${{ inputs.sealed || '100' }}

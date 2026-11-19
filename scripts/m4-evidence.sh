@@ -5,7 +5,7 @@
 # each side (ADR 0051).
 # usage: scripts/m4-evidence.sh OUTPUT_DIRECTORY [HEAD [BASE]]
 #
-# HEAD defaults to the checked-out commit, BASE to the M3 code (main at 0ffc772). Each side is
+# HEAD defaults to the checked-out commit, BASE to the M3 code (main at 0e40c93). Each side is
 # built in its own worktree from this checkout's segment-log-core/examples/sealed_probe.rs, which
 # uses only the public API both sides share, so both run the same workload code.
 #
@@ -17,7 +17,7 @@
 set -euo pipefail
 out="${1:?usage: scripts/m4-evidence.sh OUTPUT_DIRECTORY [HEAD [BASE]]}"
 head="$(git rev-parse --verify "${2:-HEAD}^{commit}")"
-base="$(git rev-parse --verify "${3:-0ffc77259ade423091eea503b282f28bf674745c}^{commit}")"
+base="$(git rev-parse --verify "${3:-0e40c937f41eea18bacd1ec6b5ebf5d085d36760}^{commit}")"
 if [ -n "${M4_EVIDENCE_SMALL:-}" ]; then
     : "${M4_SEALED:=3}" "${M4_ROLL_BYTES:=1048576}" "${M4_ACTIVE_BYTES:=262144}"
     : "${M4_OPEN_RUNS:=3}" "${M4_CALLERS:=20}" "${M4_ROUNDS:=50}" "${M4_PAIRS:=2}"

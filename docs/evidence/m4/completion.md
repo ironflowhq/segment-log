@@ -11,9 +11,9 @@ M4 (sealed footer and locator, `seal`, read-only open, `LogReader`, retained-key
 
 ## Linux report
 
-The fixture holds 22,715,000 keyed records: 100 sealed segments at the default 64 MiB roll size (227,000 records each) and a 4.23 MiB active segment. [`linux/environment.txt`](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m4/linux/environment.txt) records the runner (4 vCPUs, AMD EPYC 7763), the kernel, the mounts and the toolchain. [`linux/binaries.sha256`](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m4/linux/binaries.sha256) identifies both binaries. A hosted runner is a shared virtual machine. These are measurements under its conditions.
+The fixture holds 22,715,000 keyed records: 100 sealed segments at the default 64 MiB roll size (227,000 records each) and a 4.23 MiB active segment. [`linux/environment.txt`](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m4/linux/environment.txt) records the runner (4 vCPUs, AMD EPYC 7763), the kernel, the mounts and the toolchain. [`linux/binaries.sha256`](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m4/linux/binaries.sha256) identifies both binaries. A hosted runner is a shared virtual machine. These are measurements under its conditions.
 
-| Measure | M4 | M3 (`0ffc772`) |
+| Measure | M4 | M3 (`0e40c93`) |
 | --- | --- | --- |
 | Open, keyed, warm p50 | 38.6 ms | about 32 s, full scan |
 | Open, keyed, cold p50 | 122.8 ms | not measured |

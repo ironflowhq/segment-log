@@ -4,9 +4,9 @@ ADR 0052 rejected aligned key index pages (option B) without a measurement. This
 
 A lookup in a sealed segment opens the file, reads one 4,096-byte page at its file position, and closes the file (`segment-log-core/src/storage/real.rs`). Format version 1 puts no page on a 4 KiB boundary. `scripts/key-page-alignment.py` copies that I/O on 2,000 distinct random pages of an 8 GiB file, after dropping the page cache. Each variant ran 5 times, in a rotating order. The unaligned offset is random within the page.
 
-[Format evidence run 43471859438](https://github.com/ironflowx/segment-log/actions/runs/43471859438), at `fc202ba` on a hosted ubuntu-24.04 runner. [`environment.txt`](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/format/key-page-alignment/environment.txt) records the kernel, the device (local NVMe, ext4) and a readahead of 128 KiB. A hosted runner is a shared virtual machine; these are measurements under its conditions.
+[Format evidence run 43471859438](https://github.com/ironflowx/segment-log/actions/runs/43471859438), at `77270f4` on a hosted ubuntu-24.04 runner. [`environment.txt`](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/format/key-page-alignment/environment.txt) records the kernel, the device (local NVMe, ext4) and a readahead of 128 KiB. A hosted runner is a shared virtual machine; these are measurements under its conditions.
 
-Medians over the 5 trials ([`summary.tsv`](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/format/key-page-alignment/summary.tsv); every run in [`runs.tsv`](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/format/key-page-alignment/runs.tsv)):
+Medians over the 5 trials ([`summary.tsv`](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/format/key-page-alignment/summary.tsv); every run in [`runs.tsv`](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/format/key-page-alignment/runs.tsv)):
 
 | Variant | p50 | p90 | p99 | Device reads | Device KiB |
 | --- | --- | --- | --- | --- | --- |

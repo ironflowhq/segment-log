@@ -34,18 +34,18 @@ The performance targets are diagnostics in M1 ([ADR 0029](../../decisions/0029-m
 
 A later commit must leave the `segment-log-core` tree unchanged for this record to describe it. Compare with `git rev-parse HEAD:segment-log-core`.
 
-After the merge, 10 November 2026: the pull requests were squash-merged, so the measured commit is not on `main`. It is an ancestor of `refs/pull/40/head` and can be fetched from there. The squash commits of pull requests 40 and 43, `c459c26` and `2fa9cff`, have the `segment-log-core` tree above. So does `856af11`, the commit of pull request 39, which adds only two scripts and their record.
+After the merge, 10 November 2026: the pull requests were squash-merged, so the measured commit is not on `main`. It is an ancestor of `refs/pull/40/head` and can be fetched from there. The squash commits of pull requests 40 and 43, `a2e9996` and `3071fc9`, have the `segment-log-core` tree above. So does `dbd50db`, the commit of pull request 39, which adds only two scripts and their record.
 
 All four captures ran on 10 November 2026:
 
 | Capture | Host | Files |
 | --- | --- | --- |
 | Hosted Linux | GitHub runner `ubuntu-24.04`, [run 42763429080](https://github.com/ironflowx/segment-log/actions/runs/42763429080) | [completion/hosted-linux/](completion/hosted-linux/) |
-| Hosted macOS | GitHub runner `macos-latest`, the same run | [completion/hosted-macos/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/hosted-macos) |
+| Hosted macOS | GitHub runner `macos-latest`, the same run | [completion/hosted-macos/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/hosted-macos) |
 | Docker guest | Pinned `rust:1.99.1-bookworm` container on Docker Desktop for Mac | [completion/docker/](completion/docker/) |
-| Mac host | Apple M4, macOS 27.0.1 | [completion/macos/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/macos) |
+| Mac host | Apple M4, macOS 27.0.1 | [completion/macos/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/macos) |
 
-[completion/hosted-run.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/hosted-run.json) is the API record of the hosted run. Three local files were edited after capture to remove directory names of the host: line 2 of `docker/environment.txt`, and the process paths in `docker/host-load-before.txt` and `docker/host-load-after.txt`, which now hold process names only.
+[completion/hosted-run.json](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/hosted-run.json) is the API record of the hosted run. Three local files were edited after capture to remove directory names of the host: line 2 of `docker/environment.txt`, and the process paths in `docker/host-load-before.txt` and `docker/host-load-after.txt`, which now hold process names only.
 
 ## 1. Checks on Linux and macOS
 
@@ -65,9 +65,9 @@ The ignored test is the long run. It ran separately with the hosted settings, 10
 | Mac host | 2,700 scenarios passed | 30 repetitions passed |
 | Docker guest | 2,700 scenarios passed | 30 repetitions passed |
 
-[completion/long-run/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/long-run) holds the four logs. The tests cover the simulated `Kill`, `PowerLoss` and `PowerLossTorn` crashes, real-process `SIGKILL`, I/O faults, recovery, the writer lock, expected revisions, retries and admission limits. [testing.md](../../architecture/testing.md#m1-acceptance-coverage) lists every case, and each group there is `Implemented`.
+[completion/long-run/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/long-run) holds the four logs. The tests cover the simulated `Kill`, `PowerLoss` and `PowerLossTorn` crashes, real-process `SIGKILL`, I/O faults, recovery, the writer lock, expected revisions, retries and admission limits. [testing.md](../../architecture/testing.md#m1-acceptance-coverage) lists every case, and each group there is `Implemented`.
 
-Hosted CI passed on Linux and macOS for the head of each pull request in this stack: #36, #37, #38, #40, #41 and #42. After the merge it also passed for each of the eight squash commits on `main`, from `31bae72` to `856af11`.
+Hosted CI passed on Linux and macOS for the head of each pull request in this stack: #36, #37, #38, #40, #41 and #42. After the merge it also passed for each of the eight squash commits on `main`, from `a10a7ad` to `dbd50db`.
 
 ### Hosted long runs
 
@@ -79,11 +79,11 @@ Hosted CI passed on Linux and macOS for the head of each pull request in this st
 | [42818173749](https://github.com/ironflowx/segment-log/actions/runs/42818173749) | Scheduled, 10 November at 12:43 UTC | Passed on Linux and macOS |
 | [42855610214](https://github.com/ironflowx/segment-log/actions/runs/42855610214) | Manual, 10 November at 16:32 UTC, on the merged tree | Passed on Linux and macOS |
 
-The first scheduled run was due on 10 November 2026 at 04:23 UTC. When this record was captured, more than one hour later, the repository showed no run with the `schedule` event. GitHub does not promise when a scheduled workflow starts. The run started at 12:43 UTC, eight hours and twenty minutes after its slot, and passed on both platforms. [completion/scheduled-run.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/scheduled-run.json) is its API record.
+The first scheduled run was due on 10 November 2026 at 04:23 UTC. When this record was captured, more than one hour later, the repository showed no run with the `schedule` event. GitHub does not promise when a scheduled workflow starts. The run started at 12:43 UTC, eight hours and twenty minutes after its slot, and passed on both platforms. [completion/scheduled-run.json](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/scheduled-run.json) is its API record.
 
-The scheduled run used `86f8da8`, the `main` before this stack. So it ran the workflow without the drill input, and the engine before the linger change. It shows that the schedule fires and that the long run passes on hosted runners. It does not test the measured tree; the two manual runs and the local long runs above do. This gate does not require a scheduled run.
+The scheduled run used `806e8f5`, the `main` before this stack. So it ran the workflow without the drill input, and the engine before the linger change. It shows that the schedule fires and that the long run passes on hosted runners. It does not test the measured tree; the two manual runs and the local long runs above do. This gate does not require a scheduled run.
 
-Note of 10 November 2026: a manual run then used `main` at `ff74647`, after the merge. Its `segment-log-core` tree is the measured tree. Each platform passed trace seeds 10000 to 10099 with 2,700 scenarios, and then the process-crash test. [completion/merged-tree-run.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/merged-tree-run.json) is its API record.
+Note of 10 November 2026: a manual run then used `main` at `8fd09b2`, after the merge. Its `segment-log-core` tree is the measured tree. Each platform passed trace seeds 10000 to 10099 with 2,700 scenarios, and then the process-crash test. [completion/merged-tree-run.json](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/merged-tree-run.json) is its API record.
 
 ## 2. One `fdatasync` for each new group
 
@@ -103,8 +103,8 @@ Creation and recovery are separate from the group commits. A fully deduplicated 
 
 | Host | Trace | Verifier output | Phase log |
 | --- | --- | --- | --- |
-| Hosted Linux, x86-64 | [syscalls.trace](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/hosted-linux/syscalls.trace) | [syscalls-verified.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/hosted-linux/syscalls-verified.txt) | [sync-phases.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/hosted-linux/sync-phases.log) |
-| Docker guest, aarch64 | [syscalls.trace](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/docker/syscalls.trace) | [syscalls-verified.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/docker/syscalls-verified.txt) | [sync-phases.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/docker/sync-phases.log) |
+| Hosted Linux, x86-64 | [syscalls.trace](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/hosted-linux/syscalls.trace) | [syscalls-verified.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/hosted-linux/syscalls-verified.txt) | [sync-phases.log](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/hosted-linux/sync-phases.log) |
+| Docker guest, aarch64 | [syscalls.trace](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/docker/syscalls.trace) | [syscalls-verified.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/docker/syscalls-verified.txt) | [sync-phases.log](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/docker/sync-phases.log) |
 
 Command, from `scripts/m1-evidence-guest.sh`:
 
@@ -121,7 +121,7 @@ In the benchmark, the storage wrapper counts one successful group flush for each
 The same scenario checks the directory syncs through the real storage implementation: two for the log directory and one for its parent during creation, and one each during recovery.
 
 - **Linux.** The traces above show each `fsync` on the log directory and on its parent return 0.
-- **macOS.** [completion/hosted-macos/directory.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/hosted-macos/directory.log) and [completion/macos/directory.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/completion/macos/directory.log) record `Ok(())` for every `SyncDir` call on the log directory and on its parent, during creation and recovery. These are results of the real storage calls on APFS, not a kernel trace.
+- **macOS.** [completion/hosted-macos/directory.log](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/hosted-macos/directory.log) and [completion/macos/directory.log](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/completion/macos/directory.log) record `Ok(())` for every `SyncDir` call on the log directory and on its parent, during creation and recovery. These are results of the real storage calls on APFS, not a kernel trace.
 
 These checks show the calls that the library makes. They do not certify a storage stack. [ADR 0032](../../decisions/0032-qualify-deployment-storage-before-m6.md) keeps that qualification before M6.
 

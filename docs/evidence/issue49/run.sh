@@ -2,7 +2,7 @@
 # Run as root on the host, on 2026-11-16. /tmp is ext4 on nvme1n1, one drive, no RAID.
 . "$HOME/.cargo/env"
 cd /root && rm -rf sl && git clone -q https://github.com/ironflowx/segment-log.git sl && cd sl
-for rev in main ff746473929eccb5398f2b7d4d3fa5ba90f8b10c; do
+for rev in main 8fd09b2ccec9a8f016be19ddca196e19cdad9b9d; do
   git checkout -q $rev; rustup toolchain install >/dev/null 2>&1
   o=/root/m1/out-${rev:0:7}; rm -rf $o /tmp/m1; mkdir -p $o /root/m1/build /tmp/m1/data
   { cat /proc/mdstat; cat /sys/block/nvme*/queue/write_cache; for d in /dev/nvme0 /dev/nvme1; do nvme id-ctrl $d; done; } >$o/host-extra.txt 2>&1

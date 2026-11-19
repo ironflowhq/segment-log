@@ -2,7 +2,7 @@
 
 One row per investigation. Each record states its question, host, date, the commits it measured, and the numbers it relies on. Update a row when a later run changes its verdict ([CLAUDE.md](../../CLAUDE.md#evidence)).
 
-Raw run output (logs, traces, TSVs) is not kept in the tree. Records committed before 2026-11-19 cite theirs through permalinks at [`962a34a`](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence), the last commit that holds every raw file. A path a record names in plain text, without a link, refers to that commit too.
+Raw run output (logs, traces, TSVs) is not kept in this repository, nor in its history. The raw files of the records written before 2026-11-19 are frozen in [segment-log-evidence](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c), under the same paths as here, and the records link to them there. A path a record names in plain text, without a link, is a path in that archive; its directory names keep the commit hashes from before the history rewrite of 2026-11-19.
 
 ## Milestones
 

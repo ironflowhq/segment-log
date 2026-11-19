@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 out="${1:?usage: scripts/m1-compare-codec.sh OUTPUT_DIRECTORY [BASE_SHA]}"
-base="${2:-911e809e72fc9c9ef5571f7022c89e55a48d6cb1}"
+base="${2:-307228eb447cbd2185860554feea7b71308cc7f9}"
 mkdir -p "$out/before" "$out/after"
 git show "$base:segment-log-core/src/codec.rs" > "$out/before/codec.rs"
 cp segment-log-core/src/codec.rs "$out/after/codec.rs"

@@ -14,16 +14,16 @@ This supports the change. It does not show that a PRD target passes, and it is n
 
 ## Scope and provenance
 
-- `main` is `5e95407cb3e427800cdb29c687595d35bae56410`. The change is `aeb542c34d3e135a8aacf942608dba028fab2bbc`. Commits after it on this branch change documents and scripts only. [sources.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/sources.txt) and [binaries.sha256](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/binaries.sha256) identify what ran.
-- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/environment.txt), [docker-info.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/docker-info.txt) and [host.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/host.txt) hold the details.
+- `main` is `384305980c6285ff5b2d759b49583524569cefac`. The change is `aeb542c34d3e135a8aacf942608dba028fab2bbc`. Commits after it on this branch change documents and scripts only. [sources.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/sources.txt) and [binaries.sha256](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/binaries.sha256) identify what ran.
+- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/environment.txt), [docker-info.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/docker-info.txt) and [host.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/host.txt) hold the details.
 - The host is an Apple M4 with 10 cores and 24 GiB on macOS 27.0.1. It ran unrelated work. Each run's log is preceded by the guest's load average, which includes the run before it.
 - This is a virtual Linux guest on a Mac. It is not physical local NVMe and it is not the deployment storage stack. The guest has 10 processors for 1,000 caller threads.
 
 ## Method
 
 - **Benchmark.** `scripts/m1-compare-latency.sh` ran the default benchmark with 1,000 callers and 1,000 rounds: one warm-up for each binary, then five alternating pairs. `scripts/m1-latency-summary.py` wrote [latency/summary.md](latency/summary.md).
-- **Trace.** The benchmark's request trace (`SEGMENT_LOG_PIPELINE_OUT`) ran with 1,000 callers and 200 rounds, three alternating repetitions for each binary. `scripts/m1-group-phases.py --min-count 900` split the writer's cycle. It counts only groups of at least 900 requests, so the warm-up and partial groups do not dilute the steady state. The trace files are large and are not retained. The benchmark output and the phase tables are in [trace/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/trace).
-- **Wake-up strategies.** [wake/wake.rs](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/wake/wake.rs) parks 1,000 threads and measures how long each strategy takes to wake them, 200 rounds for each strategy, three repetitions. It uses only `std`.
+- **Trace.** The benchmark's request trace (`SEGMENT_LOG_PIPELINE_OUT`) ran with 1,000 callers and 200 rounds, three alternating repetitions for each binary. `scripts/m1-group-phases.py --min-count 900` split the writer's cycle. It counts only groups of at least 900 requests, so the warm-up and partial groups do not dilute the steady state. The trace files are large and are not retained. The benchmark output and the phase tables are in [trace/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/trace).
+- **Wake-up strategies.** [wake/wake.rs](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/wake/wake.rs) parks 1,000 threads and measures how long each strategy takes to wake them, 200 rounds for each strategy, three repetitions. It uses only `std`.
 - **Fan-out.** Four builds of the change that differ only in the relay's fan-out, compared with the default benchmark.
 
 Every benchmark and trace run validated all its records before and after reopen, with no refusal and no commit or correctness error.
@@ -90,7 +90,7 @@ The bound is the linger plus two flushes, about 2 ms here. It leaves no time for
 
 ## Wake-up strategies
 
-Medians of 200 rounds for 1,000 parked threads, then the median and range of three repetitions, in microseconds. "Waker" is the time the waking thread spends before it can do other work. [wake/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/wake) holds the three outputs.
+Medians of 200 rounds for 1,000 parked threads, then the median and range of three repetitions, in microseconds. "Waker" is the time the waking thread spends before it can do other work. [wake/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/wake) holds the three outputs.
 
 | Strategy | Waker | Mean wake | Last wake |
 | --- | ---: | ---: | ---: |
@@ -109,7 +109,7 @@ Medians of 200 rounds for 1,000 parked threads, then the median and range of thr
 
 ## Fan-out
 
-The engine's fan-out is four. To check that choice, the same commit was built with fan-outs 2, 8 and 16, and the default benchmark ran five rounds with one run of each build in every round, through [gated.sh](gated.sh). The other containers of the guest were idle in this period. [fanout/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/fanout) holds the twenty logs.
+The engine's fan-out is four. To check that choice, the same commit was built with fan-outs 2, 8 and 16, and the default benchmark ran five rounds with one run of each build in every round, through [gated.sh](gated.sh). The other containers of the guest were idle in this period. [fanout/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/fanout) holds the twenty logs.
 
 | Fan-out | Records/s median (range) | p50 ms median (range) | p99 ms median (range) |
 | ---: | --- | --- | --- |
@@ -139,7 +139,7 @@ The checks ran on this branch's sources (`segment-log-core` tree `20b6837999cf`)
 - 30 process-kill repetitions from seed 10000.
 - 12 Python script tests.
 
-[checks.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/ack-relay/checks.txt) holds the result lines. Hosted CI had not run for this branch when this record was written.
+[checks.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/ack-relay/checks.txt) holds the result lines. Hosted CI had not run for this branch when this record was written.
 
 ## Reproduce
 

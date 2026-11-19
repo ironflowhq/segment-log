@@ -1,6 +1,6 @@
 # Larger and longer workloads (issue 47)
 
-[Issue 47](https://github.com/ironflowx/segment-log/issues/47) asks for measurements beyond the M1 sizes (1,000 callers, 1,000,000 records, one segment), and for the operational limits they support. They ran during the M7 requalification on the qualified host's volume drive, with `scripts/m7-workloads.sh` at `386695f` ([raw output](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/workloads), [host](../m7/requalified-host/README.md#host)). Each case is the M1 benchmark, `acceptance::evidence::measured_appends_survive_reopen`, at a larger size: keyed 256-byte records, one stream per caller, a unique key per record, default options (1 ms linger, 64 MiB roll), on ext4 on a Samsung PM983.
+[Issue 47](https://github.com/ironflowx/segment-log/issues/47) asks for measurements beyond the M1 sizes (1,000 callers, 1,000,000 records, one segment), and for the operational limits they support. They ran during the M7 requalification on the qualified host's volume drive, with `scripts/m7-workloads.sh` at `82bb5b1` ([raw output](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m7/requalified-host/workloads), [host](../m7/requalified-host/README.md#host)). Each case is the M1 benchmark, `acceptance::evidence::measured_appends_survive_reopen`, at a larger size: keyed 256-byte records, one stream per caller, a unique key per record, default options (1 ms linger, 64 MiB roll), on ext4 on a Samsung PM983.
 
 ## Results
 
@@ -17,7 +17,7 @@
 
 ## Memory
 
-The soak sampled the process's resident set every 5 s ([soak.rss.tsv](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/workloads/soak.rss.tsv)).
+The soak sampled the process's resident set every 5 s ([soak.rss.tsv](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m7/requalified-host/workloads/soak.rss.tsv)).
 
 - **During appends, resident memory grew about 50 bytes per record:** 2.89 GB after about 58 million records. Of that, 16 bytes per record are the harness's own arrays (one latency and one offset per append). So the log's retained state grew at most about 34 bytes per record on this workload.
 - The peak of 27.8 GB comes after the appends: the harness's correctness check reads the whole log back into memory in one call. It is not the log's state.

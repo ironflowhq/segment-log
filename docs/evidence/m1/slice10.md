@@ -44,8 +44,8 @@ count. No public test interface or runtime dependency was added.
 ## Captured platform calls
 
 [Original trace](slice10/linux/syscalls.trace),
-[executable verification output](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/linux/syscalls-verified.txt), and
-[phase results](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/linux/sync-phases.log) distinguish:
+[executable verification output](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/linux/syscalls-verified.txt), and
+[phase results](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/linux/sync-phases.log) distinguish:
 
 | Phase | Segment fdatasync | Segment fsync | Log directory fsync | Parent directory fsync |
 | --- | --- | --- | --- | --- |
@@ -60,8 +60,8 @@ count. No public test interface or runtime dependency was added.
 All listed calls returned success. Parent review strengthened the verifier to
 check the resolved segment, log-directory and parent-directory targets, as
 well as totals. Wrong-file and substituted-parent traces are rejected by
-regression tests. The [reviewed Linux trace](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/reviewed-linux/syscalls.trace)
-and [target-aware verification](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/reviewed-linux/syscalls-verified.txt)
+regression tests. The [reviewed Linux trace](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/reviewed-linux/syscalls.trace)
+and [target-aware verification](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/reviewed-linux/syscalls-verified.txt)
 repeat the check against the final helper code.
 `strace -f -tt -T -yy` follows the writer
 thread and resolves descriptors to paths. The phase test also validates the
@@ -70,7 +70,7 @@ after the retry. Provisioning syncs appear in a separate initial phase: the
 harness makes temporary ancestors durable before calling the engine.
 They are not engine initialization or group flushes.
 
-The [macOS directory run](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/macos/directory.log) records successful
+The [macOS directory run](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/macos/directory.log) records successful
 `Real::call` results for both log and parent directories during creation and
 recovery. The forwarding wrapper calls the actual implementation first and
 records its returned result. This is actual-storage call evidence on APFS,
@@ -152,10 +152,10 @@ output directory.
 
 ## Hardware and deviations
 
-[Linux environment](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/linux/environment.txt),
-[Docker versions](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/linux/docker-version.txt),
-[Docker resources](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/linux/docker-info.txt), and
-[macOS environment](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/macos/environment.txt) are captured outputs.
+[Linux environment](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/linux/environment.txt),
+[Docker versions](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/linux/docker-version.txt),
+[Docker resources](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/linux/docker-info.txt), and
+[macOS environment](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/macos/environment.txt) are captured outputs.
 
 The host is an Apple M4, Mac16,10, with 10 physical/logical cores and
 25,769,803,776 bytes of memory. It runs macOS 27.0.1 build 26A434.
@@ -173,7 +173,7 @@ macOS source bind. Docker reports the containerd overlayfs snapshotter.
 The mount output exposes ext4 on virtual `/dev/vda1` for container metadata.
 The overlay backing path is captured, but the host location of Docker's disk
 image and its exact physical backing device are not established. The
-[conventional Docker.raw path](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/host-backing.txt) was absent. Host root storage is reported as
+[conventional Docker.raw path](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/host-backing.txt) was absent. Host root storage is reported as
 internal solid-state APFS through Apple Fabric. That does not prove where
 Docker's backing image lives. Device volatile write-cache state, flush
 propagation, sector atomicity, metadata-error behavior, and the hypervisor
@@ -226,10 +226,10 @@ the 16,777,216-byte budget, with zero current charges after completion.
 
 ## Limiter and plausibility
 
-The separate [CPU profile](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/linux/profile.json) measures task CPU with
+The separate [CPU profile](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/linux/profile.json) measures task CPU with
 Linux schedstat nanoseconds. Samples retain maximum observed cumulative CPU
 per task, so exited tasks can lose their final sampling interval.
-The separate [syscall profile](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/linux/diagnostic-strace.txt) shows
+The separate [syscall profile](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/linux/diagnostic-strace.txt) shows
 caller futex waiting and the expected flush calls; summed thread syscall time
 is not elapsed time. Expected filesystem probes and futex races can report
 syscall errors while all storage operations and caller results succeed.
@@ -260,19 +260,19 @@ microbenchmark cannot alone predict that end-to-end latency.
 
 The original capture's Linux and macOS commands both return exit zero, with
 138 passing Rust tests. Parent review added the blocked-diagnostic regression.
-The final [Linux checks](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/reviewed-linux/tests.log) and
-[macOS checks](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/reviewed-macos/tests.log) each have 135 passing core tests,
+The final [Linux checks](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/reviewed-linux/tests.log) and
+[macOS checks](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/reviewed-macos/tests.log) each have 135 passing core tests,
 one ignored scheduled long-run test, three process tests and one real-storage
 test: 139 passes total. All 135 baseline behaviors remain. Both final runs also
 pass the three Python verifier regressions, formatting, strict workspace
-Clippy and case-ID checking. The [final checks](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/final-checks.tsv) also
+Clippy and case-ID checking. The [final checks](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/final-checks.tsv) also
 record diff validation, source hashes and task-container cleanup. The fuzz configuration compiles with the existing
 24 unused simulator warnings. Logs remain under the platform directories.
 No hosted scheduled execution is claimed.
 
-The peak probe has an [actual assertion red](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/peak-red.log): zero
+The peak probe has an [actual assertion red](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/peak-red.log): zero
 instead of 414 bytes for a held original and its queued retry.
-The [focused green](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/peak-green.log) also verifies that the historical
+The [focused green](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/peak-green.log) also verifies that the historical
 peak survives release and a later smaller request, while caller-visible
 records and retry positions remain correct. The first Position comparison
 and Options print attempts had compile errors; those are not behavioral reds.
@@ -280,15 +280,15 @@ The two actual-storage scenarios are supplemental coverage of existing
 behavior, not newly fixed engine defects. Historical missing initial reds
 remain missing.
 
-The final [provenance manifest](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/provenance.tsv) records source, category,
-transformations and hashes. [Source hashes](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/source-sha256.tsv) identify
+The final [provenance manifest](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/provenance.tsv) records source, category,
+transformations and hashes. [Source hashes](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/source-sha256.tsv) identify
 the uncommitted implementation used for the benchmark capture. Capture versions
 of sources later changed by review are preserved under
 `slice10/capture-source/`; all other capture hashes match unchanged sources.
-[Reviewed source hashes](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/reviewed-source-sha256.tsv) identify the final
+[Reviewed source hashes](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/reviewed-source-sha256.tsv) identify the final
 verification code. The measured workload and storage instrumentation did not
 change, apart from the inactive timeout constructor and removed ordinary
-comments; the [body comparison](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/slice10/reviewed-measurement-body.log) records
+comments; the [body comparison](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/m1/slice10/reviewed-measurement-body.log) records
 that check. No benchmark rerun is claimed for these verification-only changes.
 The fresh Linux and macOS checks and Linux trace were executed after them.
 Earlier exploratory

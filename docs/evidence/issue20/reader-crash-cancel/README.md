@@ -14,7 +14,7 @@ No acknowledged record, watermark or recovered state was wrong at any point.
 
 ## The failure
 
-The long run for another change, with 100 trace seeds from 10000, ran in the pinned `rust:1.99.1-bookworm` container on Docker Desktop for Mac (Linux 7.0.14-linuxkit, aarch64) while the host was saturated by unrelated work. [long-run.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/reader-crash-cancel/long-run.log) is its output:
+The long run for another change, with 100 trace seeds from 10000, ran in the pinned `rust:1.99.1-bookworm` container on Docker Desktop for Mac (Linux 7.0.14-linuxkit, aarch64) while the host was saturated by unrelated work. [long-run.log](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/reader-crash-cancel/long-run.log) is its output:
 
 ```text
 thread '<unnamed>' panicked at segment-log-core/src/acceptance/seeded/actors.rs:145:39:
@@ -28,14 +28,14 @@ The tree under test differed from `main` in the writer's group formation only. T
 
 ## Replay of the saved pair
 
-[133740-10030-PowerLossTorn-1.trace](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/reader-crash-cancel/133740-10030-PowerLossTorn-1.trace) and [133740-10030-PowerLossTorn-1.ledger](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/reader-crash-cancel/133740-10030-PowerLossTorn-1.ledger) are the pair as the failed run saved it.
+[133740-10030-PowerLossTorn-1.trace](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/reader-crash-cancel/133740-10030-PowerLossTorn-1.trace) and [133740-10030-PowerLossTorn-1.ledger](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/reader-crash-cancel/133740-10030-PowerLossTorn-1.ledger) are the pair as the failed run saved it.
 
 ```sh
 SEGMENT_LOG_TRACE_REPLAY="$PWD/docs/evidence/issue20/reader-crash-cancel/133740-10030-PowerLossTorn-1" \
   cargo test -p segment-log-core --lib acceptance::seeded::saved_trace_replays_the_oracle -- --exact --nocapture
 ```
 
-[replay.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/reader-crash-cancel/replay.log): one test passed, on the Mac host. The pair came from the Linux container, so it does not depend on the platform that wrote it.
+[replay.log](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/reader-crash-cancel/replay.log): one test passed, on the Mac host. The pair came from the Linux container, so it does not depend on the platform that wrote it.
 
 ```sh
 SEGMENT_LOG_TRACE_SEEDS=1 SEGMENT_LOG_TRACE_SEED=10030 \
@@ -46,7 +46,7 @@ Three runs of the seed passed on the Mac host.
 
 ## The directed scenario
 
-`a_reader_outlives_a_read_that_a_crash_cancels` in `segment-log-core/src/acceptance/seeded.rs` commits one record, starts a reader, holds the reader's next storage read, crashes with `PowerLoss`, and releases the read. [directed-red.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/reader-crash-cancel/directed-red.log) is its output on `main` with only the scenario added: the same panic at `actors.rs:145`.
+`a_reader_outlives_a_read_that_a_crash_cancels` in `segment-log-core/src/acceptance/seeded.rs` commits one record, starts a reader, holds the reader's next storage read, crashes with `PowerLoss`, and releases the read. [directed-red.log](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/reader-crash-cancel/directed-red.log) is its output on `main` with only the scenario added: the same panic at `actors.rs:145`.
 
 After the correction it passes: the reader reports one canceled read, and every state that it recorded holds the one durable record.
 

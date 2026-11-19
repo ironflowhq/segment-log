@@ -10,7 +10,7 @@ Three files produce the report:
 
 ## Capture on a hosted runner
 
-Dispatch the [evidence workflow](../../../.github/workflows/evidence.yml) with `capture: m4-evidence`, or put the `m4-evidence` label on a pull request. The capture runs on a GitHub-hosted `ubuntu-26.04` runner. It removes preinstalled SDKs first: the fixtures are about 20 GB, and a standard runner documents 14 GB of SSD. A dispatch can set `sealed` and `roll_bytes` to measure a named variant. The workflow measures the pull request's head, or the dispatched ref, against the M3 code at `0ffc772`. It uploads the `m4-evidence-linux` artifact, which GitHub keeps for 3 days. A capture writes about 20 GB of fixtures under `/mnt`. The job's time limit is 150 minutes. No full capture has run yet, so its real duration is unknown.
+Dispatch the [evidence workflow](../../../.github/workflows/evidence.yml) with `capture: m4-evidence`, or put the `m4-evidence` label on a pull request. The capture runs on a GitHub-hosted `ubuntu-26.04` runner. It removes preinstalled SDKs first: the fixtures are about 20 GB, and a standard runner documents 14 GB of SSD. A dispatch can set `sealed` and `roll_bytes` to measure a named variant. The workflow measures the pull request's head, or the dispatched ref, against the M3 code at `0e40c93`. It uploads the `m4-evidence-linux` artifact, which GitHub keeps for 3 days. A capture writes about 20 GB of fixtures under `/mnt`. The job's time limit is 150 minutes. No full capture has run yet, so its real duration is unknown.
 
 To capture on another Linux host, run this from the repository root:
 

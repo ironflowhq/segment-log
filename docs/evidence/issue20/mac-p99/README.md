@@ -29,7 +29,7 @@ A lower linger, different caller arrangement, or faster checksum remains an unte
 ## Workload and populations
 
 All options use `Options::default()` and actual `Real` storage.
-The control binary is built from unchanged `e409b1d88bdbbe7dbbb36ae7b08c54861e744a2a`.
+The control binary is built from unchanged `147783cdaf78d4c4964903f69d8f49921f958a71`.
 The traced binary runs the same release acceptance workload with the test-only observations enabled.
 The comparison uses an entirely uninstrumented source control, not merely disabled tracing in the candidate.
 Both retain the existing outer request timer, admission timer, and reservation-peak instrumentation.
@@ -154,10 +154,10 @@ Run `scripts/m1-pipeline-summary.py OUT` to regenerate the comparison.
 Run `scripts/m1-pipeline-summary.py OUT/1-trace/requests.tsv` to regenerate one joined attribution.
 Run the runner at 8 callers and 8 rounds first for its clock/order pilot.
 
-[raw.tar.gz](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-p99/raw.tar.gz) preserves every pilot and pair log, raw request/group TSV, per-run manifest and host observation, build output, and validation output.
-[raw-hashes.tsv](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-p99/raw-hashes.tsv) hashes every archived file.
-[build-manifest.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-p99/build-manifest.json) pins the base SHA, source-file hashes, release profile, and binary hashes.
-[comparison.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-p99/comparison.json) is generated from all ten pair logs.
+[raw.tar.gz](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/mac-p99/raw.tar.gz) preserves every pilot and pair log, raw request/group TSV, per-run manifest and host observation, build output, and validation output.
+[raw-hashes.tsv](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/mac-p99/raw-hashes.tsv) hashes every archived file.
+[build-manifest.json](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/mac-p99/build-manifest.json) pins the base SHA, source-file hashes, release profile, and binary hashes.
+[comparison.json](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/mac-p99/comparison.json) is generated from all ten pair logs.
 Full original copies and both executables also remain in ignored `.audit/p99` in the producing worktree.
 No failed run or clock outlier was removed. No controlled benchmark run failed.
 

@@ -6,7 +6,7 @@ The user wants evidence for sustained simultaneous reads and appends against a g
 
 The intended claim is limited to this machine and workload: whether adding a single closed-loop reader changes append throughput or latency across four history-growth stages. A repeatable gap larger than run-to-run spread could justify further attribution. No optimization follows without the root's decision. If load drift, observer effects, missing overlap, or an unidentified limiter prevents attribution, the result is inconclusive.
 
-The starting production source is `e409b1d88bdbbe7dbbb36ae7b08c54861e744a2a`. The runner records the actual source commit, dirty diff, exact diagnostic source copies and hashes, binary hash, compiler, OS, filesystem, CPU count, RAM, load, process list, and available thermal observations. Missing or failed observations remain recorded. There is no cache eviction. Each run uses a fresh directory and naturally warm system caches.
+The starting production source is `147783cdaf78d4c4964903f69d8f49921f958a71`. The runner records the actual source commit, dirty diff, exact diagnostic source copies and hashes, binary hash, compiler, OS, filesystem, CPU count, RAM, load, process list, and available thermal observations. Missing or failed observations remain recorded. There is no cache eviction. Each run uses a fresh directory and naturally warm system caches.
 
 ## Workload and validation
 

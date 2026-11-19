@@ -12,8 +12,8 @@ Reopen time did not change. This supports the change for logs with many streams.
 
 ## Scope and provenance
 
-- `main` is `5e95407cb3e427800cdb29c687595d35bae56410`. The change is `870349a319896f8b692ee1b9e6423fb742688a29`. Commits after it on this branch change documents only. [sources.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/stream-heads/sources.txt) and [binaries.sha256](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/stream-heads/binaries.sha256) identify what ran.
-- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/stream-heads/environment.txt), [docker-info.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/stream-heads/docker-info.txt) and [host.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/stream-heads/host.txt) hold the details.
+- `main` is `384305980c6285ff5b2d759b49583524569cefac`. The change is `870349a319896f8b692ee1b9e6423fb742688a29`. Commits after it on this branch change documents only. [sources.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/stream-heads/sources.txt) and [binaries.sha256](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/stream-heads/binaries.sha256) identify what ran.
+- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/stream-heads/environment.txt), [docker-info.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/stream-heads/docker-info.txt) and [host.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/stream-heads/host.txt) hold the details.
 - The host is an Apple M4 with 10 cores and 24 GiB on macOS 27.0.1. Unrelated work ran on the host and in other containers of the same guest. [gated.sh](gated.sh) waited before each run until the other containers used less than 10% of a processor, and recorded their use before and after the run in the `others` files. It cannot see work on the host outside the guest. Nothing outside this experiment was stopped.
 - This is a virtual Linux guest on a Mac. It is not physical local NVMe and it is not the deployment storage stack.
 
@@ -63,7 +63,7 @@ Default options, 1,000 callers on 1,000 streams, 256-byte payloads.
 
 ## Rejected alternative
 
-An earlier version of this change also updated an existing stream's head in place when a group is published, to avoid one allocation for each record. A new stream then needs two map lookups instead of one. With 100,000 streams and two records for each stream, reopen took 58, 68 and 60 ms against 51, 50 and 50 ms on `main`. With 1,000 streams it took 32, 31 and 32 ms against 36, 36 and 36 ms. The gain for a few streams did not justify the loss for many, and the lookup is not needed to remove the copy, so it was dropped. [candidates/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/stream-heads/candidates) holds the patch and the six outputs at 100,000 streams.
+An earlier version of this change also updated an existing stream's head in place when a group is published, to avoid one allocation for each record. A new stream then needs two map lookups instead of one. With 100,000 streams and two records for each stream, reopen took 58, 68 and 60 ms against 51, 50 and 50 ms on `main`. With 1,000 streams it took 32, 31 and 32 ms against 36, 36 and 36 ms. The gain for a few streams did not justify the loss for many, and the lookup is not needed to remove the copy, so it was dropped. [candidates/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/stream-heads/candidates) holds the patch and the six outputs at 100,000 streams.
 
 ## Limits
 
@@ -81,7 +81,7 @@ The checks ran on this branch's sources (`segment-log-core` tree `8c34ed74ea54`)
 - 30 process-kill repetitions from seed 10000.
 - 9 Python script tests.
 
-[checks.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/stream-heads/checks.txt) holds the result lines. Hosted CI had not run for this branch when this record was written.
+[checks.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/stream-heads/checks.txt) holds the result lines. Hosted CI had not run for this branch when this record was written.
 
 ## Reproduce
 

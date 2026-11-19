@@ -14,9 +14,9 @@ This is evidence from a virtual Linux guest on a Mac. It does not show that a PR
 
 ## Scope and provenance
 
-- The earlier `main` is `5e95407cb3e427800cdb29c687595d35bae56410`. The measured build is a local merge of the six code commits in [sources.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/combined/sources.txt). Its `segment-log-core` tree is `5157c788a84c8f781e31809e230e06148d36f78f`, the same tree as `main` at `e712813cf8308c49f4f999e55311ed4493f0e5cf`, after the six changes were squash-merged as #28 to #33. [binaries.sha256](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/combined/binaries.sha256) identifies the binaries.
+- The earlier `main` is `384305980c6285ff5b2d759b49583524569cefac`. The measured build is a local merge of the six code commits in [sources.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/combined/sources.txt). Its `segment-log-core` tree is `5157c788a84c8f781e31809e230e06148d36f78f`, the same tree as `main` at `256cbcf3f6bb7bb9a3427987eed68941fc84f216`, after the six changes were squash-merged as #28 to #33. [binaries.sha256](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/combined/binaries.sha256) identifies the binaries.
 - The paced runs compare the earlier `main` with only the paced benchmark added (`18e3581a812a490505ac4aaf9cdb9b14c9b7165c`) against the merged build.
-- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/combined/environment.txt), [docker-info.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/combined/docker-info.txt) and [host.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/combined/host.txt) hold the details.
+- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/combined/environment.txt), [docker-info.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/combined/docker-info.txt) and [host.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/combined/host.txt) hold the details.
 - The host is an Apple M4 with 10 cores and 24 GiB on macOS 27.0.1. Unrelated work ran on the host and in other containers of the same guest. [gated.sh](gated.sh) waited before each run until the other containers used less than 10% of a processor, and recorded their use in the `others` files. They used less than 7% before every run of this record. The sample after a run was higher three times in the closed-loop batch: 44% and 28% after the third and fourth runs of the earlier `main`, and 9% after the fourth run of the merged build. The script cannot see work on the host outside the guest. Nothing outside this experiment was stopped.
 - This is not physical local NVMe and it is not the deployment storage stack. The guest has 10 processors for 1,000 caller threads.
 
@@ -26,7 +26,7 @@ All runs use the default options, 1,000 callers, 1,000 rounds, 256-byte payloads
 
 - **Closed loop.** The default benchmark. `scripts/m1-latency-summary.py` wrote [latency/summary.md](latency/summary.md).
 - **Paced.** `SEGMENT_LOG_BENCH_INTERVAL_US=20000`: each caller submits once in 20 ms, so the log is offered 50,000 records/s, and latency runs from the scheduled send. The paced benchmark's `summarize.py` wrote [paced/summary.md](paced/summary.md).
-- **Trace.** The request trace with 1,000 callers and 200 rounds, three alternating repetitions for each binary, split by `scripts/m1-group-phases.py --min-count 900`. The phase tables are in [trace/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/combined/trace).
+- **Trace.** The request trace with 1,000 callers and 200 rounds, three alternating repetitions for each binary, split by `scripts/m1-group-phases.py --min-count 900`. The phase tables are in [trace/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/combined/trace).
 
 Every run validated all its records before and after reopen, with no refusal and no commit or correctness error.
 
@@ -93,7 +93,7 @@ The merged tree passed `cargo fmt --all --check`, `cargo clippy --workspace --al
 
 ## Reproduce
 
-Build `5e95407` and `main` at `e712813` in the pinned image with `cargo test -p segment-log-core --lib --release --no-run`. Keep the data directory on the container's own filesystem.
+Build `3843059` and `main` at `256cbcf` in the pinned image with `cargo test -p segment-log-core --lib --release --no-run`. Keep the data directory on the container's own filesystem.
 
 ```sh
 SEGMENT_LOG_EVIDENCE_DIR=/data/bench scripts/m1-compare-latency.sh BASE_TEST_BINARY MAIN_TEST_BINARY latency

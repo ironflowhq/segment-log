@@ -4,15 +4,15 @@
 #
 #   main      both fixes: the active key map is a HashMap (#163), and the benchmark builds the
 #             log filter off the writer as `SegmentLog::open` does (#164)
-#   ab86546   #163 only, so the benchmark still builds the log filter on the writer
-#   386695f   the commit of the recorded capture (docs/evidence/m7/requalified-host/m1-capture)
+#   87ea195   #163 only, so the benchmark still builds the log filter on the writer
+#   82bb5b1   the commit of the recorded capture (docs/evidence/m7/requalified-host/m1-capture)
 #
 # Each commit gets the unchanged M1 capture. Then main gets 3 more paced runs with the pipeline
 # trace on; the trace adds work to every request, so those runs are kept out of the summary.
 set -uo pipefail
 . "$HOME/.cargo/env"
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq numactl >/dev/null
-revs=${*:-main ab86546 386695f}
+revs=${*:-main 87ea195 82bb5b1}
 cd /root && rm -rf sl && git clone -q https://github.com/ironflowx/segment-log.git sl && cd sl
 main=$(git rev-parse --short main)
 for rev in $revs; do

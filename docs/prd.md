@@ -145,7 +145,7 @@ M0 passed on 2026-11-08. [CI run 42447941878](https://github.com/ironflowx/segme
 
 M1 passed on 2026-11-10. The [completion record](evidence/m1/completion.md) links the checks on Linux and macOS, the Linux syscall trace, the directory-sync results and the Linux benchmark report. The performance targets were measured as diagnostics on virtual machines and are not claimed as passed ([ADR 0029](decisions/0029-m1-completion-requires-correctness-and-measurement-evidence.md)).
 
-M2 passed on 2026-11-10. [CI run 42895794655](https://github.com/ironflowx/segment-log/actions/runs/42895794655) is green on Ubuntu and macOS at `7b794ad`. The `MODEL` and `REV-NO-OFFSET` properties compare the log with a model built from the contract, and a mutation of each rule in R9–R12 fails them ([pull request 52](https://github.com/ironflowx/segment-log/pull/52)).
+M2 passed on 2026-11-10. [CI run 42895794655](https://github.com/ironflowx/segment-log/actions/runs/42895794655) is green on Ubuntu and macOS at `b97588a`. The `MODEL` and `REV-NO-OFFSET` properties compare the log with a model built from the contract, and a mutation of each rule in R9–R12 fails them ([pull request 52](https://github.com/ironflowx/segment-log/pull/52)).
 
 M3 passed on 2026-11-10. The [completion record](evidence/m3/completion.md) links the green CI run on Ubuntu and macOS at `bb38e4b`, which includes the roll crash scenarios, and the Linux syscall trace of the roll's directory sync.
 

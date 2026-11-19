@@ -19,16 +19,16 @@ This supports the change. It makes no claim about a PRD target or about target h
 
 ## Scope and provenance
 
-- `main` is `5e95407cb3e427800cdb29c687595d35bae56410`. The change is `de94d4265adf867062b56227fdc65aaf55e545b4`. Commits after it on this branch change documents only. [sources.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/crc-slicing/sources.txt) and [binaries.sha256](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/crc-slicing/binaries.sha256) identify what ran.
-- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/crc-slicing/environment.txt), [docker-info.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/crc-slicing/docker-info.txt) and [host.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/crc-slicing/host.txt) hold the details.
+- `main` is `384305980c6285ff5b2d759b49583524569cefac`. The change is `de94d4265adf867062b56227fdc65aaf55e545b4`. Commits after it on this branch change documents only. [sources.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/crc-slicing/sources.txt) and [binaries.sha256](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/crc-slicing/binaries.sha256) identify what ran.
+- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/crc-slicing/environment.txt), [docker-info.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/crc-slicing/docker-info.txt) and [host.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/crc-slicing/host.txt) hold the details.
 - The host is an Apple M4 with 10 cores and 24 GiB on macOS 27.0.1. Unrelated work ran on the host and in other containers of the same guest. For the trace and read runs, [gated.sh](gated.sh) waited before each run until the other containers used less than 10% of a processor, and recorded their use in the `others` files. It cannot see work on the host outside the guest. Nothing outside this experiment was stopped.
 - This is a virtual Linux guest on a Mac. It is not physical local NVMe and it is not the deployment storage stack. The checksum runs in software on an Apple M4 core; other processors will give other figures.
 
 ## Method
 
-- **Equivalence.** `scripts/m1-compare-codec.sh OUT 5e95407cb3e427800cdb29c687595d35bae56410` on the Mac host. [codec-equivalence.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/crc-slicing/codec-equivalence.txt) is its output.
+- **Equivalence.** `scripts/m1-compare-codec.sh OUT 384305980c6285ff5b2d759b49583524569cefac` on the Mac host. [codec-equivalence.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/crc-slicing/codec-equivalence.txt) is its output.
 - **Benchmark.** `scripts/m1-compare-latency.sh` with 1,000 callers and 1,000 rounds: one warm-up for each binary, then five alternating pairs. It ran twice.
-- **Trace.** The benchmark's request trace with 1,000 callers and 200 rounds, three alternating repetitions for each binary. `scripts/m1-group-phases.py --min-count 900` split the writer's cycle and counted only groups of at least 900 requests. That script arrives with the ack-relay change for the same issue and is not part of this branch. The phase tables are in [trace/](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/crc-slicing/trace).
+- **Trace.** The benchmark's request trace with 1,000 callers and 200 rounds, three alternating repetitions for each binary. `scripts/m1-group-phases.py --min-count 900` split the writer's cycle and counted only groups of at least 900 requests. That script arrives with the ack-relay change for the same issue and is not part of this branch. The phase tables are in [trace/](https://github.com/ironflowx/segment-log-evidence/tree/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/crc-slicing/trace).
 - **Reads.** `concurrent_probe DIR concurrent keyed default 1024 32768 timing`: one caller appends 32 keyed records for each submit while one reader reads the first and the last record in a loop. Five alternating repetitions. Latency values are histogram buckets.
 - **Memory.** `memory_probe` through `scripts/m1-memory-probe.py`, which counts requested heap bytes exactly, and two histories of 1,000,000 records.
 
@@ -118,14 +118,14 @@ The checks ran on this branch's sources (`segment-log-core` tree `263a3e7dc4c4`)
 - 30 process-kill repetitions from seed 10000.
 - 9 Python script tests.
 
-[checks.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/crc-slicing/checks.txt) holds the result lines. Hosted CI had not run for this branch when this record was written.
+[checks.txt](https://github.com/ironflowx/segment-log-evidence/blob/dc1a230a4b0e7bd70fec1963473ddd7cb2733c1c/issue20/crc-slicing/checks.txt) holds the result lines. Hosted CI had not run for this branch when this record was written.
 
 ## Reproduce
 
 Build both commits in the pinned image with `cargo test -p segment-log-core --lib --release --no-run` and `cargo build --release -p segment-log-core --examples`. Keep the data directory on the container's own filesystem.
 
 ```sh
-scripts/m1-compare-codec.sh .audit/codec-compare 5e95407cb3e427800cdb29c687595d35bae56410
+scripts/m1-compare-codec.sh .audit/codec-compare 384305980c6285ff5b2d759b49583524569cefac
 SEGMENT_LOG_EVIDENCE_DIR=/data/bench scripts/m1-compare-latency.sh BASE_TEST_BINARY CHANGE_TEST_BINARY latency
 python3 scripts/m1-latency-summary.py latency before after
 BASE/concurrent_probe /data/c concurrent keyed default 1024 32768 timing > reads/base-concurrent-1.txt
