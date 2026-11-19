@@ -6,20 +6,39 @@ import (
 	"sync/atomic"
 )
 
-// ErrPoolClosed means the request was never sent: the pool was closed, or the connection it
-// picked had already failed. Unlike ErrUnknown, the request had no effect.
-var ErrPoolClosed = errors.New("pool connection closed; request not sent")
+// ErrPoolClosed means the pool was closed before the request was sent, so the request had no
+// effect. Unlike ErrUnknown, it is never a possible append.
+var ErrPoolClosed = errors.New("pool closed; request not sent")
+
+// maxInFlight bounds the requests in flight on one pool connection. The server reads no more than
+// 64 requests ahead of its answers (PIPELINE_DEPTH, ADR 0063), so more in flight would only add
+// bytes buffered in the client.
+const maxInFlight = 64
 
 // Pool is a set of pipelined connections that many goroutines share (ADR 0063). Each request goes
 // to the next connection in turn. On a connection, requests queued while a write is in progress
 // go out together in the next write, and each answer returns to its caller in request order
-// (protocol.md, step 3).
+// (protocol.md, step 3). A connection holds at most 64 requests in flight; a request beyond that
+// waits for an answer to free a place.
 //
-// A connection that fails stays failed: every request in flight on it gets ErrUnknown, and later
-// requests sent to it get ErrPoolClosed. Close the pool and dial a new one to recover.
+// When a connection fails, every request in flight on it gets ErrUnknown; the pool never retries
+// one, because only a fully keyed retry is safe (api.md, retry after an unknown outcome). The next
+// request for that connection dials a new one first. If that dial fails, the request gets its
+// error and was not sent.
 type Pool struct {
-	conns []*poolConn
-	next  atomic.Uint32
+	network, address string
+	slots            []*poolSlot
+	next             atomic.Uint32
+	closed           atomic.Bool
+}
+
+// poolSlot is one place in the pool. Its connection is replaced when it fails; its in-flight
+// tokens outlive the connection, so requests still waiting on a failed one keep their places
+// until they are answered.
+type poolSlot struct {
+	mu     sync.Mutex
+	conn   *poolConn
+	tokens chan struct{}
 }
 
 type poolResult struct {
@@ -28,8 +47,9 @@ type poolResult struct {
 }
 
 type poolConn struct {
-	c    *Client
-	wake chan struct{}
+	c      *Client
+	wake   chan struct{}
+	tokens chan struct{}
 
 	mu sync.Mutex
 	// out holds requests not yet written; waiting holds a reply channel for every request queued
@@ -56,18 +76,24 @@ func DialPool(network, address string, n int) (*Pool, error) {
 		}
 		clients = append(clients, c)
 	}
-	return newPool(clients), nil
+	return newPool(network, address, clients), nil
 }
 
-func newPool(clients []*Client) *Pool {
-	p := &Pool{}
+func newPool(network, address string, clients []*Client) *Pool {
+	p := &Pool{network: network, address: address}
 	for _, c := range clients {
-		pc := &poolConn{c: c, wake: make(chan struct{}, 1)}
-		p.conns = append(p.conns, pc)
-		go pc.writeLoop()
-		go pc.readLoop()
+		s := &poolSlot{tokens: make(chan struct{}, maxInFlight)}
+		s.conn = start(c, s.tokens)
+		p.slots = append(p.slots, s)
 	}
 	return p
+}
+
+func start(c *Client, tokens chan struct{}) *poolConn {
+	pc := &poolConn{c: c, wake: make(chan struct{}, 1), tokens: tokens}
+	go pc.writeLoop()
+	go pc.readLoop()
+	return pc
 }
 
 // Do sends r on one of the pool's connections and waits for its answer. It is safe to call from
@@ -78,28 +104,69 @@ func (p *Pool) Do(r Request) (Answer, error) {
 }
 
 func (p *Pool) send(r Request) <-chan poolResult {
-	pc := p.conns[(p.next.Add(1)-1)%uint32(len(p.conns))]
-	return pc.send(r)
+	s := p.slots[(p.next.Add(1)-1)%uint32(len(p.slots))]
+	s.tokens <- struct{}{}
+	for {
+		pc, err := p.conn(s)
+		if err != nil {
+			<-s.tokens
+			reply := make(chan poolResult, 1)
+			reply <- poolResult{err: err}
+			return reply
+		}
+		// A connection can fail between conn and send; then nothing was queued, so dial again.
+		if reply, ok := pc.send(r); ok {
+			return reply
+		}
+	}
 }
 
-// Close closes every connection. Requests in flight get ErrUnknown.
+// conn returns the slot's connection, dialing a new one if it has failed.
+func (p *Pool) conn(s *poolSlot) (*poolConn, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if p.closed.Load() {
+		return nil, ErrPoolClosed
+	}
+	if !s.conn.isFailed() {
+		return s.conn, nil
+	}
+	c, err := Dial(p.network, p.address)
+	if err != nil {
+		return nil, err
+	}
+	s.conn = start(c, s.tokens)
+	return s.conn, nil
+}
+
+// Close closes every connection. Requests in flight get ErrUnknown, and later ones ErrPoolClosed.
 func (p *Pool) Close() error {
+	p.closed.Store(true)
 	var first error
-	for _, pc := range p.conns {
-		if err := pc.fail(); err != nil && first == nil {
+	for _, s := range p.slots {
+		s.mu.Lock()
+		err := s.conn.fail()
+		s.mu.Unlock()
+		if err != nil && first == nil {
 			first = err
 		}
 	}
 	return first
 }
 
-func (pc *poolConn) send(r Request) <-chan poolResult {
+func (pc *poolConn) isFailed() bool {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	return pc.failed
+}
+
+// send queues r, unless the connection has failed.
+func (pc *poolConn) send(r Request) (<-chan poolResult, bool) {
 	reply := make(chan poolResult, 1)
 	pc.mu.Lock()
+	defer pc.mu.Unlock()
 	if pc.failed {
-		pc.mu.Unlock()
-		reply <- poolResult{err: ErrPoolClosed}
-		return reply
+		return nil, false
 	}
 	pc.out = append(pc.out, r...)
 	pc.waiting = append(pc.waiting, reply)
@@ -108,8 +175,7 @@ func (pc *poolConn) send(r Request) <-chan poolResult {
 	case pc.wake <- struct{}{}:
 	default: // a wake is already pending; the writer takes this request with it
 	}
-	pc.mu.Unlock()
-	return reply
+	return reply, true
 }
 
 func (pc *poolConn) writeLoop() {
@@ -150,8 +216,14 @@ func (pc *poolConn) readLoop() {
 		reply := pc.waiting[0]
 		pc.waiting = pc.waiting[1:]
 		pc.mu.Unlock()
-		reply <- poolResult{answer: a}
+		pc.answer(reply, poolResult{answer: a})
 	}
+}
+
+// answer delivers a result and frees the request's place in flight.
+func (pc *poolConn) answer(reply chan poolResult, res poolResult) {
+	reply <- res
+	<-pc.tokens
 }
 
 // fail closes the connection once and resolves every request still waiting with ErrUnknown: some
@@ -169,7 +241,7 @@ func (pc *poolConn) fail() error {
 	pc.mu.Unlock()
 	err := pc.c.Close()
 	for _, reply := range waiting {
-		reply <- poolResult{err: ErrUnknown}
+		pc.answer(reply, poolResult{err: ErrUnknown})
 	}
 	return err
 }

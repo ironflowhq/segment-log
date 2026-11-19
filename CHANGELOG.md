@@ -4,7 +4,7 @@ Each release lists its API breaks with a migration note, its format version bump
 
 ## Unreleased
 
-- **Go client:** `Pool` (`DialPool(network, address, n)`) shares *n* pipelined connections among goroutines. Requests queued on a connection while a write is in progress go out together in the next write, and each answer returns to its caller in request order. When a connection fails, each request in flight on it gets `ErrUnknown`, and later requests on it get `ErrPoolClosed` ([issue 134](https://github.com/ironflowx/segment-log/issues/134), [ADR 0063](docs/decisions/0063-the-guest-benchmark-shares-pipelined-connections.md)). Additive; no wire change.
+- **Go client:** `Pool` (`DialPool(network, address, n)`) shares *n* pipelined connections among goroutines. Requests queued on a connection while a write is in progress go out together in the next write, and each answer returns to its caller in request order. A connection holds at most 64 requests in flight, the server's read-ahead; a request beyond that waits for an answer. When a connection fails, each request in flight on it gets `ErrUnknown` and is never retried by the pool; the next request for that connection dials a new one, and gets the dial's error if that fails. After `Close`, requests get `ErrPoolClosed` ([issue 134](https://github.com/ironflowx/segment-log/issues/134), [ADR 0063](docs/decisions/0063-the-guest-benchmark-shares-pipelined-connections.md)). Additive; no wire change.
 
 ## 0.1.0 - 2026-11-18
 
