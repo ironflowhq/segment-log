@@ -1,9 +1,0 @@
-== nvme0
-power_cycles				: 85
-power_on_hours				: 66,871
-unsafe_shutdowns			: 59
-== nvme1
-power_cycles				: 85
-power_on_hours				: 66,870
-unsafe_shutdowns			: 59
-93

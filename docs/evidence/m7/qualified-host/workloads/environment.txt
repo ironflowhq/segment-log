@@ -1,3 +1,0 @@
-TARGET SOURCE       FSTYPE OPTIONS
-/tmp   /dev/nvme1n1 ext4   rw,noatime
-df23d9b111f510faa811b62d6d2142b619de2fe0

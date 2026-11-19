@@ -13,7 +13,7 @@ The difference is exactly `(512 - 1) * 40 = 20,440` bytes of unused frame descri
 - Merged PR #19 baseline is `911e809e72fc9c9ef5571f7022c89e55a48d6cb1`.
 - Probe and boundary-test source is `09392d2778a032fc5290ea8b50299cdbbb32bd34`. The library at that commit is identical to the merged baseline.
 - Selected implementation and experiment runner are `04e7bd628ab85a6d2ae27053b07d73ea5fb6624a`. Documentation added afterward does not change the measured implementation.
-- The suffix candidate is the probe commit plus [suffix.patch](candidates/suffix.patch). It was built and run, then replaced by the selected implementation.
+- The suffix candidate is the probe commit plus [suffix.patch](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1-memory/candidates/suffix.patch). It was built and run, then replaced by the selected implementation.
 - Captured on November 9, 2026, on Apple M4, Mac16,10, 10 logical CPUs, 24 GiB RAM, macOS 27.0.1 build 26A434, aarch64-apple-darwin. Data was in the local worktree under `.audit/memory/data` on `/Volumes/p7`.
 - Rust 1.99.1, compiler commit `58cf8f9c35b355199727627d07ae34a4e2846d67`, LLVM 23.1.1. `cargo build` used the default dev profile. No new dependencies.
 - The initial host load averages were 143.77, 61.81, and 28.59. Only small allocation and correctness runs ran here. No timing, RSS, cold-cache, physical NVMe, or VPS qualification claim is made.
@@ -31,7 +31,7 @@ The saved binary SHA-256 hashes identify the exact local artifacts. The raw outp
 
 The probe uses the public real-storage engine and wraps the system allocator in the example executable. The library's unsafe-code prohibition is unchanged. Allocation counters do not allocate. Thread-local counters count all requested allocation bytes on the calling thread, including the full requested size of reallocations. Atomic counters track live requested bytes across all Rust threads and the extra peak above the start of each phase. Freed bytes reduce the live counter. Allocator size classes, native thread stacks, libc allocations, file cache, and kernel memory are excluded.
 
-Per-phase process counters can include asynchronous writer startup or cleanup. Their ranges are retained in [allocations.csv](allocations.csv). They must not be interpreted as exact ownership or resident memory. Reader-thread allocation totals were identical in all five repetitions of every case and candidate. The first read has a consistent additional 64-byte allocation in all candidates. The comparison retains this first-use effect.
+Per-phase process counters can include asynchronous writer startup or cleanup. Their ranges are retained in [allocations.csv](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1-memory/allocations.csv). They must not be interpreted as exact ownership or resident memory. Reader-thread allocation totals were identical in all five repetitions of every case and candidate. The first read has a consistent additional 64-byte allocation in all candidates. The comparison retains this first-use effect.
 
 The phases distinguish these costs:
 
@@ -121,7 +121,7 @@ python3 scripts/m1-memory-probe.py baseline=.audit/memory/baseline suffix=.audit
 
 ## Verification and limits
 
-[regression.txt](regression.txt) preserves an actual baseline failure of a 4,096-byte one-record allocation ceiling, followed by the selected candidate's pass at the same path and dimensions. This is an allocation regression check, not a previously failing correctness contract.
+[regression.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1-memory/regression.txt) preserves an actual baseline failure of a 4,096-byte one-record allocation ceiling, followed by the selected candidate's pass at the same path and dimensions. This is an allocation regression check, not a previously failing correctness contract.
 
 The new public integration test passed both before and after the implementation. It checks empty history, zero limit, offsets beyond the head, oversized limits that saturate, unequal multi-record groups, reads crossing group boundaries, reopen, and 64 rounds of reads with concurrent appends. Each read must contain an exact contiguous prefix of one of the two permitted publication states. It does not claim every possible thread schedule.
 

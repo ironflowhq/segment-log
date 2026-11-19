@@ -1,1 +1,0 @@
-FAIL: the Robot offers no power button reset: {"reset":{"server_ip":"213.239.196.144","server_ipv6_net":"2a01:4f8:222:1a9b::","server_number":3114789,"type":["sw","hw","man"],"operating_status":"not supported"}}

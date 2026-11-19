@@ -1,0 +1,11 @@
+# Evidence records are prose: a run's raw output (logs, traces, TSVs) stays out of the repository.
+# A record quotes the numbers it needs and names the commit and host that produced them.
+*
+!*/
+!.gitignore
+!*.md
+!*.sh
+!*.py
+# Read by tests: segment-log-core/src/acceptance/seeded.rs and scripts/test_m1_verify_syscalls.py.
+!m1/seeded/pressure-1000*
+!m1/slice10/linux/syscalls.trace

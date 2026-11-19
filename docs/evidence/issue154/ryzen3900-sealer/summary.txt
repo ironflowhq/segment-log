@@ -1,4 +1,0 @@
-origin/adr-0067-impl 50c2125 capture exit 0
-main 9280322 capture exit 0
-main traced runs done
-all done

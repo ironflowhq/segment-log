@@ -1,4 +1,0 @@
-    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
-  33973 root      20   0 1057120 289776   2660 S  99.9   0.2   0:17.73 firecra+
-  34018 root      20   0 1057120 289776   2660 S  73.3   0.2   0:08.02 fc_vcpu+
-  34019 root      20   0 1057120 289776   2660 R  73.3   0.2   0:07.27 fc_vcpu+

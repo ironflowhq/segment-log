@@ -1,7 +1,0 @@
-process-crash real exit 0
-process-crash control exit 0
-guest-crash real exit 0
-guest-crash control exit 0
-guest-destroy real exit 0
-guest-destroy control exit 0
-done

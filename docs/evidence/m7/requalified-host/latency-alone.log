@@ -1,7 +1,0 @@
-== build the server
-info: component rust-std for target x86_64-unknown-linux-musl is up to date
-== build the powercut tool
-== build the guest rootfs
-== VOL-FLUSH-LATENCY: 1 guest(s), rate 0/s each, 60 s, 16384-byte writes, host disk nvme0n1
-guest 1: PROBE cycles=88731 syncs_per_s=1478.8 mean_us=675 p50_us=658 p99_us=898 p999_us=999 max_us=2103 bytes=16384
-host: 0 flushes in 67 s (boot and warm-up included), 0 per second

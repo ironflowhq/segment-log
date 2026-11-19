@@ -1,3 +1,0 @@
-CONFIG transport=firecracker callers=1000 connections=1000 rounds=1000 payload=256 records_per_submit=1 interval_ns=20000000 linger_ns=1000000 group_byte_cap=1048576 queue_capacity=4096 pending_byte_budget=16777216
-APPEND records=1000000 elapsed_ns=30193563379 records_per_second=33119.642 full=0
-METRIC append_ns count=1000000 min=28950495 p50=5382484004 p99=10021197772 p999=10191808000 max=10483177604

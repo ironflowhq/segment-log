@@ -9,13 +9,13 @@ the strict check before the change used baseline
 | Command | Exit | Observation |
 | --- | --- | --- |
 | `RUSTFLAGS='--cfg fuzzing' cargo check -p segment-log-core` at baseline | 0 | 24 dead-code warnings, all in the private simulator |
-| `RUSTFLAGS='--cfg fuzzing -D warnings' cargo check -p segment-log-core` at baseline | 101 | 24 dead-code errors, [captured output](fuzz-strict-before.log) |
-| Same strict check after the correction | 0 | No warnings, [captured output](fuzz-strict-after.log) |
+| `RUSTFLAGS='--cfg fuzzing -D warnings' cargo check -p segment-log-core` at baseline | 101 | 24 dead-code errors, [captured output](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/fuzz-strict-before.log) |
+| Same strict check after the correction | 0 | No warnings, [captured output](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/fuzz-strict-after.log) |
 | `cargo fmt --all --check` | 0 | No output |
 | `cargo clippy --workspace --all-targets -- -D warnings` | 0 | Both workspace crates checked without warnings |
 | `python3 -B -m unittest discover -s scripts -p 'test_m1_*.py'` | 0 | 3 tests passed |
-| `cargo test --workspace` | 101 | Core test binary aborted with SIGABRT after the codec test reported FAILED; [captured output](workspace-aborted.log) |
-| `cargo test -p segment-log-core --lib acceptance::codec::binary_groups_round_trip_and_encoding_enforces_limits -- --exact --nocapture` | 101 | Isolated binary also aborted with SIGABRT; no assertion diagnostic, [captured output](codec-isolated-aborted.log) |
+| `cargo test --workspace` | 101 | Core test binary aborted with SIGABRT after the codec test reported FAILED; [captured output](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/workspace-aborted.log) |
+| `cargo test -p segment-log-core --lib acceptance::codec::binary_groups_round_trip_and_encoding_enforces_limits -- --exact --nocapture` | 101 | Isolated binary also aborted with SIGABRT; no assertion diagnostic, [captured output](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/codec-isolated-aborted.log) |
 | `cargo test -p segment-log-core --lib storage:: -- --nocapture` | 0 | 23 storage and simulator tests passed, 113 filtered out |
 
 The workspace run did not reach a complete test summary. It is not a pass.
@@ -32,7 +32,7 @@ No workload, watchdog, or other worker's processes were changed to obtain a
 pass. The local aborts remain unresolved. Subsequent exact-head hosted CI passed the
 full workspace suite on both Linux and macOS at
 `03293670714624269d21b375a5a64cb23a1b7c01`, as recorded in
-[the API snapshot](pr21-ci.json). The targeted simulator tests show that the
+[the API snapshot](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/pr21-ci.json). The targeted simulator tests show that the
 selected gate retains executable simulator coverage despite this limitation.
 
 Deslop review found only the one-line gate change in executable source. No

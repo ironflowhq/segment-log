@@ -1,3 +1,0 @@
-CONFIG transport=inproc callers=1000 rounds=1000 payload=256 records_per_submit=1 interval_ns=0 linger_ns=1000000 group_byte_cap=1048576 queue_capacity=4096 pending_byte_budget=16777216
-APPEND records=1000000 elapsed_ns=7735078941 records_per_second=129281.163 full=0
-METRIC append_ns count=1000000 min=611799 p50=7345272 p99=14580490 p999=21751578 max=23116697

@@ -1,7 +1,7 @@
 # M1 implementation evidence
 
 This archive preserves selected implementation evidence from the slice PRs. The
-[provenance table](provenance.tsv) identifies original files, extraction methods
+[provenance table](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/provenance.tsv) identifies original files, extraction methods
 and limitations. Original paths in captured output describe the development
 environment. They are not dependencies of the current tests.
 The provenance notes identify whitespace normalization where applied; original
@@ -21,15 +21,15 @@ The [issue 48 record](../issue48/README.md) gives exact phase peaks and the byte
 
 | Slice | PR | Observed evidence and limits |
 | --- | --- | --- |
-| 0 | [#6](https://github.com/ironflowx/segment-log/pull/6) | [Contemporaneous journal](provenance/slice0.tsv) and [parent corrections](provenance/parent-decisions.tsv). Several initial behaviors were implemented before their scenarios. Original raw red output is unavailable. Narrative entries cannot repair that history. |
-| 1 | [#7](https://github.com/ironflowx/segment-log/pull/7) | [Command journal](provenance/slice1.tsv), captured `red/slice1-*.txt` outputs, [counter journal](provenance/counters.tsv) and five counter red logs. Early admission failures did not independently exercise later fault assertions. |
+| 0 | [#6](https://github.com/ironflowx/segment-log/pull/6) | [Contemporaneous journal](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/provenance/slice0.tsv) and [parent corrections](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/provenance/parent-decisions.tsv). Several initial behaviors were implemented before their scenarios. Original raw red output is unavailable. Narrative entries cannot repair that history. |
+| 1 | [#7](https://github.com/ironflowx/segment-log/pull/7) | [Command journal](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/provenance/slice1.tsv), captured `red/slice1-*.txt` outputs, [counter journal](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/provenance/counters.tsv) and five counter red logs. Early admission failures did not independently exercise later fault assertions. |
 | 2 | [#8](https://github.com/ironflowx/segment-log/pull/8) | Seven supplemental scenarios. The experimental red assumed two unflushed groups, an unreachable premise under [ADR 0015](../../decisions/0015-open-makes-the-recovered-tail-durable.md). Its experimental fix was reverted; it is not claimed as a production defect. |
 | 3 | [#9](https://github.com/ironflowx/segment-log/pull/9) | Seven supplemental revision scenarios; no production fix or behavioral red. Compilation and fixture corrections are excluded from red evidence. |
-| 4 | [#10](https://github.com/ironflowx/segment-log/pull/10) | [Seven-test red run](red/slice4-durable-keys.log), extracted from the original output column. The separate short-frame guard correction has [narrative evidence](provenance/parent-decisions.tsv), with no retained raw stdout. |
-| 5 | [#11](https://github.com/ironflowx/segment-log/pull/11) | [Five-test pending-key red run](red/slice5-pending-keys.log). The earlier fixture-timeout run is excluded. |
-| 6 | [#12](https://github.com/ironflowx/segment-log/pull/12) | Fourteen supplemental scenarios. [Wrapping-add mutation rejection](mutation/slice6-overflow.log) is sensitivity evidence, not a discovered production defect. The temporary mutation changed the final `charge_base` addition from checked to wrapping arithmetic. |
-| 7 | [#13](https://github.com/ironflowx/segment-log/pull/13) | Five delegate scenarios reached 121 tests. Review added an admission-close observation and sixth scenario, reaching 122. The final [parent record](provenance/parent-decisions.tsv) preserves this distinction. |
-| 8 | [#15](https://github.com/ironflowx/segment-log/pull/15) | Seven supplemental scenarios and a reproduced harness scheduling failure. [Final workspace summaries](validation/slice8-workspace-summary.log) show 125 core, three process and one real-storage test. [Thirty additional repetitions](validation/slice8-process30.log) used seeds 5001–5030. |
+| 4 | [#10](https://github.com/ironflowx/segment-log/pull/10) | [Seven-test red run](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/red/slice4-durable-keys.log), extracted from the original output column. The separate short-frame guard correction has [narrative evidence](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/provenance/parent-decisions.tsv), with no retained raw stdout. |
+| 5 | [#11](https://github.com/ironflowx/segment-log/pull/11) | [Five-test pending-key red run](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/red/slice5-pending-keys.log). The earlier fixture-timeout run is excluded. |
+| 6 | [#12](https://github.com/ironflowx/segment-log/pull/12) | Fourteen supplemental scenarios. [Wrapping-add mutation rejection](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/mutation/slice6-overflow.log) is sensitivity evidence, not a discovered production defect. The temporary mutation changed the final `charge_base` addition from checked to wrapping arithmetic. |
+| 7 | [#13](https://github.com/ironflowx/segment-log/pull/13) | Five delegate scenarios reached 121 tests. Review added an admission-close observation and sixth scenario, reaching 122. The final [parent record](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/provenance/parent-decisions.tsv) preserves this distinction. |
+| 8 | [#15](https://github.com/ironflowx/segment-log/pull/15) | Seven supplemental scenarios and a reproduced harness scheduling failure. [Final workspace summaries](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/validation/slice8-workspace-summary.log) show 125 core, three process and one real-storage test. [Thirty additional repetitions](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/validation/slice8-process30.log) used seeds 5001–5030. |
 
 Slice 9 adds the [threaded trace oracle and coverage audit](slice9.md), including
 saved replay commands, the preserved pressure-seed regression and local validation.
@@ -49,15 +49,15 @@ controlled schedule. It writes results under ignored `.audit/process-evidence/`
 without editing repository sources. The preserved final source was commit
 `4bf4844` when these patches were recorded.
 
-The preserved [pipe transcript](process-schedule/protocol.txt) contains 250
+The preserved [pipe transcript](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/process-schedule/protocol.txt) contains 250
 requests and 250 answers, no request 0 and zero unknown outcomes. The
-[failure output](process-schedule/observed-red-output.txt) is explicitly a
+[failure output](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/process-schedule/observed-red-output.txt) is explicitly a
 transcription of a captured tool result. The original stdout was not redirected
-to a file. The [schedule patch](process-schedule/schedule-only.patch) changed only
+to a file. The [schedule patch](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/process-schedule/schedule-only.patch) changed only
 caller scheduling and parent event consumption.
 
-Fresh review retained [100 ordinary repetitions](process-schedule/fixed-ordinary.log)
-and [20 controlled repetitions](process-schedule/fixed-controlled.log), seeds
+Fresh review retained [100 ordinary repetitions](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/process-schedule/fixed-ordinary.log)
+and [20 controlled repetitions](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/process-schedule/fixed-controlled.log), seeds
 30000 onward. The controlled schedule asserts that the former kill predicate is
 reached before the post-admission abandonment event. The final gate waits for
 that event. No production code changed for this harness correction.
@@ -71,7 +71,7 @@ configuration compiled with 24 existing unused simulator warnings.
 
 Slice 8 CI passed on [Linux](https://github.com/ironflowx/segment-log/actions/runs/42559576442/job/128972810634)
 and [macOS](https://github.com/ironflowx/segment-log/actions/runs/42559576442/job/128972811118)
-at commit `4bf4844`. The [captured check metadata](validation/slice8-ci.json)
+at commit `4bf4844`. The [captured check metadata](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/validation/slice8-ci.json)
 identifies the head and completion times.
 
 The randomized oracle and scheduled-job configuration are recorded in

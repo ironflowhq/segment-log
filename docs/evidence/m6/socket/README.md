@@ -25,7 +25,7 @@ Put the `m6-socket` label on a pull request, or dispatch the [evidence workflow]
 
 ## Results
 
-One capture, run [43677190849](https://github.com/ironflowx/segment-log/actions/runs/43677190849) at `65280cc`, on a hosted `ubuntu-26.04` runner: 4 vCPUs (AMD EPYC 9V45) and an ext4 root mounted `nobarrier`. [`linux/summary.md`](linux/summary.md) has the tables, and [`linux/environment.txt`](linux/environment.txt) has the full environment. Medians of 5 pairs, with the range in parentheses:
+One capture, run [43677190849](https://github.com/ironflowx/segment-log/actions/runs/43677190849) at `65280cc`, on a hosted `ubuntu-26.04` runner: 4 vCPUs (AMD EPYC 9V45) and an ext4 root mounted `nobarrier`. [`linux/summary.md`](linux/summary.md) has the tables, and [`linux/environment.txt`](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m6/socket/linux/environment.txt) has the full environment. Medians of 5 pairs, with the range in parentheses:
 
 | Run | Metric | In process | Unix socket |
 | --- | --- | --- | --- |

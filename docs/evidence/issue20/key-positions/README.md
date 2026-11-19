@@ -12,8 +12,8 @@ This supports the change. It makes no claim about a PRD target on target hardwar
 
 ## Scope and provenance
 
-- `main` is `5e95407cb3e427800cdb29c687595d35bae56410`. The change is `fcca44aa272f9f65904a76ae1ae069db5caa5bf0`. Commits after it on this branch change documents only. [sources.txt](sources.txt) and [binaries.sha256](binaries.sha256) identify what ran.
-- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](environment.txt), [docker-info.txt](docker-info.txt) and [host.txt](host.txt) hold the details.
+- `main` is `5e95407cb3e427800cdb29c687595d35bae56410`. The change is `fcca44aa272f9f65904a76ae1ae069db5caa5bf0`. Commits after it on this branch change documents only. [sources.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/key-positions/sources.txt) and [binaries.sha256](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/key-positions/binaries.sha256) identify what ran.
+- Captured on 9 November 2026 in the pinned `rust:1.99.1-bookworm` image (`sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c`) on Docker Desktop for Mac. The guest runs Linux 7.0.14-linuxkit on aarch64 with 10 processors and 8 GiB. Data was on the container's overlay filesystem, on the guest's virtual disk. [environment.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/key-positions/environment.txt), [docker-info.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/key-positions/docker-info.txt) and [host.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/key-positions/host.txt) hold the details.
 - The host is an Apple M4 with 10 cores and 24 GiB on macOS 27.0.1. It ran unrelated work. Each run's log is preceded by the guest's load average, which includes the run before it.
 - This is a virtual Linux guest on a Mac. It is not physical local NVMe and it is not the deployment storage stack.
 
@@ -39,7 +39,7 @@ Requested heap bytes. Both repetitions of each matrix case gave the same value.
 
 The change adds one transient cost. While a group forms, the writer keeps 16 bytes for each of the group's new records, to find a pending record by its offset. With 1,024 records in each group, the peak extra bytes during the append phase of the unkeyed case rose from 181,540 to 197,924. The memory is released with the group.
 
-[memory/allocations.csv](memory/allocations.csv) holds every phase of the matrix, and the four text files hold the larger histories.
+[memory/allocations.csv](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/key-positions/memory/allocations.csv) holds every phase of the matrix, and the four text files hold the larger histories.
 
 ## Append benchmark
 
@@ -78,7 +78,7 @@ The checks ran on this branch's sources (`segment-log-core` tree `5ea762220ea8`)
 - 30 process-kill repetitions from seed 10000.
 - 9 Python script tests.
 
-[checks.txt](checks.txt) holds the result lines. Hosted CI had not run for this branch when this record was written.
+[checks.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/key-positions/checks.txt) holds the result lines. Hosted CI had not run for this branch when this record was written.
 
 ## Reproduce
 

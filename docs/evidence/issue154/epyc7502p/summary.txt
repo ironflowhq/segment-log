@@ -1,5 +1,0 @@
-main 8b1a2d1 capture exit 0
-main traced runs done
-ab86546 ab86546 capture exit 0
-386695f 386695f capture exit 0
-all done

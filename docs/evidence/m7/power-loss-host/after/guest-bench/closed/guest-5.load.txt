@@ -1,1 +1,0 @@
- 21:40:42 up 26 min,  0 user,  load average: 5.77, 3.88, 2.50

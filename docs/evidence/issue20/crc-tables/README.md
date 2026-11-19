@@ -20,7 +20,7 @@ The scenario is `binary_groups_round_trip_and_encoding_enforces_limits`. Each sc
 
 CI runs [42757290131](https://github.com/ironflowx/segment-log/actions/runs/42757290131) (two attempts) and [42758310337](https://github.com/ironflowx/segment-log/actions/runs/42758310337) ended with `SIGABRT` about 10.4 s after the tests started. Every other test had passed by then. Only this scenario was unfinished, and its ten-second watchdog ended the process. In passing runs on other runners the same scenario took 1.0 to 1.7 s.
 
-A temporary branch ran the test binary on a hosted runner and attached a debugger after seven seconds. [hosted-stack.txt](hosted-stack.txt) holds the frames: the scenario's thread is in `memcpy` under `crc_update`, under the 8 MiB `encode`. A second thread, in the seeded trace oracle, is in the same place under `decode`.
+A temporary branch ran the test binary on a hosted runner and attached a debugger after seven seconds. [hosted-stack.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/crc-tables/hosted-stack.txt) holds the frames: the scenario's thread is in `memcpy` under `crc_update`, under the 8 MiB `encode`. A second thread, in the seeded trace oracle, is in the same place under `decode`.
 
 The runner had an AMD EPYC 7763. How long the copies take there depends on where the table and the stack lie, which changes with every build. That is why one branch failed each time and the branch above it passed.
 

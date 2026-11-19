@@ -1,4 +1,0 @@
-== v2-clean-20261118001637-control: 10 cycles, delay 3000 ms, host root@168.119.4.92, observer 178.156.201.194:7070
--- cycle 1: check: 5093 records, 5098 reported, 5 missing; evidence: the control server answered after open
-== v2-clean-20261118001637-control: 1 of 1 counted cycles failed (open Corrupt or a reported record missing)
-control detected (expected)
