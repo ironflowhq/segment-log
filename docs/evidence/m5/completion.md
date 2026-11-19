@@ -4,7 +4,7 @@ M5 (freeze the byte layout, fuzz the recovery parser) passed on 2026-11-13. This
 
 | Gate part | Evidence |
 | --- | --- |
-| A format ADR is Accepted. | [ADR 0052](../../decisions/0052-freeze-format-version-1.md) freezes the layout at `format_version` 1 with no byte change. The owner accepted it on 2026-11-13. The `FORMAT-GOLDEN` scenarios in `segment-log-core/src/acceptance/format_golden.rs` pin the layout against the committed [fixture](../../../segment-log-core/tests/fixtures/format-v1/README.md). |
+| A format ADR is Accepted. | [ADR 0052](../../decisions/0052-freeze-format-version-1.md) freezes the layout at `format_version` 1 with no byte change. The owner accepted it on 2026-11-13. The `FORMAT-GOLDEN` scenarios in `segment-log-core/src/acceptance/format_golden.rs` pin the layout against the committed [fixture](https://github.com/ironflowx/segment-log/blob/8c8bbdc9fa928ec770091a9999987bf6ecf0729c/segment-log-core/tests/fixtures/format-v1/README.md). |
 | Fuzzing runs for 1 hour in CI with no crash. | [Fuzz run 43441567752](https://github.com/ironflowx/segment-log/actions/runs/43441567752), dispatched at `9874b95` on hosted ubuntu-24.04 runners with `nightly-2026-11-12` and debug assertions on. Each target ran for 3,601 s with no crash: `FUZZ-DECODER` made 362,260,534 runs, and `FUZZ-RECOVERY` made 7,599,542. |
 
 CI is green on Ubuntu and macOS at the same commit, [run 43441514680](https://github.com/ironflowx/segment-log/actions/runs/43441514680), including the reruns with `roll_bytes` at 65 and 256 bytes.

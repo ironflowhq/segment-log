@@ -4,7 +4,7 @@
 
 ## Fingerprint
 
-The machine-readable copy that the launcher and the guest check before every open (V10) is [`scripts/m7/fingerprint`](../../../scripts/m7/fingerprint), committed from this session's pinned copy. The launcher checks `vmm.*` and `host.*` before boot; the guest checks `guest.*` before the log opens. Host values come from [host.txt](requalified-host/host.txt) and [`scripts/m7/fingerprint-host`](../../../scripts/m7/fingerprint-host).
+The machine-readable copy that the launcher and the guest check before every open (V10) is [`scripts/m7/fingerprint`](../../../scripts/m7/fingerprint), committed from this session's pinned copy. The launcher checks `vmm.*` and `host.*` before boot; the guest checks `guest.*` before the log opens. Host values come from [host.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/host.txt) and [`scripts/m7/fingerprint-host`](../../../scripts/m7/fingerprint-host).
 
 | Layer | Component and version | Configuration |
 | --- | --- | --- |
@@ -28,7 +28,7 @@ The machine-readable copy that the launcher and the guest check before every ope
 | Guest destroy | yes | `SIGKILL` the VMM |
 | Host kernel crash | yes | `sysrq c` on the host, `kernel.panic` reboots it |
 | Host reset | yes | Robot web service, `hw`: the reset button. The drives keep power, so this is never a power cut |
-| Host power loss | yes | Robot web service: long press, then press, of the power button. Each cut removed drive power: both drives' SMART `power_cycles` rose by exactly the number of cuts ([before](requalified-host/smart-before.txt), [after](requalified-host/host.txt)) |
+| Host power loss | yes | Robot web service: long press, then press, of the power button. Each cut removed drive power: both drives' SMART `power_cycles` rose by exactly the number of cuts ([before](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/smart-before.txt), [after](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/host.txt)) |
 | Host loss | no | The image lives on one host's local drive |
 | Device loss | no | One drive, no RAID |
 | Zone loss | no | One host |
@@ -41,7 +41,7 @@ These stand in for deployment numbers that are not set yet. Each is labeled wher
 
 - V8: the deployment never copies a log volume.
 - V9, the workload profile (owner, issue 133): 8 logs per host; a peak write rate per log of the density run's 200 groups/s × 16 KiB = 3,276,800 bytes/s; a planned peak history per log of 50 GiB encoded; 256-byte payloads, 16-byte stream ids and 16-byte keys on every record, as many records per group as fit in 16 KiB (53), and one stream per record (the footer's worst case); a response time of 1 hour; 20 % headroom. These are the defaults of [`scripts/m7-capacity.py`](../../../scripts/m7-capacity.py), which takes every width from [format.md](../../architecture/format.md).
-- V9, what the profile gives on this host (format version 3): 146,335,728 records per log; a planned allocated size of 64.4 GB per log at the measured allocation ratio; an alert threshold of 11.8 GB free in each guest and 94.4 GB free on the host filesystem; a 82.7 GB image per log; 755.8 GB needed on the host filesystem, which has 895.9 GB ([capacity.log](requalified-host/capacity.log)).
+- V9, what the profile gives on this host (format version 3): 146,335,728 records per log; a planned allocated size of 64.4 GB per log at the measured allocation ratio; an alert threshold of 11.8 GB free in each guest and 94.4 GB free on the host filesystem; a 82.7 GB image per log; 755.8 GB needed on the host filesystem, which has 895.9 GB ([capacity.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/capacity.log)).
 - V11: the density above.
 
 ## Requirements
@@ -50,13 +50,13 @@ Logs are in [requalified-host/](requalified-host/), one per step, named after th
 
 | ID | Case | Evidence class | Commands or script | Control result | Result | Limitations |
 | --- | --- | --- | --- | --- | --- | --- |
-| V1 | `VOL-FLUSH-CONFIG` | Tested | `m7-rehearse.sh` (guest `write_cache`, mount options), `host.txt` (drive `vwc`) | `Unsafe` shows `write through` | Pass | Guest: `write back`, ext4 `rw,relatime,errors=remount-ro`. Host: ext4 `rw,noatime` with default barriers on a drive with no volatile cache (`vwc 0`), so the host sends no flush to the drive (0 flushes in every [latency](requalified-host/latency-density.log) run) |
+| V1 | `VOL-FLUSH-CONFIG` | Tested | `m7-rehearse.sh` (guest `write_cache`, mount options), `host.txt` (drive `vwc`) | `Unsafe` shows `write through` | Pass | Guest: `write back`, ext4 `rw,relatime,errors=remount-ro`. Host: ext4 `rw,noatime` with default barriers on a drive with no volatile cache (`vwc 0`), so the host sends no flush to the drive (0 flushes in every [latency](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/latency-density.log) run) |
 | V1 | `VOL-FLUSH-TRACE` | Not verified | none | | Not verified | A trace alone never qualifies V1; `VOL-POWER-CUT` decides |
 | V1 | `VOL-POWER-CUT`, guest-side events | Tested | `m7-power-cut.sh process-crash\|guest-crash\|guest-destroy 30` | `--control`, 10 cycles each: caught 9, 9 and 7 of 10 | Pass | 0 of 30 cycles lost a record for each event; the last checks covered 151,924, 155,164 and 141,349 reported records |
 | V1 | `VOL-POWER-CUT`, host kernel crash | Tested | `m7-host-cut.sh host-kernel-crash 30` | `--control` (`Unsafe`): first cycle lost all 11,451 reported records | Pass | 0 of 30 cycles lost a record; 257,717 reported records checked |
 | V1 | `VOL-POWER-CUT`, host reset | Tested | `m7-host-cut.sh host-reset 30` | `--control` (`Unsafe`): first cycle lost all 12,298 reported records | Pass | 0 of 30 cycles lost a record; 322,595 reported records checked |
 | V1 | `VOL-POWER-CUT`, host power loss | Tested | `m7-host-cut.sh host-power-loss 30` | `--control` (`Unsafe`): first cycle lost all 19,167 reported records | Pass | 0 of 30 cycles lost a record; 576,495 reported records checked. Both drives' `power_cycles` went from 16 to 47 and `unsafe_shutdowns` from 2 to 33: one per cut, 30 real and 1 control |
-| V2 | `VOL-POWER-CUT-RECOVERY` | Tested | `m7-recovery-cut.sh clean\|sealed\|header 10` | `--control` (`rewrite-control` build): first cycle, 5 reported records missing | Pass | 0 of 10 counted cycles failed for each window, open never `Corrupt`; the `clean` check covered 50,948 reported records. `clean` is from its [rerun](requalified-host/v2-clean-rerun.log): the first run stopped at cycle 10 when the ssh session to the host timed out before the check ran, after 9 clean cycles ([details](requalified-host/README.md#the-first-v2-clean-run)). Cut by host kernel crash on block-trace evidence; dm-delay widens the window |
+| V2 | `VOL-POWER-CUT-RECOVERY` | Tested | `m7-recovery-cut.sh clean\|sealed\|header 10` | `--control` (`rewrite-control` build): first cycle, 5 reported records missing | Pass | 0 of 10 counted cycles failed for each window, open never `Corrupt`; the `clean` check covered 50,948 reported records. `clean` is from its [rerun](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/v2-clean-rerun.log): the first run stopped at cycle 10 when the ssh session to the host timed out before the check ran, after 9 clean cycles ([details](requalified-host/README.md#the-first-v2-clean-run)). Cut by host kernel crash on block-trace evidence; dm-delay widens the window |
 | V2 | `VOL-ATOMIC-WRITE` | Supporting | `host.txt` (`awupf`, `nawupf`, logical block size) | | `awupf 7`, `nawupf 7`: 4 KiB | Supporting only |
 | V3 | `VOL-METADATA-ERROR` | Tested | `m7-metadata-error.sh`, `--control`, `--panic` | No control could be built (`errors=continue` also goes read-only), as expected | Pass | Under [ADR 0062](../../decisions/0062-v3-requires-refused-writes-not-failed-syncs.md); the failing target is a dm table on the host, under the guest's drive. `--panic` exits 1 (`fail`), as in every earlier run and ADR 0062: evidence only, since the stack mounts `errors=remount-ro` |
 | V4 | `VOL-FS-CHECK` | Tested | `m7-rehearse.sh` (`/dev/vdb ext4`) | the same rule rejects `/dev/shm` (`tmpfs`) | Pass | |
@@ -75,9 +75,9 @@ A guest `fsync` of 16 KiB on the log drive, through virtio-blk and the host file
 
 | Run | Guests | Rate each | syncs/s each | mean µs | p50 µs | p99 µs | p999 µs | max µs |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| [alone](requalified-host/latency-alone.log) | 1 | unpaced | 1,479 | 675 | 658 | 898 | 999 | 2,103 |
-| [density](requalified-host/latency-density.log) | 8 | 200/s | 200 | 1,626 | 1,599 | 2,104 | 2,497 | 2,813–3,925 |
-| [saturation](requalified-host/latency-saturation.log) | 8 | unpaced | 1,184 | 844 | 771 | 1,486 | 1,726 | 2,309–13,019 |
+| [alone](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/latency-alone.log) | 1 | unpaced | 1,479 | 675 | 658 | 898 | 999 | 2,103 |
+| [density](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/latency-density.log) | 8 | 200/s | 200 | 1,626 | 1,599 | 2,104 | 2,497 | 2,813–3,925 |
+| [saturation](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/latency-saturation.log) | 8 | unpaced | 1,184 | 844 | 771 | 1,486 | 1,726 | 2,309–13,019 |
 
 ## Throughput estimate (V11)
 
@@ -94,7 +94,7 @@ The guest benchmark ([summary](requalified-host/guest-bench/summary.md)) runs th
 | Paced at 50,000/s, achieved records/s | 49,794 | 49,809 | 32,377 |
 | Paced, p99 ms | 3.2 | 69.2 | 10,724 |
 
-**The guest meets the PRD's 50,000 records/s target in every pair**, by about 6 % at the median. The bound is still the VMM's main thread, which runs Firecracker's vsock muxer: in [the thread sample](requalified-host/guest-bench/closed/guest-1.threads.txt) the `firecracker` thread runs at 99.9 % CPU and the two `fc_vcpu` threads at 63–69 %. **The guest misses the latency target at 50,000/s**: it runs at about 94 % of its closed-loop rate there, so the paced p99 of 69 ms is queueing near saturation. ADR 0063 records this as a known 0.1 limit, together with the Go client's lack of connection pooling ([issue 134](https://github.com/ironflowx/segment-log/issues/134)).
+**The guest meets the PRD's 50,000 records/s target in every pair**, by about 6 % at the median. The bound is still the VMM's main thread, which runs Firecracker's vsock muxer: in [the thread sample](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m7/requalified-host/guest-bench/closed/guest-1.threads.txt) the `firecracker` thread runs at 99.9 % CPU and the two `fc_vcpu` threads at 63–69 %. **The guest misses the latency target at 50,000/s**: it runs at about 94 % of its closed-loop rate there, so the paced p99 of 69 ms is queueing near saturation. ADR 0063 records this as a known 0.1 limit, together with the Go client's lack of connection pooling ([issue 134](https://github.com/ironflowx/segment-log/issues/134)).
 
 The issue 49 capture on this host ([summary](requalified-host/m1-capture/summary.md)), with `ROLL writer_ns` per roll ([ADR 0061](../../decisions/0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md)):
 

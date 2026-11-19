@@ -90,7 +90,7 @@ The following table reports the median and full range of recovered-held process 
 | Groups 64 to 1,024 | 576 [576, 592] | 672 [640, 720] | 267119 / 305519 |
 | Payload 32 to 256 bytes | 592 [592, 592] | 544 [544, 560] | 267119 / 267119 |
 
-![Keyed-history comparison](keyed-memory.svg)
+![Keyed-history comparison](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-resident/keyed-memory.svg)
 
 Every requested-heap value in the last column repeated exactly across its five trials. These are the existing `memory_probe` release-build counters, measured in separate processes. They count requested Rust allocation bytes released by engine Drop after validation. They are not resident bytes or memory returned to the OS.
 
@@ -139,7 +139,7 @@ Before, between, and after matrix cases, `memory_pressure -Q` reported the exact
 
 The tiny Rust pilot checked empty engine, an 8 MiB touch, and eight keyed records through append and recovery. Deliberate wrong-payload validation and over-cap submission trials returned failures. The latter recorded exactly one admission error and zero commits. The missing-result fixture also failed as expected, both in initial preparation and the compiled-pilot checks. All failed trials retain stderr, counts, exit code, and raw samples. No unexpected engine, tool, or validation failures occurred in the completed matrices.
 
-[trials.csv](trials.csv) contains every primary per-trial held value and contained sampled peak. [heap.csv](heap.csv) contains every requested-heap phase. [observer-cpu.csv](observer-cpu.csv) contains the separate observer accounting. [raw.tar.gz](raw.tar.gz) contains raw stdout, stderr, events, every RSS sample, status files, exact commands, environment, build/check logs, VM maps, capability checks, failures, hashes, and captured driver scripts. [manifest.sha256](manifest.sha256) covers the archive and tabular evidence. The original data directories and executable remain local under `.audit/engine-rss` and `target/release/examples`; the segment files are not in the committed archive.
+[trials.csv](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-resident/trials.csv) contains every primary per-trial held value and contained sampled peak. [heap.csv](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-resident/heap.csv) contains every requested-heap phase. [observer-cpu.csv](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-resident/observer-cpu.csv) contains the separate observer accounting. [raw.tar.gz](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-resident/raw.tar.gz) contains raw stdout, stderr, events, every RSS sample, status files, exact commands, environment, build/check logs, VM maps, capability checks, failures, hashes, and captured driver scripts. [manifest.sha256](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-resident/manifest.sha256) covers the archive and tabular evidence. The original data directories and executable remain local under `.audit/engine-rss` and `target/release/examples`; the segment files are not in the committed archive.
 
 The original matrix can be rerun with the frozen sampler and the committed driver, once another measurement interval is available:
 

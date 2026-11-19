@@ -83,7 +83,7 @@ Keep the existing wrapper and its useful group observations.
 
 ## Writer CPU is a measured contributor
 
-The [separate phase diagnostic](ablation/cpu.log) measures 13.815 writer CPU-seconds in a 17.145-second append interval.
+The [separate phase diagnostic](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/latency/ablation/cpu.log) measures 13.815 writer CPU-seconds in a 17.145-second append interval.
 The writer consumes about 81% of one CPU during that interval.
 The sum of group flush service times is 3.363 seconds, about 20% of the interval.
 Service time includes some CPU time, so these shares are not disjoint and must not be added.
@@ -95,11 +95,11 @@ Those sums overlap. They are neither wall-clock delay nor a per-request latency 
 The 0.878-second sum of admission calls is less than one microsecond per accepted request on average.
 This does not bound admission p99 or its impact during an individual scheduling stall.
 
-The [writer-filtered profile](profile/writer.txt) attributes 24.45% of writer self samples to `frame_crc`.
+The [writer-filtered profile](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/latency/profile/writer.txt) attributes 24.45% of writer self samples to `frame_crc`.
 The call graph resolves CRC32C inside that function. The current implementation processes eight bits per input byte.
 Other observed costs include key-map insertion, allocation, notification, and futex wakeups.
 Some addresses remain unresolved. Sampling percentages are approximate.
-The [recording](profile/perf.log) contains 1,922 samples and reports no lost samples in the report.
+The [recording](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/latency/profile/perf.log) contains 1,922 samples and reports no lost samples in the report.
 The recording covers the whole test. The writer filter excludes validation and reopen on the acceptance-test thread.
 
 ## Queue and acknowledgment limits
@@ -140,7 +140,7 @@ The baseline uses `baseline.sh` from this directory on the unchanged source.
 The storage experiment uses `scripts/m1-latency-linux.sh` at the diagnostic SHA.
 The CRC comparison uses `scripts/m1-compare-latency.sh BEFORE_BINARY AFTER_BINARY OUTPUT_DIRECTORY`.
 Both binaries use release optimization and the same diagnostic workload. Their SHA256 digests are recorded with the outputs.
-[build-manifest.json](build-manifest.json) associates source commits, binary digests, and captured Cargo profiles for both timing and profiling artifacts.
+[build-manifest.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/latency/build-manifest.json) associates source commits, binary digests, and captured Cargo profiles for both timing and profiling artifacts.
 Every comparison runs before then after, five times, following a short warmup for each side.
 The separate CPU run follows the repetitions. No profile or other benchmark runs concurrently on the VM.
 
@@ -181,21 +181,21 @@ Every candidate repetition still misses its numerical relative latency bound.
 Keep the observed default configuration and report the miss rather than changing the target.
 The storage-wrapper ablation remains rejected. No other writer optimization was attempted.
 
-The [candidate function profile](profile-after/writer.txt) reduces `frame_crc` self sample share from 24.45% to 15.09% of writer samples.
+The [candidate function profile](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/latency/profile-after/writer.txt) reduces `frame_crc` self sample share from 24.45% to 15.09% of writer samples.
 The separate phase diagnostics measure writer CPU of 13.815 seconds before and 12.700 seconds after.
 Their append intervals are 17.145 and 16.005 seconds. Each is one diagnostic run, not a repeated speedup estimate.
 Together these observations support the CRC mechanism, but cannot explain all remaining tail latency.
 
 The candidate Linux checks pass 141 Rust tests, with one scheduled test ignored, plus three Python verifier tests.
 The syscall verifier confirms one data flush per new group, none for the durable retry, and successful creation and recovery directory syncs.
-The first Linux workspace run [fails the coverage scanner](checks-linux/tests-transfer-failure.log) on non-UTF-8 AppleDouble files.
+The first Linux workspace run [fails the coverage scanner](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/latency/checks-linux/tests-transfer-failure.log) on non-UTF-8 AppleDouble files.
 My Mac tar transfer created `._evidence.rs` and `._cpu.rs`. Removing only those two files makes the same full workspace command pass.
 No coverage scanner or runtime change masks that failure. Git bundles avoid the transfer metadata on reproduction.
 
 ## Evidence and remaining gaps
 
 Committed output copies preserve all full repetitions, phase counters, profile summaries, environment observations, and check outcomes.
-Only trailing whitespace and terminal blank lines were removed. [output-hashes.tsv](output-hashes.tsv) records original and committed SHA256 values.
+Only trailing whitespace and terminal blank lines were removed. [output-hashes.tsv](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/latency/output-hashes.tsv) records original and committed SHA256 values.
 The original output copies remain under `.audit/latency`.
 The large raw `perf.data` recordings and build outputs stay in ignored `.audit/latency/remote` in this worktree.
 The scripts regenerate them. The report does not imply that these large local artifacts are in Git.

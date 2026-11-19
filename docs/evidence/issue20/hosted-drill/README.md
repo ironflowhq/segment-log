@@ -6,7 +6,7 @@
 
 **The failure path works on Linux and macOS.** In [drill run 42754924923](https://github.com/ironflowx/segment-log/actions/runs/42754924923), both long-run jobs failed on the planted records and uploaded their artifacts. Both replay jobs downloaded them and passed. The same two artifacts, downloaded to a Mac with `gh run download`, replay there with the same result.
 
-**A run without the drill still passes.** [Run 42754928006](https://github.com/ironflowx/segment-log/actions/runs/42754928006) used the same workflow revision without the input. Both long-run jobs passed with 100 trace seeds and 30 process repetitions, and the replay job was skipped. [plain-run.json](plain-run.json) is its API record.
+**A run without the drill still passes.** [Run 42754928006](https://github.com/ironflowx/segment-log/actions/runs/42754928006) used the same workflow revision without the input. Both long-run jobs passed with 100 trace seeds and 30 process repetitions, and the replay job was skipped. [plain-run.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted-drill/plain-run.json) is its API record.
 
 This shows that a failed check leaves a trace, a ledger and a process directory that can be fetched and checked again. It does not show a real defect, because none was observed.
 
@@ -23,7 +23,7 @@ The planted records exist only in the check. The saved pair and the kept process
 
 ## Hosted run
 
-Source: `7d8c483b3c27bdc88e621e397aa460aa39114bd2`, branch `t3/m1-failed-artifact-drill`. [run.json](run.json) is the API record and [run.log](run.log) the full log. An earlier drill, [run 42753948712](https://github.com/ironflowx/segment-log/actions/runs/42753948712) at `3b19599`, gave the same result. The commit between them only renames the replay job.
+Source: `7d8c483b3c27bdc88e621e397aa460aa39114bd2`, branch `t3/m1-failed-artifact-drill`. [run.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted-drill/run.json) is the API record and [run.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted-drill/run.log) the full log. An earlier drill, [run 42753948712](https://github.com/ironflowx/segment-log/actions/runs/42753948712) at `3b19599`, gave the same result. The commit between them only renames the replay job.
 
 | Job | Linux (`ubuntu-24.04`) | macOS (`macos-latest`) |
 | --- | --- | --- |
@@ -39,12 +39,12 @@ The run as a whole ends as failed, because its long-run jobs fail by design. The
 
 ## Downloaded artifacts
 
-[artifacts.json](artifacts.json) lists the two artifacts with their digests. Their contents are kept here unchanged:
+[artifacts.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted-drill/artifacts.json) lists the two artifacts with their digests. Their contents are kept here unchanged:
 
 | Artifact | Trace pair | Process directory |
 | --- | --- | --- |
-| [ubuntu-24.04](ubuntu-24.04/) | `2223-10000-Kill-0.trace`, `.ledger` | `process/segment-log-slice8-2305-SIGKILL-10000/` with `protocol.txt`, `log/00000000000000000000.seg` and `log/LOCK` |
-| [macos-latest](macos-latest/) | `2589-10000-Kill-0.trace`, `.ledger` | `process/segment-log-slice8-2621-SIGKILL-10000/` with the same three files |
+| [ubuntu-24.04](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted-drill/ubuntu-24.04) | `2223-10000-Kill-0.trace`, `.ledger` | `process/segment-log-slice8-2305-SIGKILL-10000/` with `protocol.txt`, `log/00000000000000000000.seg` and `log/LOCK` |
+| [macos-latest](https://github.com/ironflowx/segment-log/tree/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted-drill/macos-latest) | `2589-10000-Kill-0.trace`, `.ledger` | `process/segment-log-slice8-2621-SIGKILL-10000/` with the same three files |
 
 ## Replay on the Mac
 
@@ -55,7 +55,7 @@ scripts/m1-drill-replay.sh .audit/drill-hosted/ubuntu-24.04
 scripts/m1-drill-replay.sh .audit/drill-hosted/macos-latest
 ```
 
-Both replays exited 0 on the Mac host (Darwin 27.0.0, arm64, Rust 1.99.1) from a clean export of the source commit. Each ran on a copy, so the artifacts kept here are as downloaded. [local-replay-ubuntu-24.04.log](local-replay-ubuntu-24.04.log) and [local-replay-macos-latest.log](local-replay-macos-latest.log) are their output. The Linux artifact replays on macOS, so a pair does not depend on the platform that wrote it.
+Both replays exited 0 on the Mac host (Darwin 27.0.0, arm64, Rust 1.99.1) from a clean export of the source commit. Each ran on a copy, so the artifacts kept here are as downloaded. [local-replay-ubuntu-24.04.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted-drill/local-replay-ubuntu-24.04.log) and [local-replay-macos-latest.log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted-drill/local-replay-macos-latest.log) are their output. The Linux artifact replays on macOS, so a pair does not depend on the platform that wrote it.
 
 ## Local checks
 

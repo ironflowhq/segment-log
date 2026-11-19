@@ -154,10 +154,10 @@ Run `scripts/m1-pipeline-summary.py OUT` to regenerate the comparison.
 Run `scripts/m1-pipeline-summary.py OUT/1-trace/requests.tsv` to regenerate one joined attribution.
 Run the runner at 8 callers and 8 rounds first for its clock/order pilot.
 
-[raw.tar.gz](raw.tar.gz) preserves every pilot and pair log, raw request/group TSV, per-run manifest and host observation, build output, and validation output.
-[raw-hashes.tsv](raw-hashes.tsv) hashes every archived file.
-[build-manifest.json](build-manifest.json) pins the base SHA, source-file hashes, release profile, and binary hashes.
-[comparison.json](comparison.json) is generated from all ten pair logs.
+[raw.tar.gz](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-p99/raw.tar.gz) preserves every pilot and pair log, raw request/group TSV, per-run manifest and host observation, build output, and validation output.
+[raw-hashes.tsv](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-p99/raw-hashes.tsv) hashes every archived file.
+[build-manifest.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-p99/build-manifest.json) pins the base SHA, source-file hashes, release profile, and binary hashes.
+[comparison.json](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/mac-p99/comparison.json) is generated from all ten pair logs.
 Full original copies and both executables also remain in ignored `.audit/p99` in the producing worktree.
 No failed run or clock outlier was removed. No controlled benchmark run failed.
 

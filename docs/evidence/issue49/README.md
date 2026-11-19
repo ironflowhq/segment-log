@@ -6,9 +6,9 @@
 
 A Hetzner server-auction machine in FSN1, used on 2026-11-16 and cancelled the same day.
 
-- Intel Core i7-7700 (4 cores, 8 threads), 64 GB DDR4. Debian 12, kernel 6.1.0-54-amd64 ([host.txt](host.txt)).
+- Intel Core i7-7700 (4 cores, 8 threads), 64 GB DDR4. Debian 12, kernel 6.1.0-54-amd64 ([host.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue49/host.txt)).
 - Two Samsung PM981 `MZVLB512HAJQ-00000` drives, firmware `EXA7301Q`. They are client drives with no power-loss protection, and the volatile write cache is on (`vwc 0x1`, `write_cache: write back`). Each flush goes to the flash. 29,235 power-on hours, 26 % used.
-- The OS is on `nvme0n1`. The data directory is on `nvme1n1`: ext4, `rw,noatime`, one drive, no software RAID ([host-extra.txt](main-f4cdbea/host-extra.txt) has `/proc/mdstat` and `nvme id-ctrl` for both).
+- The OS is on `nvme0n1`. The data directory is on `nvme1n1`: ext4, `rw,noatime`, one drive, no software RAID ([host-extra.txt](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue49/main-f4cdbea/host-extra.txt) has `/proc/mdstat` and `nvme id-ctrl` for both).
 - Nothing else ran on the host. The script checks the load before it measures.
 
 [run.sh](run.sh) is the exact driver. Each run directory holds the script's full output: [main-f4cdbea](main-f4cdbea/summary.md) and [ff74647](ff74647/summary.md).

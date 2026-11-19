@@ -172,7 +172,7 @@ workspace tests, focused seeded tests, the saved replay command, case-ID
 validation and diff checks passed locally. `RUSTFLAGS='--cfg fuzzing' cargo check
 -p segment-log-core` compiled with the same 24 unused simulator warnings as the
 baseline. No Linux execution or hosted workflow execution is claimed. The
-[environment record](validation/slice9-environment.log) identifies the local
+[environment record](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/m1/validation/slice9-environment.log) identifies the local
 macOS host and pinned toolchain. No performance speedup was measured.
 
 The unknown-ID check reports only later-milestone or optional uncited cases:

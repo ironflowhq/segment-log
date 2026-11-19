@@ -27,8 +27,8 @@ RUSTFLAGS='--cfg fuzzing -D warnings' cargo check -p segment-log-core
 ```
 
 The same command exits 0 after the correction. The
-[before log](hosted/fuzz-strict-before.log) and
-[after log](hosted/fuzz-strict-after.log) preserve the actual results.
+[before log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/fuzz-strict-before.log) and
+[after log](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/fuzz-strict-after.log) preserve the actual results.
 The non-strict baseline command also reproduced the 24 warnings from the issue.
 These are compilation failures under warnings-as-errors, not engine behavioral
 failures or historical initial-red evidence.
@@ -74,7 +74,7 @@ gh workflow run long-run.yml --repo ironflowx/segment-log --ref main
 ```
 
 It started [manual run 42654692594](https://github.com/ironflowx/segment-log/actions/runs/42654692594)
-on the merged baseline SHA above. The [initial API snapshot](hosted/manual-run-initial.json)
+on the merged baseline SHA above. The [initial API snapshot](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/manual-run-initial.json)
 records both jobs as in progress:
 
 - [Linux, ubuntu-24.04](https://github.com/ironflowx/segment-log/actions/runs/42654692594/job/129289934512).
@@ -84,7 +84,7 @@ Each job requests 100 trace seeds starting at 10000, all three crash modes and
 nine variants per seed, followed by 30 process-crash repetitions starting at
 10000. This is the configured scope, not a completed result count. The run tests
 the merged baseline, not this PR. No sleep or polling loop was used.
-The [final API snapshot](hosted/manual-run-final.json) supersedes the initial
+The [final API snapshot](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/manual-run-final.json) supersedes the initial
 pending snapshot. Both platform jobs completed successfully, including the trace
 and process-crash steps. Failure-artifact upload steps were skipped. This proves
 manual execution on the baseline, not scheduled execution or failure retention.
@@ -158,7 +158,7 @@ Results are recorded in the [validation summary](hosted/validation.md).
 The workspace suite and an isolated codec rerun aborted on the heavily loaded
 host. The local abort cause remains unresolved. Exact-head hosted CI subsequently
 passed the full workspace suite on Linux and macOS, as recorded in the
-[CI snapshot](hosted/pr21-ci.json) for
+[CI snapshot](https://github.com/ironflowx/segment-log/blob/962a34a7d7b129b8e50a08458a966d2f17379760/docs/evidence/issue20/hosted/pr21-ci.json) for
 `03293670714624269d21b375a5a64cb23a1b7c01`. The targeted simulator suite
 passed all 23 tests. The strict compilation, formatting, Clippy, and Python checks
 passed. The normal small
