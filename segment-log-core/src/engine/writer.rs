@@ -11,12 +11,26 @@ pub(super) struct Writer {
     pub active: Active,
     pub limits: Limits,
     pub background_seal: bool,
-    /// The rolled segment whose closing run the writer has not written yet (ADR 0061).
+    /// The rolled segment whose closing run is not durable yet (ADR 0061, ADR 0067).
     pub pending: Option<Pending>,
     #[cfg(test)]
     pub memory: Arc<Mutex<KeyMemory>>,
     #[cfg(test)]
     pub rolls: Arc<Mutex<Vec<std::time::Duration>>>,
+}
+
+/// Whatever ends the writer, even poison, waits for a sealer still writing a closing run: the
+/// log joins the writer before it releases the directory lock, so no write outlives the lock.
+impl Drop for Writer {
+    fn drop(&mut self) {
+        if let Some(Pending {
+            sealing: Sealing::Running(sealer),
+            ..
+        }) = self.pending.take()
+        {
+            let _ = sealer.join();
+        }
+    }
 }
 
 pub(super) struct Active {
@@ -52,12 +66,27 @@ pub(super) struct Pending {
 
 enum Sealing {
     Built(Built),
-    Running(thread::JoinHandle<Built>),
+    Running(thread::JoinHandle<io::Result<Built>>),
 }
 
 struct Built {
-    run: [Vec<u8>; 4],
+    /// `None` once the sealer has written and flushed the run itself (ADR 0067).
+    run: Option<[Vec<u8>; 4]>,
     keys: keys::SealedKeys,
+}
+
+/// Writes a rolled segment's closing run. The key frames are durable before the footer and the
+/// locator exist, so that a valid locator and footer prove the whole run to an open that reads
+/// only them (overview.md, open step 5).
+fn write_run(storage: &dyn Storage, path: &Path, run: [Vec<u8>; 4]) -> io::Result<()> {
+    let [filter, index, footer, locator] = run;
+    for frames in [[filter, index], [footer, locator]] {
+        for frame in frames {
+            call(storage, path, Purpose::Roll, Op::Append(frame))?;
+        }
+        call(storage, path, Purpose::Roll, Op::SyncData)?;
+    }
+    Ok(())
 }
 
 /// The sealer's work: every step is O(keys in the segment), so none of it runs on the writer
@@ -80,7 +109,10 @@ fn build(
         footer_at: filter_at + (run[0].len() + run[1].len()) as u64,
     };
     let keys = keys::SealedKeys::written(summary, &log_id, &run[0]);
-    Built { run, keys }
+    Built {
+        run: Some(run),
+        keys,
+    }
 }
 
 fn footer_entry(stream: &[u8]) -> usize {
@@ -110,8 +142,9 @@ impl Writer {
         (self.active.length >= options.roll_bytes || !fits) && next != self.active.base
     }
 
-    /// Hands the segment's closing run to the sealer and starts the next segment. The writer
-    /// writes the run later (`write_pending`), and never appends a group to the old segment.
+    /// Hands the segment's closing run to the sealer and starts the next segment. The sealer
+    /// writes and flushes the run (ADR 0067); inline, the writer writes it later
+    /// (`write_pending`). Nobody appends a group to the old segment again.
     fn roll(&mut self, view: &View, next: u64) -> io::Result<()> {
         #[cfg(test)]
         let started = crate::pipeline::clock();
@@ -125,16 +158,6 @@ impl Writer {
         let tails = std::mem::take(&mut self.active.tails);
         let (log_id, hash, epoch) = (view.log_id.clone(), self.keys.hash(), self.epoch);
         let job = move || build(log_id, hash, epoch, (base, next, filter_at), tails, keys);
-        let sealing = if self.background_seal {
-            Sealing::Running(
-                thread::Builder::new()
-                    .name("segment-log-sealer".into())
-                    .spawn(job)?,
-            )
-        } else {
-            Sealing::Built(job())
-        };
-        self.pending = Some(Pending { base, sealing });
         let header = codec::Header {
             version: self.limits.format_version,
             log_id: *view.log_id.bytes(),
@@ -142,6 +165,25 @@ impl Writer {
             epoch: self.epoch,
         };
         create_segment(view.storage.as_ref(), &view.dir, Purpose::Roll, &header)?;
+        let sealing = if self.background_seal {
+            // The next segment is durable first, so the old one is never sealed with no successor.
+            // From here only the sealer writes the old segment, and only the writer the new one.
+            let (storage, path) = (view.storage.clone(), segment_path(&view.dir, base));
+            Sealing::Running(
+                thread::Builder::new()
+                    .name("segment-log-sealer".into())
+                    .spawn(move || {
+                        let mut built = job();
+                        if let Some(run) = built.run.take() {
+                            write_run(storage.as_ref(), &path, run)?;
+                        }
+                        Ok(built)
+                    })?,
+            )
+        } else {
+            Sealing::Built(job())
+        };
+        self.pending = Some(Pending { base, sealing });
         let spans = view.published.lock().unwrap().roll(self.epoch, self.epoch);
         view.tables.lock().unwrap().keep(base, spans);
         self.active = Active::new(next);
@@ -150,8 +192,9 @@ impl Writer {
         Ok(())
     }
 
-    /// Writes and flushes the pending closing run once the sealer has built it, or, with `wait`,
-    /// after waiting for it. A sealer that panicked counts as a failed roll.
+    /// Ends the pending roll once the sealer has made its closing run durable, or, with `wait`,
+    /// after waiting for it; an inline sealer's run the writer writes here. A sealer that
+    /// panicked or failed to write counts as a failed roll, and nothing is retried (ADR 0004).
     fn write_pending(&mut self, view: &View, wait: bool) -> io::Result<()> {
         let Some(Pending { base, sealing }) = self.pending.take() else {
             return Ok(());
@@ -162,22 +205,14 @@ impl Writer {
             Sealing::Built(built) => built,
             Sealing::Running(sealer) if wait || sealer.is_finished() => sealer
                 .join()
-                .map_err(|_| io::Error::other("the sealer panicked"))?,
+                .map_err(|_| io::Error::other("the sealer panicked"))??,
             sealing @ Sealing::Running(_) => {
                 self.pending = Some(Pending { base, sealing });
                 return Ok(());
             }
         };
-        let storage = view.storage.as_ref();
-        let path = segment_path(&view.dir, base);
-        // The key frames are durable before the footer and the locator exist, so that a valid
-        // locator and footer prove the whole run to an open that reads only them (step 5).
-        let [filter, index, footer, locator] = built.run;
-        for frames in [[filter, index], [footer, locator]] {
-            for frame in frames {
-                call(storage, &path, Purpose::Roll, Op::Append(frame))?;
-            }
-            call(storage, &path, Purpose::Roll, Op::SyncData)?;
+        if let Some(run) = built.run {
+            write_run(view.storage.as_ref(), &segment_path(&view.dir, base), run)?;
         }
         #[cfg(test)]
         let written = crate::pipeline::clock();
