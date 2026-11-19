@@ -1,7 +1,7 @@
 ---
 id: "0065"
 title: "The repair tool truncates only the newest segment, and seals a log whose repair drops acknowledged records"
-status: proposed
+status: accepted
 date: 2026-11-17
 deciders: [Altug Sahin]
 supersedes: null
@@ -108,6 +108,7 @@ We chose this because class A is the only `Corrupt` with a crash explanation, an
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-19 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - api.md gains the [Operator repair](../architecture/api.md#operator-repair) section, and its note "Corrupt is for a human to resolve" points to it.
 - testing.md gains the `REPAIR` coverage group, `Planned`. Implementation waits for format version 3 and builds against it.
 - ADR 0058's command line gains the `repair` subcommand. The serve flags and exit statuses do not change.
