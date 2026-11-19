@@ -374,3 +374,68 @@ func run(c *Client, s step) error {
 	}
 	return nil
 }
+
+// TestConformancePool runs the cases through a pool of one connection (issue 134), so a
+// pipeline's requests keep their order. It skips the cases that send their own Hello or raw bytes,
+// or that wait for the server to close the connection: those test the server's session, not the
+// pool.
+func TestConformancePool(t *testing.T) {
+	files, err := filepath.Glob("../../conformance/*.json")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no conformance cases found: %v", err)
+	}
+	ran := 0
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var c caseFile
+		if err := json.Unmarshal(data, &c); err != nil {
+			t.Fatalf("%s: %v", file, err)
+		}
+		if c.NoHello || slices.ContainsFunc(c.Steps, sessionStep) {
+			continue
+		}
+		ran++
+		t.Run(filepath.Base(file), func(t *testing.T) {
+			d := newLogDir(t)
+			d.start(t, "", c.ServerArgs...)
+			p, err := DialPool(d.network, d.address, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.Close()
+			for i, s := range c.Steps {
+				steps := s.Pipeline
+				if steps == nil {
+					steps = []step{s}
+				}
+				var replies []<-chan poolResult
+				for _, s := range steps {
+					r, err := s.request()
+					if err != nil {
+						t.Fatal(err)
+					}
+					replies = append(replies, p.send(r))
+				}
+				for j, reply := range replies {
+					res := <-reply
+					if res.err == nil {
+						res.err = check(steps[j].Expect, res.answer)
+					}
+					if res.err != nil {
+						t.Fatalf("%s (%s) step %d answer %d: %v", c.Name, c.Case, i, j, res.err)
+					}
+				}
+			}
+		})
+	}
+	if ran == 0 {
+		t.Fatal("no conformance case runs through the pool")
+	}
+}
+
+func sessionStep(s step) bool {
+	return s.Raw != "" || s.Closed || s.Hello != nil || slices.ContainsFunc(s.Pipeline, sessionStep)
+}

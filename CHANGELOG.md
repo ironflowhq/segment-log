@@ -2,6 +2,10 @@
 
 Each release lists its API breaks with a migration note, its format version bumps and the protocol versions it speaks ([ADR 0064](docs/decisions/0064-the-0-1-compatibility-promise.md)). The crates and the Go client (`clients/go/vX.Y.Z`) share one version.
 
+## Unreleased
+
+- **Go client:** `Pool` (`DialPool(network, address, n)`) shares *n* pipelined connections among goroutines. Requests queued on a connection while a write is in progress go out together in the next write, and each answer returns to its caller in request order. When a connection fails, each request in flight on it gets `ErrUnknown`, and later requests on it get `ErrPoolClosed` ([issue 134](https://github.com/ironflowx/segment-log/issues/134), [ADR 0063](docs/decisions/0063-the-guest-benchmark-shares-pipelined-connections.md)). Additive; no wire change.
+
 ## 0.1.0 - 2026-11-18
 
 The first production release. From this release, every later build reads every format version from 3 and speaks every protocol version from 2; no 0.x release removes either. API breaks go only in minor releases.
