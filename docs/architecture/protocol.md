@@ -17,7 +17,7 @@ This file is the only source for the protocol's message layout, widths, status c
 
 1. The client connects and sends `Hello`. Any other first message is malformed.
 2. The server answers `Hello` with the highest version in both its range and the client's. If the ranges share no version, the answer carries `UnsupportedVersion` with the server's range, and the server closes the connection.
-3. The client may then send any number of requests without waiting for answers (pipelining). The server answers each connection's requests in the order it read them, one answer for each request.
+3. The client may then send any number of requests without waiting for answers (pipelining). The server answers each connection's requests in the order it read them, one answer for each request. It reads at most 64 requests ahead of its answers on a connection; past that it stops reading until it writes an answer.
 4. A malformed message gets a `Malformed` answer, and the server closes the connection. Requests read before it are still answered first, in order.
 
 A connection that closes before a request's answer arrives leaves that request's outcome unknown to the client. It is never a rejection ([`TRANSPORT-UNKNOWN`](testing.md#m6-transport-order-and-conformance)). The client resolves an unknown append by a fully keyed retry ([api.md](api.md#retry-after-an-unknown-outcome)).

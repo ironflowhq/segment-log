@@ -2,6 +2,7 @@ package segmentlog
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 )
@@ -10,9 +11,12 @@ import (
 // effect. Unlike ErrUnknown, it is never a possible append.
 var ErrPoolClosed = errors.New("pool closed; request not sent")
 
-// maxInFlight bounds the requests in flight on one pool connection. The server reads no more than
-// 64 requests ahead of its answers (PIPELINE_DEPTH, ADR 0063), so more in flight would only add
-// bytes buffered in the client.
+// ErrNotSent means the request was never written: its connection failed first, or a new
+// connection could not be dialed. Like ErrPoolClosed, it is never a possible append.
+var ErrNotSent = errors.New("pool connection failed; request not sent")
+
+// maxInFlight bounds the requests in flight on one pool connection to the server's read-ahead
+// (protocol.md, step 3), so more in flight would only add bytes buffered in the client.
 const maxInFlight = 64
 
 // Pool is a set of pipelined connections that many goroutines share (ADR 0063). Each request goes
@@ -21,10 +25,13 @@ const maxInFlight = 64
 // (protocol.md, step 3). A connection holds at most 64 requests in flight; a request beyond that
 // waits for an answer to free a place.
 //
-// When a connection fails, every request in flight on it gets ErrUnknown; the pool never retries
-// one, because only a fully keyed retry is safe (api.md, retry after an unknown outcome). The next
-// request for that connection dials a new one first. If that dial fails, the request gets its
-// error and was not sent.
+// When a connection fails, every request written to it and not yet answered gets ErrUnknown; the
+// pool never retries one, because only a fully keyed retry is safe (api.md, retry after an
+// unknown outcome). Requests queued but not yet written get ErrNotSent. The next request for that
+// connection dials a new one first; if that dial fails, the request gets ErrNotSent too.
+//
+// The connections are shared, so the pool refuses Hello, which only opens a session. A request
+// that the server finds malformed, or a Seal, ends the connection for every caller on it.
 type Pool struct {
 	network, address string
 	slots            []*poolSlot
@@ -53,10 +60,11 @@ type poolConn struct {
 
 	mu sync.Mutex
 	// out holds requests not yet written; waiting holds a reply channel for every request queued
-	// or in flight, in request order. Both change under mu, so their orders agree. fail closes
-	// wake under mu.
+	// or in flight, in request order, and its last unsent entries are the requests in out. All
+	// three change under mu, so their orders agree. fail closes wake under mu.
 	out     []byte
 	waiting []chan poolResult
+	unsent  int
 	failed  bool
 }
 
@@ -104,36 +112,63 @@ func (p *Pool) Do(r Request) (Answer, error) {
 }
 
 func (p *Pool) send(r Request) <-chan poolResult {
+	if len(r) > 4 && r[4] == KindHello {
+		return failed(errors.New("a pool request cannot be Hello: a second Hello ends the connection"))
+	}
 	s := p.slots[(p.next.Add(1)-1)%uint32(len(p.slots))]
 	s.tokens <- struct{}{}
-	for {
+	// A connection can fail between conn and send; then nothing was queued, so dial once more.
+	for range 2 {
 		pc, err := p.conn(s)
 		if err != nil {
 			<-s.tokens
-			reply := make(chan poolResult, 1)
-			reply <- poolResult{err: err}
-			return reply
+			return failed(err)
 		}
-		// A connection can fail between conn and send; then nothing was queued, so dial again.
 		if reply, ok := pc.send(r); ok {
 			return reply
 		}
 	}
+	<-s.tokens
+	return failed(ErrNotSent)
 }
 
-// conn returns the slot's connection, dialing a new one if it has failed.
+func failed(err error) <-chan poolResult {
+	reply := make(chan poolResult, 1)
+	reply <- poolResult{err: err}
+	return reply
+}
+
+// conn returns the slot's connection, dialing a new one if it has failed. The dial runs outside
+// s.mu, so a server that never answers Hello cannot block Close or the slot's other callers.
 func (p *Pool) conn(s *poolSlot) (*poolConn, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if p.closed.Load() {
+		s.mu.Unlock()
 		return nil, ErrPoolClosed
 	}
 	if !s.conn.isFailed() {
+		defer s.mu.Unlock()
 		return s.conn, nil
 	}
+	s.mu.Unlock()
 	c, err := Dial(p.network, p.address)
+	if err != nil && p.closed.Load() {
+		return nil, ErrPoolClosed
+	}
 	if err != nil {
-		return nil, err
+		// %v, not %w: a Hello cut short reads as ErrUnknown, but this request was never sent.
+		return nil, fmt.Errorf("%w: redial: %v", ErrNotSent, err)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if p.closed.Load() {
+		c.Close()
+		return nil, ErrPoolClosed
+	}
+	if !s.conn.isFailed() {
+		// Another caller redialed first.
+		c.Close()
+		return s.conn, nil
 	}
 	s.conn = start(c, s.tokens)
 	return s.conn, nil
@@ -145,7 +180,7 @@ func (p *Pool) Close() error {
 	var first error
 	for _, s := range p.slots {
 		s.mu.Lock()
-		err := s.conn.fail()
+		err := s.conn.fail(ErrPoolClosed)
 		s.mu.Unlock()
 		if err != nil && first == nil {
 			first = err
@@ -170,6 +205,7 @@ func (pc *poolConn) send(r Request) (<-chan poolResult, bool) {
 	}
 	pc.out = append(pc.out, r...)
 	pc.waiting = append(pc.waiting, reply)
+	pc.unsent++
 	// Under mu, so that fail cannot close wake first.
 	select {
 	case pc.wake <- struct{}{}:
@@ -187,12 +223,13 @@ func (pc *poolConn) writeLoop() {
 			return
 		}
 		buf, pc.out = pc.out, buf[:0]
+		pc.unsent = 0
 		pc.mu.Unlock()
 		if len(buf) == 0 {
 			continue
 		}
 		if err := pc.c.Send(buf); err != nil {
-			pc.fail()
+			pc.fail(ErrNotSent)
 			return
 		}
 	}
@@ -202,7 +239,7 @@ func (pc *poolConn) readLoop() {
 	for {
 		a, err := pc.c.Receive()
 		if err != nil {
-			pc.fail()
+			pc.fail(ErrNotSent)
 			return
 		}
 		pc.mu.Lock()
@@ -210,7 +247,7 @@ func (pc *poolConn) readLoop() {
 			// An answer nobody asked for: the stream is out of step, so no later answer can be
 			// matched to its request.
 			pc.mu.Unlock()
-			pc.fail()
+			pc.fail(ErrNotSent)
 			return
 		}
 		reply := pc.waiting[0]
@@ -226,22 +263,27 @@ func (pc *poolConn) answer(reply chan poolResult, res poolResult) {
 	<-pc.tokens
 }
 
-// fail closes the connection once and resolves every request still waiting with ErrUnknown: some
-// of it may have reached the server (TRANSPORT-UNKNOWN).
-func (pc *poolConn) fail() error {
+// fail closes the connection once. Every request handed to the writer and not answered gets
+// ErrUnknown, because some of it may have reached the server (TRANSPORT-UNKNOWN); every request
+// still in out gets notSent.
+func (pc *poolConn) fail(notSent error) error {
 	pc.mu.Lock()
 	if pc.failed {
 		pc.mu.Unlock()
 		return nil
 	}
 	pc.failed = true
-	waiting := pc.waiting
-	pc.waiting, pc.out = nil, nil
+	waiting, unsent := pc.waiting, pc.unsent
+	pc.waiting, pc.out, pc.unsent = nil, nil, 0
 	close(pc.wake)
 	pc.mu.Unlock()
 	err := pc.c.Close()
-	for _, reply := range waiting {
-		pc.answer(reply, poolResult{err: ErrUnknown})
+	for i, reply := range waiting {
+		err := ErrUnknown
+		if i >= len(waiting)-unsent {
+			err = notSent
+		}
+		pc.answer(reply, poolResult{err: err})
 	}
 	return err
 }

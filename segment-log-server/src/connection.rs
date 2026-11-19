@@ -12,7 +12,7 @@ use std::thread;
 
 /// Requests read but not yet answered on one connection. The reader stops reading when the
 /// writer falls this far behind, so a client that never reads its answers stalls itself, and the
-/// server's memory for it stays bounded.
+/// server's memory for it stays bounded. protocol.md (step 3) states the value; change both together.
 const PIPELINE_DEPTH: usize = 64;
 
 enum Job {
