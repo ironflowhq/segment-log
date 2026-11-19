@@ -230,11 +230,15 @@ fn files(path: &Path) -> Files {
     };
     for (index, name) in names.iter().enumerate() {
         let length = fs::metadata(name).unwrap().len();
-        // The second-newest segment may still wait for its closing run (ADR 0061), so its groups
-        // then end at its length.
+        // The second-newest segment may still wait for its closing run (ADR 0061), or hold part
+        // of one that the sealer is writing (ADR 0067), so its groups end at its first
+        // closing frame.
         let groups_end = match names.len() - index {
             1 => length,
-            2 => closing_run_start(name, length).unwrap_or(length),
+            2 => closing_run_start(name, length).unwrap_or_else(|| {
+                let bytes = fs::read(name).unwrap();
+                super::support::raw::split_run(&bytes).0.len() as u64
+            }),
             _ => closing_run_start(name, length).expect("a sealed segment ends in its closing run"),
         };
         files.bytes += length;

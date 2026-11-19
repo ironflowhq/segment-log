@@ -8,6 +8,7 @@ mod log_filter;
 mod memory;
 mod pending;
 mod poison;
+mod sealer_io;
 
 fn rolling() -> Options {
     Options {
