@@ -5,7 +5,7 @@ use super::support::{
     raw,
 };
 use crate::storage::{
-    Call, Op, Purpose,
+    Call, Op, Purpose, Storage,
     sim::{Event, Fault},
 };
 use crate::*;
@@ -379,7 +379,7 @@ fn a_failed_walk_of_a_sealed_segment_is_an_error_that_the_next_read_retries() {
 /// the end of the walk's first read
 /// When the log reopens and reads every record
 /// Then every record comes back as it was appended
-/// And the walk of that segment takes a few storage calls, not one for each frame
+/// And the walk and the read of that segment take a few storage calls, not one for each frame
 ///
 /// Cases: READ-BOUNDED, HISTORY, ORACLE-12
 #[test]
@@ -394,7 +394,7 @@ fn a_sealed_segment_larger_than_one_walk_read_is_read_in_full() {
         let log = open_with(&sim, options());
         let mut expected = vec![];
         for round in 0..120u64 {
-            let payload = vec![round as u8; FRAME - 49];
+            let payload = vec![round as u8; FRAME - 57];
             let submit = Submit {
                 records: vec![NewRecord {
                     stream: b"s".to_vec(),
@@ -427,78 +427,218 @@ fn a_sealed_segment_larger_than_one_walk_read_is_read_in_full() {
         };
         let cold = lookups();
         assert_records(&log.read(0, usize::MAX).unwrap(), &expected);
-        let walk = lookups() - cold - frames;
+        // The walk reads each 64 KiB once. Then the read takes each kept frame, its window, and
+        // at most one frame that runs past the window.
+        let reads = lookups() - cold;
+        let windows = groups.div_ceil(64 * 1024) as usize;
         assert!(
-            walk <= groups.div_ceil(64 * 1024) as usize,
-            "{walk} walk reads"
+            reads <= 4 * windows && reads < frames,
+            "{reads} reads of {frames} frames"
         );
     });
 }
 
-/// Given a log with more sealed segments than the frame tables a log keeps, rolled in this process
-/// or found by a reopen
-/// When reads need each sealed segment in turn
-/// Then every record comes back as it was appended
-/// And a later read of the segment whose table was used least recently walks that segment again
-/// And a read of a segment whose table is still kept reads only the frame it needs
+/// The size of every group frame in a windowed segment except its large one.
+const SMALL: usize = 1040;
+/// A frame that starts in the first 64 KiB of its segment and ends past the first window.
+const LARGE: usize = 12_000;
+/// The index, within its segment, of the large frame.
+const LARGE_AT: u64 = 57;
+const WINDOWED_ROLL: u64 = 140_000;
+const WINDOW: u64 = 64 * 1024;
+
+fn windowed_options() -> Options {
+    Options {
+        roll_bytes: WINDOWED_ROLL,
+        ..options()
+    }
+}
+
+/// Opens the log with a frame table budget of `budget` bytes, and writes `sealed` segments, and
+/// one record into the next, of one record per group. Each sealed segment holds `LARGE_AT`
+/// frames of `SMALL` bytes, one of `LARGE` bytes, then frames of `SMALL` bytes up to the roll.
+fn windowed(sim: &Sim, sealed: usize, budget: Option<usize>) -> (SegmentLog, Vec<Record>) {
+    let log = open_with(sim, windowed_options());
+    if let Some(budget) = budget {
+        log.set_frame_table_budget(budget);
+    }
+    let mut expected = vec![];
+    let (mut segments, mut index, mut length) = (0, 0, 64);
+    let mut offset = 0u64;
+    while segments < sealed || index == 0 {
+        let size = if index == LARGE_AT { LARGE } else { SMALL };
+        let payload = vec![offset as u8; size - 57];
+        let submit = Submit {
+            records: vec![NewRecord {
+                stream: b"s".to_vec(),
+                key: None,
+                payload: payload.clone(),
+                expected: offset
+                    .checked_sub(1)
+                    .map_or(ExpectedRevision::Empty, ExpectedRevision::At),
+            }],
+        };
+        log.append(submit).unwrap().wait().unwrap();
+        expected.push(stored(b"s", None, &payload, offset, offset));
+        offset += 1;
+        (index, length) = (index + 1, length + size as u64);
+        if length >= WINDOWED_ROLL {
+            (segments, index, length) = (segments + 1, 0, 64);
+        }
+    }
+    let segments = raw::segments(sim);
+    assert_eq!(segments.len(), sealed + 1);
+    for (_, bytes) in &segments[..sealed] {
+        let groups = closing(bytes).filter_at as usize;
+        let frames = raw::frames(&bytes[..groups]);
+        let large: u64 = 64 + LARGE_AT * SMALL as u64;
+        assert_eq!(frames[LARGE_AT as usize].len(), LARGE);
+        assert!(large < WINDOW && large + LARGE as u64 > 64 + WINDOW + 32);
+        assert!(frames.len() > 2 * LARGE_AT as usize);
+    }
+    (log, expected)
+}
+
+/// The base offsets of the log's segments, oldest first.
+fn bases(sim: &Sim) -> Vec<u64> {
+    raw::segments(sim)
+        .into_iter()
+        .map(|(base, _)| base)
+        .collect()
+}
+
+/// Reads the record at `offset` alone, checks it, and returns the lookup reads that the read made
+/// of the segment that starts at `base`.
+fn lookups_of(
+    sim: &Sim,
+    read: impl Fn(u64, usize) -> Result<Vec<Record>, ReadError>,
+    expected: &[Record],
+    base: u64,
+    offset: u64,
+) -> usize {
+    let count = || {
+        sim.count(
+            Path::new(&raw::segment(base)),
+            Purpose::Lookup,
+            &Op::Read(0, 0),
+        )
+    };
+    let before = count();
+    let at = offset as usize;
+    assert_records(&read(offset, 1).unwrap(), &expected[at..=at]);
+    count() - before
+}
+
+/// What a sealed windowed segment's table counts against the budget: three kept frames, the first
+/// group frame at or after each 64 KiB boundary.
+fn windowed_table() -> usize {
+    crate::engine::frame_table_charge(3)
+}
+
+/// Given a log whose sealed segments each hold many group frames, one of them a frame that runs
+/// past its window, and a frame table budget that holds two tables
+/// When reads take one record from a kept frame, from a frame inside its window, and from the
+/// frame that runs past it, in segments whose tables a roll left or a read built
+/// Then those reads make one lookup read, one and two
+/// And a read of a segment whose table the budget dropped walks that segment again
+/// And with a budget smaller than one table, the table just used is still kept
+/// And every record comes back as it was appended
 ///
 /// Cases: READ-BOUNDED, ORACLE-12
 #[test]
 fn reads_keep_a_bounded_number_of_frame_tables() {
     bounded(|| {
         let sim = Sim::new(406);
-        let options = || Options {
-            roll_bytes: 65,
-            ..options()
+        let (log, expected) = windowed(&sim, 4, Some(2 * windowed_table()));
+        let bases = bases(&sim);
+        let reads = |log: &SegmentLog, segment: usize, at: u64| {
+            let base = bases[segment];
+            lookups_of(&sim, |o, m| log.read(o, m), &expected, base, base + at)
         };
-        let sealed = crate::engine::FRAME_TABLES as u64 + 3;
-        let log = open_with(&sim, options());
-        let mut expected = vec![];
-        for offset in 0..=sealed {
-            let payload = offset.to_le_bytes();
-            let submit = Submit {
-                records: vec![NewRecord {
-                    stream: b"s".to_vec(),
-                    key: None,
-                    payload: payload.to_vec(),
-                    expected: offset
-                        .checked_sub(1)
-                        .map_or(ExpectedRevision::Empty, ExpectedRevision::At),
-                }],
-            };
-            log.append(submit).unwrap().wait().unwrap();
-            expected.push(stored(b"s", None, &payload, offset, offset));
-        }
-        assert_eq!(raw::segments(&sim).len() as u64, sealed + 1);
-        let reads = |log: &SegmentLog, base: u64| {
-            let lookups = || {
-                sim.count(
-                    Path::new(&raw::segment(base)),
-                    Purpose::Lookup,
-                    &Op::Read(0, 0),
-                )
-            };
-            let before = lookups();
-            let at = base as usize;
-            assert_records(&log.read(base, 1).unwrap(), &expected[at..=at]);
-            lookups() - before
+        let hits = |log: &SegmentLog, segment: usize| {
+            assert_eq!(reads(log, segment, 0), 1, "a kept frame");
+            assert_eq!(reads(log, segment, 10), 1, "a frame inside its window");
+            assert_eq!(reads(log, segment, LARGE_AT), 2, "a frame past its window");
+            assert_eq!(reads(log, segment, LARGE_AT + 1), 1, "the next kept frame");
         };
-        let check = |log: &SegmentLog| {
-            assert_records(&log.read(0, usize::MAX).unwrap(), &expected);
-            assert!(
-                reads(log, 0) > 1,
-                "the least recently used table is walked again"
-            );
-            assert_eq!(reads(log, sealed - 1), 1, "a kept table is not walked");
-        };
+        hits(&log, 3);
+        assert!(reads(&log, 0, 0) > 1, "the first rolled table was dropped");
+        assert_eq!(reads(&log, 0, 0), 1, "the walk keeps its table");
         assert!(
-            reads(&log, 0) > 1,
-            "the first rolled segment's table is walked again"
+            reads(&log, 2, 0) > 1,
+            "the least recently used table was dropped"
         );
-        assert_eq!(reads(&log, sealed - 1), 1, "the last roll keeps its table");
-        check(&log);
+        assert_records(&log.read(0, usize::MAX).unwrap(), &expected);
         drop(log);
-        check(&open_with(&sim, options()));
+
+        let log = open_with(&sim, windowed_options());
+        log.set_frame_table_budget(2 * windowed_table());
+        assert!(reads(&log, 1, 10) > 1, "the first read walks the segment");
+        hits(&log, 1);
+        assert!(reads(&log, 2, 0) > 1);
+        assert!(reads(&log, 0, 0) > 1);
+        assert!(reads(&log, 1, 0) > 1, "two later tables dropped the first");
+
+        log.set_frame_table_budget(1);
+        assert!(reads(&log, 2, 10) > 1);
+        assert_eq!(reads(&log, 2, 10), 1, "the table just used is kept");
+        assert!(reads(&log, 0, 0) > 1);
+        assert!(
+            reads(&log, 2, 10) > 1,
+            "a table over the budget goes when another is used"
+        );
+        assert_records(&log.read(0, usize::MAX).unwrap(), &expected);
+    });
+}
+
+/// Given a reopened log whose sealed segment holds many group frames, and whose table a read has
+/// built by walking it
+/// When the body header of a frame inside the segment's first window is damaged afterwards
+/// Then a read of any frame in that window fails with `ReadError::Corrupt` naming the damaged
+/// frame, after one lookup read and no walk of the segment
+/// And reads of the kept frames and of the segment's other windows still return their records
+///
+/// Cases: READ-BOUNDED, ORACLE-12
+#[test]
+fn damage_after_a_walk_fails_reads_of_its_window_and_keeps_the_table() {
+    bounded(|| {
+        let sim = Sim::new(407);
+        let (log, expected) = windowed(&sim, 1, None);
+        drop(log);
+        let log = open_with(&sim, windowed_options());
+        let path = raw::segment(0);
+        let count = || sim.count(Path::new(&path), Purpose::Lookup, &Op::Read(0, 0));
+        assert_records(&log.read(10, 1).unwrap(), &expected[10..=10]);
+
+        let damaged: u64 = 64 + 30 * SMALL as u64;
+        let wrong = 31u64.to_le_bytes().to_vec();
+        sim.call(Call::new(
+            &path,
+            Purpose::Open,
+            Op::Write(damaged + 20, wrong),
+        ))
+        .unwrap();
+        for offset in [1, 10, 29, 30, 40, LARGE_AT] {
+            let before = count();
+            let result = log.read(offset, 1);
+            assert!(
+                matches!(
+                    result,
+                    Err(ReadError::Corrupt { segment: 0, position }) if position == damaged
+                ),
+                "offset {offset}: {:?}",
+                result.map(|records| records.len())
+            );
+            assert_eq!(
+                count() - before,
+                1,
+                "offset {offset}: one window read, no walk"
+            );
+        }
+        let read = |o, m| log.read(o, m);
+        for offset in [0, LARGE_AT + 1, LARGE_AT + 10, expected.len() as u64 - 2] {
+            assert_eq!(lookups_of(&sim, read, &expected, 0, offset), 1);
+        }
     });
 }
 

@@ -520,3 +520,134 @@ fn oracle_rejects_partial_group_reader_states() {
         );
     }
 }
+
+type Read<'a> = dyn Fn(u64, usize) -> Result<Vec<Record>, ReadError> + 'a;
+
+fn same(actual: &[Record], expected: &[Record]) -> bool {
+    actual.len() == expected.len()
+        && actual.iter().zip(expected).all(|(a, e)| {
+            (a.offset, a.revision, &a.stream, &a.key, &a.payload)
+                == (e.offset, e.revision, &e.stream, &e.key, &e.payload)
+        })
+}
+
+/// Writes a seeded history of groups that mix one small record, many records, and one record past
+/// 64 KiB, over many sealed segments, then seals the log.
+fn mixed_history(sim: &Sim, rng: &mut Rng, budget: usize) -> Vec<Record> {
+    let options = Options {
+        roll_bytes: 150_000,
+        ..options()
+    };
+    let log = open(sim, &options);
+    log.set_frame_table_budget(budget);
+    let mut expected: Vec<Record> = vec![];
+    for _ in 0..240 {
+        let (count, size) = match rng.pick(10) {
+            0..6 => (1, rng.pick(2_000)),
+            6..9 => (2 + rng.pick(40), rng.pick(600)),
+            _ => (1, 66_000 + rng.pick(40_000)),
+        };
+        let first = expected.len() as u64;
+        let records: Vec<NewRecord> = (first..first + count as u64)
+            .map(|offset| NewRecord {
+                stream: b"s".to_vec(),
+                key: (offset % 3 == 0).then(|| offset.to_le_bytes().to_vec()),
+                payload: vec![offset as u8; size],
+                expected: offset
+                    .checked_sub(1)
+                    .map_or(ExpectedRevision::Empty, ExpectedRevision::At),
+            })
+            .collect();
+        for (offset, r) in (first..).zip(&records) {
+            expected.push(Record {
+                offset,
+                revision: offset,
+                stream: r.stream.clone(),
+                key: r.key.clone(),
+                payload: r.payload.clone(),
+            });
+        }
+        log.append(Submit { records }).unwrap().wait().unwrap();
+    }
+    log.seal().unwrap();
+    expected
+}
+
+/// Given seeded logs of many sealed segments whose groups mix one small record, many records and
+/// frames past 64 KiB, and a frame table budget of two tables
+/// When the sealed log, and then a `LogReader` on it, read from random offsets with random maxima
+/// Then every read returns the oracle's records
+/// And a failing seed prints its seed and saves its storage trace
+///
+/// Cases: READ-BOUNDED, ORACLE-12
+#[test]
+fn random_reads_over_many_sealed_segments_match_the_oracle() {
+    let first = setting("SEGMENT_LOG_READ_SEED", 1770);
+    let count = setting("SEGMENT_LOG_READ_SEEDS", 2);
+    for seed in first..first.checked_add(count).unwrap() {
+        let sim = Sim::new(seed);
+        let path = std::env::var_os("SEGMENT_LOG_TRACE_ARTIFACT_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| std::env::temp_dir().join("segment-log-traces"))
+            .join(format!("{}-reads-{seed}.trace", std::process::id()));
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let label = format!(
+            "cases=READ-BOUNDED,ORACLE-12 seed={seed} trace={}",
+            path.display()
+        );
+        // A hang aborts the process, so the watchdog saves the trace before it does.
+        let (watched, watched_path) = (sim.clone(), path.clone());
+        let _watchdog = watchdog_with_failure(label.clone(), move || {
+            let (trace_seed, events) = watched.trace();
+            let _ = trace::save(&watched_path, trace_seed, &events);
+        });
+        let checked =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| random_reads(&sim, seed)));
+        // Every failure, an unwrap in the history included, saves the trace that rebuilds it.
+        if let Err(cause) = checked {
+            let cause = cause
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| cause.downcast_ref::<&str>().copied())
+                .unwrap_or("a panic")
+                .to_owned();
+            eprintln!("{label}: {cause}");
+            let (trace_seed, events) = sim.trace();
+            let saved = trace::save(&path, trace_seed, &events);
+            panic!("{label}: {cause} (trace saved: {saved:?})");
+        }
+    }
+}
+
+fn random_reads(sim: &Sim, seed: u64) {
+    let mut rng = Rng(seed);
+    let budget = 2 * crate::engine::frame_table_charge(3);
+    let expected = mixed_history(sim, &mut rng, budget);
+    let reopened =
+        SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone())).unwrap();
+    reopened.set_frame_table_budget(budget);
+    let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone())).unwrap();
+    reader.set_frame_table_budget(budget);
+    let sealed = super::support::raw::segments(sim).len();
+    assert!(sealed >= 10, "{sealed} segments");
+    let views: [(&str, &Read); 2] = [
+        ("SegmentLog", &|from, max| reopened.read(from, max)),
+        ("LogReader", &|from, max| reader.read(from, max)),
+    ];
+    for (name, read) in views {
+        for _ in 0..300 {
+            let from = rng.pick(expected.len() + 1) as u64;
+            let wide = rng.pick(4) == 0;
+            let max = 1 + rng.pick(if wide { 2_000 } else { 64 });
+            let want = &expected[(from as usize).min(expected.len())..]
+                [..max.min(expected.len() - from as usize)];
+            let got = read(from, max);
+            assert!(
+                matches!(&got, Ok(records) if same(records, want)),
+                "view={name} read({from}, {max}) returned {:?} records, expected {}",
+                got.map(|r| r.len()),
+                want.len()
+            );
+        }
+    }
+}

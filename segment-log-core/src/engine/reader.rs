@@ -46,6 +46,12 @@ impl LogReader {
         })
     }
 
+    /// Drops every kept frame table and bounds later ones by `bytes` instead of the budget.
+    #[cfg(test)]
+    pub(crate) fn set_frame_table_budget(&self, bytes: usize) {
+        *self.view.tables.lock().unwrap() = view::Tables::with_budget(bytes);
+    }
+
     pub fn watermark(&self) -> LogOffset {
         self.view.watermark()
     }

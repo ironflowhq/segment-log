@@ -92,6 +92,7 @@ We chose this because it brings random reads in line with scans without a format
 
 ## Consequences
 
+- [ADR 0070](0070-read-checks-are-judged-on-logs-the-page-cache-holds.md) amends done-when check 1: a case whose log the page cache does not hold, and that fails check 1, is reported and judged by a log of the same shape that the cache holds.
 - Accepted by the owner on 2026-11-20 on the design, before the evidence runs ([PR #184](https://github.com/ironflowx/segment-log/pull/184)). The qualified-host rerun confirms it rather than gating it.
 - api.md replaces "at most 16 frame tables" with the byte budget and the sparse entry, and overview.md open step 5 adds the window check and its failure, in the change that implements them.
 - With groups of 64 KiB or more, reads cost what they cost today, and random reads past 16 segments stop walking.
