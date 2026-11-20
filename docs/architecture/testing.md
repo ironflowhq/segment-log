@@ -249,7 +249,7 @@ Cases apply from M1 unless they name another milestone. Mixed bullets identify t
 - `REPAIR-CLASS-F-SEALS`. With `--drop-acknowledged`, the log ends sealed: `LogReader` reads every record before the cut and none after, and `append` returns `Sealed`.
 - `REPAIR-CLASS-F-NO-ROOM`. A seal run that would reach the start of the last proof frame refuses, and changes nothing.
 - `REPAIR-CLASS-F-SECOND-NEWEST`. Class F damage in the second-newest segment is reported, and `truncate` refuses it.
-- `REPAIR-CLASS-F-CRASH`. A crash at every storage call of the class F `--apply`, under `Kill`, `PowerLoss` and `PowerLossTorn`. Afterwards open returns `Corrupt`, or finds the sealed repaired log. It never opens a writable log. A rerun that finds its own whole seal run at the cut only truncates, and converges to the same log.
+- `REPAIR-CLASS-F-CRASH`. A crash at every storage call of the class F `--apply`, under `Kill`, `PowerLoss` and `PowerLossTorn`. Afterwards open returns `Corrupt`, or finds the sealed repaired log. It never opens a writable log. A rerun of `--apply` after `Corrupt` converges to the same repaired log.
 - `REPAIR-CLASS-F-CLI`. In `segment-log-server` on a real temporary directory: `truncate --apply` without `--drop-acknowledged` exits 3, the JSON names class `F`, and with the flag it exits 0.
 - `REPAIR-CLI`. In `segment-log-server`, on a real temporary directory: every exit code of [api.md](api.md#operator-repair), the `--json` schema, a dry run that writes nothing, and the serve command line unchanged without a subcommand.
 

@@ -1,6 +1,32 @@
 use super::support::{bounded, fixtures::*, raw};
-use crate::*;
+use crate::repair::{Apply, Class, Outcome, PlanKind, apply_with, plan_with, verify_with};
+use crate::{storage, *};
 use std::{path::Path, sync::Arc};
+
+fn apply(sim: &Sim, at: (u64, u64), drop_acknowledged: bool, backup: &str) -> Outcome {
+    let apply = Apply {
+        at,
+        drop_acknowledged,
+        backup,
+    };
+    apply_with(sim, Path::new("/log"), raw::VERSION, apply).unwrap()
+}
+
+/// An unsealed newest segment of three groups of one record each, the second with a flipped byte.
+/// Returns the log, the bad group's position, the third group's position and the segment's bytes.
+fn damage_before_a_group() -> (Sim, u64, u64, Vec<u8>) {
+    let first = raw::group(1, 0, &[b"a"]);
+    // Large enough that a seal run fits before the third group.
+    let mut second = raw::group(1, 1, &[&[b'b'; 200]]);
+    second[40] ^= 0xff;
+    let third = raw::group(1, 2, &[&[b'c'; 200]]);
+    let bad = (codec::HEADER_LEN + first.len()) as u64;
+    let proof = bad + second.len() as u64;
+    let bytes = [raw::header(raw::VERSION, 0, 1), first, second, third].concat();
+    let sim = Sim::new(1783);
+    raw::install_segments(&sim, &[(0, bytes.clone())]);
+    (sim, bad, proof, bytes)
+}
 
 fn reopen(sim: &Sim) -> Result<SegmentLog, OpenError> {
     SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone()))
@@ -106,5 +132,213 @@ fn open_refuses_damage_in_a_second_newest_segment_without_its_run() {
             result.err()
         );
         assert_eq!(sim.image(), before);
+    });
+}
+
+/// Given an unsealed newest segment whose second group has a flipped byte and whose third is valid
+/// When `verify` runs
+/// Then it reports class F at the second group, not a torn tail, and changes nothing
+///
+/// Cases: REPAIR-CLASS-F-VERIFY
+#[test]
+fn verify_reports_class_f_for_damage_with_a_group_after_it() {
+    bounded(|| {
+        let (sim, bad, _, _) = damage_before_a_group();
+        let before = sim.image();
+        let report = verify_with(&sim, Path::new("/log"), raw::VERSION).unwrap();
+        let found: Vec<_> = report
+            .findings
+            .iter()
+            .map(|f| (f.class, f.segment, f.position))
+            .collect();
+        assert_eq!(found, [(Class::F, 0, bad)]);
+        assert!(report.damaged());
+        assert_eq!(sim.image(), before);
+    });
+}
+
+/// Given the class F log
+/// When `truncate` runs without `--apply`
+/// Then the plan is lossy, cuts at the bad group, and drops offsets 1 to 3
+/// When `truncate --apply` runs without `--drop-acknowledged`
+/// Then it refuses and changes nothing
+///
+/// Cases: REPAIR-CLASS-F-REFUSED
+#[test]
+fn a_class_f_plan_is_lossy_and_needs_drop_acknowledged() {
+    bounded(|| {
+        let (sim, bad, _, _) = damage_before_a_group();
+        let before = sim.image();
+        let outcome = plan_with(&sim, Path::new("/log"), raw::VERSION).unwrap();
+        assert_eq!(outcome.refusal, None);
+        let plan = outcome.plan.expect("a class F plan");
+        assert_eq!(
+            (plan.segment, plan.cut, plan.kind),
+            (0, bad, PlanKind::Lossy)
+        );
+        assert_eq!(plan.dropped_offsets, Some((1, 3)));
+        assert!(plan.closing_frames_removed.is_empty());
+        let outcome = apply(&sim, (0, bad), false, "repair-1");
+        assert!(outcome.refusal.unwrap().contains("--drop-acknowledged"));
+        assert!(!outcome.plan.unwrap().applied);
+        assert_eq!(sim.image(), before);
+    });
+}
+
+/// Given the class F log
+/// When `truncate --apply --drop-acknowledged` runs at the plan's cut
+/// Then the segment ends in a seal's run after the record before the cut
+/// And `LogReader` reads that record and none after, and a writable open finds the log sealed, so
+/// no dropped offset is assigned again
+///
+/// Cases: REPAIR-CLASS-F-SEALS
+#[test]
+fn a_class_f_repair_seals_the_log() {
+    bounded(|| {
+        let (sim, bad, _, bytes) = damage_before_a_group();
+        let outcome = apply(&sim, (0, bad), true, "repair-1");
+        assert_eq!(outcome.refusal, None);
+        assert!(outcome.plan.unwrap().applied);
+        let kept = bytes[..bad as usize].to_vec();
+        let run = raw::seal_run(&kept, 2);
+        assert_eq!(raw::segments(&sim), [(0, [kept, run].concat())]);
+        let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone())).unwrap();
+        let payloads: Vec<_> = reader
+            .read(0, 10)
+            .unwrap()
+            .into_iter()
+            .map(|r| r.payload)
+            .collect();
+        assert_eq!(payloads, [b"a"]);
+        let log = reopen(&sim).unwrap();
+        assert!(matches!(log.append(submit(b"t")), Err(AppendError::Sealed)));
+    });
+}
+
+/// Given an unsealed newest segment whose damaged group is too small to hold a seal run before
+/// the only group frame after it
+/// When `truncate` runs, with or without `--apply`
+/// Then it refuses, because the run would overwrite the last proof, and changes nothing
+///
+/// Cases: REPAIR-CLASS-F-NO-ROOM
+#[test]
+fn a_class_f_seal_run_that_would_reach_the_last_proof_is_refused() {
+    bounded(|| {
+        let first = raw::group(1, 0, &[b"a"]);
+        let mut second = raw::group(1, 1, &[b"b"]);
+        second[40] ^= 0xff;
+        let bad = (codec::HEADER_LEN + first.len()) as u64;
+        let bytes = [
+            raw::header(raw::VERSION, 0, 1),
+            first,
+            second,
+            raw::group(1, 2, &[b"c"]),
+        ]
+        .concat();
+        let sim = Sim::new(1784);
+        raw::install_segments(&sim, &[(0, bytes)]);
+        let before = sim.image();
+        let outcome = plan_with(&sim, Path::new("/log"), raw::VERSION).unwrap();
+        assert_eq!(outcome.plan.unwrap().kind, PlanKind::Lossy);
+        assert!(
+            outcome
+                .refusal
+                .unwrap()
+                .contains("last acknowledged group frame")
+        );
+        let outcome = apply(&sim, (0, bad), true, "repair-1");
+        assert!(outcome.refusal.is_some());
+        assert_eq!(sim.image(), before);
+    });
+}
+
+/// Given a second-newest segment without its closing run, whose second group has a flipped byte
+/// and whose third is valid
+/// When `verify` and `truncate` run
+/// Then `verify` reports class F at the second group, and `truncate` refuses and changes nothing
+///
+/// Cases: REPAIR-CLASS-F-SECOND-NEWEST
+#[test]
+fn class_f_in_the_second_newest_segment_is_diagnosed_only() {
+    bounded(|| {
+        let groups = [
+            raw::group(2, 0, &[b"zero"]),
+            raw::group(2, 1, &[b"one"]),
+            raw::group(2, 2, &[b"two"]),
+        ];
+        let mut older = [raw::header(raw::VERSION, 0, 1), groups.concat()].concat();
+        let cut = (codec::HEADER_LEN + groups[0].len()) as u64;
+        older[cut as usize + 40] ^= 0xff;
+        let sim = Sim::new(1785);
+        raw::install_segments(&sim, &[(0, older), (3, raw::header(raw::VERSION, 3, 2))]);
+        let before = sim.image();
+        let report = verify_with(&sim, Path::new("/log"), raw::VERSION).unwrap();
+        let found: Vec<_> = report
+            .findings
+            .iter()
+            .map(|f| (f.class, f.segment, f.position))
+            .collect();
+        assert_eq!(found, [(Class::F, 0, cut)]);
+        let outcome = plan_with(&sim, Path::new("/log"), raw::VERSION).unwrap();
+        assert!(outcome.refusal.unwrap().contains("class F"));
+        let outcome = apply(&sim, (0, cut), true, "repair-1");
+        assert!(outcome.refusal.is_some());
+        assert_eq!(sim.image(), before);
+    });
+}
+
+/// Given the class F log, and the trace of a `truncate --apply --drop-acknowledged` on it
+/// When Kill, PowerLoss or PowerLossTorn cuts that trace at each storage call
+/// Then open fails with `Corrupt` at the cut, with every byte before it unchanged, or finds the
+/// sealed repaired log; it never finds a writable log, which would assign a dropped offset again
+/// And after `Corrupt`, a second `--apply` converges to the same repaired log
+///
+/// Cases: REPAIR-CLASS-F-CRASH
+#[test]
+fn a_crash_at_each_step_of_a_class_f_repair_fails_closed_or_finds_it_sealed() {
+    bounded(|| {
+        let (sim, bad, _, original) = damage_before_a_group();
+        let start = sim.trace().1.len();
+        apply(&sim, (0, bad), true, "repair-1");
+        let repaired = raw::segments(&sim)[0].1.clone();
+        let (seed, trace) = sim.trace();
+        let (mut closed, mut opened) = (0, 0);
+        for step in start..=trace.len() {
+            for mode in [
+                storage::sim::Crash::Kill,
+                storage::sim::Crash::PowerLoss,
+                storage::sim::Crash::PowerLossTorn,
+            ] {
+                for crash_seed in 0..3 {
+                    let crashed = Sim::replay(seed, &trace[..step]);
+                    crashed.crash(mode, crash_seed);
+                    let label = format!("step {step} {mode:?} {crash_seed}");
+                    match reopen(&crashed) {
+                        Err(OpenError::Corrupt {
+                            segment: 0,
+                            position,
+                        }) => {
+                            assert_eq!(position, bad, "{label}");
+                            let now = &raw::segments(&crashed)[0].1;
+                            assert_eq!(now[..bad as usize], original[..bad as usize], "{label}");
+                            closed += 1;
+                            let again = apply(&crashed, (0, bad), true, "repair-2");
+                            assert!(again.plan.unwrap().applied, "{label}");
+                            assert_eq!(raw::segments(&crashed)[0].1, repaired, "{label}");
+                        }
+                        Ok(log) => {
+                            opened += 1;
+                            assert_eq!(raw::segments(&crashed)[0].1, repaired, "{label}");
+                            let read = log.read(0, 10).unwrap();
+                            assert_eq!(read.len(), 1, "{label}");
+                            let appended = log.append(submit(b"t"));
+                            assert!(matches!(appended, Err(AppendError::Sealed)), "{label}");
+                        }
+                        Err(other) => panic!("{label}: {other:?}"),
+                    }
+                }
+            }
+        }
+        assert!(closed > 0 && opened > 0, "{closed} {opened}");
     });
 }
