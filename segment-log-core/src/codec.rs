@@ -11,7 +11,7 @@ pub(crate) use crc::crc32c;
 pub(crate) use filter::{KeyFilter, probes as filter_probes};
 pub(crate) use frame::{
     Body, Entry, Footer, Frame, Group, StreamTail, decode, encode_footer, encode_group,
-    encode_locator, encode_seal,
+    encode_locator, encode_seal, group_at_or_after,
 };
 pub(crate) use header::{
     FORMAT_VERSION, HEADER_LEN, Header, MIN_FORMAT_VERSION, decode_header, encode_header,

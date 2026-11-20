@@ -310,7 +310,7 @@ segment-log-server repair truncate --dir <path> --apply --at <segment>:<position
 | 0 | `verify`: no damage. A torn tail that open would truncate is not damage. `truncate --apply`: done. |
 | 1 | `verify`: damage found. `truncate` without `--apply`: a plan was printed. |
 | 2 | Usage error. |
-| 3 | Refused: no class A or F finding, a class B–E finding, class F damage in the second-newest segment, `--at` that differs from the plan, a lossy plan without `--drop-acknowledged`, a class A seal run that would reach the old footer, or a class F seal run that would reach the last acknowledged group frame after the cut. |
+| 3 | Refused: no class A or F finding, a class B–E finding, class F damage in the second-newest segment, `--at` that differs from the plan, a lossy plan without `--drop-acknowledged`, a class A seal run that would reach the old footer, a class F seal run that would reach the last acknowledged group frame after the cut, or a class F plan while the second-newest segment lacks its closing run. |
 | 4 | Another process holds `LOCK`. |
 | 5 | I/O error. |
 

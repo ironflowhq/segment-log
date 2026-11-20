@@ -217,9 +217,8 @@ pub(super) fn survey(
                 storage,
                 &path,
                 &log_id,
-                length,
-                newest.end,
-                kept.published.watermark,
+                (length, newest.end, kept.published.watermark),
+                1,
             )?
             .is_empty())
     {
@@ -274,41 +273,55 @@ pub(in crate::engine) struct Proof {
 /// Every proof after `at`, in file order. Frames carry no marker, so each byte position is a
 /// candidate. Only one group frame of a segment can be unsynced, its last, so a group frame of
 /// this log whose `base_offset` is at least `next` was written after a durable one. A lookalike
-/// copied into a torn payload has a lower `base_offset`, and closing frames never count.
+/// copied into a torn payload has a lower `base_offset`, and closing frames never count. Stops
+/// after `limit` proofs: open needs one, and the repair plan needs them all.
 pub(in crate::engine) fn proofs(
     storage: &ReadOnly<'_>,
     path: &Path,
     log: &codec::LogId,
-    length: u64,
-    at: u64,
-    next: u64,
+    (length, at, next): (u64, u64, u64),
+    limit: usize,
 ) -> io::Result<Vec<Proof>> {
-    // shortcut: reads the whole tail at once, at most one segment; window it if segments outgrow memory.
-    let tail = storage.read(path, Purpose::Recovery, at, (length - at) as usize)?;
+    const MAX_FRAME: usize = codec::ENVELOPE_LEN + codec::FRAME_BODY_LIMIT;
+    // Two frames' worth, so each refill moves at least one frame on, and memory stays bounded.
+    const WINDOW: u64 = 2 * MAX_FRAME as u64;
     let mut found = vec![];
-    let mut i = 1;
-    while i + codec::ENVELOPE_LEN <= tail.len() {
-        let body = u32::from_le_bytes(tail[i..i + 4].try_into().unwrap()) as usize;
+    let (mut base, mut window) = (at, vec![]);
+    let mut position = at + 1;
+    while found.len() < limit && position + codec::ENVELOPE_LEN as u64 <= length {
+        let window_end = base + window.len() as u64;
+        if position + MAX_FRAME as u64 > window_end && window_end < length {
+            base = position;
+            let len = WINDOW.min(length - base) as usize;
+            window = storage.read(path, Purpose::Recovery, base, len)?;
+            if window.len() != len {
+                return Err(io::ErrorKind::UnexpectedEof.into());
+            }
+        }
+        let i = (position - base) as usize;
+        let body = u32::from_le_bytes(window[i..i + 4].try_into().unwrap()) as usize;
         let frame_end = i + codec::ENVELOPE_LEN + body;
+        // Cheap checks first, so that a CRC runs only for a plausible group frame.
         let group = if (codec::BODY_HEADER_LEN..=codec::FRAME_BODY_LIMIT).contains(&body)
-            && frame_end <= tail.len()
+            && frame_end <= window.len()
+            && codec::group_at_or_after(&window[i..frame_end], next)
         {
-            codec::decode(log, &tail[i..frame_end])
+            codec::decode(log, &window[i..frame_end])
                 .ok()
                 .and_then(|f| f.into_group())
+                .filter(|g| g.base_offset >= next)
         } else {
             None
         };
         match group {
-            Some(group) if group.base_offset >= next => {
-                let end = group.base_offset + group.entries.len() as u64;
+            Some(group) => {
                 found.push(Proof {
-                    position: at + i as u64,
-                    end,
+                    position,
+                    end: group.base_offset + group.entries.len() as u64,
                 });
-                i = frame_end;
+                position = base + frame_end as u64;
             }
-            _ => i += 1,
+            None => position += 1,
         }
     }
     Ok(found)
@@ -347,9 +360,8 @@ fn rebuild(
             storage,
             &path,
             log,
-            length,
-            scan.end,
-            kept.published.watermark,
+            (length, scan.end, kept.published.watermark),
+            1,
         )?
         .is_empty()
     {

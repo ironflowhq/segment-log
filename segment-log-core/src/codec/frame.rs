@@ -275,6 +275,16 @@ impl<'a> Cursor<'a> {
     }
 }
 
+/// Whether `frame`'s body header could be a group at `next` or later: its kind, reserved bytes and
+/// `base_offset`, read before any CRC (ADR 0068). `decode` still decides validity.
+pub(crate) fn group_at_or_after(frame: &[u8], next: u64) -> bool {
+    let at = ENVELOPE_LEN;
+    frame.len() >= at + BODY_HEADER_LEN
+        && frame[at] == Kind::Group as u8
+        && frame[at + 1..at + 4] == [0; 3]
+        && u64::from_le_bytes(frame[at + 12..at + 20].try_into().unwrap()) >= next
+}
+
 pub(crate) fn decode<'a>(log: &LogId, bytes: &'a [u8]) -> Result<Frame<'a>, Error> {
     let mut c = Cursor { bytes, position: 0 };
     let size = c.u32()? as usize;

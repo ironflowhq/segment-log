@@ -35,6 +35,7 @@ fn reopen(sim: &Sim) -> Result<SegmentLog, OpenError> {
 /// Given three acknowledged groups in an unsealed newest segment
 /// When one byte inside the first group frame flips, and the later two frames stay valid
 /// Then open fails with `Corrupt` at the first group frame and changes no file
+/// And `LogReader` fails with `Corrupt` at the same frame, not `NotSealed`
 ///
 /// Cases: OPEN-DAMAGE-FOLLOWED
 #[test]
@@ -81,6 +82,17 @@ fn open_refuses_a_bad_frame_with_acknowledged_groups_after_it() {
             result.map(|log| log.watermark())
         );
         assert_eq!(sim.image(), before, "a refused open changes no file");
+        // `LogReader` refuses the damage before it would refuse the unsealed log.
+        let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone()));
+        assert!(
+            matches!(
+                reader,
+                Err(OpenError::Corrupt { segment: 0, position }) if position == first as u64
+            ),
+            "expected Corrupt from LogReader, got {:?}",
+            reader.err()
+        );
+        assert_eq!(sim.image(), before);
     });
 }
 
@@ -365,6 +377,7 @@ fn next(state: &mut u64) -> u64 {
 /// When one byte anywhere before the start of the last group frame flips
 /// Then open fails with `Corrupt`, or keeps every acknowledged offset and record; it never returns
 /// `Ok` with a lower watermark
+/// A failure prints the seed, and `Sim` saves its storage trace, which rebuilds the damaged image
 ///
 /// Cases: OPEN-DAMAGE-RANDOM
 #[test]
@@ -426,5 +439,134 @@ fn one_flipped_byte_before_the_last_group_never_loses_an_acknowledged_record() {
                 Err(other) => panic!("{replay}: {other:?}"),
             }
         }
+    });
+}
+
+/// Given a second-newest segment whose closing run the sealer had not yet written (ADR 0061), and
+/// a newest segment of three groups whose second has a flipped byte and whose third is valid
+/// When `verify` and `truncate` run
+/// Then `verify` reports the missing run and class F, and `truncate` refuses and changes nothing,
+/// because sealing the newest segment would leave a missing run that open never rebuilds
+///
+/// Cases: REPAIR-CLASS-F-PENDING-RUN
+#[test]
+fn class_f_with_a_pending_closing_run_is_refused() {
+    bounded(|| {
+        let older = [
+            raw::header(raw::VERSION, 0, 1),
+            raw::group(1, 0, &[b"zero"]),
+        ]
+        .concat();
+        let first = raw::group(2, 1, &[b"a"]);
+        let mut second = raw::group(2, 2, &[&[b'b'; 200]]);
+        second[40] ^= 0xff;
+        let third = raw::group(2, 3, &[&[b'c'; 200]]);
+        let cut = (codec::HEADER_LEN + first.len()) as u64;
+        let newest = [raw::header(raw::VERSION, 1, 2), first, second, third].concat();
+        let sim = Sim::new(1786);
+        raw::install_segments(&sim, &[(0, older.clone()), (1, newest)]);
+        let before = sim.image();
+        let report = verify_with(&sim, Path::new("/log"), raw::VERSION).unwrap();
+        let found: Vec<_> = report
+            .findings
+            .iter()
+            .map(|f| (f.class, f.segment, f.position))
+            .collect();
+        assert_eq!(
+            found,
+            [(Class::TornTail, 0, older.len() as u64), (Class::F, 1, cut)]
+        );
+        let outcome = plan_with(&sim, Path::new("/log"), raw::VERSION).unwrap();
+        assert!(
+            outcome
+                .refusal
+                .as_deref()
+                .unwrap_or("")
+                .contains("closing run"),
+            "{:?}",
+            outcome.refusal
+        );
+        let outcome = apply(&sim, (1, cut), true, "repair-1");
+        assert!(outcome.refusal.is_some());
+        assert_eq!(sim.image(), before);
+    });
+}
+
+/// Given three segments, the oldest sealed with a flipped byte in its second group and in its
+/// locator, and a valid group after the damaged one
+/// When `verify` runs
+/// Then it reports class B at the damaged group, not class F: open checks for a proof only in the
+/// newest segment and in a second-newest segment without its run (ADR 0068)
+///
+/// Cases: REPAIR-CLASS-F-SECOND-NEWEST
+#[test]
+fn class_f_is_not_reported_for_an_older_sealed_segment() {
+    bounded(|| {
+        let groups = [
+            raw::group(1, 0, &[b"zero"]),
+            raw::group(1, 1, &[b"one"]),
+            raw::group(1, 2, &[b"two"]),
+        ];
+        let mut oldest = raw::rolled(
+            [raw::header(raw::VERSION, 0, 1), groups.concat()].concat(),
+            1,
+        );
+        let bad = codec::HEADER_LEN + groups[0].len();
+        oldest[bad + 40] ^= 0xff;
+        let locator = oldest.len() - 1;
+        oldest[locator] ^= 0xff;
+        let middle = raw::rolled(
+            [raw::header(raw::VERSION, 3, 1), raw::group(1, 3, &[b"x"])].concat(),
+            1,
+        );
+        let sim = Sim::new(1787);
+        raw::install_segments(
+            &sim,
+            &[
+                (0, oldest),
+                (3, middle),
+                (4, raw::header(raw::VERSION, 4, 1)),
+            ],
+        );
+        let report = verify_with(&sim, Path::new("/log"), raw::VERSION).unwrap();
+        let found: Vec<_> = report
+            .findings
+            .iter()
+            .map(|f| (f.class, f.segment, f.position))
+            .collect();
+        assert_eq!(found, [(Class::B, 0, bad as u64)]);
+    });
+}
+
+/// Given an unsealed segment whose second and third groups each hold one record of almost 16 MiB
+/// with a flipped byte, and a valid fourth group after them, more than 32 MiB past the damage
+/// When the log opens
+/// Then the search refills its window and still finds the fourth group, so open fails with
+/// `Corrupt` at the second group
+///
+/// Cases: OPEN-DAMAGE-FOLLOWED
+#[test]
+fn a_proof_past_the_search_window_is_found() {
+    bounded(|| {
+        let first = raw::group(1, 0, &[b"a"]);
+        let mut damaged = raw::group(1, 1, &[&vec![0xff; codec::FRAME_BODY_LIMIT - 64]]);
+        damaged[40] ^= 0xff;
+        let cut = (codec::HEADER_LEN + first.len()) as u64;
+        let bytes = [
+            raw::header(raw::VERSION, 0, 1),
+            first,
+            damaged.clone(),
+            damaged,
+            raw::group(1, 3, &[b"c"]),
+        ]
+        .concat();
+        let sim = Sim::new(1788);
+        raw::install_segments(&sim, &[(0, bytes)]);
+        let result = reopen(&sim);
+        assert!(
+            matches!(result, Err(OpenError::Corrupt { segment: 0, position }) if position == cut),
+            "expected Corrupt at 0:{cut}, got {:?}",
+            result.map(|log| log.watermark())
+        );
     });
 }

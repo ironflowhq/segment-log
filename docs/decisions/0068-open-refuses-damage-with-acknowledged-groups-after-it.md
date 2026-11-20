@@ -82,7 +82,7 @@ We will build options B, D and G.
 
 **Proof.** At open step 7, after a scan of an unsealed segment stops at position `p` while it expects offset `n` next, a proof is a group frame after `p` that passes every per-frame rule for readers (length, CRC, reserved fields, kind, entries fill the body) and has `base_offset >= n`. Continuity of offset and epoch with the frames before `p` is not checked, because the damage broke it. Closing frames are never a proof. A group frame with `base_offset < n` is a lookalike and is never a proof.
 
-**Search.** Open tries every byte position from `p` to the end of the file and stops at the first proof. A position whose `body_len` is out of range, whose frame would pass the end of the file, or whose kind is not group is skipped before any CRC is computed.
+**Search.** Open tries every byte position from `p` to the end of the file and stops at the first proof; the repair plan collects them all. A position whose `body_len` is out of range, whose frame would pass the end of the file, whose kind is not group, whose reserved bytes are not zero, or whose `base_offset` is below `n` is skipped before any CRC is computed. The search reads the tail in windows of two maximum frames, so its memory does not grow with the segment.
 
 **Order.** Step 7 first runs its existing locator and footer check. A valid closing run still fails with `Corrupt`, as class A. Only when that check does not refuse does open search for a proof. A proof fails open with `OpenError::Corrupt { segment, position: p }`, and open changes no file. No proof means a torn tail, and open truncates at `p` as ADR 0003 decides.
 
@@ -92,7 +92,9 @@ We will build options B, D and G.
 
 **Crash order.** The seal run must end at or before the start of the last proof frame in the file. Then the last proof survives until the truncation, and every crash point before it fails closed: open refuses with `Corrupt`, whether the scan stops inside an incomplete seal run or after a whole one. A rerun of the tool converges with no special case: a closing run counts only when its locator ends the file, so the scan stops at the cut again, the last proof still makes the plan class F with the same cut, and the tool writes the same seal run bytes again before it truncates. Truncating first and sealing after would leave a writable log between the two steps. If even the last proof leaves no room, the plan refuses, and the case stays manual.
 
-**Second-newest segment.** The same damage in the second-newest segment that lacks its closing run is diagnosed and not repaired. A seal run there would leave a `Gap` before the next segment, and cutting every later segment is ADR 0065's rejected option C.
+**Pending run.** A class F plan refuses while the second-newest segment lacks its closing run. A seal run closes the newest segment, and open rebuilds a missing run only behind an open newest segment ([ADR 0061](0061-a-sealer-thread-builds-the-key-frames-off-the-writer.md)), so the repaired log would never open again. That case stays manual.
+
+**Second-newest segment.** The same damage in the second-newest segment that lacks its closing run is diagnosed and not repaired. In an older sealed segment, open reads only the summary and never scans the groups, so the tool reports such damage as class B, as before. A seal run there would leave a `Gap` before the next segment, and cutting every later segment is ADR 0065's rejected option C.
 
 We chose this because it stops open from dropping acknowledged records without an operator, and it cannot be triggered by a caller's payload. We accept that a log with damage before an acknowledged group no longer opens on its own: it fails closed, and its repair ends the log.
 
@@ -101,7 +103,7 @@ We chose this because it stops open from dropping acknowledged records without a
 - Amends ADR 0003: the contiguous valid prefix is kept only when no proof follows the damage. A torn tail is truncated as before.
 - Amends ADR 0065: the class table gains F, and the refusal exit code covers a class F seal run with no room. `verify` no longer calls this case a torn tail.
 - The repair JSON keeps `schema` 1. `"F"` is a new value of the existing `class` field, not a new field or a new meaning, so a consumer must accept class values it does not know.
-- `OpenError` gains no variant. An unsealed newest segment can now return `Corrupt`, which [api.md](../architecture/api.md) states.
+- `OpenError` gains no variant. An unsealed newest segment can now return `Corrupt`, which [api.md](../architecture/api.md) states. `LogReader` returns that `Corrupt` before the `NotSealed` it returned before.
 - Open's worst case on a damaged segment is one pass over its tail with a CRC per candidate frame. A healthy segment and a torn tail with no candidate cost nothing more.
 - overview.md open step 7 gains the proof search and its order. testing.md gains the scenarios below, `Planned`.
 - Ships in 0.1.1. [CHANGELOG.md](../../CHANGELOG.md) lists it under Fixed. No format version or protocol version changes.
@@ -114,7 +116,7 @@ Scenarios in [testing.md](../architecture/testing.md), on simulated storage in `
 - `OPEN-DAMAGE-FOLLOWED`: the issue's reproduction. Open returns `Corrupt` at the cut and changes no file. `LogReader` and the second-newest segment without a closing run do the same.
 - `OPEN-TORN-LOOKALIKE-COPY`: a torn last group whose payload holds a copy of an earlier frame of this log. Open truncates.
 - `OPEN-TORN-RUN-LATER-FRAME`: a closing run with a lost inner page and a kept locator and footer. Open truncates, as today.
-- `REPAIR-CLASS-F-VERIFY`, `-REFUSED`, `-SEALS`, `-NO-ROOM`, `-SECOND-NEWEST` and `-CRASH`: the repair cases above, with a crash at every storage call of `--apply` under `Kill`, `PowerLoss` and `PowerLossTorn`.
+- `REPAIR-CLASS-F-VERIFY`, `-REFUSED`, `-SEALS`, `-NO-ROOM`, `-SECOND-NEWEST`, `-PENDING-RUN` and `-CRASH`: the repair cases above, with a crash at every storage call of `--apply` under `Kill`, `PowerLoss` and `PowerLossTorn`.
 - A randomized oracle check: flip one byte anywhere before the start of the last group frame of an unsealed newest segment. Open returns `Corrupt` or keeps every acknowledged offset; it never returns `Ok` with a lower watermark. A failing seed prints and saves its storage trace.
 
 ## Revisit if

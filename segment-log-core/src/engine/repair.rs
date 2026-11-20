@@ -132,6 +132,9 @@ struct Cut {
     tails: BTreeMap<Vec<u8>, closing::Tail>,
     /// For class F, the group frames after the cut that prove it lossy; empty for class A.
     proofs: Vec<survey::Proof>,
+    /// Whether the second-newest segment lacks its closing run, which open rebuilds only while
+    /// the newest segment is not closed.
+    pending_run: bool,
 }
 
 /// `verify` without the lock, and the class A cut when there is one.
@@ -231,8 +234,11 @@ fn inspect(
                 let message = "a seal's closing run in a segment that has a successor";
                 report.note(Class::C, base, run.start, message);
             }
-            (Some(_), Ending::Stopped)
-                if !behind && !proofs(&reader, &log_id, &path, length, end, &kept)?.is_empty() =>
+            // Open checks for a proof only where it scans groups: here, the second-newest segment.
+            (Some(next), Ending::Stopped)
+                if next == newest
+                    && !behind
+                    && !proofs(&reader, &log_id, &path, (length, end), &kept, 1)?.is_empty() =>
             {
                 let message = "a frame that is not valid, before acknowledged group frames, in a \
                                segment that has a successor; not repairable (ADR 0068)";
@@ -255,10 +261,12 @@ fn inspect(
                     epoch: kept.epoch,
                     tails: scan.tails,
                     proofs: vec![],
+                    pending_run: pending.is_some(),
                 });
             }
             (None, Ending::Stopped)
-                if let found = proofs(&reader, &log_id, &path, length, end, &kept)?
+                if let found =
+                    proofs(&reader, &log_id, &path, (length, end), &kept, usize::MAX)?
                     && !found.is_empty() =>
             {
                 let message = "open stops here: a frame that is not valid, before acknowledged \
@@ -273,6 +281,7 @@ fn inspect(
                     epoch: kept.epoch,
                     tails: scan.tails,
                     proofs: found,
+                    pending_run: pending.is_some(),
                 });
             }
             (None, Ending::Stopped) => {
@@ -311,11 +320,17 @@ fn proofs(
     reader: &ReadOnly<'_>,
     log: &codec::LogId,
     path: &Path,
-    length: u64,
-    end: u64,
+    (length, end): (u64, u64),
     kept: &Kept,
+    limit: usize,
 ) -> io::Result<Vec<survey::Proof>> {
-    survey::proofs(reader, path, log, length, end, kept.published.watermark)
+    survey::proofs(
+        reader,
+        path,
+        log,
+        (length, end, kept.published.watermark),
+        limit,
+    )
 }
 
 /// Names the frame that stopped the scan of a segment with a successor at `end`.
@@ -541,6 +556,13 @@ fn planned(
         );
     };
     if let Some(last) = cut.proofs.last() {
+        // A seal run closes the newest segment, and open rebuilds a missing run only behind an
+        // open newest segment (ADR 0061), so the log would never open again.
+        if cut.pending_run {
+            let refusal = "the second-newest segment lacks its closing run, and sealing the newest \
+                           segment would leave it missing; this case stays manual";
+            return refuse(report, refusal.into());
+        }
         let dropped_end = cut.proofs.iter().map(|p| p.end).max().unwrap_or(cut.next);
         let plan = Plan {
             segment: cut.base,
