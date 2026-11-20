@@ -21,7 +21,8 @@
 # log holds CALLER_SEGMENTS segments; one caller with one record per group, SINGLE records at a
 # 4 MiB roll (about 20 segments, about 30 minutes to build on an M4).
 #
-# Sizes are environment variables so that a smoke run can shrink them.
+# Sizes are environment variables so that a smoke run can shrink them. CALLER_SECONDS (default 60)
+# is the length of each 1,000-caller build round, so a smaller log can stop nearer its target.
 set -euo pipefail
 out=${1:?usage: run.sh OUT_DIR [REPS] [SECONDS] [BEFORE]}
 reps=${2:-3}
@@ -74,7 +75,7 @@ build() {
 	callers)
 		probe head build "$3" 1000 1000 >/dev/null
 		while [ "$(segment_count "$3")" -lt "$2" ]; do
-			probe head run "$3" 1000 0 tail 60 64 | grep APPEND
+			probe head run "$3" 1000 0 tail "${CALLER_SECONDS:-60}" 64 | grep APPEND
 		done
 		;;
 	single) probe head build-single "$3" "$2" $((4 * 1024 * 1024)) ;;
