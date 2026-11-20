@@ -193,7 +193,12 @@ pub(super) fn survey(
         let summary = match summarize(storage, &log_id, dir, base, successor, &mut kept) {
             Err(error @ OpenError::Corrupt { .. }) if successor == newest_base => {
                 // The writer that created the newest segment also built this run.
-                let at = (base, successor, newest_epoch, closes(&header));
+                let at = (
+                    base,
+                    successor,
+                    newest_epoch,
+                    may_hold_close_frames(&header),
+                );
                 let rebuilt = rebuild(storage, &log_id, &hash, dir, at, &mut kept)?.ok_or(error)?;
                 let summary = rebuilt.summary;
                 pending = Some(rebuilt);
@@ -212,7 +217,7 @@ pub(super) fn survey(
     kept.published.newest.epoch_floor = kept.epoch;
     let path = segment_path(dir, base);
     let length = storage.length(&path, Purpose::Recovery)?;
-    let at = (path.as_path(), closes(&header));
+    let at = (path.as_path(), may_hold_close_frames(&header));
     let newest = scan(storage, &log_id, &hash, base, at, length, &mut kept)?;
     if matches!(newest.ending, Ending::Stopped)
         && (closing::sealed_behind(storage, &path, &log_id, length, newest.end)?
@@ -266,7 +271,7 @@ pub(super) fn survey(
 }
 
 /// Whether a segment's format version lets it hold close frames (ADR 0071).
-pub(in crate::engine) fn closes(header: &codec::Header) -> bool {
+pub(in crate::engine) fn may_hold_close_frames(header: &codec::Header) -> bool {
     header.version >= codec::CLOSE_VERSION
 }
 

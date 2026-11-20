@@ -203,7 +203,7 @@ fn inspect(
         kept.published.newest.epoch_floor = kept.epoch;
         let path = segment_path(dir, base);
         let length = reader.length(&path, Purpose::Recovery)?;
-        let at = (path.as_path(), survey::closes(header));
+        let at = (path.as_path(), survey::may_hold_close_frames(header));
         let scanned = survey::scan(&reader, &log_id, &hash, base, at, length, &mut kept);
         let scan = match scanned {
             Ok(scan) => scan,
@@ -583,7 +583,7 @@ fn planned(
         // every crash state fails closed with `Corrupt` (ADR 0068). A close frame can be copied
         // past the run first instead (ADR 0071).
         let room = last.position;
-        let close = last.close.clone().map(|bytes| (room, bytes));
+        let close = last.close.clone();
         return sealed(
             report,
             plan,
@@ -646,13 +646,13 @@ fn planned(
 }
 
 /// A lossy plan, and its seal run unless the run would reach `room`, which must survive until the
-/// truncation. When the frame at `room` is a close frame, given with its bytes, the plan copies
-/// it past the run's end first, so that a proof survives every crash point before the truncation.
+/// truncation. When the frame at `room` is a close frame, given by its bytes, the plan copies it
+/// past the run's end first, so that a proof survives every crash point before the truncation.
 fn sealed(
     report: Report,
     mut plan: Plan,
     cut: Cut,
-    (room, close): (u64, Option<(u64, Vec<u8>)>),
+    (room, close): (u64, Option<Vec<u8>>),
     guard: &str,
 ) -> Result<(Outcome, Option<Work>), Error> {
     let Some(epoch) = cut.epoch.checked_add(1) else {
@@ -663,14 +663,14 @@ fn sealed(
     let run_end = cut.at + run.len() as u64;
     let mut moved = vec![];
     if run_end > room {
-        let Some((position, bytes)) = close else {
+        let Some(bytes) = close else {
             let refusal = format!("the seal run would reach {guard}; this case stays manual");
             return Ok((refused(report, plan, refusal), None));
         };
         // Zero bytes have a body length out of range, so open's proof search skips them.
         moved = vec![0; run_end.saturating_sub(cut.length) as usize];
         moved.extend(bytes);
-        plan.moved_proof = Some((position, cut.length.max(run_end)));
+        plan.moved_proof = Some((room, cut.length.max(run_end)));
     }
     let outcome = Outcome {
         report,

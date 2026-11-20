@@ -37,7 +37,7 @@ pub(super) struct Active {
     pub base: u64,
     pub length: u64,
     /// Whether the segment's last frame is a close frame, so a drop has nothing to add.
-    pub closed: bool,
+    pub ends_with_close: bool,
     tails: BTreeMap<Vec<u8>, Tail>,
     footer_body: usize,
 }
@@ -50,7 +50,7 @@ impl Active {
     pub(super) fn recovered(
         base: u64,
         length: u64,
-        closed: bool,
+        ends_with_close: bool,
         tails: BTreeMap<Vec<u8>, Tail>,
     ) -> Self {
         let footer_body = tails
@@ -60,7 +60,7 @@ impl Active {
         Self {
             base,
             length,
-            closed,
+            ends_with_close,
             tails,
             footer_body: codec::FOOTER_HEADER_LEN + footer_body,
         }
@@ -239,7 +239,9 @@ impl Writer {
 
     /// Appends a close frame and syncs it, once every group before it is durable (ADR 0071).
     fn close(&mut self, view: &View) -> io::Result<()> {
-        if self.active.closed || self.limits.format_version < codec::CLOSE_VERSION {
+        // The build's version is the active segment's: open rolls away from an older active
+        // segment before the writer starts (ADR 0064, rule 12).
+        if self.active.ends_with_close || self.limits.format_version < codec::CLOSE_VERSION {
             return Ok(());
         }
         let path = segment_path(&view.dir, self.active.base);
@@ -253,7 +255,7 @@ impl Writer {
         )?;
         call(view.storage.as_ref(), &path, Purpose::Close, Op::SyncData)?;
         self.active.length += length;
-        self.active.closed = true;
+        self.active.ends_with_close = true;
         Ok(())
     }
 
@@ -664,7 +666,7 @@ impl Writer {
         self.append_time = group.append_time;
         let span = GroupSpan::of(self.active.length, length, &group);
         self.active.length += length as u64;
-        self.active.closed = false;
+        self.active.ends_with_close = false;
         self.active.tails.append(&mut draft.tails);
         self.active.footer_body += std::mem::take(&mut draft.footer_growth);
         view.published.lock().unwrap().publish(span, &group);

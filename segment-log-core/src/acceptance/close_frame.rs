@@ -573,3 +573,24 @@ fn reads_step_over_close_frames_in_a_sealed_segment() {
         assert_eq!(payloads(&log, 3).unwrap(), expected[3..]);
     });
 }
+
+/// Given a new log that never appended, so its only segment holds only its header
+/// When it is dropped cleanly
+/// Then the segment ends with a close frame at offset 0, so drop has one path
+/// And the log reopens empty and appends at offset 0
+///
+/// Cases: DROP-CLOSE-FRAME
+#[test]
+fn a_drop_with_no_group_still_writes_a_close_frame() {
+    bounded(|| {
+        let sim = Sim::new(1870);
+        drop(open_with(&sim, unrolled()));
+        let segment = raw::segments(&sim)[0].1.clone();
+        assert_eq!(segment.len(), codec::HEADER_LEN + 32);
+        assert_eq!(segment[codec::HEADER_LEN..], close(&sim, 1, 0));
+        let log = reopen(&sim).unwrap();
+        assert_eq!(log.watermark(), 0);
+        let committed = log.append(keyed(0)).unwrap().wait().unwrap();
+        assert_eq!(committed.records[0].offset, 0);
+    });
+}
