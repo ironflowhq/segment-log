@@ -42,23 +42,42 @@ pub(crate) const FRAME_TABLES: usize = 16;
 
 /// The frame tables of sealed segments that reads built or rolls left, least recently used first.
 #[derive(Default)]
-pub(super) struct Tables(Vec<(u64, Arc<[GroupSpan]>)>);
+pub(super) struct Tables {
+    kept: Vec<(u64, Arc<[GroupSpan]>)>,
+    #[cfg(test)]
+    #[allow(dead_code)]
+    budget: usize,
+}
+
+/// What a table of `entries` kept frames counts against the budget.
+#[cfg(test)]
+pub(crate) fn frame_table_charge(entries: usize) -> usize {
+    entries * std::mem::size_of::<GroupSpan>()
+}
 
 impl Tables {
+    #[cfg(test)]
+    pub(super) fn with_budget(budget: usize) -> Self {
+        Self {
+            kept: vec![],
+            budget,
+        }
+    }
+
     fn get(&mut self, base: u64) -> Option<Arc<[GroupSpan]>> {
-        let at = self.0.iter().position(|(kept, _)| *kept == base)?;
-        let entry = self.0.remove(at);
+        let at = self.kept.iter().position(|(kept, _)| *kept == base)?;
+        let entry = self.kept.remove(at);
         let spans = entry.1.clone();
-        self.0.push(entry);
+        self.kept.push(entry);
         Some(spans)
     }
 
     pub(super) fn keep(&mut self, base: u64, spans: Arc<[GroupSpan]>) {
-        self.0.retain(|(kept, _)| *kept != base);
-        if self.0.len() == FRAME_TABLES {
-            self.0.remove(0);
+        self.kept.retain(|(kept, _)| *kept != base);
+        if self.kept.len() == FRAME_TABLES {
+            self.kept.remove(0);
         }
-        self.0.push((base, spans));
+        self.kept.push((base, spans));
     }
 }
 

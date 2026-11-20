@@ -27,7 +27,7 @@ use keys::{KeyHash, Keys};
 pub use reader::LogReader;
 pub use reply::Pending;
 #[cfg(test)]
-pub(crate) use view::FRAME_TABLES;
+pub(crate) use view::frame_table_charge;
 use view::{GroupSpan, Published, View};
 use writer::{Active, Writer, run};
 
@@ -299,6 +299,11 @@ impl SegmentLog {
             #[cfg(test)]
             rolls,
         })
+    }
+    /// Drops every kept frame table and bounds later ones by `bytes` instead of the budget.
+    #[cfg(test)]
+    pub(crate) fn set_frame_table_budget(&self, bytes: usize) {
+        *self.view.tables.lock().unwrap() = view::Tables::with_budget(bytes);
     }
     #[cfg(test)]
     pub(crate) fn key_memory(&self) -> KeyMemory {
