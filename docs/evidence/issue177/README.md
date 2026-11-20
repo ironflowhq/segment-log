@@ -9,7 +9,7 @@
 - **Scans stay within check 2.** Scan p50 and p99 are within 10% of the pre-change scan on every log. On the one-caller log, scans got faster, 139,000 → 1,371,000 records/s, because one window read replaces many frame reads. The 331-segment 1,000-caller log also scanned faster, 703,000 → 1,116,000 records/s. Windows don't explain that, because its frames are larger than a window, and this run did not investigate the cause.
 - **The 331-segment 1,000-caller log fails check 1 as ADR 0069 wrote it.** Its random p50 is 216 µs against a bar of 88 µs (2 × a 44 µs scan). Its frames average about 160 KiB, more than 64 KiB, so most of them, likely all, are kept, and a random read is one direct frame read, the same as an old table hit. This run did not count the kept entries. The 23.5 GB log is 0.91 of RAM, and half of it was resident, so a random read often reads from the SSD. The same shape at 7.3 GB, fully resident, reads at 51 µs.
 
-The qualified-host rerun ADR 0069 asks for has not run yet. It applies the same rule.
+- **Confirmed on Linux.** A rerun on a Hetzner EPYC 7502P with Samsung PM9A3 drives passes every check with no substitute log: with 128 GB of RAM, every log stayed resident ([Linux rerun](#linux-rerun)). No EPYC 7401P, the qualified host's model, was on offer, so this is a confirmation on similar hardware, not on the qualified host.
 
 ## Host and provenance
 
@@ -91,9 +91,55 @@ The three rounds of each run agree closely. For example, callers (103) random p5
 - On this host, the 18-segment log passes check 1 before the change, on p99 too (294 µs against 648 µs). The issue 156 record saw a p99 of 1,628 µs at 18 segments. This log has 17, and this run did not investigate why its p99 stays low before the change.
 - The s200 log is 72% resident and passes check 1 anyway, so ADR 0070 does not replace it.
 
+## Linux rerun
+
+**Host.** 2026-11-20, Hetzner auction server #3118224 (HEL1), ordered for this run and cancelled after it. AMD EPYC 7502P (32 cores, 64 threads), 128 GB. Debian 12, kernel 6.1.0-56-amd64. The logs sat on ext4 (`noatime`) on the second of two Samsung PM9A3 U.2 drives (MZQL2960HCJR-00A07, firmware GDC5A02Q). The system was on the first drive. rustc 1.100.0, release build. Nothing else ran on the host.
+
+The qualified host ([ADR 0059](../../decisions/0059-m7-qualifies-firecracker-on-a-dedicated-nvme-host.md)) is an EPYC 7401P with PM983 drives. No EPYC 7401P was on the auction market. This host has a newer EPYC and the PM983's successor drive.
+
+**Commits.** Before: `0a11998`. After: `b4a596e`, `main` with the change merged. Run as `docs/evidence/issue177/run.sh /data/issue177-run 3 10`, the full matrix only.
+
+| Log | Group frames per segment (median) | Log GB | Log / RAM | Resident after |
+| --- | ---: | ---: | ---: | ---: |
+| s7 (7 segments) | 110 | 0.5 | 0.00 | 1.00 |
+| s18 (18 segments) | 113 | 1.2 | 0.01 | 1.00 |
+| s43 (43 segments) | 111 | 3.1 | 0.02 | 1.00 |
+| s200 (200 segments) | 110 | 14.3 | 0.11 | 1.00 |
+| callers (335 segments) | 443 | 23.9 | 0.18 | 1.00 |
+| single (20 segments) | 12,827 | 0.1 | 0.00 | 1.00 |
+
+| Log | Commit | Random p50 µs | Random p99 µs | Scan p50 µs | Scan p99 µs | Scan records/s | First walks: total ms, p50 µs, max µs |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| s7 | before | 315 | 626 | 309 | 529 | 190,928 | 12, 1,825, 2,089 |
+| s7 | after | 321 | 629 | 313 | 532 | 189,917 | 12, 1,862, 2,113 |
+| s18 | before | 306 | 1,712 | 297 | 522 | 205,083 | 33, 1,736, 2,763 |
+| s18 | after | 302 | 598 | 296 | 520 | 204,428 | 33, 1,759, 2,726 |
+| s43 | before | 1,580 | 1,968 | 301 | 520 | 199,553 | 73, 1,709, 2,059 |
+| s43 | after | 301 | 620 | 301 | 519 | 199,791 | 74, 1,738, 2,138 |
+| s200 | before | 1,615 | 2,014 | 298 | 520 | 201,373 | 333, 1,662, 1,924 |
+| s200 | after | 333 | 635 | 299 | 520 | 200,006 | 333, 1,658, 1,931 |
+| callers (335) | before | 2,936 | 5,546 | 154 | 311 | 415,176 | 1,121, 2,893, 5,776 |
+| callers (335) | after | 170 | 356 | 164 | 334 | 393,939 | 1,118, 2,884, 5,802 |
+| single | before | 342 | 1,533 | 339 | 595 | 178,217 | 24, 1,183, 1,724 |
+| single | after | 38 | 342 | 35 | 344 | 1,117,594 | 21, 1,009, 1,436 |
+
+| Log | Check 1 before | Check 1 after | Judged by (ADR 0070) | Check 2 | Check 3 | In benefit verdict |
+| --- | --- | --- | --- | --- | --- | --- |
+| s7 | pass | pass | itself: pass | pass | pass | no |
+| s18 | FAIL | pass | itself: pass | pass | pass | yes |
+| s43 | FAIL | pass | itself: pass | pass | pass | yes |
+| s200 | FAIL | pass | itself: pass | pass | pass | yes |
+| callers (335) | FAIL | pass | itself: pass | pass | pass | yes |
+| single | pass | pass | itself: pass | pass | pass | no |
+
+- **Every log stayed resident**, so ADR 0070 replaced no log. The 1,000-caller log passes check 1 on its own: random p50 170 µs against a bar of 308 µs. On the M4, the same shape read at 216 µs while half resident. That supports reading the M4 miss as a page-cache effect.
+- **The 18-segment log fails check 1 before the change here**, on p99 (1,712 µs against 1,566 µs), as the issue 156 record saw on the M4. This log has 18 segments, where the M4's had 17.
+- **The 1,000-caller scan got slightly slower.** Its scan p50 rose 6.5% (154 → 164 µs) and its p99 7.4% (311 → 334 µs). Both are within check 2's 10%. On the M4, the same shape scanned faster. This run did not investigate either change.
+- **Absolute times are higher than on the M4**, for scans too (about 300 µs against 180 µs for a 64-record read of large groups). The ratios that the checks use are what carry across hosts.
+
 ## Limits of this run
 
 - The logs sat on an external SSD, not the Mac's internal one.
-- A Mac on APFS is not the deployment stack. Its page cache, readahead and SSD differ from the qualified Linux host. The qualified-host rerun confirms or reopens ADR 0069.
+- A Mac on APFS is not the deployment stack. Its page cache, readahead and SSD differ from the qualified Linux host. The Linux rerun ran on similar hardware, not on the qualified host's model.
 - One reader per run. Several readers on one `LogReader` share its tables, and were not measured here.
 - The measured logs stop at 331 segments. The 24 MiB budget covers about 1,000 segments at the default roll. That figure is arithmetic, and the simulation tests eviction at the budget.
