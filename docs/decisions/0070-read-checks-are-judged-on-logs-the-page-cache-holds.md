@@ -1,7 +1,7 @@
 ---
 id: "0070"
 title: "Read checks are judged on logs that the page cache holds, not on SSD misses"
-status: proposed
+status: accepted
 date: 2026-11-20
 deciders: [Altug Sahin]
 supersedes: null
@@ -58,6 +58,7 @@ We chose this because check 1 exists to show that frame tables no longer cost a 
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-20 ([PR #185](https://github.com/ironflowx/segment-log/pull/185)).
 - The issue 177 record passes on the M4. The 331-segment 1,000-caller log is reported as a cache miss beside the 103-segment log that judges check 1.
 - `docs/evidence/issue177/summarize.py` reads several runs and applies this rule, so a rerun reproduces the verdict.
 - ADR 0069 gains a bullet at the top of its Consequences that links this ADR.
