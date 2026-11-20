@@ -21,7 +21,7 @@ The [issue 177 record](../evidence/issue177/README.md) ran the checks on the M4 
 
 - Five of six cases pass every check. The 43-segment and 199-segment cases pass check 1 after the change and fail it before.
 - The log of 1,000 single-record callers, 331 segments and 23.5 GB, is 0.91 of RAM. After the timed runs, half of it was resident. Its random p50 fell from 5,053 µs to 216 µs, but its pre-change scan p50 is 44 µs, so check 1 needs 88 µs or less. It fails on p50 and passes on p99.
-- Its group frames average about 160 KiB, more than 64 KiB, so after the change every frame is a kept entry. A random read is one direct read of one frame, as a hit in the old dense table was. No window is walked. A scan stays inside one cached frame for several calls, so cache misses barely touch it.
+- Its group frames average about 160 KiB, more than 64 KiB, so after the change most of them, likely all, are kept entries. A random read of a kept frame is one direct read, as a hit in the old dense table was, and walks no window. The record did not count the kept entries, so this is an inference. A scan stays inside one cached frame for several calls, so cache misses barely touch it.
 - A log of the same shape that fits in memory, 103 segments and 7.3 GB (0.28 of RAM, fully resident), passes every check: random p50 4,930 → 51 µs, p99 5,177 → 91 µs, scan unchanged at 44 µs and 86 µs.
 
 No change to frame tables can make a read of a page that is not resident as fast as a scan of a cached frame. As written, check 1 can pass on this case only on a host where the log fits in memory.
@@ -59,6 +59,7 @@ We chose this because check 1 exists to show that frame tables no longer cost a 
 ## Consequences
 
 - Accepted by the owner on 2026-11-20 ([PR #185](https://github.com/ironflowx/segment-log/pull/185)).
+- Before merge, review in the same pull request marked the kept-frame claim in Context as an inference, since the record did not count kept entries, and rewrote Enforcement in the template's form. The Decision is unchanged.
 - The issue 177 record passes on the M4. The 331-segment 1,000-caller log is reported as a cache miss beside the 103-segment log that judges check 1.
 - `docs/evidence/issue177/summarize.py` reads several runs and applies this rule, so a rerun reproduces the verdict.
 - ADR 0069 gains a bullet at the top of its Consequences that links this ADR.
@@ -66,7 +67,7 @@ We chose this because check 1 exists to show that frame tables no longer cost a 
 
 ## Enforcement
 
-`docs/evidence/issue177/summarize.py` applies the rule and prints which log judges check 1 for each case. Nothing in CI runs it; a reviewer of a later read-path record has to apply it.
+None in CI. `docs/evidence/issue177/summarize.py` applies the rule and prints which log judges check 1 for each case, but no CI job runs it, so a reviewer of a later read-path record has to apply it. A CI job that ran the summarizer on synthetic runs would enforce the rule's logic.
 
 ## Revisit if
 

@@ -6,21 +6,21 @@
 
 - **Pass on the M4 Mac, under ADR 0069 as ADR 0070 amends it.** Every log passes checks 2 and 3. Every log passes check 1, except the 331-segment log of 1,000 callers, which half fits in memory. A fully resident log of the same shape (103 segments) passes check 1 and judges that case.
 - **Random reads past 16 segments no longer walk.** On the 43-segment log, random p50 fell from 1,191 to 209 µs. On the 199-segment log, from 1,268 to 214 µs. On the 1,000-caller logs, from about 5,000 µs to 51 µs (103 segments, resident) and 216 µs (331 segments, half resident).
-- **Scans are not slower.** Scan p50 and p99 are within 10% of the pre-change scan on every log. On the logs of small groups, scans got faster: 703,000 → 1,116,000 records/s on the 331-segment 1,000-caller log, and 139,000 → 1,371,000 records/s on the one-caller log, because one window read replaces many frame reads.
-- **The 331-segment 1,000-caller log fails check 1 as ADR 0069 wrote it.** Its random p50 is 216 µs against a bar of 88 µs (2 × a 44 µs scan). Its frames are about 160 KiB, so every frame is kept and a random read is one direct frame read, the same as an old table hit. The 23.5 GB log is 0.91 of RAM, and half of it was resident, so a random read often reads from the SSD. The same shape at 7.3 GB, fully resident, reads at 51 µs.
+- **Scans stay within check 2.** Scan p50 and p99 are within 10% of the pre-change scan on every log. On the one-caller log, scans got faster, 139,000 → 1,371,000 records/s, because one window read replaces many frame reads. The 331-segment 1,000-caller log also scanned faster, 703,000 → 1,116,000 records/s. Windows don't explain that, because its frames are larger than a window, and this run did not investigate the cause.
+- **The 331-segment 1,000-caller log fails check 1 as ADR 0069 wrote it.** Its random p50 is 216 µs against a bar of 88 µs (2 × a 44 µs scan). Its frames average about 160 KiB, more than 64 KiB, so most of them, likely all, are kept, and a random read is one direct frame read, the same as an old table hit. This run did not count the kept entries. The 23.5 GB log is 0.91 of RAM, and half of it was resident, so a random read often reads from the SSD. The same shape at 7.3 GB, fully resident, reads at 51 µs.
 
 The qualified-host rerun ADR 0069 asks for has not run yet. It applies the same rule.
 
 ## Host and provenance
 
-- 2026-11-20, Apple M4 Mac mini: 10 cores, 24 GiB, Darwin 27.2.0, APFS on the internal SSD (Apple Fabric, PCI-Express). rustc 1.100.0, release build.
+- 2026-11-20, Apple M4 Mac mini: 10 cores, 24 GiB, Darwin 27.2.0, APFS on an external Samsung PSSD P7 (firmware SXGD0PCQ, PCI-Express), where the logs were written. The driver's host capture recorded only the volume, which names no drive; the drive was read off the host after the runs. rustc 1.100.0, release build.
 - Before: `0a11998`, the commit before the change. After: `9cd3ace` for the full matrix, and `62a6589` for the 103-segment log. The two after commits differ only in the driver and a test.
 - Both commits read with the probe source of the after commit. It uses only the public API, which the change leaves alone, so only the library differs.
 - The host ran an interactive session but no other benchmark. Raw output was not kept, per the [evidence rules](../README.md).
 - To reproduce:
   - Full matrix: `docs/evidence/issue177/run.sh OUT_DIR 3 10`, about 45 minutes.
   - 103-segment log: `CASES=callers:100 CALLER_SECONDS=15 docs/evidence/issue177/run.sh OUT_DIR 3 10`.
-  - Verdict: `summarize.py OUT_DIR/reads.txt OTHER/reads.txt`.
+  - Verdict: `python3 -I docs/evidence/issue177/summarize.py OUT_DIR/reads.txt OTHER/reads.txt`.
 
 ## Method
 
@@ -88,11 +88,12 @@ The three rounds of each run agree closely. For example, callers (103) random p5
 | callers (103) | FAIL | pass | itself: pass | pass | pass | yes |
 | single | pass | pass | itself: pass | pass | pass | no |
 
-- On this host, the 18-segment log passes check 1 before the change, on p99 too (294 µs against 648 µs). The issue 156 record saw a p99 of 1,628 µs at 18 segments. That log had 18 segments, this one 17, so it fits in 16 tables plus one walk more often.
+- On this host, the 18-segment log passes check 1 before the change, on p99 too (294 µs against 648 µs). The issue 156 record saw a p99 of 1,628 µs at 18 segments. This log has 17, and this run did not investigate why its p99 stays low before the change.
 - The s200 log is 72% resident and passes check 1 anyway, so ADR 0070 does not replace it.
 
 ## Limits of this run
 
+- The logs sat on an external SSD, not the Mac's internal one.
 - A Mac on APFS is not the deployment stack. Its page cache, readahead and SSD differ from the qualified Linux host. The qualified-host rerun confirms or reopens ADR 0069.
 - One reader per run. Several readers on one `LogReader` share its tables, and were not measured here.
 - The measured logs stop at 331 segments. The 24 MiB budget covers about 1,000 segments at the default roll. That figure is arithmetic, and the simulation tests eviction at the budget.

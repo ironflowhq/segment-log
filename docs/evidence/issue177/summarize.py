@@ -7,9 +7,10 @@ more reads.txt files that run.sh wrote.
 Each latency is the median over rounds of one run's quantile. A case is one log: its name and
 segment count. Check 1: random p50 <= 2x the before scan p50, and random p99 <= 3x the before scan
 p99. Check 2: the scan p50 and p99 at most 10% slower than before. Check 3: the s43, s200 and
-callers shapes fail check 1 before the change. ADR 0070: a log that is not fully resident (a
-resident fraction below 0.99) and fails check 1 is judged by a fully resident log of the same name;
-checks 2 and 3 apply to every log.
+callers shapes fail check 1 before the change. ADR 0070: a log that is not fully resident (less
+than 99% of its bytes resident) and fails check 1 is judged by a fully resident log of the same
+name with fewer segments that fails check 1 before; checks 2 and 3 apply to every log. The
+verdict fails when a shape that check 3 names is missing, or when a log appears in two runs.
 """
 import collections
 import re
@@ -33,6 +34,9 @@ for path in sys.argv[1:]:
         f = fields(line)
         if line.startswith("CASE "):
             key = (f["name"], int(f["segments"]))
+            # Two runs of one log would pool their rounds and hide one of them.
+            if key in cases:
+                sys.exit(f"{path}: {key[0]} with {key[1]} segments appears in more than one run")
             label[f["name"]] = key
             cases[key] = f
             order.append(key)
@@ -60,14 +64,17 @@ def name(k):
 
 
 def resident(k):
-    return float(cases[k]["after"]["fraction"]) >= RESIDENT
+    """Fully resident, from the byte counts, not the rounded fraction. No AFTER line: not."""
+    a = cases[k].get("after")
+    return a is not None and int(a["log_bytes"]) > 0 and int(a["resident_bytes"]) >= RESIDENT * int(a["log_bytes"])
 
 
 print("| Log | Group frames per segment (median) | Log GB | Log / RAM | Resident after |")
 print("| --- | ---: | ---: | ---: | ---: |")
 for k in order:
-    c, a = cases[k], cases[k]["after"]
-    print(f"| {name(k)} | {int(c['median']):,} | {int(a['log_bytes']) / 1e9:.1f} | {a['log_over_ram']} | {a['fraction']} |")
+    c, a = cases[k], cases[k].get("after")
+    size = f"{int(a['log_bytes']) / 1e9:.1f} | {a['log_over_ram']} | {a['fraction']}" if a else "- | - | -"
+    print(f"| {name(k)} | {int(c['median']):,} | {size} |")
 
 print()
 print("| Log | Commit | Random p50 µs | Random p99 µs | Scan p50 µs | Scan p99 µs | Scan records/s | First walks: total ms, p50 µs, max µs |")
@@ -101,11 +108,19 @@ for k in order:
     b, h = check1(k, "before"), check1(k, "head")
     judge = k
     if not h and not resident(k):
-        judge = next((j for j in order if j[0] == k[0] and j != k and resident(j)), None)
+        # ADR 0070: a resident log of the same shape, with fewer segments, that fails before.
+        judge = next(
+            (j for j in order if j[0] == k[0] and j[1] < k[1] and resident(j) and not check1(j, "before")),
+            None,
+        )
     ok1 = h if judge == k else judge is not None and check1(judge, "head")
     c3 = (not b) if k[0] in MUST_FAIL_BEFORE else True
     passed &= ok1 and check2(k) and c3
     by = "itself" if judge == k else (name(judge) if judge else "no resident log")
     print(f"| {name(k)} | {mark(b)} | {mark(h)} | {by}: {mark(ok1)} | {mark(check2(k))} | {mark(c3)} | {'no' if b else 'yes'} |")
+missing = MUST_FAIL_BEFORE - {k[0] for k in order}
+if missing:
+    print()
+    print("Missing shapes that check 3 needs:", ", ".join(sorted(missing)))
 print()
-print("VERDICT", "pass" if passed else "FAIL")
+print("VERDICT", "pass" if passed and order and not missing else "FAIL")

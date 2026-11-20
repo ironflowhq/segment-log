@@ -582,30 +582,39 @@ fn mixed_history(sim: &Sim, rng: &mut Rng, budget: usize) -> Vec<Record> {
 /// Cases: READ-BOUNDED, ORACLE-12
 #[test]
 fn random_reads_over_many_sealed_segments_match_the_oracle() {
-    let _watchdog = watchdog("random sealed reads".into());
     let first = setting("SEGMENT_LOG_READ_SEED", 1770);
     let count = setting("SEGMENT_LOG_READ_SEEDS", 2);
     for seed in first..first.checked_add(count).unwrap() {
         let sim = Sim::new(seed);
+        let path = std::env::var_os("SEGMENT_LOG_TRACE_ARTIFACT_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| std::env::temp_dir().join("segment-log-traces"))
+            .join(format!("{}-reads-{seed}.trace", std::process::id()));
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let label = format!(
+            "cases=READ-BOUNDED,ORACLE-12 seed={seed} trace={}",
+            path.display()
+        );
+        // A hang aborts the process, so the watchdog saves the trace before it does.
+        let (watched, watched_path) = (sim.clone(), path.clone());
+        let _watchdog = watchdog_with_failure(label.clone(), move || {
+            let (trace_seed, events) = watched.trace();
+            let _ = trace::save(&watched_path, trace_seed, &events);
+        });
         let checked =
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| random_reads(&sim, seed)));
         // Every failure, an unwrap in the history included, saves the trace that rebuilds it.
         if let Err(cause) = checked {
-            let path = std::env::var_os("SEGMENT_LOG_TRACE_ARTIFACT_DIR")
-                .map(PathBuf::from)
-                .unwrap_or_else(|| std::env::temp_dir().join("segment-log-traces"))
-                .join(format!("{}-reads-{seed}.trace", std::process::id()));
-            let (trace_seed, events) = sim.trace();
-            trace::save(&path, trace_seed, &events).unwrap();
             let cause = cause
                 .downcast_ref::<String>()
                 .map(String::as_str)
                 .or_else(|| cause.downcast_ref::<&str>().copied())
-                .unwrap_or("a panic");
-            panic!(
-                "cases=READ-BOUNDED,ORACLE-12 seed={seed} trace={}: {cause}",
-                path.display()
-            );
+                .unwrap_or("a panic")
+                .to_owned();
+            eprintln!("{label}: {cause}");
+            let (trace_seed, events) = sim.trace();
+            let saved = trace::save(&path, trace_seed, &events);
+            panic!("{label}: {cause} (trace saved: {saved:?})");
         }
     }
 }

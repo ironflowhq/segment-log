@@ -19,7 +19,7 @@
 # Cases: the issue 156 logs (1,500,000, 4,000,000 and 10,000,000 records: about 7, 18 and 43
 # segments); about 200 segments at the default roll; 1,000 single-record callers, run until the
 # log holds CALLER_SEGMENTS segments; one caller with one record per group, SINGLE records at a
-# 4 MiB roll (about 20 segments, about 30 minutes to build on an M4).
+# 4 MiB roll (about 20 segments, 599 s to build on the M4).
 #
 # summarize.py applies ADR 0069's checks as ADR 0070 amends them, and accepts several reads.txt
 # files, so a smaller resident log from a second run can judge a case.
@@ -46,14 +46,21 @@ cases_sizes=${CASES:-"s7:1500000 s18:4000000 s43:10000000 s200:46500000 callers:
 	uname -a
 	if [ "$(uname)" = Darwin ]; then
 		sysctl -n machdep.cpu.brand_string hw.ncpu hw.memsize
-		diskutil info "$(df "$out" | awk 'NR==2 { print $1 }')" | grep -E 'Device / Media Name|File System Personality|Solid State|Protocol' || true
+		volume=$(df "$out" | awk 'NR==2 { print $1 }')
+		diskutil info "$volume" | grep -E 'File System Personality|Solid State|Protocol' || true
+		# A volume reports no media name; its whole disk does, and system_profiler has the firmware.
+		whole=$(diskutil info "$volume" | awk -F': *' '/Part of Whole/ { print $2 }')
+		media=$(diskutil info "$whole" | awk -F': *' '/Device \/ Media Name/ { print $2 }')
+		echo "drive: $media"
+		system_profiler SPNVMeDataType SPUSBDataType SPThunderboltDataType 2>/dev/null |
+			grep -A6 -F "$media" | grep -E 'Model|Revision|Firmware' || true
 	else
 		lscpu | grep -E 'Model name|^CPU\(s\)|Thread|NUMA node\(s\)'
 		free -b | head -2
 		findmnt -T "$out"
 		source=$(findmnt -n -o SOURCE -T "$out")
 		# A filesystem on a whole disk has no parent, so fall back to the source itself.
-		disk=$(lsblk -no PKNAME "$source" 2>/dev/null | head -1)
+		disk=$(lsblk -dno PKNAME "$source" 2>/dev/null || true)
 		[ -n "$disk" ] && source=/dev/$disk
 		lsblk -d -o NAME,MODEL,REV,SIZE "$source" || true
 	fi
