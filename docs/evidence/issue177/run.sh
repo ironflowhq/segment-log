@@ -48,7 +48,11 @@ cases_sizes=${CASES:-"s7:1500000 s18:4000000 s43:10000000 s200:46500000 callers:
 		lscpu | grep -E 'Model name|^CPU\(s\)|Thread|NUMA node\(s\)'
 		free -b | head -2
 		findmnt -T "$out"
-		lsblk -d -o NAME,MODEL,REV,SIZE "$(findmnt -n -o SOURCE -T "$out" | sed 's/p\?[0-9]*$//')" || true
+		source=$(findmnt -n -o SOURCE -T "$out")
+		# A filesystem on a whole disk has no parent, so fall back to the source itself.
+		disk=$(lsblk -no PKNAME "$source" 2>/dev/null | head -1)
+		[ -n "$disk" ] && source=/dev/$disk
+		lsblk -d -o NAME,MODEL,REV,SIZE "$source" || true
 	fi
 	rustc --version
 } >"$out/environment.txt"

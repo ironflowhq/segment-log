@@ -587,44 +587,58 @@ fn random_reads_over_many_sealed_segments_match_the_oracle() {
     let count = setting("SEGMENT_LOG_READ_SEEDS", 2);
     for seed in first..first.checked_add(count).unwrap() {
         let sim = Sim::new(seed);
-        let mut rng = Rng(seed);
-        let budget = 2 * crate::engine::frame_table_charge(3);
-        let expected = mixed_history(&sim, &mut rng, budget);
-        let reopened =
-            SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone())).unwrap();
-        reopened.set_frame_table_budget(budget);
-        let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone())).unwrap();
-        reader.set_frame_table_budget(budget);
-        let sealed = super::support::raw::segments(&sim).len();
-        assert!(sealed >= 10, "seed {seed}: {sealed} segments");
-        let views: [(&str, &Read); 2] = [
-            ("SegmentLog", &|from, max| reopened.read(from, max)),
-            ("LogReader", &|from, max| reader.read(from, max)),
-        ];
-        for (name, read) in views {
-            for _ in 0..300 {
-                let from = rng.pick(expected.len() + 1) as u64;
-                let wide = rng.pick(4) == 0;
-                let max = 1 + rng.pick(if wide { 2_000 } else { 64 });
-                let want = &expected[(from as usize).min(expected.len())..]
-                    [..max.min(expected.len() - from as usize)];
-                let got = read(from, max);
-                if !matches!(&got, Ok(records) if same(records, want)) {
-                    let path = std::env::var_os("SEGMENT_LOG_TRACE_ARTIFACT_DIR")
-                        .map(PathBuf::from)
-                        .unwrap_or_else(|| std::env::temp_dir().join("segment-log-traces"))
-                        .join(format!("{}-reads-{seed}.trace", std::process::id()));
-                    let (trace_seed, events) = sim.trace();
-                    trace::save(&path, trace_seed, &events).unwrap();
-                    panic!(
-                        "cases=READ-BOUNDED,ORACLE-12 seed={seed} view={name} read({from}, {max}) \
-                         returned {:?} records, expected {}; trace={}",
-                        got.map(|r| r.len()),
-                        want.len(),
-                        path.display()
-                    );
-                }
-            }
+        let checked =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| random_reads(&sim, seed)));
+        // Every failure, an unwrap in the history included, saves the trace that rebuilds it.
+        if let Err(cause) = checked {
+            let path = std::env::var_os("SEGMENT_LOG_TRACE_ARTIFACT_DIR")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| std::env::temp_dir().join("segment-log-traces"))
+                .join(format!("{}-reads-{seed}.trace", std::process::id()));
+            let (trace_seed, events) = sim.trace();
+            trace::save(&path, trace_seed, &events).unwrap();
+            let cause = cause
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| cause.downcast_ref::<&str>().copied())
+                .unwrap_or("a panic");
+            panic!(
+                "cases=READ-BOUNDED,ORACLE-12 seed={seed} trace={}: {cause}",
+                path.display()
+            );
+        }
+    }
+}
+
+fn random_reads(sim: &Sim, seed: u64) {
+    let mut rng = Rng(seed);
+    let budget = 2 * crate::engine::frame_table_charge(3);
+    let expected = mixed_history(sim, &mut rng, budget);
+    let reopened =
+        SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone())).unwrap();
+    reopened.set_frame_table_budget(budget);
+    let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone())).unwrap();
+    reader.set_frame_table_budget(budget);
+    let sealed = super::support::raw::segments(sim).len();
+    assert!(sealed >= 10, "{sealed} segments");
+    let views: [(&str, &Read); 2] = [
+        ("SegmentLog", &|from, max| reopened.read(from, max)),
+        ("LogReader", &|from, max| reader.read(from, max)),
+    ];
+    for (name, read) in views {
+        for _ in 0..300 {
+            let from = rng.pick(expected.len() + 1) as u64;
+            let wide = rng.pick(4) == 0;
+            let max = 1 + rng.pick(if wide { 2_000 } else { 64 });
+            let want = &expected[(from as usize).min(expected.len())..]
+                [..max.min(expected.len() - from as usize)];
+            let got = read(from, max);
+            assert!(
+                matches!(&got, Ok(records) if same(records, want)),
+                "view={name} read({from}, {max}) returned {:?} records, expected {}",
+                got.map(|r| r.len()),
+                want.len()
+            );
         }
     }
 }
