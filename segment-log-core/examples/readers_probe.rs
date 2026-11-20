@@ -3,12 +3,15 @@
 //!
 //! usage:
 //!   readers_probe build DIR RECORDS STREAMS
+//!   readers_probe build-single DIR RECORDS ROLL_BYTES
 //!   readers_probe run DIR APPENDERS READERS tail|random|scan SECONDS BATCH
 //!   readers_probe seal DIR
 //!   readers_probe sealed DIR READERS random|scan SECONDS BATCH
 //!
 //! `build` writes RECORDS keyed 256-byte records round-robin over STREAMS streams, under the
-//! default options, so the history spans many sealed segments. `run` reopens the log, then for
+//! default options, so the history spans many sealed segments. `build-single` writes RECORDS of
+//! the same records from one caller that waits for each, so each group holds one record, under a
+//! roll of ROLL_BYTES (issue 177). `run` reopens the log, then for
 //! SECONDS runs APPENDERS closed-loop callers (one keyed 256-byte record per submit, each on its
 //! own new stream, as in the M1 benchmark) beside READERS threads that call `read(from, BATCH)`:
 //!
@@ -19,7 +22,9 @@
 //! - `scan` reads the history from offset 0 in order, and starts again at the end.
 //!
 //! `sealed` reads a sealed log through `LogReader`, which opens only a sealed log, so it cannot
-//! run beside appenders on the same log (api.md). Every read checks that its records are
+//! run beside appenders on the same log (api.md). It first reads one record at the base offset of
+//! every segment file, in order, and reports those first walks of each segment's frame headers
+//! on a `WALK` line, apart from the timed reads. Every read checks that its records are
 //! contiguous from `from` and carry 256-byte payloads.
 //!
 //! Output: one `APPEND` line and one `READ` line per run, with latency quantiles in µs.
@@ -39,7 +44,7 @@ const TAIL_POLL: Duration = Duration::from_micros(200);
 
 fn usage() -> ! {
     eprintln!(
-        "usage:\n  readers_probe build DIR RECORDS STREAMS\n  readers_probe run DIR APPENDERS READERS tail|random|scan SECONDS BATCH\n  readers_probe seal DIR\n  readers_probe sealed DIR READERS random|scan SECONDS BATCH"
+        "usage:\n  readers_probe build DIR RECORDS STREAMS\n  readers_probe build-single DIR RECORDS ROLL_BYTES\n  readers_probe run DIR APPENDERS READERS tail|random|scan SECONDS BATCH\n  readers_probe seal DIR\n  readers_probe sealed DIR READERS random|scan SECONDS BATCH"
     );
     std::process::exit(2)
 }
@@ -54,6 +59,11 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     match (args.get(1).map(String::as_str), args.len()) {
         (Some("build"), 5) => build(Path::new(&args[2]), number(&args, 3), number(&args, 4)),
+        (Some("build-single"), 5) => build_single(
+            Path::new(&args[2]),
+            number(&args, 3),
+            number(&args, 4) as u64,
+        ),
         (Some("run"), 8) => run(
             Path::new(&args[2]),
             number(&args, 3),
@@ -78,12 +88,8 @@ fn main() {
     }
 }
 
-fn build(dir: &Path, records: usize, streams: usize) {
-    assert!(!dir.exists(), "build needs a new directory");
-    assert!(streams > 0 && streams <= records);
-    let log = SegmentLog::open(dir, Options::default()).expect("open");
-    let started = Instant::now();
-    let record = |i: usize| NewRecord {
+fn record(i: usize, streams: usize) -> NewRecord {
+    NewRecord {
         stream: (i % streams).to_le_bytes().to_vec(),
         expected: if i < streams {
             ExpectedRevision::Empty
@@ -92,7 +98,36 @@ fn build(dir: &Path, records: usize, streams: usize) {
         },
         key: Some(format!("h{i}").into_bytes()),
         payload: vec![(i % 251) as u8; PAYLOAD],
+    }
+}
+
+fn build_single(dir: &Path, records: usize, roll_bytes: u64) {
+    assert!(!dir.exists(), "build needs a new directory");
+    let options = Options {
+        roll_bytes,
+        ..Options::default()
     };
+    let log = SegmentLog::open(dir, options).expect("open");
+    let started = Instant::now();
+    for i in 0..records {
+        let submit = Submit {
+            records: vec![record(i, 1000.min(records))],
+        };
+        let committed = log.append(submit).expect("append").wait().expect("commit");
+        assert_eq!(committed.records[0].offset, i as u64);
+    }
+    println!(
+        "BUILD records={records} roll_bytes={roll_bytes} seconds={:.1}",
+        started.elapsed().as_secs_f64()
+    );
+}
+
+fn build(dir: &Path, records: usize, streams: usize) {
+    assert!(!dir.exists(), "build needs a new directory");
+    assert!(streams > 0 && streams <= records);
+    let log = SegmentLog::open(dir, Options::default()).expect("open");
+    let started = Instant::now();
+    let record = |i: usize| record(i, streams);
     // A window of pending submits keeps the writer's groups full without a thread per caller.
     let mut window = std::collections::VecDeque::new();
     let mut next = 0;
@@ -316,6 +351,34 @@ fn sealed(dir: &Path, readers: usize, pattern: &str, seconds: usize, batch: usiz
     assert!(pattern != "tail", "a sealed log has no tail to follow");
     let reader_log = LogReader::open(dir).expect("LogReader::open");
     let history = reader_log.watermark();
+    let mut bases: Vec<u64> = std::fs::read_dir(dir)
+        .expect("list")
+        .filter_map(|e| {
+            e.ok()?
+                .file_name()
+                .to_str()?
+                .strip_suffix(".seg")?
+                .parse()
+                .ok()
+        })
+        .filter(|&base| base < history)
+        .collect();
+    bases.sort_unstable();
+    let walked = Instant::now();
+    let walks = bases
+        .iter()
+        .map(|&base| {
+            let t0 = Instant::now();
+            assert_eq!(reader_log.read(base, 1).expect("read")[0].offset, base);
+            t0.elapsed().as_nanos() as u64
+        })
+        .collect();
+    println!(
+        "WALK segments={} total_ms={:.1} {}",
+        bases.len(),
+        walked.elapsed().as_secs_f64() * 1000.0,
+        quantiles(walks)
+    );
     let stop = AtomicBool::new(false);
     let started = Instant::now();
     let reads = thread::scope(|s| {
