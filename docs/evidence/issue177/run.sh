@@ -21,6 +21,9 @@
 # log holds CALLER_SEGMENTS segments; one caller with one record per group, SINGLE records at a
 # 4 MiB roll (about 20 segments, about 30 minutes to build on an M4).
 #
+# summarize.py applies ADR 0069's checks as ADR 0070 amends them, and accepts several reads.txt
+# files, so a smaller resident log from a second run can judge a case.
+#
 # Sizes are environment variables so that a smoke run can shrink them. CALLER_SECONDS (default 60)
 # is the length of each 1,000-caller build round, so a smaller log can stop nearer its target.
 set -euo pipefail
