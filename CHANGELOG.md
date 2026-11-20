@@ -8,6 +8,10 @@ Each release lists its API breaks with a migration note, its format version bump
 
 - **Random reads over many sealed segments no longer reread frame headers** on nearly every call ([issue 177](https://github.com/ironflowx/segment-log/issues/177), [ADR 0069](docs/decisions/0069-reads-keep-sparse-frame-tables-under-a-byte-budget.md)). A log, or a `LogReader`, used to keep the frame tables of at most 16 sealed segments. It now keeps a sparse table per sealed segment, one frame for each 64 KiB, under a 24 MiB budget per view, about 64 GiB of sealed history ([api.md](docs/architecture/api.md#opening-a-directory)). A read of a frame that is not kept reads one window of at most 64 KiB. Header damage found in a sealed segment after its first walk now fails reads of that whole window, not only of the damaged frame.
 
+### Fixed
+
+- **Go client: a vsock `Dial` no longer fails with `interrupted system call`** when a signal reaches the dialing thread during the connect, as the Go runtime's own `SIGURG` can under a burst of dials ([issue 187](https://github.com/ironflowx/segment-log/issues/187)). The connect is now non-blocking and waits on Go's poller, as `net.Dial` does.
+
 No API change. No format version change. The protocol versions are unchanged.
 
 ## 0.1.1 - 2026-11-20

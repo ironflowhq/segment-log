@@ -323,6 +323,57 @@ func TestDialBurst(t *testing.T) {
 	}
 }
 
+// TRANSPORT-DIAL-SIGNALS: a dial that signals interrupt still connects. The runtime handles
+// SIGURG itself, so a stream of them lands on whichever thread is blocked in a dial without
+// stopping the test (issue 187).
+func TestDialSignals(t *testing.T) {
+	const dialers, dials = 8, 200
+	d := newLogDir(t)
+	// A cap no run can reach, so a close the server has not yet seen never refuses a dial.
+	d.start(t, "", "--max-connections", fmt.Sprint(dialers*dials))
+	stop := make(chan struct{})
+	var signaled sync.WaitGroup
+	signaled.Add(1)
+	go func() {
+		defer signaled.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				syscall.Kill(os.Getpid(), syscall.SIGURG)
+				runtime.Gosched() // keep the storm from starving the dialers and the server of a core
+			}
+		}
+	}()
+	errs := make(chan error, dialers)
+	for g := range dialers {
+		go func() {
+			for i := range dials {
+				c, err := Dial(d.network, d.address)
+				if err != nil {
+					errs <- fmt.Errorf("dialer %d, dial %d: %w", g, i, err)
+					return
+				}
+				c.Close()
+			}
+			errs <- nil
+		}()
+	}
+	defer func() { close(stop); signaled.Wait() }()
+	deadline := time.After(time.Minute) // a hung dial fails here, not at go test's timeout
+	for range dialers {
+		select {
+		case err := <-errs:
+			if err != nil {
+				t.Error(err)
+			}
+		case <-deadline:
+			t.Fatal("dials still running after a minute")
+		}
+	}
+}
+
 // TRANSPORT-THREAD-EXHAUSTION: a connection that the server cannot start threads for is closed,
 // and the server keeps accepting. A 256 MiB guest's threads-max runs out under the burst of
 // TRANSPORT-DIAL-BURST, so only the Firecracker transport can cause it.
