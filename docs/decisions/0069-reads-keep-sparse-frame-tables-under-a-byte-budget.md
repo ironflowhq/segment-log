@@ -20,7 +20,7 @@ enforced_by: test
 These facts are fixed:
 
 - The bound of 16 came from commit `bbc4a12`, a fix that bounded memory. No ADR chose it. Its comment sizes it for forward readers, one table each, and not for random reads.
-- A table is a dense list of `GroupSpan` (position, length, base offset, count), one per group frame, 24 bytes each. Its size grows with the number of group frames. The issue 156 log holds about 77 KiB per frame (3.0 GB in 43 segments, groups of 256 records), so a 64 MiB segment holds about 850 frames and 20 KiB of table. Groups of one 256-byte record hold about 200,000 frames, about 4.7 MiB of table.
+- A table is a dense list of `GroupSpan` (position, length, base offset, count), one per group frame, 24 bytes each. Its size grows with the number of group frames. The issue 156 log holds about 100 frames per 64 MiB segment, each 0.8–0.9 MiB at the median, because the writer packs several 256-record submits into one group, so its tables are about 2.4 KiB each. Groups of one 256-byte record hold about 200,000 frames, about 4.7 MiB of table.
 - A hit through a dense table reads the frame it needs from the stored position and length: one lookup read per frame, and `read` checks the frame's CRC when it decodes it.
 - The first read of a sealed segment walks and checks every frame envelope and body header ([open step 5](../architecture/overview.md#open-and-recovery)). A sealed segment never changes after that.
 - `SegmentLog` and each `LogReader` have their own view, so their own tables. A roll hands the writer's table of the segment it seals to the view. The newest segment's spans live apart from the sealed tables.
@@ -31,7 +31,7 @@ These facts are fixed:
 
 ### Option A - today's dense tables under a byte budget
 
-- **For:** the smallest change. Hits stay at one read per frame. With the issue 156 groups, the tables of 1,000 segments fit in about 20 MiB.
+- **For:** the smallest change. Hits stay at one read per frame. With the issue 156 groups, the tables of 1,000 segments fit in about 2.4 MiB.
 - **Against:** memory follows the frame count, so how callers group their records sets how much history the budget covers. With single-record groups a 24 MiB budget holds 5 segments, and random reads fall back to full walks.
 
 ### Option B - sparse tables in memory: one entry per 64 KiB of segment, under a byte budget
@@ -67,24 +67,24 @@ We will build Option B.
 
 So a `read` costs one lookup read for each kept frame it uses, plus one for each window it walks, plus one for each frame that runs past its window.
 
-**Damage after the first walk.** A window check that fails returns `Corrupt` for that `read`, and the view keeps the table. The segment does not change, so walking it again would fail at the same frame. While the table is kept, reads that need other windows of the segment still succeed. Reads that need any frame of the damaged window fail, where today only reads of the damaged frame fail. A CRC failure when a frame is decoded also keeps the table, as today. Once the budget drops the table, the next read walks the segment, fails at the damaged frame, and keeps no table, so every read of the segment fails, as it does today after a dropped table.
+**Damage after the first walk.** A window check that fails returns `Corrupt` for that `read`, and the view keeps the table. The segment does not change, so walking it again would fail at the same frame. While the table is kept, reads that need other windows of the segment still succeed. Reads that need any frame of the damaged window fail, where today only reads of the damaged frame fail. A CRC failure when a frame is decoded also keeps the table, as today. For header damage, once the budget drops the table, the next read walks the segment, fails at the damaged frame, and keeps no table, so every read of the segment fails, as it does today after a dropped table. A walk does not check CRCs, so damage inside a frame body still fails only reads of that frame.
 
 **Budget.** The view charges each sealed segment's table its entries plus a fixed allowance for the table itself. When the charges pass 24 MiB, it drops the least recently used tables until they fit, but it always keeps the most recently used or handed-over table, even if that table alone exceeds the budget. A lookup must not scan every kept table, because the view now keeps thousands, not 16. The budget is a `pub(crate)` const, for each log and each `LogReader`, with no new `Options` field. The newest segment's spans are outside it, as today. 24 MiB covers about 64 GiB of sealed history: 1,000 segments at the [default roll](../architecture/api.md).
 
-**Done when.** The `docs/evidence/issue177/` record runs the issue 156 driver at the pre-change commit `0a11998` and at the change, on the same host and the same logs, with one discarded pass that walks every segment before any timed run. It reports first walks separately, the frames per segment of each log, and whether each log fits the host's page cache, since a random read that misses the cache can fail check 1 for reasons unrelated to tables.
+**Done when.** The `docs/evidence/issue177/` record runs the issue 156 driver at the pre-change commit `0a11998` and at the change, on the same host and the same logs, with one discarded pass that walks every segment before any timed run. It reports first walks separately, the frames per segment of each log, and each log's bytes against the host's RAM, with the fraction of the log resident in the page cache where the host can measure it. A random read that misses the cache can fail check 1 for reasons unrelated to tables. Such a failure still counts, and the record names the cache state beside it.
 
 The cases, each sealed and read through `LogReader`:
 
 - the issue 156 logs: 7, 18 and 43 segments;
 - a log of about 200 segments at the default roll;
 - the log of 1,000 single-record callers, whose groups the writer still packs from several callers;
-- a log written by one caller with one record per group, the case with the most entries per window.
+- a log written by one caller with one record per group, the case with the most frames per window: 20 segments at a 4 MiB roll, about 250,000 frames, about 30 minutes to build at the 145 flushes per second measured on the M4.
 
 The record passes when all of these hold:
 
 1. For every case: random-read p50 at most 2× the pre-change scan p50, and random-read p99 at most 3× the pre-change scan p99.
-2. For every case: scan p50 and p99 within 10% of the pre-change scan.
-3. The 43-segment, 200-segment and both small-group cases fail check 1 at the pre-change commit. Any other case that already passes check 1 there is reported and excluded from the verdict. On the M4, the 18-segment case fails before the change only on p99.
+2. For every case: scan p50 and p99 at most 10% slower than the pre-change scan. Faster is fine.
+3. The 43-segment, 200-segment and 1,000-caller cases fail check 1 at the pre-change commit. Any other case that already passes check 1 there is reported and excluded from the verdict on the change's benefit, but must still pass checks 1 and 2 after it. On the M4, the 18-segment case fails before the change only on p99. The one-record-per-group case may pass before the change, because a 4 MiB walk is cheap. It is there to show that windows do not make reads slower.
 
 The record decides on the M4 Mac and reruns on the qualified host before this ADR is accepted. The owner accepted on 2026-11-20 that the measured cases stop near 314 segments. The 1,000-segment figure stays arithmetic, and eviction at the production budget is tested in simulation.
 
@@ -99,6 +99,7 @@ We chose this because it brings random reads in line with scans without a format
 - Damage in a sealed segment after its first walk fails reads of a whole window, not one frame, while the table is kept, and of the whole segment once the budget drops it.
 - The table store changes from a 16-entry list to one that finds a table without a full scan.
 - Ships in a 0.1.x patch. [CHANGELOG.md](../../CHANGELOG.md) lists it under Changed. No API, format version or protocol version changes.
+- The roll hands over a filtered table and changes no I/O, so the write and recovery paths gain no crash cases.
 - I1–I10 are unchanged. The tables stay caches that the log rebuilds from the segments ([overview.md](../architecture/overview.md)).
 - The done-when cases reach about 314 segments. The 1,000-segment and 64 GiB figures are arithmetic from the entry size, not measured.
 
