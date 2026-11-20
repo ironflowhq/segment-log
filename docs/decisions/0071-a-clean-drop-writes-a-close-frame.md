@@ -1,7 +1,7 @@
 ---
 id: "0071"
 title: "A clean drop writes a close frame, so open no longer truncates a synced last group as a torn tail"
-status: proposed
+status: accepted
 date: 2026-11-20
 deciders: [Altug Sahin]
 supersedes: null
@@ -88,7 +88,7 @@ We will build options A, E and I.
 
 **Writing it.** When the queue disconnects, the writer runs `write_pending(&view, true)` as today. Only if that returns `Ok`, and the writer is not poisoned, does it append a close frame to the newest segment and call `sync_data`, the same barrier as a group. It skips the frame when the newest segment already ends with a close frame, so that a guest that starts and stops without appending pays no `fsync`. It writes the frame even when the newest segment holds only its header, so drop has one path. If the write or the `fsync` fails, the writer stops: it does not retry ([ADR 0004](0004-io-errors-poison-the-writer.md)), and drop returns nothing. The next open then finds no close frame and behaves as today. `seal` writes no close frame: a sealed log ends in a seal run, and its last segment is never scanned at open.
 
-**Reading it.** The close frame holds no records. Open's scan, `LogReader`, the sealer's closing-run build, the sparse frame tables ([ADR 0069](0069-reads-keep-sparse-frame-tables-under-a-byte-budget.md)) and the repair tool step over it. The repair tool lists it as `close`. The next session's groups follow it, so a segment can hold many close frames. Every rule that says a segment "holds only its header", or "only its header and group frames", reads instead "holds no group frame", or "only group and close frames".
+**Reading it.** The close frame holds no records. Open's scan, `LogReader`, the sealer's closing-run build, the sparse frame tables ([ADR 0069](0069-reads-keep-sparse-frame-tables-under-a-byte-budget.md)) and the repair tool step over it. The repair tool lists it as `close`. A read of a sealed segment checks a close frame's CRC, its offset and its epoch, but not its segment's version: only a writer that has the log id could place a valid one in a version 3 segment. The next session's groups follow it, so a segment can hold many close frames. Open's rewrite of the recovered tail ([ADR 0015](0015-open-makes-the-recovered-tail-durable.md)) writes back a trailing close frame instead of the group before it, because only the close frame's flush can have failed. Every rule that says a segment "holds only its header", or "only its header and group frames", reads instead "holds no group frame", or "only group and close frames".
 
 **Proof.** ADR 0068's proof gains one case. After a scan of an unsealed segment stops at `p` while it expects offset `n` next, a close frame after `p` that passes every per-frame rule for readers and has `base_offset > n` is a proof: open fails with `OpenError::Corrupt { segment, position: p }` and changes no file. A close frame is written only after every group before it was synced, so if it is valid, those groups were acknowledged. A close frame with `base_offset <= n` is from an earlier session or a lookalike copy, and proves nothing. The search's cheap filter accepts kind 7 beside kind 1. A torn close frame is a torn tail: open truncates it and keeps every group before it. The same rule serves the newest segment, the second-newest segment without its closing run, and `LogReader`.
 
@@ -100,6 +100,7 @@ We chose the close frame because it closes the clean-drop case at the cost of on
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-20, for 0.2.0 ([issue #183](https://github.com/ironflowx/segment-log/issues/183)).
 - Amends ADR 0003: after a clean drop, a damaged last group is no longer kept as a torn tail; open fails with `Corrupt`.
 - Amends ADR 0011: a close frame now records a clean drop. It is a frame, not a marker file, and open never skips the scan because of it.
 - Amends ADR 0065 and ADR 0068: a close frame is a proof, and a class F plan may move a close-frame proof before it writes the seal run.
