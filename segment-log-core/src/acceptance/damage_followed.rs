@@ -41,7 +41,12 @@ fn reopen(sim: &Sim) -> Result<SegmentLog, OpenError> {
 fn open_refuses_a_bad_frame_with_acknowledged_groups_after_it() {
     bounded(|| {
         let sim = Sim::new(178);
-        let log = open(&sim);
+        // All three groups in one unsealed segment, whatever roll size the run sets.
+        let unrolled = Options {
+            roll_bytes: 1 << 20,
+            ..options()
+        };
+        let log = open_with(&sim, unrolled);
         for i in 0..3u64 {
             let expected = match i {
                 0 => ExpectedRevision::Empty,
@@ -340,5 +345,86 @@ fn a_crash_at_each_step_of_a_class_f_repair_fails_closed_or_finds_it_sealed() {
             }
         }
         assert!(closed > 0 && opened > 0, "{closed} {opened}");
+    });
+}
+
+fn setting(name: &str, default: u64) -> u64 {
+    std::env::var(name).map_or(default, |v| v.parse().expect("numeric damage setting"))
+}
+
+/// The next value of a splitmix64 sequence, so that one seed rebuilds a case.
+fn next(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
+/// Given seeded logs of two to seven acknowledged groups in one unsealed segment
+/// When one byte anywhere before the start of the last group frame flips
+/// Then open fails with `Corrupt`, or keeps every acknowledged offset and record; it never returns
+/// `Ok` with a lower watermark
+///
+/// Cases: OPEN-DAMAGE-RANDOM
+#[test]
+fn one_flipped_byte_before_the_last_group_never_loses_an_acknowledged_record() {
+    let seed = setting("SEGMENT_LOG_DAMAGE_SEED", 178);
+    let cases = setting("SEGMENT_LOG_DAMAGE_CASES", 64);
+    bounded(move || {
+        // One segment, whatever roll size the run sets.
+        let unrolled = || Options {
+            roll_bytes: 1 << 20,
+            ..options()
+        };
+        for case in 0..cases {
+            let mut state = seed ^ case.wrapping_mul(0xD6E8_FEB8_6659_FD93);
+            let sim = Sim::new(seed.wrapping_add(case));
+            let log =
+                SegmentLog::with_storage(Path::new("/log"), unrolled(), Arc::new(sim.clone()))
+                    .unwrap();
+            let groups = 2 + next(&mut state) % 6;
+            let mut written = vec![];
+            for i in 0..groups {
+                let stream = format!("s{i}").into_bytes();
+                let payload = vec![i as u8; 1 + (next(&mut state) % 300) as usize];
+                let submit = Submit {
+                    records: vec![NewRecord {
+                        stream,
+                        expected: ExpectedRevision::Empty,
+                        key: Some(format!("k{i}").into_bytes()),
+                        payload: payload.clone(),
+                    }],
+                };
+                log.append(submit).unwrap().wait().unwrap();
+                written.push(payload);
+            }
+            drop(log);
+            let mut segments = raw::segments(&sim);
+            let segment = &mut segments[0].1;
+            let last = segment.len() - raw::frames(segment).last().unwrap().len();
+            let at = codec::HEADER_LEN + (next(&mut state) as usize) % (last - codec::HEADER_LEN);
+            segment[at] ^= 1 << (next(&mut state) % 8);
+            raw::install_segments(&sim, &segments);
+            let replay = format!(
+                "case {case} byte {at}; replay: SEGMENT_LOG_DAMAGE_SEED={seed} \
+                 SEGMENT_LOG_DAMAGE_CASES={cases} cargo test -p segment-log-core --lib \
+                 one_flipped_byte"
+            );
+            match SegmentLog::with_storage(Path::new("/log"), unrolled(), Arc::new(sim.clone())) {
+                Err(OpenError::Corrupt { .. }) => (),
+                Ok(log) => {
+                    assert_eq!(log.watermark(), groups, "{replay}");
+                    let read: Vec<_> = log
+                        .read(0, 10)
+                        .unwrap()
+                        .into_iter()
+                        .map(|r| r.payload)
+                        .collect();
+                    assert_eq!(read, written, "{replay}");
+                }
+                Err(other) => panic!("{replay}: {other:?}"),
+            }
+        }
     });
 }
