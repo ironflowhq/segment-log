@@ -50,6 +50,7 @@ The layout is in [format.md](../architecture/format.md#footer-entry-m4).
 
 ## Consequences
 
+- [ADR 0071](0071-a-clean-drop-writes-a-close-frame.md) amends this decision. A clean drop writes a close frame (format version 4). It is a frame, not a marker file, and open never skips the scan because of it.
 - [ADR 0037](0037-retain-complete-logs-through-current-milestones.md) replaces the footer-coverage deletion proposal with complete-history retention through M1–M6. Deployment owns whole-log archival and expiry; existing recovery cleanup is unchanged.
 - [ADR 0017](0017-footer-locator-offset-and-size.md) amends the footer's contents and position.
 - [ADR 0031](0031-keys-live-with-retained-segments.md) preserves segment-lifetime keys. Optimized key lookup and its key-cache memory budget must be settled for M4.

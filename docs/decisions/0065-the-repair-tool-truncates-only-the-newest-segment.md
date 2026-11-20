@@ -108,6 +108,7 @@ We chose this because class A is the only `Corrupt` with a crash explanation, an
 
 ## Consequences
 
+- [ADR 0071](0071-a-clean-drop-writes-a-close-frame.md) amends this decision. A class F plan whose only room is blocked by a close-frame proof first copies that proof past the seal run.
 - [ADR 0068](0068-open-refuses-damage-with-acknowledged-groups-after-it.md) amends this decision. It adds class F, an unsealed newest segment with acknowledged group frames after the damage, whose `truncate` plan is always lossy.
 - Accepted by the owner on 2026-11-19 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - api.md gains the [Operator repair](../architecture/api.md#operator-repair) section, and its note "Corrupt is for a human to resolve" points to it.

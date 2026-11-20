@@ -44,6 +44,7 @@ The contract:
 
 ## Consequences
 
+- [ADR 0071](0071-a-clean-drop-writes-a-close-frame.md) amends this decision. After a clean drop, a close frame proves that the last group was synced, so open fails with `Corrupt` instead of truncating a damaged last group.
 - [ADR 0068](0068-open-refuses-damage-with-acknowledged-groups-after-it.md) amends this decision. Open keeps the prefix only when no acknowledged group frame follows the damage; otherwise it fails with `Corrupt`.
 - [ADR 0015](0015-open-makes-the-recovered-tail-durable.md) extends this decision. It makes the kept tail durable at every open.
 - Idempotency keys are required on any append that a caller might retry ([ADR 0008](0008-idempotency-key-before-expected-revision.md)).
