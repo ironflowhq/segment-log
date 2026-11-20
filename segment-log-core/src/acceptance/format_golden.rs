@@ -20,10 +20,22 @@ fn rolling() -> Options {
     }
 }
 
+/// A build that writes `version`: version 3 stands in for 0.1, which never writes a close frame.
+fn open_at(sim: &Sim, version: u16) -> SegmentLog {
+    let hooks = crate::engine::Hooks {
+        limits: crate::engine::Limits {
+            format_version: version,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    SegmentLog::with_hooks(Path::new("/log"), rolling(), Arc::new(sim.clone()), hooks).unwrap()
+}
+
 /// Creates the log at epoch 1, appends the first submits, reopens it at epoch 2 and appends the
 /// rest, so the fixture holds a creation, an epoch change, rolls and a clock that steps back, as a
 /// real history does.
-fn write(sim: &Sim) -> SegmentLog {
+fn write(sim: &Sim, version: u16) -> SegmentLog {
     let random = Call::new("/log", Purpose::Open, Op::Random(16));
     sim.inject(random, Fault::Random(LOG_ID.to_vec()));
     let mut submits = submits().into_iter();
@@ -34,11 +46,11 @@ fn write(sim: &Sim) -> SegmentLog {
             .unwrap();
     };
     sim.set_clock(FIRST_CLOCK, 1_000);
-    let log = open_with(sim, rolling());
+    let log = open_at(sim, version);
     submits.by_ref().take(FIRST).for_each(|s| append(&log, s));
     drop(log);
     sim.set_clock(SECOND_CLOCK, 1_000);
-    let log = open_with(sim, rolling());
+    let log = open_at(sim, version);
     submits.for_each(|s| append(&log, s));
     log
 }
@@ -106,37 +118,52 @@ fn fields(records: &[Record]) -> Vec<Fields<'_>> {
 }
 
 macro_rules! fixture {
-    ($dir:literal, $($base:literal $file:literal),+) => {
-        vec![$((
+    ($version:literal, $dir:literal) => {
+        vec![
+            fixture!(@ $version, $dir, 0 "00000000000000000000"),
+            fixture!(@ $version, $dir, 4 "00000000000000000004"),
+            fixture!(@ $version, $dir, 9 "00000000000000000009"),
+        ]
+    };
+    (@ $version:literal, $dir:literal, $base:literal $file:literal) => {
+        (
             $base,
             include_bytes!(concat!(
-                "../../tests/fixtures/format-v3/", $dir, "/", $file, ".seg"
+                "../../tests/fixtures/format-v", $version, "/", $dir, "/", $file, ".seg"
             ))
             .to_vec(),
-        )),+]
+        )
     };
 }
 
-/// Two rolled segments and an active one.
-fn open_fixture() -> Vec<(u64, Vec<u8>)> {
-    fixture!("open", 0 "00000000000000000000", 4 "00000000000000000004", 9 "00000000000000000009")
+/// Two rolled segments and an active one, at `version`.
+fn open_fixture(version: u16) -> Vec<(u64, Vec<u8>)> {
+    match version {
+        3 => fixture!("3", "open"),
+        4 => fixture!("4", "open"),
+        _ => unreachable!(),
+    }
 }
 
 /// The open fixture after `seal`.
-fn sealed_fixture() -> Vec<(u64, Vec<u8>)> {
-    fixture!("sealed", 0 "00000000000000000000", 4 "00000000000000000004", 9 "00000000000000000009")
+fn sealed_fixture(version: u16) -> Vec<(u64, Vec<u8>)> {
+    match version {
+        3 => fixture!("3", "sealed"),
+        4 => fixture!("4", "sealed"),
+        _ => unreachable!(),
+    }
 }
 
-fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)]) {
+fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)], version: u16) {
     let bases = |s: &[(u64, Vec<u8>)]| s.iter().map(|(base, _)| *base).collect::<Vec<_>>();
     assert_eq!(bases(actual), bases(fixture), "segment bases");
     for ((base, actual), (_, fixture)) in actual.iter().zip(fixture) {
         let first = actual.iter().zip(fixture).position(|(a, f)| a != f);
         assert!(
             actual == fixture,
-            "segment {base} differs from the format v3 fixture at byte {:?} (lengths {} and {}); \
-             format v3 is the 0.1 baseline, so this fixture stays for good and a layout change is \
-             a new format version with its own fixture (ADR 0064)",
+            "segment {base} differs from the format v{version} fixture at byte {:?} (lengths {} and \
+             {}); a fixture stays for good once released, and a layout change is a new format \
+             version with its own fixture (ADR 0064)",
             first,
             actual.len(),
             fixture.len(),
@@ -153,8 +180,22 @@ fn assert_same(actual: &[(u64, Vec<u8>)], fixture: &[(u64, Vec<u8>)]) {
 /// Cases: FORMAT-GOLDEN
 #[test]
 fn a_writable_log_opens_the_format_v3_fixture() {
+    writable_log_opens(3);
+}
+
+/// Given the committed format v4 fixture, whose segment 0 holds the first writer's close frame
+/// When a writable log opens it
+/// Then it reads every record, deduplicates each keyed retry, and refuses a reused key, as for v3
+///
+/// Cases: FORMAT-GOLDEN
+#[test]
+fn a_writable_log_opens_the_format_v4_fixture() {
+    writable_log_opens(4);
+}
+
+fn writable_log_opens(version: u16) {
     let sim = Sim::new(0);
-    raw::install_segments(&sim, &open_fixture());
+    raw::install_segments(&sim, &open_fixture(version));
     let log = open_with(&sim, options());
     let expected = records();
     assert_eq!(fields(&log.read(0, 100).unwrap()), fields(&expected));
@@ -201,8 +242,22 @@ fn a_writable_log_opens_the_format_v3_fixture() {
 /// Cases: FORMAT-GOLDEN
 #[test]
 fn a_log_reader_opens_the_sealed_format_v3_fixture() {
+    log_reader_opens(3);
+}
+
+/// Given the committed format v4 fixture of a sealed log, whose segment 0 holds a close frame
+/// When a `LogReader` opens it
+/// Then it reads every record at its offset and revision, stepping over the close frame
+///
+/// Cases: FORMAT-GOLDEN
+#[test]
+fn a_log_reader_opens_the_sealed_format_v4_fixture() {
+    log_reader_opens(4);
+}
+
+fn log_reader_opens(version: u16) {
     let sim = Sim::new(0);
-    raw::install_segments(&sim, &sealed_fixture());
+    raw::install_segments(&sim, &sealed_fixture(version));
     let reader = LogReader::with_storage(Path::new("/log"), Arc::new(sim.clone())).unwrap();
     let expected = records();
     assert_eq!(fields(&reader.read(0, 100).unwrap()), fields(&expected));
@@ -217,11 +272,35 @@ fn a_log_reader_opens_the_sealed_format_v3_fixture() {
 /// Cases: FORMAT-GOLDEN
 #[test]
 fn the_writer_still_writes_format_v3() {
+    writer_writes(3);
+}
+
+/// Given a new log created with the fixture's log id, by a build at version 4
+/// When it writes the same history, whose first writer drops the log cleanly
+/// Then its segment files equal the committed format v4 fixture byte for byte, before and after
+/// the seal
+/// And the v4 fixture holds one close frame, where the first writer dropped the log, and the v3
+/// fixture holds none
+///
+/// Cases: FORMAT-GOLDEN, DROP-CLOSE-FRAME
+#[test]
+fn the_writer_writes_format_v4() {
+    writer_writes(4);
+    let v3 = open_fixture(3);
+    let v4 = open_fixture(4);
+    let close_frames = |segments: &[(u64, Vec<u8>)]| {
+        let frames = segments.iter().flat_map(|(_, bytes)| raw::frames(bytes));
+        frames.filter(|frame| frame[8] == 7).count()
+    };
+    assert_eq!((close_frames(&v3), close_frames(&v4)), (0, 1));
+}
+
+fn writer_writes(version: u16) {
     let sim = Sim::new(0);
-    let log = write(&sim);
-    assert_same(&raw::segments(&sim), &open_fixture());
+    let log = write(&sim, version);
+    assert_same(&raw::segments(&sim), &open_fixture(version), version);
     log.seal().unwrap();
-    assert_same(&raw::segments(&sim), &sealed_fixture());
+    assert_same(&raw::segments(&sim), &sealed_fixture(version), version);
 }
 
 /// Given the committed format v3 fixture
@@ -233,7 +312,7 @@ fn the_writer_still_writes_format_v3() {
 #[test]
 fn the_format_v3_fixture_carries_append_times_that_never_decrease() {
     let log_id = crate::codec::LogId::new(LOG_ID);
-    let times: Vec<u64> = open_fixture()
+    let times: Vec<u64> = open_fixture(3)
         .iter()
         .flat_map(|(_, bytes)| raw::frames(bytes))
         .filter_map(|frame| crate::codec::decode(&log_id, frame).ok()?.into_group())

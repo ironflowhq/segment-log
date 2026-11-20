@@ -13,6 +13,7 @@ pub(super) enum Kind {
     Locator,
     KeyFilter,
     KeyIndex,
+    Close,
 }
 
 impl Kind {
@@ -24,6 +25,7 @@ impl Kind {
             4 => Self::Locator,
             5 => Self::KeyFilter,
             6 => Self::KeyIndex,
+            7 => Self::Close,
             _ => return None,
         })
     }
@@ -84,6 +86,8 @@ pub(crate) enum Body<'a> {
         count: u32,
         pages: &'a [u8],
     },
+    /// Written by a clean drop after every group before it was synced (ADR 0071). Version 4 on.
+    Close,
 }
 
 impl<'a> Frame<'a> {
@@ -235,6 +239,13 @@ pub(crate) fn encode_seal(log: &LogId, epoch: u64, base_offset: u64) -> Vec<u8> 
     )
 }
 
+pub(crate) fn encode_close(log: &LogId, epoch: u64, base_offset: u64) -> Vec<u8> {
+    finish(
+        log,
+        begin(Kind::Close, epoch, base_offset, 0, BODY_HEADER_LEN),
+    )
+}
+
 pub(crate) fn encode_locator(
     log: &LogId,
     epoch: u64,
@@ -275,14 +286,20 @@ impl<'a> Cursor<'a> {
     }
 }
 
-/// Whether `frame`'s body header could be a group at `next` or later: its kind, reserved bytes and
-/// `base_offset`, read before any CRC (ADR 0068). `decode` still decides validity.
-pub(crate) fn group_at_or_after(frame: &[u8], next: u64) -> bool {
+/// Whether `frame`'s body header could prove the bytes before it durable, read before any CRC:
+/// a group at `next` or later (ADR 0068), or a close frame past `next` (ADR 0071). `decode` still
+/// decides validity.
+pub(crate) fn proof_candidate(frame: &[u8], next: u64) -> bool {
     let at = ENVELOPE_LEN;
-    frame.len() >= at + BODY_HEADER_LEN
-        && frame[at] == Kind::Group as u8
-        && frame[at + 1..at + 4] == [0; 3]
-        && u64::from_le_bytes(frame[at + 12..at + 20].try_into().unwrap()) >= next
+    if frame.len() < at + BODY_HEADER_LEN || frame[at + 1..at + 4] != [0; 3] {
+        return false;
+    }
+    let base_offset = u64::from_le_bytes(frame[at + 12..at + 20].try_into().unwrap());
+    match frame[at] {
+        k if k == Kind::Group as u8 => base_offset >= next,
+        k if k == Kind::Close as u8 => base_offset > next,
+        _ => false,
+    }
 }
 
 pub(crate) fn decode<'a>(log: &LogId, bytes: &'a [u8]) -> Result<Frame<'a>, Error> {
@@ -314,6 +331,10 @@ pub(crate) fn decode<'a>(log: &LogId, bytes: &'a [u8]) -> Result<Frame<'a>, Erro
         Kind::Seal => {
             check_fixed_body(&c, count, BODY_HEADER_LEN)?;
             Body::Seal
+        }
+        Kind::Close => {
+            check_fixed_body(&c, count, BODY_HEADER_LEN)?;
+            Body::Close
         }
         Kind::Locator => {
             check_fixed_body(&c, count, LOCATOR_LEN - ENVELOPE_LEN)?;

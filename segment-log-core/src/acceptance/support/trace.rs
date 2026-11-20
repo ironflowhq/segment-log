@@ -63,6 +63,7 @@ fn purpose(w: &mut impl Write, purpose: Purpose) -> io::Result<()> {
         Purpose::Seal => 8,
         Purpose::LogFilter => 9,
         Purpose::Repair => 10,
+        Purpose::Close => 11,
     };
     number(w, tag)
 }
@@ -79,6 +80,7 @@ fn read_purpose(r: &mut impl Read) -> io::Result<Purpose> {
         8 => Purpose::Seal,
         9 => Purpose::LogFilter,
         10 => Purpose::Repair,
+        11 => Purpose::Close,
         _ => return Err(invalid()),
     })
 }

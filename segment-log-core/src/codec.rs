@@ -1,4 +1,4 @@
-//! The byte layout of [format.md](../../docs/architecture/format.md), version 3. Every width,
+//! The byte layout of [format.md](../../docs/architecture/format.md), version 4. Every width,
 //! limit and check value comes from that file, and belongs to its format version (ADR 0064).
 
 mod crc;
@@ -10,11 +10,12 @@ mod index;
 pub(crate) use crc::crc32c;
 pub(crate) use filter::{KeyFilter, probes as filter_probes};
 pub(crate) use frame::{
-    Body, Entry, Footer, Frame, Group, StreamTail, decode, encode_footer, encode_group,
-    encode_locator, encode_seal, group_at_or_after,
+    Body, Entry, Footer, Frame, Group, StreamTail, decode, encode_close, encode_footer,
+    encode_group, encode_locator, encode_seal, proof_candidate,
 };
 pub(crate) use header::{
-    FORMAT_VERSION, HEADER_LEN, Header, MIN_FORMAT_VERSION, decode_header, encode_header,
+    CLOSE_VERSION, FORMAT_VERSION, HEADER_LEN, Header, MIN_FORMAT_VERSION, decode_header,
+    encode_header,
 };
 pub(crate) use index::{KeyEntry, KeyFrames, decode_page, encode_key_frames, page_count};
 

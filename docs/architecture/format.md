@@ -1,8 +1,8 @@
 # Byte layout
 
-Status: `format_version` 3, the 0.1 baseline ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md)). Version 3 adds a group's append time and binds each key index page to its place; version 2 ([ADR 0055](../decisions/0055-format-version-2-aligns-key-index-pages.md)) aligned key index pages, and version 1 is what M5 reviewed ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). A change to the bytes of a segment file is a new `format_version`, written one segment at a time, and every build reads every version from 3 up to its own (ADR 0064, rules 11–14). No 0.x release drops a version: dropping one needs an ADR, a major release (1.0 or later) and a migration path. No build reads version 0, 1 or 2: each is refused with `UnsupportedVersion`.
+Status: `format_version` 4 ([ADR 0071](../decisions/0071-a-clean-drop-writes-a-close-frame.md)). Version 4 adds the close frame; every other byte matches version 3, the 0.1 baseline ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md)). Version 3 adds a group's append time and binds each key index page to its place; version 2 ([ADR 0055](../decisions/0055-format-version-2-aligns-key-index-pages.md)) aligned key index pages, and version 1 is what M5 reviewed ([ADR 0052](../decisions/0052-freeze-format-version-1.md)). A change to the bytes of a segment file is a new `format_version`, written one segment at a time, and every build reads every version from 3 up to its own (ADR 0064, rules 11–14). No 0.x release drops a version: dropping one needs an ADR, a major release (1.0 or later) and a migration path. No build reads version 0, 1 or 2: each is refused with `UnsupportedVersion`.
 
-Every width, limit and constant in this file belongs to format version 3, the filter's parameters and the page size included. Changing one is a new format version.
+Every width, limit and constant in this file belongs to format version 4, and has the same value in version 3, the filter's parameters and the page size included. Changing one is a new format version.
 
 This file is the only source for field widths, offsets and size limits. Other docs link here and do not copy them.
 
@@ -70,12 +70,12 @@ Check value: with `log_id` bytes `00 01 02 … 0f`, a seal frame with epoch 1 an
 
 | Offset in body | Size | Field |
 | --- | --- | --- |
-| 0 | 1 | `kind` — `1` group, `2` footer, `3` seal, `4` locator, `5` key filter, `6` key index |
+| 0 | 1 | `kind` — `1` group, `2` footer, `3` seal, `4` locator, `5` key filter, `6` key index, `7` close (version 4 on) |
 | 1 | 1 | `flags` — `0` |
 | 2 | 2 | reserved |
 | 4 | 8 | `epoch` — the writer epoch that wrote this frame |
 | 12 | 8 | `base_offset` — for a group, the log offset of its first record. For any other kind, the next unused log offset. |
-| 20 | 4 | `count` — group: number of records (at least 1). Footer: number of streams. Key filter and key index: number of keyed records in the segment. Seal and locator: `0`. |
+| 20 | 4 | `count` — group: number of records (at least 1). Footer: number of streams. Key filter and key index: number of keyed records in the segment. Seal, locator and close: `0`. |
 
 The CRC covers the epoch. Kafka keeps its leader epoch outside the CRC, so that a broker can stamp it when it receives a batch. A local writer has no receive path, so it has no reason to leave a field unprotected.
 
@@ -87,7 +87,7 @@ A group body is the body header, then `append_time`, then `count` record entries
 | --- | --- | --- |
 | 24 | 8 | `append_time` — wall-clock milliseconds since the Unix epoch, which the writer reads when it encodes the group |
 
-The append time never decreases within a log. The writer stamps the larger of its clock and the previous group's time. At open it takes the previous time from the newest group it keeps: the newest segment's last group, or, when the newest segment holds only its header, the last group of the segment before, which is the group at the largest `last_position` in that segment's footer. A clock that steps back therefore cannot reorder appends ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md), rule 2). The time is advisory, not a source of truth: it has no upper bound, so a clock reading in the future becomes the floor for every later group of the log, and a feature that seeks by time must treat it as a hint. Readers do not check the order: a decrease is not a reason to reject a frame. The writer is the one place that keeps the order, a reader check would add a failure mode for no gain, and a frame CRC already catches a damaged time ([ADR 0066](../decisions/0066-append-time-is-advisory-and-versions-never-go-back.md)). Closing frames carry no time, so ADR 0054's rebuild of a closing run never reads a clock.
+The append time never decreases within a log. The writer stamps the larger of its clock and the previous group's time. At open it takes the previous time from the newest group it keeps: the newest segment's last group, or, when the newest segment holds no group frame, the last group of the segment before, which is the group at the largest `last_position` in that segment's footer. A clock that steps back therefore cannot reorder appends ([ADR 0064](../decisions/0064-the-0-1-compatibility-promise.md), rule 2). The time is advisory, not a source of truth: it has no upper bound, so a clock reading in the future becomes the floor for every later group of the log, and a feature that seeks by time must treat it as a hint. Readers do not check the order: a decrease is not a reason to reject a frame. The writer is the one place that keeps the order, a reader check would add a failure mode for no gain, and a frame CRC already catches a damaged time ([ADR 0066](../decisions/0066-append-time-is-advisory-and-versions-never-go-back.md)). Closing frames carry no time, so ADR 0054's rebuild of a closing run never reads a clock.
 
 ### Group record entry
 
@@ -208,6 +208,12 @@ The entries for a hash `h` start in the last page whose fence is less than `h`, 
 
 A body header with `kind = 3` and `count = 0`, and nothing after it. It uses no log offset. It marks a sealed log.
 
+### Close frame (version 4)
+
+A body header with `kind = 7` and `count = 0`, and nothing after it: 32 bytes in all. It uses no log offset, and holds no record. A clean drop writes it after its last group's `fsync` returned, so a valid close frame proves that every group frame before it was durable ([ADR 0071](../decisions/0071-a-clean-drop-writes-a-close-frame.md)). The next session's groups follow it, so a segment can hold many. A version 3 segment never holds one.
+
+Check value: with `log_id` bytes `00 01 02 … 0f`, a close frame with epoch 1 and `base_offset` 0 has `body_len = 24`, the body `07 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00`, and `crc = 0x1f9f9fe5`.
+
 ### Locator frame (M4)
 
 A body header with `kind = 4` and `count = 0`, followed by:
@@ -220,7 +226,7 @@ The whole frame is 40 bytes. It uses no log offset. Open reads the last 40 bytes
 
 ## Sealed segment layout (M4)
 
-A segment that a roll sealed holds, in order: the header, its group frames, the key filter, the key index, the footer and the locator. A roll writes both key frames even when the segment has no keyed record. The final segment of a sealed log holds the header, its group frames, the footer, the seal frame and the locator. It has no key frames, because a sealed log never checks a key again ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). Before M4, a sealed segment holds only the header and group frames. Seal ships in M4, so a seal frame always has a locator after it.
+A segment that a roll sealed holds, in order: the header, its group frames and any close frames between or after them, the key filter, the key index, the footer and the locator. A roll writes both key frames even when the segment has no keyed record. The final segment of a sealed log holds the header, its group frames, the footer, the seal frame and the locator. It has no key frames, because a sealed log never checks a key again ([ADR 0048](../decisions/0048-sealed-segments-carry-a-key-filter-and-index.md)). Before M4, a sealed segment holds only the header and group frames. Seal ships in M4, so a seal frame always has a locator after it.
 
 ## Rules for readers
 
@@ -233,6 +239,7 @@ A segment that a roll sealed holds, in order: the header, its group frames, the 
   - A seal's run: a footer whose `key_filter_position` is `0`, a seal frame and a locator.
 
   In both, the locator points to the footer and ends at the end of the file, and every frame of the run carries the run's epoch. The run's bytes must equal the run that a writer builds from the segment's group frames, with the run's epoch and start position: the footer names each stream's last record in the segment, and the key frames name every keyed record ([ADR 0054](../decisions/0054-a-closing-run-must-match-its-groups.md)). A forward scan that ends through a complete run shows a sealed segment. If a run is not complete and valid, the scan stops where the run starts. A closing frame anywhere else ends the log. The last bytes of a file never decide this alone, because a payload can end with bytes that look like a locator.
+- A close frame is valid only in a segment of version 4 or later, and only where a group frame could follow. It holds no record, so a reader steps over it. A segment's last frame before its closing run may be a close frame.
 - In the active segment, the first frame that is not valid ends the log. Recovery truncates there.
 - In a sealed segment, a frame that is not valid is corruption. Recovery stops with an error.
 - A key filter frame is valid only if its padding is zero and shorter than 4,096 bytes, and is empty when `count` is 0. A reader that knows the frame's file position also checks that the key index pages start on a 4 KiB boundary. A decoder that does not know it cannot, because the padding's length depends on the position.

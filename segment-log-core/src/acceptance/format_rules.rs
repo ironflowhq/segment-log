@@ -176,13 +176,14 @@ fn a_frame_below_its_segment_header_epoch_ends_the_log() {
 }
 
 /// Given the limits and constants of format.md
-/// When the build's format version is 3
-/// Then each has its version 3 value: a change to one is a new format version (ADR 0064, rule 3)
+/// When the build's format version is 4
+/// Then each has the value it had in version 3, because version 4 adds only the close frame
+/// (ADR 0071): a change to one is a new format version (ADR 0064, rule 3)
 ///
 /// Cases: FORMAT-RULES
 #[test]
-fn every_limit_belongs_to_format_version_3() {
-    assert_eq!(codec::FORMAT_VERSION, 3);
+fn every_limit_belongs_to_format_version_4() {
+    assert_eq!(codec::FORMAT_VERSION, 4);
     assert_eq!(
         (
             codec::FRAME_BODY_LIMIT,

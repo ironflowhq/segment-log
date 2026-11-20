@@ -59,7 +59,9 @@ fn assert_cut_to(bytes: Vec<u8>, groups: &[u8], label: &str) {
     drop(log);
     sim.crash(Crash::PowerLoss, 811);
     let log = open_with(&sim, unrolled());
-    assert_eq!(raw::segments(&sim), [(0, groups.to_vec())], "{label}");
+    // The clean drop's close frame, under the epoch of the open before it (ADR 0071).
+    let closed = [groups, &raw::close(2, 3)].concat();
+    assert_eq!(raw::segments(&sim), [(0, closed)], "{label}");
     let answer = send(&log, vec![record(b"s", None, b"d", Some(2))])
         .wait()
         .unwrap();

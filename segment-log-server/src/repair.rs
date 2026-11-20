@@ -169,6 +169,9 @@ fn text(outcome: &Outcome) -> String {
         if let Some((from, to)) = p.dropped_offsets {
             out += &format!("plan drops acknowledged offsets {from} to {to} (half-open)\n");
         }
+        if let Some((from, to)) = p.moved_proof {
+            out += &format!("plan first copies the close frame at {from} to {to}\n");
+        }
         if let Some(backup) = &p.backup {
             out += &format!("backup: {}\n", backup.display());
         }

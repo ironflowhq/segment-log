@@ -71,7 +71,9 @@ impl SegmentLog {
 
 /// Dropping the last handle stops admission, lets the writer commit what is
 /// already queued, joins the writer thread, and releases the lock. If seal was
-/// not called, the log is not sealed.
+/// not called, the log is not sealed. From 0.2, once every group is durable and
+/// the writer is not poisoned, it appends one close frame and syncs it, so that
+/// open refuses later damage to the last group instead of truncating it (ADR 0071).
 impl Drop for SegmentLog { /* … */ }
 
 /// A read-only view of a sealed log (ADR 0016). Takes no lock and writes
@@ -224,7 +226,7 @@ pub enum SealError { Poisoned }
 - **Directory and volume ownership.** The deployment or runner provisions, mounts and preserves the volume, supplies the directory to `SegmentLog::open`, and arranges the post-guest reader handoff ([ADR 0033](../decisions/0033-deployment-owns-volumes-and-reader-handoff.md)). The core validates, recovers and reads files in that directory. Each deployment names its mount paths and reader component; the [handoff record](../evidence/m7/handoff.md) does this for the M7 stack. Required writable recovery follows the existing API rather than an automatic deployment action inside the core.
 - **Complete-history retention.** M1–M7 retain all valid history segments without segment-level retention or automatic expiry ([ADR 0037](../decisions/0037-retain-complete-logs-through-current-milestones.md)). Deployment owns whole-log archival and expiry. The core gains no retention option or deletion endpoint. Existing recovery cleanup remains unchanged and does not authorize deletion of valid history.
 - **A reader after the guest is gone** uses `LogReader`, not `SegmentLog::open`, so that it changes nothing on the volume. It opens only a sealed log. A directory with no segment, or whose newest segment does not end in a complete seal run, gives `NotSealed`. A missing directory gives `Io`. To read an unsealed log, open it with `SegmentLog::open` on a writable volume and call `seal`.
-- **Corrupt is for a human to resolve.** `OpenError::Corrupt { segment, position }` names the file and the byte where open stopped. Open never repairs it, because it cannot tell a torn tail from a bad frame in a sealed segment, and truncating a sealed segment drops acknowledged records. From 0.1.1, an unsealed newest segment also fails with it when a valid group frame of this log follows the bad frame, because that frame was acknowledged ([ADR 0068](../decisions/0068-open-refuses-damage-with-acknowledged-groups-after-it.md)). From M4, frame CRCs cover the log id, so a caller's payload cannot cause it ([ADR 0049](../decisions/0049-frame-crcs-cover-the-log-id.md)). The [operator repair](#operator-repair) command diagnoses it and, for a bad frame in the newest segment, truncates it ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)).
+- **Corrupt is for a human to resolve.** `OpenError::Corrupt { segment, position }` names the file and the byte where open stopped. Open never repairs it, because it cannot tell a torn tail from a bad frame in a sealed segment, and truncating a sealed segment drops acknowledged records. From 0.1.1, an unsealed newest segment also fails with it when a valid group frame of this log follows the bad frame, because that frame was acknowledged ([ADR 0068](../decisions/0068-open-refuses-damage-with-acknowledged-groups-after-it.md)). From 0.2, a clean drop's close frame after the bad frame proves the same, so damage to the last group after a clean drop also fails with it ([ADR 0071](../decisions/0071-a-clean-drop-writes-a-close-frame.md)). From M4, frame CRCs cover the log id, so a caller's payload cannot cause it ([ADR 0049](../decisions/0049-frame-crcs-cover-the-log-id.md)). The [operator repair](#operator-repair) command diagnoses it and, for a bad frame in the newest segment, truncates it ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)).
 - **Options.** `open` checks the [option limits below](#option-validation) before creating or changing files. An invalid option returns `InvalidOptions`.
 - **Thread model.** One writer thread, owned by `SegmentLog`. Callers never write files.
 
@@ -292,7 +294,7 @@ The charge is fixed until the request is answered. It does not decrease when dat
 
 ## Operator repair
 
-For 0.1 ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)); class F from 0.1.1 ([ADR 0068](../decisions/0068-open-refuses-damage-with-acknowledged-groups-after-it.md)). This section is the only source for the command's subcommands, flags, exit codes and JSON output. After 0.1 they are public API. The core module behind it, `segment_log_core::repair`, is hidden and carries no promise.
+For 0.1 ([ADR 0065](../decisions/0065-the-repair-tool-truncates-only-the-newest-segment.md)); class F from 0.1.1 ([ADR 0068](../decisions/0068-open-refuses-damage-with-acknowledged-groups-after-it.md)); close-frame proofs from 0.2 ([ADR 0071](../decisions/0071-a-clean-drop-writes-a-close-frame.md)). This section is the only source for the command's subcommands, flags, exit codes and JSON output. After 0.1 they are public API. The core module behind it, `segment_log_core::repair`, is hidden and carries no promise.
 
 ```text
 segment-log-server repair verify   --dir <path> [--json]
@@ -302,7 +304,7 @@ segment-log-server repair truncate --dir <path> --apply --at <segment>:<position
 
 - Every subcommand takes `LOCK` without waiting. Neither runs from `SegmentLog::open`.
 - `verify` changes nothing. It reads every segment in full, by its own format version, and reports each finding with its segment, position and class (A–E in ADR 0065, F in ADR 0068).
-- `truncate` without `--apply` prints the plan and changes nothing. The plan names the cut as `<segment>:<position>`, its kind (torn tail or lossy), the log offsets it drops and the closing frames it removes. `--apply` needs `--at` equal to the plan's cut. A lossy plan also needs `--drop-acknowledged`, and leaves the log sealed. A class F plan is always lossy. Before any change, `--apply` copies the newest segment into `<dir>/repair-<unix seconds>/`.
+- `truncate` without `--apply` prints the plan and changes nothing. The plan names the cut as `<segment>:<position>`, its kind (torn tail or lossy), the log offsets it drops and the closing frames it removes. `--apply` needs `--at` equal to the plan's cut. A lossy plan also needs `--drop-acknowledged`, and leaves the log sealed. A class F plan is always lossy. When its seal run would overwrite its last proof and that proof is a close frame, the printed plan names the close frame and the position past the run where `--apply` first copies it, and syncs the copy before the run; the JSON is unchanged. Before any change, `--apply` copies the newest segment into `<dir>/repair-<unix seconds>/`.
 - `<segment>` is the segment's base offset in decimal, as in its file name without leading zeros. `<position>` is a byte position in that file.
 
 | Exit code | Meaning |
@@ -310,7 +312,7 @@ segment-log-server repair truncate --dir <path> --apply --at <segment>:<position
 | 0 | `verify`: no damage. A torn tail that open would truncate is not damage. `truncate --apply`: done. |
 | 1 | `verify`: damage found. `truncate` without `--apply`: a plan was printed. |
 | 2 | Usage error. |
-| 3 | Refused: no class A or F finding, a class B–E finding, class F damage in the second-newest segment, `--at` that differs from the plan, a lossy plan without `--drop-acknowledged`, a class A seal run that would reach the old footer, a class F seal run that would reach the last acknowledged group frame after the cut, or a class F plan while the second-newest segment lacks its closing run. |
+| 3 | Refused: no class A or F finding, a class B–E finding, class F damage in the second-newest segment, `--at` that differs from the plan, a lossy plan without `--drop-acknowledged`, a class A seal run that would reach the old footer, a class F seal run that would reach the last acknowledged group frame after the cut when that frame is a group frame, or a class F plan while the second-newest segment lacks its closing run. |
 | 4 | Another process holds `LOCK`. |
 | 5 | I/O error. |
 

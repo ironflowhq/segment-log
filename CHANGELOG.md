@@ -2,7 +2,11 @@
 
 Each release lists its API breaks with a migration note, its format version bumps and the protocol versions it speaks ([ADR 0064](docs/decisions/0064-the-0-1-compatibility-promise.md)). The crates and the Go client (`clients/go/vX.Y.Z`) share one version.
 
-## Unreleased (0.1.2)
+## Unreleased (0.2.0)
+
+### Format
+
+- **Format version 4** adds the close frame (kind 7) and changes nothing else ([ADR 0071](docs/decisions/0071-a-clean-drop-writes-a-close-frame.md), [format.md](docs/architecture/format.md)). This build reads versions 3 and 4 and writes 4. Its first writable open of a 0.1 log closes the active version 3 segment and rolls into a version 4 segment, or rewrites a header-only one (ADR 0064, rule 12). **The upgrade is one-way:** a 0.1 build refuses the log with `UnsupportedVersion(4)` once this build has opened it for writing, so roll back only before that. `LogReader` changes no file.
 
 ### Changed
 
@@ -10,9 +14,11 @@ Each release lists its API breaks with a migration note, its format version bump
 
 ### Fixed
 
+- **Open no longer drops an acknowledged last group after a clean drop** when its bytes are damaged and nothing follows it ([issue 183](https://github.com/ironflowx/segment-log/issues/183), [ADR 0071](docs/decisions/0071-a-clean-drop-writes-a-close-frame.md)). A clean drop now appends a close frame after its last group and syncs it; it writes none when the writer is poisoned, when a pending closing run failed, or when the segment already ends with one. Open counts a close frame past the damage as proof that the damaged group was acknowledged, and fails with `OpenError::Corrupt { segment, position }` instead of truncating it. A crash, unlike a clean drop, writes no close frame, so damage to the last group before the next group or clean drop is still truncated. No API change.
+- **`segment-log-server repair`:** a class F plan whose only proof is a close frame first copies it past the seal run, and then seals, instead of refusing when the run does not fit. The printed plan names the copy; the JSON is unchanged.
 - **Go client: a vsock `Dial` no longer fails with `interrupted system call`** when a signal reaches the dialing thread during the connect, as the Go runtime's own `SIGURG` can under a burst of dials ([issue 187](https://github.com/ironflowx/segment-log/issues/187)). The connect is now non-blocking and waits on Go's poller, as `net.Dial` does.
 
-No API change. No format version change. The protocol versions are unchanged.
+No API change. Format version 4. The protocol versions are unchanged.
 
 ## 0.1.1 - 2026-11-20
 

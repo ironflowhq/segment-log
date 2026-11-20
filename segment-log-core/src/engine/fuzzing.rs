@@ -48,6 +48,7 @@ pub fn decode_frame(data: &[u8]) {
         }
         codec::Body::Footer(footer) => codec::encode_footer(&log, epoch, base, &footer).unwrap(),
         codec::Body::Seal => codec::encode_seal(&log, epoch, base),
+        codec::Body::Close => codec::encode_close(&log, epoch, base),
         codec::Body::Locator { footer_position } => {
             codec::encode_locator(&log, epoch, base, footer_position)
         }

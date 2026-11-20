@@ -260,7 +260,8 @@ fn a_key_in_an_older_segment_still_deduplicates_a_retry() {
                 Err(CommitError::KeyConflict { index: 0 })
             ));
             assert_eq!(log.watermark(), 3);
-            assert_eq!(raw::segments(&sim), sealed);
+            // A retry writes nothing; the reopen's clean drop wrote a close frame (ADR 0071).
+            assert_eq!(raw::segments_unclosed(&sim), sealed);
         }
     });
 }

@@ -162,6 +162,22 @@ impl SealedSegment {
         valid.then_some((span, epoch))
     }
 
+    /// The epoch of a close frame whose envelope and body header are `prefix`, if it follows
+    /// offset `next` at an epoch from `floor` to the segment's highest. It holds no record, so a
+    /// walk steps over it (ADR 0071).
+    fn close_at(&self, prefix: &[u8], next: u64, floor: u64) -> Option<u64> {
+        let body = u32::from_le_bytes(prefix[0..4].try_into().unwrap()) as usize;
+        let epoch = u64::from_le_bytes(prefix[12..20].try_into().unwrap());
+        let base = u64::from_le_bytes(prefix[20..28].try_into().unwrap());
+        let count = u32::from_le_bytes(prefix[28..32].try_into().unwrap());
+        let valid = body == codec::BODY_HEADER_LEN
+            && prefix[8] == 7
+            && (floor..=*self.epochs.end()).contains(&epoch)
+            && base == next
+            && count == 0;
+        valid.then_some(epoch)
+    }
+
     /// Walks every group frame's envelope and body header, and keeps the sparse table. `read`
     /// checks each frame's checksum when it decodes the frame.
     fn walk(&self, storage: &dyn Storage, dir: &Path) -> Result<Arc<[GroupSpan]>, ReadError> {
@@ -189,8 +205,14 @@ impl SealedSegment {
                 }
             }
             let at = (position - chunk_at) as usize;
+            let prefix = &chunk[at..at + PREFIX];
+            if let Some(epoch) = self.close_at(prefix, next, floor) {
+                floor = epoch;
+                position += PREFIX as u64;
+                continue;
+            }
             let (span, epoch) = self
-                .group_at(&chunk[at..at + PREFIX], position, next, floor, groups_end)
+                .group_at(prefix, position, next, floor, groups_end)
                 .ok_or_else(corrupt)?;
             if is_kept(previous.replace(position), position) {
                 kept.push(span);
@@ -247,6 +269,11 @@ impl SealedSegment {
             let Some(prefix) = bytes.get(at..at + PREFIX) else {
                 return Err(corrupt);
             };
+            if let Some(epoch) = self.close_at(prefix, next, floor) {
+                floor = epoch;
+                position += PREFIX as u64;
+                continue;
+            }
             let Some((span, epoch)) = self.group_at(prefix, position, next, floor, end) else {
                 return Err(corrupt);
             };

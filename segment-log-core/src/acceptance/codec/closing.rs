@@ -113,6 +113,39 @@ fn the_seal_frame_matches_the_frame_crc_check_value() {
     });
 }
 
+/// Given the log id `00 01 02 … 0f` and a close frame with epoch 1 and base offset 0
+/// When the frame is encoded and decoded
+/// Then its bytes are the check value of format.md, with crc 0x1f9f9fe5, and the decoder reads a
+/// close frame (ADR 0071)
+/// And with a nonzero count, or a byte after its body header, it is not valid
+///
+/// Cases: CODEC-GROUP
+#[test]
+fn the_close_frame_matches_its_check_value() {
+    bounded(|| {
+        let mut expected = vec![24, 0, 0, 0, 0xe5, 0x9f, 0x9f, 0x1f, 7, 0, 0, 0, 1];
+        expected.extend([0; 19]);
+        let bytes = codec::encode_close(&log(), 1, 0);
+        assert_eq!(bytes, expected);
+        assert_eq!(
+            codec::decode(&log(), &bytes),
+            Ok(codec::Frame {
+                epoch: 1,
+                base_offset: 0,
+                body: codec::Body::Close
+            })
+        );
+        let mut counted = bytes.clone();
+        counted[28] = 1;
+        raw::rechecksum(&CHECK_ID, &mut counted);
+        assert_eq!(codec::decode(&log(), &counted), Err(codec::Error::Count));
+        let mut longer = [bytes.as_slice(), &[0]].concat();
+        longer[..4].copy_from_slice(&25u32.to_le_bytes());
+        raw::rechecksum(&CHECK_ID, &mut longer);
+        assert_eq!(codec::decode(&log(), &longer), Err(codec::Error::Length));
+    });
+}
+
 /// Given a group frame and a frame of every closing kind, each written for one log
 /// When a decoder with another log id, or one whose checksum has no log id, reads them
 /// Then it rejects each with a checksum error, and the log's own decoder accepts them
@@ -600,7 +633,7 @@ fn malformed_closing_frames_are_rejected() {
         for frame in &valid {
             assert!(codec::decode(&log(), frame).is_ok());
             assert_eq!(with(frame, &|f| f[8] = 0), Err(Error::Kind));
-            assert_eq!(with(frame, &|f| f[8] = 7), Err(Error::Kind));
+            assert_eq!(with(frame, &|f| f[8] = 8), Err(Error::Kind));
             for at in [9, 10, 11] {
                 assert_eq!(with(frame, &|f| f[at] = 1), Err(Error::Reserved));
             }

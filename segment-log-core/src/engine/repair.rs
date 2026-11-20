@@ -203,7 +203,8 @@ fn inspect(
         kept.published.newest.epoch_floor = kept.epoch;
         let path = segment_path(dir, base);
         let length = reader.length(&path, Purpose::Recovery)?;
-        let scanned = survey::scan(&reader, &log_id, &hash, base, &path, length, &mut kept);
+        let at = (path.as_path(), survey::closes(header));
+        let scanned = survey::scan(&reader, &log_id, &hash, base, at, length, &mut kept);
         let scan = match scanned {
             Ok(scan) => scan,
             Err(OpenError::Corrupt { position, .. }) => {
@@ -238,7 +239,7 @@ fn inspect(
             (Some(next), Ending::Stopped)
                 if next == newest
                     && !behind
-                    && !proofs(&reader, &log_id, &path, (length, end), &kept, 1)?.is_empty() =>
+                    && !proofs(&reader, &log_id, at, (length, end), &kept, 1)?.is_empty() =>
             {
                 let message = "a frame that is not valid, before acknowledged group frames, in a \
                                segment that has a successor; not repairable (ADR 0068)";
@@ -265,8 +266,7 @@ fn inspect(
                 });
             }
             (None, Ending::Stopped)
-                if let found =
-                    proofs(&reader, &log_id, &path, (length, end), &kept, usize::MAX)?
+                if let found = proofs(&reader, &log_id, at, (length, end), &kept, usize::MAX)?
                     && !found.is_empty() =>
             {
                 let message = "open stops here: a frame that is not valid, before acknowledged \
@@ -319,14 +319,14 @@ fn inspect(
 fn proofs(
     reader: &ReadOnly<'_>,
     log: &codec::LogId,
-    path: &Path,
+    at: (&Path, bool),
     (length, end): (u64, u64),
     kept: &Kept,
     limit: usize,
 ) -> io::Result<Vec<survey::Proof>> {
     survey::proofs(
         reader,
-        path,
+        at,
         log,
         (length, end, kept.published.watermark),
         limit,
@@ -431,6 +431,7 @@ fn frame_info(log: &codec::LogId, segment: u64, position: u64, bytes: &[u8]) -> 
         Some(4) => "locator",
         Some(5) => "key-filter",
         Some(6) => "key-index",
+        Some(7) => "close",
         _ => "unknown",
     };
     FrameInfo {
@@ -470,6 +471,9 @@ pub struct Plan {
     /// The half-open range of log offsets that a lossy plan drops.
     pub dropped_offsets: Option<(LogOffset, LogOffset)>,
     pub closing_frames_removed: Vec<&'static str>,
+    /// For a class F plan whose seal run would overwrite its last proof, a close frame: where the
+    /// proof is, and where `--apply` copies it first, past the run's end (ADR 0071).
+    pub moved_proof: Option<(u64, u64)>,
     pub backup: Option<PathBuf>,
     pub applied: bool,
 }
@@ -516,8 +520,9 @@ pub(crate) fn plan_with(storage: &dyn Storage, dir: &Path, version: u16) -> Resu
     Ok(planned(storage, dir, version)?.0)
 }
 
-/// The cut, and the seal run that a lossy plan writes at it; empty for a torn tail.
-type Work = (Cut, Vec<u8>);
+/// The cut, the seal run that a lossy plan writes at it, empty for a torn tail, and the bytes it
+/// appends first to move a close-frame proof past the run, empty when none moves.
+type Work = (Cut, Vec<u8>, Vec<u8>);
 
 /// The plan, and the work `--apply` does when it carries the plan out.
 fn planned(
@@ -570,13 +575,22 @@ fn planned(
             kind: PlanKind::Lossy,
             dropped_offsets: Some((cut.next, dropped_end.max(cut.next))),
             closing_frames_removed: vec![],
+            moved_proof: None,
             backup: None,
             applied: false,
         };
         // Until the truncation, the last proof must stay whole, so that open still refuses and
-        // every crash state fails closed with `Corrupt` (ADR 0068).
+        // every crash state fails closed with `Corrupt` (ADR 0068). A close frame can be copied
+        // past the run first instead (ADR 0071).
         let room = last.position;
-        return sealed(report, plan, cut, room, "the last acknowledged group frame");
+        let close = last.close.clone().map(|bytes| (room, bytes));
+        return sealed(
+            report,
+            plan,
+            cut,
+            (room, close),
+            "the last acknowledged group frame",
+        );
     }
     // `verify` found this locator and footer valid.
     let reader = ReadOnly::new(storage);
@@ -612,6 +626,7 @@ fn planned(
         kind: PlanKind::TornTail,
         dropped_offsets: None,
         closing_frames_removed,
+        moved_proof: None,
         backup: None,
         applied: false,
     };
@@ -621,40 +636,56 @@ fn planned(
             plan: Some(plan),
             refusal: None,
         };
-        return Ok((outcome, Some((cut, vec![]))));
+        return Ok((outcome, Some((cut, vec![], vec![]))));
     }
     plan.kind = PlanKind::Lossy;
     plan.dropped_offsets = Some((cut.next, footer_next.max(cut.next)));
     // Until the truncation, the old footer and locator must stay whole, so that open still proves
     // the old run and every crash state fails closed with `Corrupt` (ADR 0065).
-    sealed(report, plan, cut, footer_position, "the old footer")
+    sealed(report, plan, cut, (footer_position, None), "the old footer")
 }
 
 /// A lossy plan, and its seal run unless the run would reach `room`, which must survive until the
-/// truncation.
+/// truncation. When the frame at `room` is a close frame, given with its bytes, the plan copies
+/// it past the run's end first, so that a proof survives every crash point before the truncation.
 fn sealed(
     report: Report,
-    plan: Plan,
+    mut plan: Plan,
     cut: Cut,
-    room: u64,
+    (room, close): (u64, Option<(u64, Vec<u8>)>),
     guard: &str,
 ) -> Result<(Outcome, Option<Work>), Error> {
-    let mut outcome = Outcome {
+    let Some(epoch) = cut.epoch.checked_add(1) else {
+        let refusal = "the highest epoch cannot be incremented for the seal run";
+        return Ok((refused(report, plan, refusal.into()), None));
+    };
+    let run = closing::seal_run(&cut.log_id, epoch, cut.next, cut.at, &cut.tails).concat();
+    let run_end = cut.at + run.len() as u64;
+    let mut moved = vec![];
+    if run_end > room {
+        let Some((position, bytes)) = close else {
+            let refusal = format!("the seal run would reach {guard}; this case stays manual");
+            return Ok((refused(report, plan, refusal), None));
+        };
+        // Zero bytes have a body length out of range, so open's proof search skips them.
+        moved = vec![0; run_end.saturating_sub(cut.length) as usize];
+        moved.extend(bytes);
+        plan.moved_proof = Some((position, cut.length.max(run_end)));
+    }
+    let outcome = Outcome {
         report,
         plan: Some(plan),
         refusal: None,
     };
-    let Some(epoch) = cut.epoch.checked_add(1) else {
-        outcome.refusal = Some("the highest epoch cannot be incremented for the seal run".into());
-        return Ok((outcome, None));
-    };
-    let run = closing::seal_run(&cut.log_id, epoch, cut.next, cut.at, &cut.tails).concat();
-    if cut.at + run.len() as u64 > room {
-        let refusal = format!("the seal run would reach {guard}; this case stays manual");
-        outcome.refusal = Some(refusal);
-        return Ok((outcome, None));
+    Ok((outcome, Some((cut, run, moved))))
+}
+
+fn refused(report: Report, plan: Plan, refusal: String) -> Outcome {
+    Outcome {
+        report,
+        plan: Some(plan),
+        refusal: Some(refusal),
     }
-    Ok((outcome, Some((cut, run))))
 }
 
 pub(crate) fn apply_with(
@@ -665,7 +696,7 @@ pub(crate) fn apply_with(
 ) -> Result<Outcome, Error> {
     let _lock = lock(storage, dir)?;
     let (mut outcome, cut) = planned(storage, dir, version)?;
-    let (Some(plan), Some((cut, run))) = (&mut outcome.plan, cut) else {
+    let (Some(plan), Some((cut, run, moved))) = (&mut outcome.plan, cut) else {
         return Ok(outcome);
     };
     if apply.at != (plan.segment, plan.cut) {
@@ -691,6 +722,12 @@ pub(crate) fn apply_with(
         call(storage, &segment, Purpose::Repair, Op::SyncAll)?;
         call(storage, dir, Purpose::Repair, Op::SyncDir)?;
     } else {
+        // The copy of the last proof is durable before the run overwrites the original, so a
+        // proof survives every crash point until the truncation (ADR 0071).
+        if !moved.is_empty() {
+            call(storage, &segment, Purpose::Repair, Op::Append(moved))?;
+            call(storage, &segment, Purpose::Repair, Op::SyncAll)?;
+        }
         // The run lands over the damage before the truncation, so the old locator ends the file
         // until the run is durable.
         let end = cut.at + run.len() as u64;

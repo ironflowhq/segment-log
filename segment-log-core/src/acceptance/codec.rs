@@ -70,7 +70,7 @@ fn malformed_groups_are_rejected_without_panicking() {
         }
         for (pos, value, error) in [
             (8, 0, Error::Kind),
-            (8, 7, Error::Kind),
+            (8, 8, Error::Kind),
             (9, 1, Error::Reserved),
             (10, 1, Error::Reserved),
             (11, 1, Error::Reserved),

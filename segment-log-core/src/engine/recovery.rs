@@ -220,7 +220,12 @@ pub(super) fn open(
             (epoch, Active::new(next), KeyMap::new())
         }
         (Ending::Groups | Ending::Stopped, Some(epoch)) => {
-            let active = Active::recovered(newest, found.newest.end, found.newest.tails);
+            let active = Active::recovered(
+                newest,
+                found.newest.end,
+                found.newest.closed,
+                found.newest.tails,
+            );
             (epoch, active, found.newest.keys)
         }
     };
