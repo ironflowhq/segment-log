@@ -142,15 +142,19 @@ pub(super) fn open(
     let older = found.newest_header.version < version;
     let (position, bytes) = match &found.newest.ending {
         Ending::Rolled { run, .. } | Ending::Sealed(run) => (run.start, run.frames.concat()),
-        Ending::Groups | Ending::Stopped => found.newest.last.take().unwrap_or_else(|| {
-            // A valid header encodes back to its own bytes, so an unchanged version rewrites the
-            // same bytes, as ADR 0015 needs.
-            let header = codec::Header {
-                version: version.max(found.newest_header.version),
-                ..found.newest_header
-            };
-            (0, codec::encode_header(&header).to_vec())
-        }),
+        // A trailing close frame is the frame whose flush may have failed: every group before it
+        // was synced (ADR 0071).
+        Ending::Groups | Ending::Stopped => (found.newest.close.clone())
+            .or_else(|| found.newest.last.take())
+            .unwrap_or_else(|| {
+                // A valid header encodes back to its own bytes, so an unchanged version rewrites the
+                // same bytes, as ADR 0015 needs.
+                let header = codec::Header {
+                    version: version.max(found.newest_header.version),
+                    ..found.newest_header
+                };
+                (0, codec::encode_header(&header).to_vec())
+            }),
     };
     let close = older && position > 0 && !matches!(found.newest.ending, Ending::Sealed(_));
     // The V2 control: different bytes over one acknowledged sector in place of the identical
@@ -223,7 +227,7 @@ pub(super) fn open(
             let active = Active::recovered(
                 newest,
                 found.newest.end,
-                found.newest.closed,
+                found.newest.close.is_some(),
                 found.newest.tails,
             );
             (epoch, active, found.newest.keys)

@@ -4,7 +4,7 @@ use super::support::{bounded, fixtures::*, raw};
 use crate::engine::Hooks;
 use crate::storage::{
     Call, Op, Purpose,
-    sim::{Crash, Fault},
+    sim::{Crash, Event, Fault},
 };
 use crate::*;
 use std::{path::Path, sync::Arc};
@@ -157,6 +157,8 @@ fn a_clean_drop_writes_one_close_frame_and_an_idle_one_writes_none() {
 /// Given a clean drop whose close frame's flush fails
 /// When the log is dropped
 /// Then it flushes once and never retries (ADR 0004), and the log reopens with every record
+/// And that open rewrites and syncs the trailing close frame, not the group before it, because
+/// only the close frame's flush is in doubt
 ///
 /// Cases: DROP-CLOSE-FRAME
 #[test]
@@ -205,8 +207,17 @@ fn a_poisoned_writer_or_a_failed_flush_writes_no_close_frame() {
         );
         written(&sim, 2);
         assert_eq!(close_calls(&sim, Op::SyncData), 1, "no retry");
+        let segment = raw::segments(&sim)[0].1.clone();
+        let at = (segment.len() - 32) as u64;
         let log = reopen(&sim).unwrap();
         assert_eq!(log.read(0, 10).unwrap().len(), 2);
+        // The frame whose flush failed is the one open rewrites and syncs (ADR 0015).
+        let rewrite = Op::Write(at, close(&sim, 1, 2));
+        let rewritten = sim.trace().1.iter().any(|event| {
+            matches!(event, Event::Call(call, _, _)
+                if call.purpose == Purpose::Recovery && call.op == rewrite)
+        });
+        assert!(rewritten, "open rewrites the trailing close frame");
     });
 }
 
@@ -316,8 +327,6 @@ fn a_kind_7_frame_in_a_version_3_segment_is_not_valid() {
 /// Given two acknowledged groups
 /// When a kill or a power loss overtakes the drop's close frame write or its flush
 /// Then the log reopens with both records, a torn close frame being a torn tail
-/// And a byte flipped in the last group afterwards makes open refuse once the close frame is
-/// durable, and never loses an acknowledged record
 ///
 /// Cases: DROP-CLOSE-FRAME
 #[test]
@@ -346,16 +355,6 @@ fn a_crash_at_each_step_of_a_drop_keeps_every_record() {
                     let log = reopen(&sim).unwrap();
                     let read = log.read(0, 10).unwrap();
                     assert_eq!(read.len(), 2, "{label}");
-                    drop(log);
-                    let mut segments = raw::segments(&sim);
-                    let at = last_group(&segments[0].1);
-                    segments[0].1[at + 40] ^= 0xff;
-                    raw::install_segments(&sim, &segments);
-                    match reopen(&sim) {
-                        Err(OpenError::Corrupt { .. }) => (),
-                        Ok(log) => assert_eq!(log.watermark(), 2, "{label}"),
-                        Err(other) => panic!("{label}: {other:?}"),
-                    }
                 }
             }
         }
@@ -521,5 +520,56 @@ fn a_crash_at_each_step_of_a_close_frame_repair_fails_closed_or_finds_it_sealed(
             }
             assert!(closed > 0 && opened > 0, "{payload}: {closed} {opened}");
         }
+    });
+}
+
+/// Given a segment that holds two sessions' groups, each followed by its close frame, and that a
+/// later session rolled
+/// When a reopened log reads the sealed segment, which it walks frame by frame
+/// Then it steps over both close frames and returns every record
+/// When a byte of the close frame between the groups flips
+/// Then that read fails with `Corrupt` at the close frame, and reads of the next segment succeed
+///
+/// Cases: DROP-CLOSE-FRAME, READ-BOUNDED
+#[test]
+fn reads_step_over_close_frames_in_a_sealed_segment() {
+    bounded(|| {
+        let sim = Sim::new(1860);
+        written(&sim, 2);
+        let between = raw::segments(&sim)[0].1.len() - 32;
+        let log = reopen(&sim).unwrap();
+        log.append(keyed(2)).unwrap().wait().unwrap();
+        drop(log);
+        let rolling = Options {
+            roll_bytes: EVERY_GROUP,
+            ..options()
+        };
+        let log = open_with(&sim, rolling);
+        log.append(keyed(3)).unwrap().wait().unwrap();
+        drop(log);
+        assert_eq!(raw::segments(&sim).len(), 2, "segment 0 rolled");
+
+        let payloads = |log: &SegmentLog, from| -> Result<Vec<Vec<u8>>, ReadError> {
+            Ok(log.read(from, 10)?.into_iter().map(|r| r.payload).collect())
+        };
+        let log = reopen(&sim).unwrap();
+        let expected: Vec<Vec<u8>> = (0..4).map(|i| format!("record {i}").into_bytes()).collect();
+        assert_eq!(payloads(&log, 0).unwrap(), expected);
+        drop(log);
+
+        let mut segments = raw::segments(&sim);
+        // The CRC byte: only the checksum check catches it.
+        segments[0].1[between + 4] ^= 1;
+        raw::install_segments(&sim, &segments);
+        let log = reopen(&sim).unwrap();
+        assert!(
+            matches!(
+                payloads(&log, 0),
+                Err(ReadError::Corrupt { segment: 0, position }) if position == between as u64
+            ),
+            "{:?}",
+            payloads(&log, 0)
+        );
+        assert_eq!(payloads(&log, 3).unwrap(), expected[3..]);
     });
 }

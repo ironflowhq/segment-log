@@ -90,8 +90,8 @@ pub(super) struct Scan {
     pub end: u64,
     pub ending: Ending,
     pub last: Option<(u64, Vec<u8>)>,
-    /// Whether the scan's last frame is a close frame (ADR 0071).
-    pub closed: bool,
+    /// The position and bytes of the close frame that ends the scan, if one does (ADR 0071).
+    pub close: Option<(u64, Vec<u8>)>,
     pub tails: BTreeMap<Vec<u8>, Tail>,
     pub keys: KeyMap,
 }
@@ -561,27 +561,27 @@ pub(super) fn scan(
     let mut epoch = kept.epoch;
     let mut run = vec![];
     let mut last = None;
-    let mut closed = false;
+    let mut close = None;
     let mut tails = BTreeMap::new();
     let mut keys = KeyMap::new();
-    let end = |at, ending, last, closed, tails, keys| Scan {
+    let end = |at, ending, last, close, tails, keys| Scan {
         end: at,
         ending,
         last,
-        closed,
+        close,
         tails,
         keys,
     };
     loop {
         if position == length && state == RunState::Groups {
-            return Ok(end(position, Ending::Groups, last, closed, tails, keys));
+            return Ok(end(position, Ending::Groups, last, close, tails, keys));
         }
         let Some(bytes) = storage.frame(path, Purpose::Recovery, position, length)? else {
             return Ok(end(
                 state.stop(position),
                 Ending::Stopped,
                 last,
-                closed,
+                close,
                 tails,
                 keys,
             ));
@@ -594,7 +594,7 @@ pub(super) fn scan(
                 state.stop(position),
                 Ending::Stopped,
                 last,
-                closed,
+                close,
                 tails,
                 keys,
             ));
@@ -604,7 +604,7 @@ pub(super) fn scan(
         // A close frame holds no record; a version 3 segment never holds one (ADR 0071).
         if closes && state == RunState::Groups && matches!(frame.body, codec::Body::Close) {
             kept.epoch = epoch;
-            closed = true;
+            close = Some((position, bytes.clone()));
             position = next;
             continue;
         }
@@ -632,7 +632,7 @@ pub(super) fn scan(
                         }
                     }
                 }
-                closed = false;
+                close = None;
                 kept.published
                     .publish(GroupSpan::of(position, bytes.len(), &group), &group);
                 kept.last_group = Some((base, position));
@@ -643,7 +643,7 @@ pub(super) fn scan(
                 run.push(bytes);
             }
             Step::Stop { at } => {
-                return Ok(end(at, Ending::Stopped, last, closed, tails, keys));
+                return Ok(end(at, Ending::Stopped, last, close, tails, keys));
             }
             Step::Rolled { start, footer } => {
                 kept.epoch = epoch;
@@ -660,7 +660,7 @@ pub(super) fn scan(
                 };
                 let run = Run { start, frames: run };
                 let rolled = Ending::Rolled { run, summary };
-                return Ok(end(length, rolled, last, closed, tails, keys));
+                return Ok(end(length, rolled, last, close, tails, keys));
             }
             Step::Sealed { start } => {
                 kept.epoch = epoch;
@@ -669,7 +669,7 @@ pub(super) fn scan(
                 let built = closing::seal_run(log, epoch, next, start, &tails);
                 matches_groups(&run, &built, base, start)?;
                 let sealed = Ending::Sealed(Run { start, frames: run });
-                return Ok(end(length, sealed, last, closed, tails, keys));
+                return Ok(end(length, sealed, last, close, tails, keys));
             }
         }
         position = next;
