@@ -12,6 +12,8 @@ pub enum Class {
     C,
     D,
     E,
+    /// An unsealed segment whose damage has acknowledged group frames after it (ADR 0068).
+    F,
     TornTail,
 }
 
@@ -24,6 +26,7 @@ impl Class {
             Self::C => "C",
             Self::D => "D",
             Self::E => "E",
+            Self::F => "F",
             Self::TornTail => "torn-tail",
         }
     }
@@ -116,7 +119,7 @@ pub(crate) fn verify_with(
     Ok(inspect(storage, dir, version)?.0)
 }
 
-/// What a class A cut needs from the newest segment's scan.
+/// What a class A or F cut needs from the newest segment's scan.
 struct Cut {
     log_id: codec::LogId,
     base: u64,
@@ -127,6 +130,11 @@ struct Cut {
     /// The highest epoch of any header or kept frame.
     epoch: u64,
     tails: BTreeMap<Vec<u8>, closing::Tail>,
+    /// For class F, the group frames after the cut that prove it lossy; empty for class A.
+    proofs: Vec<survey::Proof>,
+    /// Whether the second-newest segment lacks its closing run, which open rebuilds only while
+    /// the newest segment is not closed.
+    pending_run: bool,
 }
 
 /// `verify` without the lock, and the class A cut when there is one.
@@ -226,6 +234,16 @@ fn inspect(
                 let message = "a seal's closing run in a segment that has a successor";
                 report.note(Class::C, base, run.start, message);
             }
+            // Open checks for a proof only where it scans groups: here, the second-newest segment.
+            (Some(next), Ending::Stopped)
+                if next == newest
+                    && !behind
+                    && !proofs(&reader, &log_id, &path, (length, end), &kept, 1)?.is_empty() =>
+            {
+                let message = "a frame that is not valid, before acknowledged group frames, in a \
+                               segment that has a successor; not repairable (ADR 0068)";
+                report.note(Class::F, base, end, message);
+            }
             (Some(_), Ending::Groups | Ending::Stopped) => {
                 let (class, at, message) = classify(&reader, &log_id, &path, length, end)?;
                 report.note(class, base, at, message);
@@ -242,6 +260,28 @@ fn inspect(
                     next: kept.published.watermark,
                     epoch: kept.epoch,
                     tails: scan.tails,
+                    proofs: vec![],
+                    pending_run: pending.is_some(),
+                });
+            }
+            (None, Ending::Stopped)
+                if let found =
+                    proofs(&reader, &log_id, &path, (length, end), &kept, usize::MAX)?
+                    && !found.is_empty() =>
+            {
+                let message = "open stops here: a frame that is not valid, before acknowledged \
+                               group frames (ADR 0068)";
+                report.note(Class::F, base, end, message);
+                cut = Some(Cut {
+                    log_id: log_id.clone(),
+                    base,
+                    length,
+                    at: end,
+                    next: kept.published.watermark,
+                    epoch: kept.epoch,
+                    tails: scan.tails,
+                    proofs: found,
+                    pending_run: pending.is_some(),
                 });
             }
             (None, Ending::Stopped) => {
@@ -274,6 +314,23 @@ fn inspect(
         }
     }
     Ok((report, cut))
+}
+
+fn proofs(
+    reader: &ReadOnly<'_>,
+    log: &codec::LogId,
+    path: &Path,
+    (length, end): (u64, u64),
+    kept: &Kept,
+    limit: usize,
+) -> io::Result<Vec<survey::Proof>> {
+    survey::proofs(
+        reader,
+        path,
+        log,
+        (length, end, kept.published.watermark),
+        limit,
+    )
 }
 
 /// Names the frame that stopped the scan of a segment with a successor at `end`.
@@ -477,11 +534,13 @@ fn planned(
         };
         Ok((outcome, None))
     };
-    if let Some(f) = report
-        .findings
-        .iter()
-        .find(|f| f.class != Class::A && f.class != Class::TornTail)
-    {
+    // Class F in a segment with a successor has no cut, and is refused here.
+    let repairable = |f: &Finding| match f.class {
+        Class::A | Class::TornTail => true,
+        Class::F => cut.as_ref().is_some_and(|c| c.base == f.segment),
+        _ => false,
+    };
+    if let Some(f) = report.findings.iter().find(|f| !repairable(f)) {
         let refusal = format!(
             "class {} at segment {} position {} is not repairable in 0.1",
             f.class.label(),
@@ -491,8 +550,34 @@ fn planned(
         return refuse(report, refusal);
     }
     let Some(cut) = cut else {
-        return refuse(report, "no class A finding: nothing to truncate".into());
+        return refuse(
+            report,
+            "no class A or F finding: nothing to truncate".into(),
+        );
     };
+    if let Some(last) = cut.proofs.last() {
+        // A seal run closes the newest segment, and open rebuilds a missing run only behind an
+        // open newest segment (ADR 0061), so the log would never open again.
+        if cut.pending_run {
+            let refusal = "the second-newest segment lacks its closing run, and sealing the newest \
+                           segment would leave it missing; this case stays manual";
+            return refuse(report, refusal.into());
+        }
+        let dropped_end = cut.proofs.iter().map(|p| p.end).max().unwrap_or(cut.next);
+        let plan = Plan {
+            segment: cut.base,
+            cut: cut.at,
+            kind: PlanKind::Lossy,
+            dropped_offsets: Some((cut.next, dropped_end.max(cut.next))),
+            closing_frames_removed: vec![],
+            backup: None,
+            applied: false,
+        };
+        // Until the truncation, the last proof must stay whole, so that open still refuses and
+        // every crash state fails closed with `Corrupt` (ADR 0068).
+        let room = last.position;
+        return sealed(report, plan, cut, room, "the last acknowledged group frame");
+    }
     // `verify` found this locator and footer valid.
     let reader = ReadOnly::new(storage);
     let path = segment_path(dir, cut.base);
@@ -540,6 +625,20 @@ fn planned(
     }
     plan.kind = PlanKind::Lossy;
     plan.dropped_offsets = Some((cut.next, footer_next.max(cut.next)));
+    // Until the truncation, the old footer and locator must stay whole, so that open still proves
+    // the old run and every crash state fails closed with `Corrupt` (ADR 0065).
+    sealed(report, plan, cut, footer_position, "the old footer")
+}
+
+/// A lossy plan, and its seal run unless the run would reach `room`, which must survive until the
+/// truncation.
+fn sealed(
+    report: Report,
+    plan: Plan,
+    cut: Cut,
+    room: u64,
+    guard: &str,
+) -> Result<(Outcome, Option<Work>), Error> {
     let mut outcome = Outcome {
         report,
         plan: Some(plan),
@@ -550,11 +649,9 @@ fn planned(
         return Ok((outcome, None));
     };
     let run = closing::seal_run(&cut.log_id, epoch, cut.next, cut.at, &cut.tails).concat();
-    // Until the truncation, the old footer and locator must stay whole, so that open still proves
-    // the old run and every crash state fails closed with `Corrupt` (ADR 0065).
-    if cut.at + run.len() as u64 > footer_position {
-        let refusal = "the seal run would reach the old footer; this case stays manual";
-        outcome.refusal = Some(refusal.into());
+    if cut.at + run.len() as u64 > room {
+        let refusal = format!("the seal run would reach {guard}; this case stays manual");
+        outcome.refusal = Some(refusal);
         return Ok((outcome, None));
     }
     Ok((outcome, Some((cut, run))))

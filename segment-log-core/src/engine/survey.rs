@@ -212,7 +212,15 @@ pub(super) fn survey(
     let length = storage.length(&path, Purpose::Recovery)?;
     let newest = scan(storage, &log_id, &hash, base, &path, length, &mut kept)?;
     if matches!(newest.ending, Ending::Stopped)
-        && closing::sealed_behind(storage, &path, &log_id, length, newest.end)?
+        && (closing::sealed_behind(storage, &path, &log_id, length, newest.end)?
+            || !proofs(
+                storage,
+                &path,
+                &log_id,
+                (length, newest.end, kept.published.watermark),
+                1,
+            )?
+            .is_empty())
     {
         return Err(OpenError::Corrupt {
             segment: base,
@@ -254,6 +262,71 @@ pub(super) fn survey(
     })
 }
 
+/// A group frame after a scan's stop that proves the bytes at the stop were durable (ADR 0068).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::engine) struct Proof {
+    pub position: u64,
+    /// The first offset after the frame's records.
+    pub end: u64,
+}
+
+/// Every proof after `at`, in file order. Frames carry no marker, so each byte position is a
+/// candidate. Only one group frame of a segment can be unsynced, its last, so a group frame of
+/// this log whose `base_offset` is at least `next` was written after a durable one. A lookalike
+/// copied into a torn payload has a lower `base_offset`, and closing frames never count. Stops
+/// after `limit` proofs: open needs one, and the repair plan needs them all.
+pub(in crate::engine) fn proofs(
+    storage: &ReadOnly<'_>,
+    path: &Path,
+    log: &codec::LogId,
+    (length, at, next): (u64, u64, u64),
+    limit: usize,
+) -> io::Result<Vec<Proof>> {
+    const MAX_FRAME: usize = codec::ENVELOPE_LEN + codec::FRAME_BODY_LIMIT;
+    // Two frames' worth, so each refill moves at least one frame on, and memory stays bounded.
+    const WINDOW: u64 = 2 * MAX_FRAME as u64;
+    let mut found = vec![];
+    let (mut base, mut window) = (at, vec![]);
+    let mut position = at + 1;
+    while found.len() < limit && position + codec::ENVELOPE_LEN as u64 <= length {
+        let window_end = base + window.len() as u64;
+        if position + MAX_FRAME as u64 > window_end && window_end < length {
+            base = position;
+            let len = WINDOW.min(length - base) as usize;
+            window = storage.read(path, Purpose::Recovery, base, len)?;
+            if window.len() != len {
+                return Err(io::ErrorKind::UnexpectedEof.into());
+            }
+        }
+        let i = (position - base) as usize;
+        let body = u32::from_le_bytes(window[i..i + 4].try_into().unwrap()) as usize;
+        let frame_end = i + codec::ENVELOPE_LEN + body;
+        // Cheap checks first, so that a CRC runs only for a plausible group frame.
+        let group = if (codec::BODY_HEADER_LEN..=codec::FRAME_BODY_LIMIT).contains(&body)
+            && frame_end <= window.len()
+            && codec::group_at_or_after(&window[i..frame_end], next)
+        {
+            codec::decode(log, &window[i..frame_end])
+                .ok()
+                .and_then(|f| f.into_group())
+                .filter(|g| g.base_offset >= next)
+        } else {
+            None
+        };
+        match group {
+            Some(group) => {
+                found.push(Proof {
+                    position,
+                    end: group.base_offset + group.entries.len() as u64,
+                });
+                position = base + frame_end as u64;
+            }
+            None => position += 1,
+        }
+    }
+    Ok(found)
+}
+
 fn group_time(log: &codec::LogId, frame: &[u8]) -> Option<u64> {
     codec::decode(log, frame)
         .ok()?
@@ -281,6 +354,21 @@ fn rebuild(
         Ending::Groups => (),
         Ending::Stopped if !closing::sealed_behind(storage, &path, log, length, scan.end)? => (),
         _ => return Ok(None),
+    }
+    if matches!(scan.ending, Ending::Stopped)
+        && !proofs(
+            storage,
+            &path,
+            log,
+            (length, scan.end, kept.published.watermark),
+            1,
+        )?
+        .is_empty()
+    {
+        return Err(OpenError::Corrupt {
+            segment: base,
+            position: scan.end,
+        });
     }
     // A scan that stopped before the successor's first offset lost acknowledged records.
     if kept.published.watermark != successor {
