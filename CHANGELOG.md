@@ -2,9 +2,10 @@
 
 Each release lists its API breaks with a migration note, its format version bumps and the protocol versions it speaks ([ADR 0064](docs/decisions/0064-the-0-1-compatibility-promise.md)). The crates and the Go client (`clients/go/vX.Y.Z`) share one version.
 
-## Unreleased
+## 0.1.1 - 2026-11-20
 
 - **Go client:** `Pool` (`DialPool(network, address, n)`) shares *n* pipelined connections among goroutines. Requests queued on a connection while a write is in progress go out together in the next write, and each answer returns to its caller in request order. A connection holds no more requests in flight than the server reads ahead ([protocol.md](docs/architecture/protocol.md), step 3); a request beyond that waits for an answer. When a connection fails, each request written to it and not answered gets `ErrUnknown` and is never retried by the pool; requests not yet written get `ErrNotSent`. The next request for that connection dials a new one, and gets `ErrNotSent` if that fails. After `Close`, requests get `ErrPoolClosed`. The pool refuses `Hello` ([issue 134](https://github.com/ironflowx/segment-log/issues/134), [ADR 0063](docs/decisions/0063-the-guest-benchmark-shares-pipelined-connections.md)). Additive; no wire change.
+- **Speaks protocol versions:** 2.
 
 ### Fixed
 
