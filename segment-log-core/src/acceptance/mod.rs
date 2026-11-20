@@ -39,6 +39,7 @@ mod seal;
 
 mod evidence;
 
+mod damage_followed;
 mod format_golden;
 mod format_rules;
 mod mixed_versions;

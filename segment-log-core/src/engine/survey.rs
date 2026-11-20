@@ -212,7 +212,16 @@ pub(super) fn survey(
     let length = storage.length(&path, Purpose::Recovery)?;
     let newest = scan(storage, &log_id, &hash, base, &path, length, &mut kept)?;
     if matches!(newest.ending, Ending::Stopped)
-        && closing::sealed_behind(storage, &path, &log_id, length, newest.end)?
+        && (closing::sealed_behind(storage, &path, &log_id, length, newest.end)?
+            || !proofs(
+                storage,
+                &path,
+                &log_id,
+                length,
+                newest.end,
+                kept.published.watermark,
+            )?
+            .is_empty())
     {
         return Err(OpenError::Corrupt {
             segment: base,
@@ -254,6 +263,57 @@ pub(super) fn survey(
     })
 }
 
+/// A group frame after a scan's stop that proves the bytes at the stop were durable (ADR 0068).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::engine) struct Proof {
+    pub position: u64,
+    /// The first offset after the frame's records.
+    pub end: u64,
+}
+
+/// Every proof after `at`, in file order. Frames carry no marker, so each byte position is a
+/// candidate. Only one group frame of a segment can be unsynced, its last, so a group frame of
+/// this log whose `base_offset` is at least `next` was written after a durable one. A lookalike
+/// copied into a torn payload has a lower `base_offset`, and closing frames never count.
+pub(in crate::engine) fn proofs(
+    storage: &ReadOnly<'_>,
+    path: &Path,
+    log: &codec::LogId,
+    length: u64,
+    at: u64,
+    next: u64,
+) -> io::Result<Vec<Proof>> {
+    // shortcut: reads the whole tail at once, at most one segment; window it if segments outgrow memory.
+    let tail = storage.read(path, Purpose::Recovery, at, (length - at) as usize)?;
+    let mut found = vec![];
+    let mut i = 1;
+    while i + codec::ENVELOPE_LEN <= tail.len() {
+        let body = u32::from_le_bytes(tail[i..i + 4].try_into().unwrap()) as usize;
+        let frame_end = i + codec::ENVELOPE_LEN + body;
+        let group = if (codec::BODY_HEADER_LEN..=codec::FRAME_BODY_LIMIT).contains(&body)
+            && frame_end <= tail.len()
+        {
+            codec::decode(log, &tail[i..frame_end])
+                .ok()
+                .and_then(|f| f.into_group())
+        } else {
+            None
+        };
+        match group {
+            Some(group) if group.base_offset >= next => {
+                let end = group.base_offset + group.entries.len() as u64;
+                found.push(Proof {
+                    position: at + i as u64,
+                    end,
+                });
+                i = frame_end;
+            }
+            _ => i += 1,
+        }
+    }
+    Ok(found)
+}
+
 fn group_time(log: &codec::LogId, frame: &[u8]) -> Option<u64> {
     codec::decode(log, frame)
         .ok()?
@@ -281,6 +341,22 @@ fn rebuild(
         Ending::Groups => (),
         Ending::Stopped if !closing::sealed_behind(storage, &path, log, length, scan.end)? => (),
         _ => return Ok(None),
+    }
+    if matches!(scan.ending, Ending::Stopped)
+        && !proofs(
+            storage,
+            &path,
+            log,
+            length,
+            scan.end,
+            kept.published.watermark,
+        )?
+        .is_empty()
+    {
+        return Err(OpenError::Corrupt {
+            segment: base,
+            position: scan.end,
+        });
     }
     // A scan that stopped before the successor's first offset lost acknowledged records.
     if kept.published.watermark != successor {

@@ -3,10 +3,27 @@ use crate::storage::{Call, Op, Purpose, Storage};
 use crate::*;
 use std::{path::Path, sync::Arc};
 
-/// Given independently assembled valid groups followed by an invalid suffix and another valid group
+/// A valid group of this log at the next offset after `tail` proves `tail` durable (ADR 0068).
+fn assert_refused_with_a_group_after(seed: u64, prefix: &[u8], tail: &[u8]) {
+    let sim = Sim::new(seed);
+    let later = raw::group(3, 2, &[b"must not skip"]);
+    raw::install(&sim, [prefix, tail, &later].concat());
+    let before = sim.image();
+    let result = SegmentLog::with_storage(Path::new("/log"), options(), Arc::new(sim.clone()));
+    let cut = prefix.len() as u64;
+    assert!(
+        matches!(result, Err(OpenError::Corrupt { segment: 0, position }) if position == cut),
+        "expected Corrupt at 0:{cut}"
+    );
+    assert_eq!(sim.image(), before);
+}
+
+/// Given independently assembled valid groups followed by an invalid suffix
 /// When recovery encounters zeros, length past EOF, bad CRC, lower epoch or wrong base
 /// Then only the contiguous prefix is published and the retained file is exactly that prefix
-/// Cases: RECOVERY-FIXTURES, ORACLE-2, ORACLE-3, ORACLE-5
+/// When a valid group of this log at the next offset follows the invalid suffix
+/// Then open fails with `Corrupt` at the suffix and changes no file (ADR 0068)
+/// Cases: RECOVERY-FIXTURES, ORACLE-2, ORACLE-3, ORACLE-5, OPEN-DAMAGE-FOLLOWED
 #[test]
 fn handmade_invalid_tails_stop_at_the_first_bad_frame() {
     bounded(|| {
@@ -26,11 +43,9 @@ fn handmade_invalid_tails_stop_at_the_first_bad_frame() {
             raw::group(1, 2, &[b"old"]),
             raw::group(2, 3, &[b"gap"]),
         ] {
+            assert_refused_with_a_group_after(201, &prefix, &tail);
             let sim = Sim::new(201);
-            raw::install(
-                &sim,
-                [prefix.clone(), tail, raw::group(3, 2, &[b"must not skip"])].concat(),
-            );
+            raw::install(&sim, [prefix.clone(), tail].concat());
             let log = open(&sim);
             let records = log.read(0, 10).unwrap();
             assert_eq!(log.watermark(), 2);
@@ -60,8 +75,9 @@ fn handmade_invalid_tails_stop_at_the_first_bad_frame() {
 /// group, each with a checksum that is right for its writer, and then a valid group
 /// When recovery scans the active segment
 /// Then the frame ends the valid prefix, because this scan reads only group frames
-/// And recovery truncates there and keeps the records before it
-/// Cases: RECOVERY-FIXTURES, ORACLE-2, ORACLE-5
+/// And recovery truncates there and keeps the records before it, unless the valid group after it
+/// proves the frame durable, when open fails with `Corrupt` and changes no file (ADR 0068)
+/// Cases: RECOVERY-FIXTURES, ORACLE-2, ORACLE-5, OPEN-DAMAGE-FOLLOWED
 #[test]
 fn frames_that_are_not_groups_of_this_log_end_the_valid_prefix() {
     bounded(|| {
@@ -91,11 +107,9 @@ fn frames_that_are_not_groups_of_this_log_end_the_valid_prefix() {
             raw::frame(&id, &header(7, 0)),
             raw::group_in(&[9; 16], 2, 2, &[b"another log"]),
         ] {
+            assert_refused_with_a_group_after(205, &prefix, &tail);
             let sim = Sim::new(205);
-            raw::install(
-                &sim,
-                [prefix.clone(), tail, raw::group(3, 2, &[b"must not skip"])].concat(),
-            );
+            raw::install(&sim, [prefix.clone(), tail].concat());
             let log = open(&sim);
             assert_eq!(log.watermark(), 2);
             assert_eq!(raw::bytes(&sim), prefix);

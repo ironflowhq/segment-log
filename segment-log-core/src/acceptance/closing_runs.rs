@@ -223,8 +223,9 @@ fn a_payload_that_ends_in_a_closing_run_leaves_the_segment_active() {
 /// Then open cuts the closing run and keeps the segment active, and does not fail with `Corrupt`
 /// And every record is readable, a retry of a key returns its original position, and a power loss
 /// after open gives the same log
+/// And the closing frames after the lost page prove nothing, because only group frames do (ADR 0068)
 ///
-/// Cases: RECOVERY-FIXTURES, ORACLE-4, ORACLE-5
+/// Cases: RECOVERY-FIXTURES, ORACLE-4, ORACLE-5, OPEN-TORN-RUN-LATER-FRAME
 #[test]
 fn a_closing_run_that_lost_a_page_is_truncated() {
     bounded(|| {
