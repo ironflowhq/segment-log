@@ -394,7 +394,7 @@ fn a_sealed_segment_larger_than_one_walk_read_is_read_in_full() {
         let log = open_with(&sim, options());
         let mut expected = vec![];
         for round in 0..120u64 {
-            let payload = vec![round as u8; FRAME - 49];
+            let payload = vec![round as u8; FRAME - 57];
             let submit = Submit {
                 records: vec![NewRecord {
                     stream: b"s".to_vec(),
@@ -427,11 +427,12 @@ fn a_sealed_segment_larger_than_one_walk_read_is_read_in_full() {
         };
         let cold = lookups();
         assert_records(&log.read(0, usize::MAX).unwrap(), &expected);
-        // The walk reads each 64 KiB once, then the read takes each kept frame and its window.
+        // The walk reads each 64 KiB once. Then the read takes each kept frame, its window, and
+        // at most one frame that runs past the window.
         let reads = lookups() - cold;
         let windows = groups.div_ceil(64 * 1024) as usize;
         assert!(
-            reads <= 3 * windows && reads < frames,
+            reads <= 4 * windows && reads < frames,
             "{reads} reads of {frames} frames"
         );
     });

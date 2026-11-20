@@ -1,6 +1,6 @@
 use super::*;
 use keys::SealedSummary;
-use std::ops::RangeInclusive;
+use std::{collections::HashMap, ops::RangeInclusive};
 
 pub(super) struct View {
     pub storage: Arc<dyn Storage>,
@@ -35,64 +35,143 @@ pub(super) struct SealedSegment {
     epochs: RangeInclusive<u64>,
 }
 
-/// One reader that moves forward needs one table at a time. Sixteen let that many readers at
-/// different sealed segments keep theirs, and bound the tables to the frame headers of sixteen
-/// segments.
-pub(crate) const FRAME_TABLES: usize = 16;
-
-/// The frame tables of sealed segments that reads built or rolls left, least recently used first.
-#[derive(Default)]
-pub(super) struct Tables {
-    kept: Vec<(u64, Arc<[GroupSpan]>)>,
-    #[cfg(test)]
-    #[allow(dead_code)]
-    budget: usize,
-}
+/// The bytes that the frame tables of sealed segments may hold in one view. At one kept frame per
+/// `WALK_CHUNK`, this covers about 64 GiB of sealed history (ADR 0069).
+pub(crate) const FRAME_TABLE_BUDGET: usize = 24 * 1024 * 1024;
+/// What a kept table costs beside its entries: its shared allocation and the entries that find it.
+const TABLE_OVERHEAD: usize = 64;
 
 /// What a table of `entries` kept frames counts against the budget.
-#[cfg(test)]
 pub(crate) fn frame_table_charge(entries: usize) -> usize {
-    entries * std::mem::size_of::<GroupSpan>()
+    TABLE_OVERHEAD + entries * std::mem::size_of::<GroupSpan>()
+}
+
+/// The sparse frame tables of sealed segments that reads built or rolls left, under a byte budget.
+pub(super) struct Tables {
+    budget: usize,
+    charged: usize,
+    uses: u64,
+    /// Each table by its segment's base offset, with its last use.
+    kept: HashMap<u64, (u64, Arc<[GroupSpan]>)>,
+    /// The base offset of each kept table by its last use, least recent first.
+    by_use: BTreeMap<u64, u64>,
+}
+
+impl Default for Tables {
+    fn default() -> Self {
+        Self {
+            budget: FRAME_TABLE_BUDGET,
+            charged: 0,
+            uses: 0,
+            kept: HashMap::new(),
+            by_use: BTreeMap::new(),
+        }
+    }
 }
 
 impl Tables {
     #[cfg(test)]
     pub(super) fn with_budget(budget: usize) -> Self {
         Self {
-            kept: vec![],
             budget,
+            ..Self::default()
         }
     }
 
     fn get(&mut self, base: u64) -> Option<Arc<[GroupSpan]>> {
-        let at = self.kept.iter().position(|(kept, _)| *kept == base)?;
-        let entry = self.kept.remove(at);
-        let spans = entry.1.clone();
-        self.kept.push(entry);
-        Some(spans)
+        let (used, table) = self.kept.get_mut(&base)?;
+        self.by_use.remove(used);
+        self.uses += 1;
+        *used = self.uses;
+        self.by_use.insert(self.uses, base);
+        Some(table.clone())
     }
 
-    pub(super) fn keep(&mut self, base: u64, spans: Arc<[GroupSpan]>) {
-        self.kept.retain(|(kept, _)| *kept != base);
-        if self.kept.len() == FRAME_TABLES {
-            self.kept.remove(0);
+    pub(super) fn keep(&mut self, base: u64, table: Arc<[GroupSpan]>) {
+        self.uses += 1;
+        self.charged += frame_table_charge(table.len());
+        if let Some((used, old)) = self.kept.insert(base, (self.uses, table)) {
+            self.by_use.remove(&used);
+            self.charged -= frame_table_charge(old.len());
         }
-        self.kept.push((base, spans));
+        self.by_use.insert(self.uses, base);
+        // The table just kept stays even alone over the budget, so the read that built it is the
+        // only walk it costs.
+        while self.charged > self.budget {
+            let Some((&used, &oldest)) = self.by_use.first_key_value() else {
+                break;
+            };
+            if used == self.uses {
+                break;
+            }
+            self.by_use.remove(&used);
+            let (_, old) = self.kept.remove(&oldest).expect("by_use names kept tables");
+            self.charged -= frame_table_charge(old.len());
+        }
     }
 }
 
 const WALK_CHUNK: u64 = 64 * 1024;
+/// A frame envelope and its body header.
+const PREFIX: usize = 8 + codec::BODY_HEADER_LEN;
+
+/// Whether a group frame at `position` is kept: the first at or after a `WALK_CHUNK` boundary of
+/// file position, given the position of the frame before it.
+fn is_kept(previous: Option<u64>, position: u64) -> bool {
+    previous.is_none_or(|before| position / WALK_CHUNK > before / WALK_CHUNK)
+}
+
+/// The kept frames of a segment's dense spans.
+fn sparse(spans: &[GroupSpan]) -> Arc<[GroupSpan]> {
+    let mut previous = None;
+    spans
+        .iter()
+        .filter(|span| is_kept(previous.replace(span.position), span.position))
+        .copied()
+        .collect()
+}
 
 impl SealedSegment {
-    /// `read` checks each frame's checksum when it decodes the frame.
+    /// The group frame whose envelope and body header are `prefix`, at `position`, if it follows
+    /// offset `next` at an epoch from `floor` to the segment's highest, and ends by `limit`.
+    fn group_at(
+        &self,
+        prefix: &[u8],
+        position: u64,
+        next: u64,
+        floor: u64,
+        limit: u64,
+    ) -> Option<(GroupSpan, u64)> {
+        let body = u32::from_le_bytes(prefix[0..4].try_into().unwrap()) as usize;
+        let epoch = u64::from_le_bytes(prefix[12..20].try_into().unwrap());
+        let base = u64::from_le_bytes(prefix[20..28].try_into().unwrap());
+        let count = u32::from_le_bytes(prefix[28..32].try_into().unwrap());
+        let valid = (codec::GROUP_HEADER_LEN..=codec::GROUP_BODY_LIMIT).contains(&body)
+            && position + 8 + body as u64 <= limit
+            && prefix[8] == 1
+            && (floor..=*self.epochs.end()).contains(&epoch)
+            && base == next
+            && count > 0
+            && base.checked_add(u64::from(count)).is_some();
+        let span = GroupSpan {
+            position,
+            length: 8 + body as u32,
+            base,
+            count,
+        };
+        valid.then_some((span, epoch))
+    }
+
+    /// Walks every group frame's envelope and body header, and keeps the sparse table. `read`
+    /// checks each frame's checksum when it decodes the frame.
     fn walk(&self, storage: &dyn Storage, dir: &Path) -> Result<Arc<[GroupSpan]>, ReadError> {
-        const PREFIX: usize = 8 + codec::BODY_HEADER_LEN;
         let groups_end = self.groups_end;
         let path = segment_path(dir, self.base);
-        let mut spans = vec![];
+        let mut kept = vec![];
         let mut chunk: Vec<u8> = vec![];
         let mut chunk_at = codec::HEADER_LEN as u64;
         let mut position = chunk_at;
+        let mut previous = None;
         let mut next = self.base;
         let mut floor = *self.epochs.start();
         while position < groups_end {
@@ -110,30 +189,14 @@ impl SealedSegment {
                 }
             }
             let at = (position - chunk_at) as usize;
-            let prefix = &chunk[at..at + PREFIX];
-            let body = u32::from_le_bytes(prefix[0..4].try_into().unwrap()) as usize;
-            let epoch = u64::from_le_bytes(prefix[12..20].try_into().unwrap());
-            let base = u64::from_le_bytes(prefix[20..28].try_into().unwrap());
-            let count = u32::from_le_bytes(prefix[28..32].try_into().unwrap());
-            let end = position + 8 + body as u64;
-            let valid = (codec::GROUP_HEADER_LEN..=codec::GROUP_BODY_LIMIT).contains(&body)
-                && end <= groups_end
-                && prefix[8] == 1
-                && (floor..=*self.epochs.end()).contains(&epoch)
-                && base == next
-                && count > 0;
-            next = match base.checked_add(u64::from(count)) {
-                Some(after) if valid => after,
-                _ => return Err(corrupt()),
-            };
-            floor = epoch;
-            spans.push(GroupSpan {
-                position,
-                length: 8 + body as u32,
-                base,
-                count,
-            });
-            position = end;
+            let (span, epoch) = self
+                .group_at(&chunk[at..at + PREFIX], position, next, floor, groups_end)
+                .ok_or_else(corrupt)?;
+            if is_kept(previous.replace(position), position) {
+                kept.push(span);
+            }
+            (next, floor) = (span.end(), epoch);
+            position += u64::from(span.length);
         }
         if next != self.next {
             return Err(ReadError::Corrupt {
@@ -141,7 +204,63 @@ impl SealedSegment {
                 position,
             });
         }
-        Ok(spans.into())
+        Ok(kept.into())
+    }
+
+    /// The group frames after kept frame `kept` and before the next kept frame, at position and
+    /// base offset `after`, or the end of the groups. Every one of them starts before the boundary
+    /// after `kept`'s, so one read from the end of `kept` to at most `WALK_CHUNK` and one header
+    /// past its start holds their headers. Returns that read's bytes, where it starts, and the
+    /// frames.
+    fn window(
+        &self,
+        storage: &dyn Storage,
+        dir: &Path,
+        kept: &GroupSpan,
+        (end, after): (u64, u64),
+    ) -> Result<(Vec<u8>, u64, Vec<GroupSpan>), ReadError> {
+        let start = kept.position + u64::from(kept.length);
+        let cut = end.min(kept.position + WALK_CHUNK + PREFIX as u64);
+        let mut bytes = vec![];
+        if cut > start {
+            let length = (cut - start) as usize;
+            let path = segment_path(dir, self.base);
+            bytes = read_bytes(storage, &path, Purpose::Lookup, start, length)
+                .map_err(ReadError::Io)?;
+            if bytes.len() != length {
+                return Err(ReadError::Corrupt {
+                    segment: self.base,
+                    position: start,
+                });
+            }
+        }
+        let mut spans = vec![];
+        let mut position = start;
+        // No epoch is kept, so the floor is the segment's lowest, not `kept`'s.
+        let (mut next, mut floor) = (kept.end(), *self.epochs.start());
+        while position < end {
+            let corrupt = ReadError::Corrupt {
+                segment: self.base,
+                position,
+            };
+            let at = (position - start) as usize;
+            let Some(prefix) = bytes.get(at..at + PREFIX) else {
+                return Err(corrupt);
+            };
+            let Some((span, epoch)) = self.group_at(prefix, position, next, floor, end) else {
+                return Err(corrupt);
+            };
+            (next, floor) = (span.end(), epoch);
+            position += u64::from(span.length);
+            spans.push(span);
+        }
+        if next != after {
+            return Err(ReadError::Corrupt {
+                segment: self.base,
+                position,
+            });
+        }
+        Ok((bytes, start, spans))
     }
 }
 
@@ -183,8 +302,9 @@ impl Published {
         self.newest.spans.push(span);
     }
 
+    /// Seals the newest segment, and returns its sparse table.
     pub(super) fn roll(&mut self, epoch: u64, next_epoch: u64) -> Arc<[GroupSpan]> {
-        let spans: Arc<[GroupSpan]> = std::mem::take(&mut self.newest.spans).into();
+        let spans = std::mem::take(&mut self.newest.spans);
         let groups_end = spans.last().map_or(codec::HEADER_LEN as u64, |last| {
             last.position + u64::from(last.length)
         });
@@ -196,7 +316,7 @@ impl Published {
         }));
         self.newest.base = self.watermark;
         self.newest.epoch_floor = next_epoch;
-        spans
+        sparse(&spans)
     }
 
     pub(super) fn opened(
@@ -268,11 +388,8 @@ impl View {
         };
         let mut records = Vec::new();
         for segment in &sealed {
-            let spans = self.spans(segment)?;
-            for span in overlapping(&spans, from, end) {
-                if self.collect(segment.base, span, from, max, &mut records)? {
-                    return Ok(records);
-                }
+            if self.read_sealed(segment, from, max, &mut records)? {
+                return Ok(records);
             }
         }
         for span in &newest {
@@ -297,6 +414,42 @@ impl View {
         Ok(spans)
     }
 
+    /// Reads a sealed segment's records from `from` through its kept frames and the windows
+    /// between them, and returns whether `records` holds `max`.
+    fn read_sealed(
+        &self,
+        segment: &SealedSegment,
+        from: u64,
+        max: usize,
+        records: &mut Vec<Record>,
+    ) -> Result<bool, ReadError> {
+        let kept = self.spans(segment)?;
+        let first = kept.partition_point(|k| k.base <= from).saturating_sub(1);
+        for (i, k) in kept.iter().enumerate().skip(first) {
+            if k.end() > from && self.collect(segment.base, k, from, max, records)? {
+                return Ok(true);
+            }
+            let after = kept
+                .get(i + 1)
+                .map_or((segment.groups_end, segment.next), |n| (n.position, n.base));
+            if after.1 <= from {
+                continue;
+            }
+            let (bytes, at, spans) = segment.window(self.storage.as_ref(), &self.dir, k, after)?;
+            for span in spans.iter().filter(|span| span.end() > from) {
+                let inside = (span.position - at) as usize;
+                let done = match bytes.get(inside..inside + span.length as usize) {
+                    Some(frame) => self.decode(segment.base, span, frame, from, max, records)?,
+                    None => self.collect(segment.base, span, from, max, records)?,
+                };
+                if done {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
+
     fn collect(
         &self,
         segment: u64,
@@ -313,11 +466,23 @@ impl View {
             span.length as usize,
         )
         .map_err(ReadError::Io)?;
+        self.decode(segment, span, &bytes, from, max, records)
+    }
+
+    fn decode(
+        &self,
+        segment: u64,
+        span: &GroupSpan,
+        bytes: &[u8],
+        from: u64,
+        max: usize,
+        records: &mut Vec<Record>,
+    ) -> Result<bool, ReadError> {
         let corrupt = || ReadError::Corrupt {
             segment,
             position: span.position,
         };
-        let group = codec::decode(&self.log_id, &bytes)
+        let group = codec::decode(&self.log_id, bytes)
             .ok()
             .and_then(codec::Frame::into_group)
             .ok_or_else(corrupt)?;
