@@ -100,6 +100,7 @@ We chose this because it stops open from dropping acknowledged records without a
 
 ## Consequences
 
+- [ADR 0071](0071-a-clean-drop-writes-a-close-frame.md) amends this decision. A close frame with `base_offset` past the expected offset is a proof, and a class F plan may move a close-frame proof before it writes the seal run.
 - Amends ADR 0003: the contiguous valid prefix is kept only when no proof follows the damage. A torn tail is truncated as before.
 - Amends ADR 0065: the class table gains F, and the refusal exit code covers a class F seal run with no room. `verify` no longer calls this case a torn tail.
 - The repair JSON keeps `schema` 1. `"F"` is a new value of the existing `class` field, not a new field or a new meaning, so a consumer must accept class values it does not know.
