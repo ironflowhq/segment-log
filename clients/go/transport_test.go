@@ -329,8 +329,8 @@ func TestDialBurst(t *testing.T) {
 func TestDialSignals(t *testing.T) {
 	const dialers, dials = 8, 200
 	d := newLogDir(t)
-	// The default 64 connections leave room for closes the server has not yet seen.
-	d.start(t, "")
+	// A cap no run can reach, so a close the server has not yet seen never refuses a dial.
+	d.start(t, "", "--max-connections", fmt.Sprint(dialers*dials))
 	stop := make(chan struct{})
 	var signaled sync.WaitGroup
 	signaled.Add(1)
@@ -342,6 +342,7 @@ func TestDialSignals(t *testing.T) {
 				return
 			default:
 				syscall.Kill(os.Getpid(), syscall.SIGURG)
+				runtime.Gosched() // keep the storm from starving the dialers and the server of a core
 			}
 		}
 	}()
@@ -359,13 +360,18 @@ func TestDialSignals(t *testing.T) {
 			errs <- nil
 		}()
 	}
+	defer func() { close(stop); signaled.Wait() }()
+	deadline := time.After(time.Minute) // a hung dial fails here, not at go test's timeout
 	for range dialers {
-		if err := <-errs; err != nil {
-			t.Error(err)
+		select {
+		case err := <-errs:
+			if err != nil {
+				t.Error(err)
+			}
+		case <-deadline:
+			t.Fatal("dials still running after a minute")
 		}
 	}
-	close(stop)
-	signaled.Wait()
 }
 
 // TRANSPORT-THREAD-EXHAUSTION: a connection that the server cannot start threads for is closed,

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -15,8 +16,8 @@ import (
 // a blocked read.
 //
 // The connect is non-blocking, as in net: a blocking connect returns EINTR when a signal (the
-// runtime's own SIGURG) lands on its thread, and a second connect then finds the first still
-// running (issue 187). The kernel's vsock connect timeout bounds the wait.
+// runtime's own SIGURG) lands on its thread, and retrying it finds the first attempt still
+// running (issue 187). The kernel's vsock connect timeout, 2 s by default, bounds the wait.
 func dialVsock(address string) (io.ReadWriteCloser, error) {
 	cid, port, ok := strings.Cut(address, ":")
 	c, err1 := strconv.ParseUint(cid, 10, 32)
@@ -29,7 +30,7 @@ func dialVsock(address string) (io.ReadWriteCloser, error) {
 		return nil, fmt.Errorf("vsock socket: %w", err)
 	}
 	sa := &unix.SockaddrVM{CID: uint32(c), Port: uint32(p)}
-	for {
+	for { // a non-blocking vsock connect does not sleep, so EINTR is not expected; net retries it too
 		if err = unix.Connect(fd, sa); err != unix.EINTR {
 			break
 		}
@@ -51,11 +52,18 @@ func dialVsock(address string) (io.ReadWriteCloser, error) {
 	return f, nil
 }
 
+// connectBackstop ends a wait that the kernel's connect timeout should already have ended, should
+// the socket stop connecting without an error to report.
+const connectBackstop = 10 * time.Second
+
 // awaitConnect waits on the poller until a connect in progress ends. A connected socket has a
 // peer; asking for it, not connecting again, keeps a failed attempt from starting a new one.
 func awaitConnect(f *os.File) error {
 	raw, err := f.SyscallConn()
 	if err != nil {
+		return err
+	}
+	if err := f.SetWriteDeadline(time.Now().Add(connectBackstop)); err != nil {
 		return err
 	}
 	var result error
@@ -79,5 +87,8 @@ func awaitConnect(f *os.File) error {
 	if err != nil {
 		return err
 	}
-	return result
+	if result != nil {
+		return result
+	}
+	return f.SetWriteDeadline(time.Time{}) // the connection's writes have no deadline
 }
