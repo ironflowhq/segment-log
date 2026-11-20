@@ -100,6 +100,7 @@ We chose the close frame because it closes the clean-drop case at the cost of on
 
 ## Consequences
 
+- [PR #190](https://github.com/ironflowx/segment-log/pull/190) corrects Enforcement to name what the tests check: `DROP-CLOSE-FRAME` cuts the close frame's write and flush, while the roll crash scenarios cover the pending closing run, and `FORMAT-MIXED` keeps its format-version hook as a stand-in for a version 3 build. What enforcement checks is unchanged.
 - Accepted by the owner on 2026-11-20, for 0.2.0 ([issue #183](https://github.com/ironflowx/segment-log/issues/183)).
 - Amends ADR 0003: after a clean drop, a damaged last group is no longer kept as a torn tail; open fails with `Corrupt`.
 - Amends ADR 0011: a close frame now records a clean drop. It is a frame, not a marker file, and open never skips the scan because of it.
@@ -119,10 +120,10 @@ Scenarios in [testing.md](../architecture/testing.md), on simulated storage in `
 - `OPEN-TORN-LAST-GROUP-NO-CLOSE`: a crash, then a torn last group. Open truncates, as today.
 - `OPEN-TORN-CLOSE-FRAME`: a torn close frame. Open truncates only the close frame and keeps every group.
 - `OPEN-OLD-CLOSE-FRAME`: damage in the last group after an earlier session's close frame, with nothing after it. Open truncates.
-- `DROP-CLOSE-FRAME`: a clean drop writes one close frame; a second open and drop with no append writes none; a poisoned writer, a failed pending run and a failed close-frame `fsync` write none and retry nothing; a crash at every storage call of the drop under `Kill`, `PowerLoss` and `PowerLossTorn` loses no acknowledged record.
+- `DROP-CLOSE-FRAME`: a clean drop writes one close frame; a second open and drop with no append writes none; a poisoned writer, a failed pending run and a failed close-frame `fsync` write none and retry nothing; a crash at the close frame's write or its flush under `Kill`, `PowerLoss` and `PowerLossTorn` loses no acknowledged record. The roll crash scenarios cover the pending closing run's calls.
 - `REPAIR-CLASS-F-CLOSE-FITS`, `REPAIR-CLASS-F-CLOSE-MOVED` and `REPAIR-CLASS-F-CLOSE-CRASH`: class F with a close frame as the only proof, with and without room before it, and a crash at every storage call of `--apply`. Open returns `Corrupt` or the sealed repaired log, never a writable one, and a rerun converges.
 - `OPEN-DAMAGE-RANDOM` extended: after a clean drop, flip one byte anywhere in the newest segment's last group frame. Open never returns `Ok` with a lower watermark.
-- `FORMAT-GOLDEN` gains `format-v4/`, whose history includes a clean drop and appends after its close frame. `FORMAT-MIXED` runs on real version 4 bytes and drops its test hook. A version 3 segment with a kind 7 frame fails as a bad frame.
+- `FORMAT-GOLDEN` gains `format-v4/`, whose history includes a clean drop and appends after its close frame. `FORMAT-MIXED` runs on real version 4 bytes; its format-version hook now stands in for a version 3 build. A version 3 segment with a kind 7 frame fails as a bad frame.
 
 ## Revisit if
 
