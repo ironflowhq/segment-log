@@ -14,4 +14,4 @@ rewrite-control = ["segment-log-core/rewrite-control"]
 
 [dependencies]
 libc = "0.2"
-segment-log-core = { path = "../segment-log-core", version = "0.1.0" }
+segment-log-core = { path = "../segment-log-core", version = "0.1.1" }

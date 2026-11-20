@@ -43,7 +43,7 @@ The issue 49 host's paced p99 missed its bound because sealing at roll stalled t
 ```sh
 cargo add segment-log-core                  # the library
 cargo install segment-log-server            # the server; or the Linux musl binary from the GitHub release
-go get github.com/ironflowx/segment-log/clients/go@v0.1.0   # the Go client
+go get github.com/ironflowx/segment-log/clients/go@v0.1.1   # the Go client
 ```
 
 ```rust
