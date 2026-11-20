@@ -108,6 +108,7 @@ We chose this because class A is the only `Corrupt` with a crash explanation, an
 
 ## Consequences
 
+- [ADR 0068](0068-open-refuses-damage-with-acknowledged-groups-after-it.md) amends this decision. It adds class F, an unsealed newest segment with acknowledged group frames after the damage, whose `truncate` plan is always lossy.
 - Accepted by the owner on 2026-11-19 for the 0.1 release ([issue 133](https://github.com/ironflowx/segment-log/issues/133)).
 - api.md gains the [Operator repair](../architecture/api.md#operator-repair) section, and its note "Corrupt is for a human to resolve" points to it.
 - testing.md gains the `REPAIR` coverage group, `Planned`. Implementation waits for format version 3 and builds against it.
