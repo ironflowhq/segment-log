@@ -104,7 +104,7 @@ fn frames_that_are_not_groups_of_this_log_end_the_valid_prefix() {
             raw::frame(&id, &footer),
             raw::frame(&id, &header(5, 0)),
             raw::frame(&id, &header(6, 0)),
-            raw::frame(&id, &header(7, 0)),
+            raw::frame(&id, &header(8, 0)),
             raw::group_in(&[9; 16], 2, 2, &[b"another log"]),
         ] {
             assert_refused_with_a_group_after(205, &prefix, &tail);

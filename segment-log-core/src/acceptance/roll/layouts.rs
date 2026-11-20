@@ -232,7 +232,8 @@ fn a_bad_frame_in_a_sealed_segment_fails_its_read_and_changes_nothing() {
             );
             assert_eq!(log.read(3, 10).unwrap()[0].payload, b"d");
             drop(log);
-            assert_eq!(raw::segments(&sim), before);
+            // Only the clean drop writes: its close frame (ADR 0071).
+            assert_eq!(raw::segments_unclosed(&sim), before);
         }
     });
 }
@@ -260,7 +261,14 @@ fn a_torn_newest_segment_no_longer_than_a_header_is_deleted() {
             assert_eq!(raw::segments(&sim), replaced);
             drop(log);
             sim.crash(Crash::PowerLoss, 2);
-            assert_eq!(raw::segments(&sim), replaced);
+            let closed = [
+                replaced[0].clone(),
+                (
+                    2,
+                    [raw::header(raw::VERSION, 2, 2), raw::close(2, 2)].concat(),
+                ),
+            ];
+            assert_eq!(raw::segments(&sim), closed);
             let log = open(&sim);
             let payloads: Vec<_> = log
                 .read(0, 100)

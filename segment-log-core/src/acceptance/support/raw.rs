@@ -16,7 +16,7 @@ pub(crate) fn crc(bytes: &[u8]) -> u32 {
     state ^ u32::MAX
 }
 pub(crate) const LOG_ID: [u8; 16] = [7; 16];
-pub(crate) const VERSION: u16 = 3;
+pub(crate) const VERSION: u16 = crate::codec::FORMAT_VERSION;
 pub(crate) fn header(version: u16, base: u64, epoch: u64) -> Vec<u8> {
     assert_eq!(crc(b"123456789"), 0xe3069283);
     let mut bytes = vec![0; 64];
@@ -171,6 +171,29 @@ pub(crate) fn segments(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
         })
         .collect()
 }
+/// A close frame of `LOG_ID` (ADR 0071).
+pub(crate) fn close(epoch: u64, base: u64) -> Vec<u8> {
+    crate::codec::encode_close(&crate::codec::LogId::new(LOG_ID), epoch, base)
+}
+/// `segment` without the close frames that end it, which a clean drop appends (ADR 0071).
+pub(crate) fn unclosed(segment: &[u8]) -> Vec<u8> {
+    const CLOSE: usize = 32;
+    let mut end = segment.len();
+    while end >= 64 + CLOSE && {
+        let frame = &segment[end - CLOSE..end];
+        frame[..4] == 24u32.to_le_bytes() && frame[8] == 7
+    } {
+        end -= CLOSE;
+    }
+    segment[..end].to_vec()
+}
+/// Every segment, each without the close frames that end it.
+pub(crate) fn segments_unclosed(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
+    segments(sim)
+        .into_iter()
+        .map(|(base, bytes)| (base, unclosed(&bytes)))
+        .collect()
+}
 /// The path, position and bytes of the last frame in the newest segment.
 pub(crate) fn last_frame(sim: &Sim) -> (String, u64, Vec<u8>) {
     let (base, bytes) = segments(sim).pop().expect("a segment");
@@ -195,6 +218,11 @@ fn groups(segment: &[u8]) -> Groups<'_> {
     let mut tails = Tails::new();
     let mut position = 64;
     for frame in frames(segment) {
+        // A close frame holds no record (ADR 0071).
+        if frame[8] == 7 {
+            position += frame.len();
+            continue;
+        }
         let group = codec::decode(&log_id, frame)
             .unwrap()
             .into_group()
@@ -344,7 +372,8 @@ pub(crate) fn rolled(segment: Vec<u8>, epoch: u64) -> Vec<u8> {
 }
 pub(crate) fn split_run(segment: &[u8]) -> (&[u8], &[u8]) {
     let mut at = 64;
-    while at < segment.len() && segment[at + 8] == 1 {
+    // Group and close frames come before the run (ADR 0071).
+    while at < segment.len() && matches!(segment[at + 8], 1 | 7) {
         at += u32::from_le_bytes(segment[at..at + 4].try_into().unwrap()) as usize + 8;
     }
     segment.split_at(at)

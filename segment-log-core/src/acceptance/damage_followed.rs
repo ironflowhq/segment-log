@@ -373,8 +373,9 @@ fn next(state: &mut u64) -> u64 {
     z ^ (z >> 31)
 }
 
-/// Given seeded logs of two to seven acknowledged groups in one unsealed segment
-/// When one byte anywhere before the start of the last group frame flips
+/// Given seeded logs of two to seven acknowledged groups in one unsealed segment, dropped cleanly
+/// When one byte anywhere before the start of the last frame flips: the close frame's, so the
+/// last group frame too (ADR 0071)
 /// Then open fails with `Corrupt`, or keeps every acknowledged offset and record; it never returns
 /// `Ok` with a lower watermark
 /// A failure prints the seed, and `Sim` saves its storage trace, which rebuilds the damaged image
@@ -415,8 +416,19 @@ fn one_flipped_byte_before_the_last_group_never_loses_an_acknowledged_record() {
             drop(log);
             let mut segments = raw::segments(&sim);
             let segment = &mut segments[0].1;
-            let last = segment.len() - raw::frames(segment).last().unwrap().len();
-            let at = codec::HEADER_LEN + (next(&mut state) as usize) % (last - codec::HEADER_LEN);
+            let frames = raw::frames(segment);
+            let close = frames.last().unwrap();
+            assert_eq!(
+                close[8], 7,
+                "a clean drop ends the segment with a close frame"
+            );
+            let last = segment.len() - close.len();
+            // Odd cases hit the last group frame, which only the close frame proves (ADR 0071).
+            let from = match case % 2 {
+                0 => codec::HEADER_LEN,
+                _ => last - frames[frames.len() - 2].len(),
+            };
+            let at = from + (next(&mut state) as usize) % (last - from);
             segment[at] ^= 1 << (next(&mut state) % 8);
             raw::install_segments(&sim, &segments);
             let replay = format!(

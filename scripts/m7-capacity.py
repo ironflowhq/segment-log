@@ -16,7 +16,8 @@ import argparse
 import math
 import sys
 
-FORMAT_VERSION = 3
+# Version 4 adds only the close frame, 32 bytes per clean drop, which sizing ignores (ADR 0071).
+FORMAT_VERSION = 4
 SEGMENT_HEADER = 64  # Segment header
 ENVELOPE = 8  # Frame: body_len, crc
 BODY_HEADER = 24  # Body header

@@ -2,10 +2,12 @@ use super::{Error, crc32c};
 
 pub(crate) const HEADER_LEN: usize = 64;
 /// The format version this build writes.
-pub(crate) const FORMAT_VERSION: u16 = 3;
+pub(crate) const FORMAT_VERSION: u16 = 4;
 /// The oldest format version a build reads: from 0.1, every build reads every version from here up
 /// to its own (ADR 0064, rule 11).
 pub(crate) const MIN_FORMAT_VERSION: u16 = 3;
+/// The first format version whose segments may hold a close frame (ADR 0071).
+pub(crate) const CLOSE_VERSION: u16 = 4;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Header {

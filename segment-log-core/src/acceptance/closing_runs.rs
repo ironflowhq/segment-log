@@ -389,7 +389,8 @@ fn a_torn_group_whose_payload_ends_in_a_foreign_closing_run_is_truncated() {
             sim.crash(Crash::PowerLoss, 334);
             let log = open_with(&sim, unrolled());
             assert_eq!(log.read(0, 10).unwrap().len(), 1, "{label}");
-            assert_eq!(raw::segments(&sim), [(0, kept.clone())], "{label}");
+            // The clean drop added only its close frame (ADR 0071).
+            assert_eq!(raw::segments_unclosed(&sim), [(0, kept.clone())], "{label}");
         }
     });
 }
@@ -428,10 +429,9 @@ fn a_newest_segment_that_ends_in_a_closing_run_gets_its_successor() {
         drop(log);
         sim.crash(Crash::PowerLoss, 335);
         let log = open_with(&sim, unrolled());
-        assert_eq!(
-            raw::segments(&sim),
-            [(0, rolled.clone()), (next, successor.clone())]
-        );
+        // The clean drop's close frame (ADR 0071).
+        let closed = [successor.clone(), raw::close(4, next)].concat();
+        assert_eq!(raw::segments(&sim), [(0, rolled.clone()), (next, closed)]);
         assert_keyed(&log);
         assert_eq!(append_new(&log), next);
         let segments = raw::segments(&sim);

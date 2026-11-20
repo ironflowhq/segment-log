@@ -24,6 +24,8 @@ pub(crate) enum Purpose {
     LogFilter,
     /// The operator repair tool's backup and truncation (ADR 0065).
     Repair,
+    /// A clean drop's close frame (ADR 0071).
+    Close,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Op {

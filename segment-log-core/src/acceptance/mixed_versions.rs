@@ -1,13 +1,14 @@
 //! ADR 0064, rules 11–14 and Enforcement: a log written at format version N, opened and appended
-//! to by a build at N+1. Until a real version 4 exists, version 4 is a test-only bump: the same
-//! bytes as version 3 under another `format_version`.
+//! to by a build at N+1. Version 4 adds the close frame (ADR 0071); a build at version 3 stands in
+//! for 0.1 and never writes one.
 use super::support::{bounded, fixtures::*, oracle, raw};
 use crate::engine::{Hooks, Limits};
 use crate::storage::sim::Crash;
 use crate::*;
 use std::{path::Path, sync::Arc};
 
-const NEXT: u16 = 4;
+const OLD: u16 = 3;
+const NEXT: u16 = codec::FORMAT_VERSION;
 const MODES: [Crash; 3] = [Crash::Kill, Crash::PowerLoss, Crash::PowerLossTorn];
 
 /// Opens the log as a build that writes `version` and reads 3 up to it.
@@ -69,15 +70,8 @@ fn created_at_3(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
 
 /// A rolled segment and a newest one that holds only its header, both at version 3.
 fn header_only_at_3(sim: &Sim) -> Vec<(u64, Vec<u8>)> {
-    let first = [
-        raw::header(raw::VERSION, 0, 1),
-        raw::group(1, 0, &[b"a", b"b"]),
-    ]
-    .concat();
-    let segments = vec![
-        (0, raw::rolled(first, 1)),
-        (2, raw::header(raw::VERSION, 2, 1)),
-    ];
+    let first = [raw::header(OLD, 0, 1), raw::group(1, 0, &[b"a", b"b"])].concat();
+    let segments = vec![(0, raw::rolled(first, 1)), (2, raw::header(OLD, 2, 1))];
     raw::install_segments(sim, &segments);
     segments
 }
@@ -257,10 +251,10 @@ fn a_crash_at_each_step_of_the_version_change_keeps_every_record() {
 fn an_older_version_after_a_newer_one_fails_open() {
     bounded(|| {
         let first = [raw::header(NEXT, 0, 1), raw::group(1, 0, &[b"a", b"b"])].concat();
-        let middle = [raw::header(raw::VERSION, 2, 1), raw::group(1, 2, &[b"c"])].concat();
+        let middle = [raw::header(OLD, 2, 1), raw::group(1, 2, &[b"c"])].concat();
         let newest = vec![
             (0, raw::rolled(first.clone(), 1)),
-            (2, raw::header(raw::VERSION, 2, 1)),
+            (2, raw::header(OLD, 2, 1)),
         ];
         let inner = vec![
             (0, raw::rolled(first, 1)),

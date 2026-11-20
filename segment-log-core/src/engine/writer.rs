@@ -36,16 +36,23 @@ impl Drop for Writer {
 pub(super) struct Active {
     pub base: u64,
     pub length: u64,
+    /// Whether the segment's last frame is a close frame, so a drop has nothing to add.
+    pub ends_with_close: bool,
     tails: BTreeMap<Vec<u8>, Tail>,
     footer_body: usize,
 }
 
 impl Active {
     pub(super) fn new(base: u64) -> Self {
-        Self::recovered(base, codec::HEADER_LEN as u64, BTreeMap::new())
+        Self::recovered(base, codec::HEADER_LEN as u64, false, BTreeMap::new())
     }
 
-    pub(super) fn recovered(base: u64, length: u64, tails: BTreeMap<Vec<u8>, Tail>) -> Self {
+    pub(super) fn recovered(
+        base: u64,
+        length: u64,
+        ends_with_close: bool,
+        tails: BTreeMap<Vec<u8>, Tail>,
+    ) -> Self {
         let footer_body = tails
             .keys()
             .map(|stream| footer_entry(stream))
@@ -53,6 +60,7 @@ impl Active {
         Self {
             base,
             length,
+            ends_with_close,
             tails,
             footer_body: codec::FOOTER_HEADER_LEN + footer_body,
         }
@@ -226,6 +234,28 @@ impl Writer {
         }
         #[cfg(test)]
         crate::pipeline::event("pending", [started, written, crate::pipeline::clock()]);
+        Ok(())
+    }
+
+    /// Appends a close frame and syncs it, once every group before it is durable (ADR 0071).
+    fn close(&mut self, view: &View) -> io::Result<()> {
+        // The build's version is the active segment's: open rolls away from an older active
+        // segment before the writer starts (ADR 0064, rule 12).
+        if self.active.ends_with_close || self.limits.format_version < codec::CLOSE_VERSION {
+            return Ok(());
+        }
+        let path = segment_path(&view.dir, self.active.base);
+        let frame = codec::encode_close(&view.log_id, self.epoch, view.watermark());
+        let length = frame.len() as u64;
+        call(
+            view.storage.as_ref(),
+            &path,
+            Purpose::Close,
+            Op::Append(frame),
+        )?;
+        call(view.storage.as_ref(), &path, Purpose::Close, Op::SyncData)?;
+        self.active.length += length;
+        self.active.ends_with_close = true;
         Ok(())
     }
 
@@ -440,8 +470,14 @@ pub(super) fn run(
                     return;
                 }
                 let Ok(message) = receiver.recv() else {
-                    // A dropped log leaves no closing run pending (ADR 0061, rule 7).
-                    let _ = writer.write_pending(&view, true);
+                    // A dropped log leaves no closing run pending (ADR 0061, rule 7). Only then
+                    // is every group synced, so only then may a close frame say so (ADR 0071).
+                    // Nothing is retried after a failure (ADR 0004).
+                    if writer.write_pending(&view, true).is_ok()
+                        && !poisoned.load(std::sync::atomic::Ordering::Acquire)
+                    {
+                        let _ = writer.close(&view);
+                    }
                     return;
                 };
                 let Some(request) = dequeued(Some(message), &mut seal) else {
@@ -630,6 +666,7 @@ impl Writer {
         self.append_time = group.append_time;
         let span = GroupSpan::of(self.active.length, length, &group);
         self.active.length += length as u64;
+        self.active.ends_with_close = false;
         self.active.tails.append(&mut draft.tails);
         self.active.footer_body += std::mem::take(&mut draft.footer_growth);
         view.published.lock().unwrap().publish(span, &group);

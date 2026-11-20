@@ -162,9 +162,35 @@ impl SealedSegment {
         valid.then_some((span, epoch))
     }
 
+    /// The epoch of a close frame that is all of `prefix`, if it passes its CRC and follows offset
+    /// `next` at an epoch from `floor` to the segment's highest. It holds no record, so a walk
+    /// steps over it (ADR 0071). A group's body is longer, so a group costs no CRC here.
+    // shortcut: the segment's format version is not checked, so a CRC-valid kind 7 frame in a
+    // version 3 sealed segment, which only a writer with the log id could make, reads as a close
+    // frame; carry the version into `SealedSegment` if version 3 segments ever need the check.
+    fn close_at(&self, log: &codec::LogId, prefix: &[u8], next: u64, floor: u64) -> Option<u64> {
+        if prefix[..4] != (codec::BODY_HEADER_LEN as u32).to_le_bytes() {
+            return None;
+        }
+        match codec::decode(log, prefix) {
+            Ok(codec::Frame {
+                epoch,
+                base_offset,
+                body: codec::Body::Close,
+            }) if base_offset == next && (floor..=*self.epochs.end()).contains(&epoch) => {
+                Some(epoch)
+            }
+            _ => None,
+        }
+    }
+
     /// Walks every group frame's envelope and body header, and keeps the sparse table. `read`
     /// checks each frame's checksum when it decodes the frame.
-    fn walk(&self, storage: &dyn Storage, dir: &Path) -> Result<Arc<[GroupSpan]>, ReadError> {
+    fn walk(
+        &self,
+        storage: &dyn Storage,
+        (dir, log): (&Path, &codec::LogId),
+    ) -> Result<Arc<[GroupSpan]>, ReadError> {
         let groups_end = self.groups_end;
         let path = segment_path(dir, self.base);
         let mut kept = vec![];
@@ -189,8 +215,14 @@ impl SealedSegment {
                 }
             }
             let at = (position - chunk_at) as usize;
+            let prefix = &chunk[at..at + PREFIX];
+            if let Some(epoch) = self.close_at(log, prefix, next, floor) {
+                floor = epoch;
+                position += PREFIX as u64;
+                continue;
+            }
             let (span, epoch) = self
-                .group_at(&chunk[at..at + PREFIX], position, next, floor, groups_end)
+                .group_at(prefix, position, next, floor, groups_end)
                 .ok_or_else(corrupt)?;
             if is_kept(previous.replace(position), position) {
                 kept.push(span);
@@ -215,7 +247,7 @@ impl SealedSegment {
     fn window(
         &self,
         storage: &dyn Storage,
-        dir: &Path,
+        (dir, log): (&Path, &codec::LogId),
         kept: &GroupSpan,
         (end, after): (u64, u64),
     ) -> Result<(Vec<u8>, u64, Vec<GroupSpan>), ReadError> {
@@ -247,6 +279,11 @@ impl SealedSegment {
             let Some(prefix) = bytes.get(at..at + PREFIX) else {
                 return Err(corrupt);
             };
+            if let Some(epoch) = self.close_at(log, prefix, next, floor) {
+                floor = epoch;
+                position += PREFIX as u64;
+                continue;
+            }
             let Some((span, epoch)) = self.group_at(prefix, position, next, floor, end) else {
                 return Err(corrupt);
             };
@@ -406,7 +443,7 @@ impl View {
         }
         // The table is a function of sealed bytes, so two readers that both walk build the same
         // table.
-        let spans = segment.walk(self.storage.as_ref(), &self.dir)?;
+        let spans = segment.walk(self.storage.as_ref(), (&self.dir, &self.log_id))?;
         self.tables
             .lock()
             .unwrap()
@@ -435,7 +472,8 @@ impl View {
             if after.1 <= from {
                 continue;
             }
-            let (bytes, at, spans) = segment.window(self.storage.as_ref(), &self.dir, k, after)?;
+            let (bytes, at, spans) =
+                segment.window(self.storage.as_ref(), (&self.dir, &self.log_id), k, after)?;
             for span in spans.iter().filter(|span| span.end() > from) {
                 let inside = (span.position - at) as usize;
                 let done = match bytes.get(inside..inside + span.length as usize) {

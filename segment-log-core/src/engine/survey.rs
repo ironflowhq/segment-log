@@ -90,6 +90,8 @@ pub(super) struct Scan {
     pub end: u64,
     pub ending: Ending,
     pub last: Option<(u64, Vec<u8>)>,
+    /// The position and bytes of the close frame that ends the scan, if one does (ADR 0071).
+    pub close: Option<(u64, Vec<u8>)>,
     pub tails: BTreeMap<Vec<u8>, Tail>,
     pub keys: KeyMap,
 }
@@ -191,7 +193,12 @@ pub(super) fn survey(
         let summary = match summarize(storage, &log_id, dir, base, successor, &mut kept) {
             Err(error @ OpenError::Corrupt { .. }) if successor == newest_base => {
                 // The writer that created the newest segment also built this run.
-                let at = (base, successor, newest_epoch);
+                let at = (
+                    base,
+                    successor,
+                    newest_epoch,
+                    may_hold_close_frames(&header),
+                );
                 let rebuilt = rebuild(storage, &log_id, &hash, dir, at, &mut kept)?.ok_or(error)?;
                 let summary = rebuilt.summary;
                 pending = Some(rebuilt);
@@ -210,12 +217,13 @@ pub(super) fn survey(
     kept.published.newest.epoch_floor = kept.epoch;
     let path = segment_path(dir, base);
     let length = storage.length(&path, Purpose::Recovery)?;
-    let newest = scan(storage, &log_id, &hash, base, &path, length, &mut kept)?;
+    let at = (path.as_path(), may_hold_close_frames(&header));
+    let newest = scan(storage, &log_id, &hash, base, at, length, &mut kept)?;
     if matches!(newest.ending, Ending::Stopped)
         && (closing::sealed_behind(storage, &path, &log_id, length, newest.end)?
             || !proofs(
                 storage,
-                &path,
+                at,
                 &log_id,
                 (length, newest.end, kept.published.watermark),
                 1,
@@ -262,22 +270,33 @@ pub(super) fn survey(
     })
 }
 
-/// A group frame after a scan's stop that proves the bytes at the stop were durable (ADR 0068).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Whether a segment's format version lets it hold close frames (ADR 0071).
+pub(in crate::engine) fn may_hold_close_frames(header: &codec::Header) -> bool {
+    header.version >= codec::CLOSE_VERSION
+}
+
+/// A frame after a scan's stop that proves the bytes at the stop were durable: a group frame
+/// (ADR 0068) or a close frame (ADR 0071).
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::engine) struct Proof {
     pub position: u64,
     /// The first offset after the frame's records.
     pub end: u64,
+    /// The bytes of a close frame, which a repair may copy past its seal run (ADR 0071); `None`
+    /// for a group frame.
+    pub close: Option<Vec<u8>>,
 }
 
 /// Every proof after `at`, in file order. Frames carry no marker, so each byte position is a
 /// candidate. Only one group frame of a segment can be unsynced, its last, so a group frame of
-/// this log whose `base_offset` is at least `next` was written after a durable one. A lookalike
-/// copied into a torn payload has a lower `base_offset`, and closing frames never count. Stops
-/// after `limit` proofs: open needs one, and the repair plan needs them all.
+/// this log whose `base_offset` is at least `next` was written after a durable one. A clean drop
+/// writes a close frame only after its last group was synced, so one whose `base_offset` is past
+/// `next` proves the same; one at `next` or below is from an earlier session. A lookalike copied
+/// into a torn payload has a lower `base_offset`, and closing frames never count. Stops after
+/// `limit` proofs: open needs one, and the repair plan needs them all.
 pub(in crate::engine) fn proofs(
     storage: &ReadOnly<'_>,
-    path: &Path,
+    (path, closes): (&Path, bool),
     log: &codec::LogId,
     (length, at, next): (u64, u64, u64),
     limit: usize,
@@ -302,22 +321,33 @@ pub(in crate::engine) fn proofs(
         let body = u32::from_le_bytes(window[i..i + 4].try_into().unwrap()) as usize;
         let frame_end = i + codec::ENVELOPE_LEN + body;
         // Cheap checks first, so that a CRC runs only for a plausible group frame.
-        let group = if (codec::BODY_HEADER_LEN..=codec::FRAME_BODY_LIMIT).contains(&body)
+        let frame = &window[i..frame_end.min(window.len())];
+        let proof = if (codec::BODY_HEADER_LEN..=codec::FRAME_BODY_LIMIT).contains(&body)
             && frame_end <= window.len()
-            && codec::group_at_or_after(&window[i..frame_end], next)
+            && codec::proof_candidate(frame, next)
         {
-            codec::decode(log, &window[i..frame_end])
-                .ok()
-                .and_then(|f| f.into_group())
-                .filter(|g| g.base_offset >= next)
+            match codec::decode(log, frame) {
+                Ok(codec::Frame {
+                    base_offset,
+                    body: codec::Body::Group { entries, .. },
+                    ..
+                }) => Some((base_offset + entries.len() as u64, None)),
+                Ok(codec::Frame {
+                    base_offset,
+                    body: codec::Body::Close,
+                    ..
+                }) if closes => Some((base_offset, Some(frame.to_vec()))),
+                _ => None,
+            }
         } else {
             None
         };
-        match group {
-            Some(group) => {
+        match proof {
+            Some((end, close)) => {
                 found.push(Proof {
                     position,
-                    end: group.base_offset + group.entries.len() as u64,
+                    end,
+                    close,
                 });
                 position = base + frame_end as u64;
             }
@@ -343,13 +373,13 @@ fn rebuild(
     log: &codec::LogId,
     hash: &KeyHash,
     dir: &Path,
-    (base, successor, epoch): (u64, u64, u64),
+    (base, successor, epoch, closes): (u64, u64, u64, bool),
     kept: &mut Kept,
 ) -> Result<Option<Rebuilt>, OpenError> {
     let path = segment_path(dir, base);
     let length = storage.length(&path, Purpose::Recovery)?;
     kept.published.newest.epoch_floor = kept.epoch;
-    let scan = scan(storage, log, hash, base, &path, length, kept)?;
+    let scan = scan(storage, log, hash, base, (&path, closes), length, kept)?;
     match scan.ending {
         Ending::Groups => (),
         Ending::Stopped if !closing::sealed_behind(storage, &path, log, length, scan.end)? => (),
@@ -358,7 +388,7 @@ fn rebuild(
     if matches!(scan.ending, Ending::Stopped)
         && !proofs(
             storage,
-            &path,
+            (&path, closes),
             log,
             (length, scan.end, kept.published.watermark),
             1,
@@ -527,7 +557,7 @@ pub(super) fn scan(
     log: &codec::LogId,
     hash: &KeyHash,
     base: u64,
-    path: &Path,
+    (path, closes): (&Path, bool),
     length: u64,
     kept: &mut Kept,
 ) -> Result<Scan, OpenError> {
@@ -536,24 +566,27 @@ pub(super) fn scan(
     let mut epoch = kept.epoch;
     let mut run = vec![];
     let mut last = None;
+    let mut close = None;
     let mut tails = BTreeMap::new();
     let mut keys = KeyMap::new();
-    let end = |at, ending, last, tails, keys| Scan {
+    let end = |at, ending, last, close, tails, keys| Scan {
         end: at,
         ending,
         last,
+        close,
         tails,
         keys,
     };
     loop {
         if position == length && state == RunState::Groups {
-            return Ok(end(position, Ending::Groups, last, tails, keys));
+            return Ok(end(position, Ending::Groups, last, close, tails, keys));
         }
         let Some(bytes) = storage.frame(path, Purpose::Recovery, position, length)? else {
             return Ok(end(
                 state.stop(position),
                 Ending::Stopped,
                 last,
+                close,
                 tails,
                 keys,
             ));
@@ -566,12 +599,20 @@ pub(super) fn scan(
                 state.stop(position),
                 Ending::Stopped,
                 last,
+                close,
                 tails,
                 keys,
             ));
         };
         let next = position + bytes.len() as u64;
         epoch = frame.epoch;
+        // A close frame holds no record; a version 3 segment never holds one (ADR 0071).
+        if closes && state == RunState::Groups && matches!(frame.body, codec::Body::Close) {
+            kept.epoch = epoch;
+            close = Some((position, bytes.clone()));
+            position = next;
+            continue;
+        }
         match state.step(position, next, length, &frame.body) {
             Step::Group => {
                 let group = frame.into_group().expect("a group step has a group body");
@@ -596,6 +637,7 @@ pub(super) fn scan(
                         }
                     }
                 }
+                close = None;
                 kept.published
                     .publish(GroupSpan::of(position, bytes.len(), &group), &group);
                 kept.last_group = Some((base, position));
@@ -605,7 +647,9 @@ pub(super) fn scan(
                 state = next;
                 run.push(bytes);
             }
-            Step::Stop { at } => return Ok(end(at, Ending::Stopped, last, tails, keys)),
+            Step::Stop { at } => {
+                return Ok(end(at, Ending::Stopped, last, close, tails, keys));
+            }
             Step::Rolled { start, footer } => {
                 kept.epoch = epoch;
                 run.push(bytes);
@@ -621,7 +665,7 @@ pub(super) fn scan(
                 };
                 let run = Run { start, frames: run };
                 let rolled = Ending::Rolled { run, summary };
-                return Ok(end(length, rolled, last, tails, keys));
+                return Ok(end(length, rolled, last, close, tails, keys));
             }
             Step::Sealed { start } => {
                 kept.epoch = epoch;
@@ -630,7 +674,7 @@ pub(super) fn scan(
                 let built = closing::seal_run(log, epoch, next, start, &tails);
                 matches_groups(&run, &built, base, start)?;
                 let sealed = Ending::Sealed(Run { start, frames: run });
-                return Ok(end(length, sealed, last, tails, keys));
+                return Ok(end(length, sealed, last, close, tails, keys));
             }
         }
         position = next;
