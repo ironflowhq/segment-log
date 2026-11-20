@@ -100,6 +100,7 @@ We chose this because it stops open from dropping acknowledged records without a
 
 - Amends ADR 0003: the contiguous valid prefix is kept only when no proof follows the damage. A torn tail is truncated as before.
 - Amends ADR 0065: the class table gains F, and the refusal exit code covers a class F seal run with no room. `verify` no longer calls this case a torn tail.
+- The repair JSON keeps `schema` 1. `"F"` is a new value of the existing `class` field, not a new field or a new meaning, so a consumer must accept class values it does not know.
 - `OpenError` gains no variant. An unsealed newest segment can now return `Corrupt`, which [api.md](../architecture/api.md) states.
 - Open's worst case on a damaged segment is one pass over its tail with a CRC per candidate frame. A healthy segment and a torn tail with no candidate cost nothing more.
 - overview.md open step 7 gains the proof search and its order. testing.md gains the scenarios below, `Planned`.
