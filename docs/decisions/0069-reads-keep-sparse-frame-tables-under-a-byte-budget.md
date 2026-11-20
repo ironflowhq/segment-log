@@ -1,7 +1,7 @@
 ---
 id: "0069"
 title: "Reads keep sparse frame tables under a byte budget, not a persisted frame index"
-status: proposed
+status: accepted
 date: 2026-11-20
 deciders: [Altug Sahin]
 supersedes: null
@@ -86,12 +86,13 @@ The record passes when all of these hold:
 2. For every case: scan p50 and p99 at most 10% slower than the pre-change scan. Faster is fine.
 3. The 43-segment, 200-segment and 1,000-caller cases fail check 1 at the pre-change commit. Any other case that already passes check 1 there is reported and excluded from the verdict on the change's benefit, but must still pass checks 1 and 2 after it. On the M4, the 18-segment case fails before the change only on p99. The one-record-per-group case may pass before the change, because a 4 MiB walk is cheap. It is there to show that windows do not make reads slower.
 
-The record decides on the M4 Mac and reruns on the qualified host before this ADR is accepted. The owner accepted on 2026-11-20 that the measured cases stop near 314 segments. The 1,000-segment figure stays arithmetic, and eviction at the production budget is tested in simulation.
+The record decides on the M4 Mac and reruns on the qualified host. A failure there reopens this decision (Revisit if). The owner accepted on 2026-11-20 that the measured cases stop near 314 segments. The 1,000-segment figure stays arithmetic, and eviction at the production budget is tested in simulation.
 
 We chose this because it brings random reads in line with scans without a format version, and the sealed tables' memory has a fixed bound that does not depend on how callers group their records. Option A would do the same for large groups but not for small ones. We accept a window read for frames that are not kept, wider read failures after damage in a sealed segment, and full walks again past 64 GiB of history.
 
 ## Consequences
 
+- Accepted by the owner on 2026-11-20 on the design, before the evidence runs ([PR #184](https://github.com/ironflowx/segment-log/pull/184)). The qualified-host rerun confirms it rather than gating it.
 - api.md replaces "at most 16 frame tables" with the byte budget and the sparse entry, and overview.md open step 5 adds the window check and its failure, in the change that implements them.
 - With groups of 64 KiB or more, reads cost what they cost today, and random reads past 16 segments stop walking.
 - With small groups, a read that uses few frames reads up to 64 KiB more than today. A read that uses many frames reads fewer, larger blocks. Done-when check 2 measures the scan side.
