@@ -20,7 +20,7 @@ enforced_by: test
 These facts are fixed:
 
 - The bound of 16 came from commit `bbc4a12`, a fix that bounded memory. No ADR chose it. Its comment sizes it for forward readers, one table each, and not for random reads.
-- A table is a dense list of `GroupSpan` (position, length, base offset, count), one per group frame, 24 bytes each. Its size grows with the number of group frames. The issue 156 log holds about 77 KiB per frame (3.0 GB in 43 segments, groups of 256 records), so a 64 MiB segment holds about 850 frames and 20 KiB of table. Single-record groups of 256 bytes hold about 200,000 frames, about 4.7 MiB of table.
+- A table is a dense list of `GroupSpan` (position, length, base offset, count), one per group frame, 24 bytes each. Its size grows with the number of group frames. The issue 156 log holds about 77 KiB per frame (3.0 GB in 43 segments, groups of 256 records), so a 64 MiB segment holds about 850 frames and 20 KiB of table. Groups of one 256-byte record hold about 200,000 frames, about 4.7 MiB of table.
 - A hit through a dense table reads the frame it needs from the stored position and length: one lookup read per frame, and `read` checks the frame's CRC when it decodes it.
 - The first read of a sealed segment walks and checks every frame envelope and body header ([open step 5](../architecture/overview.md#open-and-recovery)). A sealed segment never changes after that.
 - `SegmentLog` and each `LogReader` have their own view, so their own tables. A roll hands the writer's table of the segment it seals to the view. The newest segment's spans live apart from the sealed tables.
@@ -60,26 +60,35 @@ We will build Option B.
 **Lookup.** To find offset `o`, a `read` takes the last kept entry `k` whose base offset is at or below `o`.
 
 - If `k` holds `o`, the `read` reads that frame from `k`'s position and length, one read, as today.
-- Otherwise `o` lies in a frame between `k` and the next kept entry `k+1` (or the end of the groups). The `read` reads one window from the end of `k`'s frame to `k+1`'s position, cut at `k`'s position plus 64 KiB plus one header. Every frame between `k` and `k+1` starts before the boundary after `k`'s, which lies within 64 KiB of `k`'s position, so the window holds every header it needs. Only the last frame's body can run past it.
-- The `read` walks the headers in the window and fails with `ReadError::Corrupt` at the frame where any of these breaks: the body length is in range for a group; the kind is group; the first frame's base offset is `k`'s next offset, and each later one follows its predecessor with no gap; the epoch does not go down within the window and lies inside the segment's epochs; the last frame ends exactly at `k+1`'s position, with `k+1`'s base offset next. Because no epoch is stored, the epoch floor at a window's start is the segment's lowest epoch, not the epoch of `k`. The target frame's CRC still guards every record a `read` returns.
+- Otherwise `o` lies in a frame between `k` and the next kept entry `k+1` (or the end of the groups). The `read` reads one window from the end of `k`'s frame to `k+1`'s position, cut at `k`'s position plus 64 KiB plus one header. Every frame between `k` and `k+1` starts before the boundary after `k`'s, which lies within 64 KiB of `k`'s position, so the window holds every header it needs. Only the last frame's body can run past it. When `k`'s frame ends at `k+1`'s position, the window is empty and is not read.
+- The `read` walks the headers in the window and fails with `ReadError::Corrupt` at the frame where any of these breaks: the body length is in range for a group; the kind is group; the first frame's base offset is `k`'s next offset, and each later one follows its predecessor with no gap; the epoch does not go down within the window and lies inside the segment's epochs; the last frame ends exactly at `k+1`'s position, with `k+1`'s base offset next, or, after the last kept entry, at the end of the groups, with the segment's next offset next. Because no epoch is stored, the epoch floor at a window's start is the segment's lowest epoch, not the epoch of `k`. The target frame's CRC still guards every record a `read` returns.
 - A frame that lies wholly inside the window is decoded from the window's bytes. A frame that runs past it is read alone.
 - A `read` that needs more frames goes on through the following kept entries and windows the same way.
 
 So a `read` costs one lookup read for each kept frame it uses, plus one for each window it walks, plus one for each frame that runs past its window.
 
-**Damage after the first walk.** A window check that fails returns `Corrupt` for that `read`, and the view keeps the table. The segment does not change, so walking it again would fail at the same frame. Reads that need other windows of the segment still succeed. Reads that need any frame of the damaged window fail, where today only reads of the damaged frame fail. A CRC failure when a frame is decoded also keeps the table, as today.
+**Damage after the first walk.** A window check that fails returns `Corrupt` for that `read`, and the view keeps the table. The segment does not change, so walking it again would fail at the same frame. While the table is kept, reads that need other windows of the segment still succeed. Reads that need any frame of the damaged window fail, where today only reads of the damaged frame fail. A CRC failure when a frame is decoded also keeps the table, as today. Once the budget drops the table, the next read walks the segment, fails at the damaged frame, and keeps no table, so every read of the segment fails, as it does today after a dropped table.
 
-**Budget.** The view charges each sealed segment's table its entries plus a fixed allowance for the table itself. When the charges pass 24 MiB, it drops the least recently used tables until they fit, but it always keeps the table the current `read` just used, even if that table alone exceeds the budget. A lookup must not scan every kept table, because the view now keeps thousands, not 16. The budget is a `pub(crate)` const, for each log and each `LogReader`, with no new `Options` field. The newest segment's spans are outside it, as today. 24 MiB covers about 64 GiB of sealed history: 1,000 segments at the default 64 MiB roll.
+**Budget.** The view charges each sealed segment's table its entries plus a fixed allowance for the table itself. When the charges pass 24 MiB, it drops the least recently used tables until they fit, but it always keeps the most recently used or handed-over table, even if that table alone exceeds the budget. A lookup must not scan every kept table, because the view now keeps thousands, not 16. The budget is a `pub(crate)` const, for each log and each `LogReader`, with no new `Options` field. The newest segment's spans are outside it, as today. 24 MiB covers about 64 GiB of sealed history: 1,000 segments at the [default roll](../architecture/api.md).
 
-**Done when.** The `docs/evidence/issue177/` record runs the issue 156 driver at the pre-change commit `0a11998` and at the change, on the same host and the same logs, with one discarded pass that walks every segment before any timed run. It reports first walks separately. It passes when all of these hold:
+**Done when.** The `docs/evidence/issue177/` record runs the issue 156 driver at the pre-change commit `0a11998` and at the change, on the same host and the same logs, with one discarded pass that walks every segment before any timed run. It reports first walks separately, the frames per segment of each log, and whether each log fits the host's page cache, since a random read that misses the cache can fail check 1 for reasons unrelated to tables.
+
+The cases, each sealed and read through `LogReader`:
+
+- the issue 156 logs: 7, 18 and 43 segments;
+- a log of about 200 segments at the default roll;
+- the log of 1,000 single-record callers, whose groups the writer still packs from several callers;
+- a log written by one caller with one record per group, the case with the most entries per window.
+
+The record passes when all of these hold:
 
 1. For every case: random-read p50 at most 2× the pre-change scan p50, and random-read p99 at most 3× the pre-change scan p99.
 2. For every case: scan p50 and p99 within 10% of the pre-change scan.
-3. Every case above 16 sealed segments fails check 1 at the pre-change commit. A case that already passes before the change proves nothing and does not count.
+3. The 43-segment, 200-segment and both small-group cases fail check 1 at the pre-change commit. Any other case that already passes check 1 there is reported and excluded from the verdict. On the M4, the 18-segment case fails before the change only on p99.
 
-The cases are the issue 156 logs (7, 18 and 43 segments), a log of about 200 segments at the default roll, and the 1,000-single-record-caller log, sealed and read through `LogReader`. That last case is the only one where entries are sparse. The record decides on the M4 Mac and reruns on the qualified host before this ADR is accepted.
+The record decides on the M4 Mac and reruns on the qualified host before this ADR is accepted. The owner accepted on 2026-11-20 that the measured cases stop near 314 segments. The 1,000-segment figure stays arithmetic, and eviction at the production budget is tested in simulation.
 
-We chose this because it brings random reads in line with scans without a format version, and its memory has a fixed bound that does not depend on how callers group their records. Option A would do the same for large groups but not for small ones. We accept a window read for frames that are not kept, wider read failures after damage in a sealed segment, and full walks again past 64 GiB of history.
+We chose this because it brings random reads in line with scans without a format version, and the sealed tables' memory has a fixed bound that does not depend on how callers group their records. Option A would do the same for large groups but not for small ones. We accept a window read for frames that are not kept, wider read failures after damage in a sealed segment, and full walks again past 64 GiB of history.
 
 ## Consequences
 
@@ -87,7 +96,7 @@ We chose this because it brings random reads in line with scans without a format
 - With groups of 64 KiB or more, reads cost what they cost today, and random reads past 16 segments stop walking.
 - With small groups, a read that uses few frames reads up to 64 KiB more than today. A read that uses many frames reads fewer, larger blocks. Done-when check 2 measures the scan side.
 - The memory bound depends on history bytes. Each `LogReader` on one directory holds its own budget, so N readers can hold N × 24 MiB. The newest segment's dense spans add to it, as they do today.
-- Damage in a sealed segment after its first walk fails reads of a whole window, not one frame.
+- Damage in a sealed segment after its first walk fails reads of a whole window, not one frame, while the table is kept, and of the whole segment once the budget drops it.
 - The table store changes from a 16-entry list to one that finds a table without a full scan.
 - Ships in a 0.1.x patch. [CHANGELOG.md](../../CHANGELOG.md) lists it under Changed. No API, format version or protocol version changes.
 - I1–I10 are unchanged. The tables stay caches that the log rebuilds from the segments ([overview.md](../architecture/overview.md)).
