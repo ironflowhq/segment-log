@@ -7,5 +7,6 @@
 !*.sh
 !*.py
 # Read by tests: segment-log-core/src/acceptance/seeded.rs and scripts/test_m1_verify_syscalls.py.
-!m1/seeded/pressure-1000*
+!m1/seeded/pressure-1000.trace
+!m1/seeded/pressure-1000.ledger
 !m1/slice10/linux/syscalls.trace
