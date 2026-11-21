@@ -3,7 +3,7 @@ members = ["segment-log-core", "segment-log-server"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 # The oldest Rust that builds and tests the workspace (ADR 0064, rule 16). It rises only in a minor
 # release, and the `msrv` CI job tests it.

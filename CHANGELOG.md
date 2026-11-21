@@ -2,7 +2,9 @@
 
 Each release lists its API breaks with a migration note, its format version bumps and the protocol versions it speaks ([ADR 0064](docs/decisions/0064-the-0-1-compatibility-promise.md)). The crates and the Go client (`clients/go/vX.Y.Z`) share one version.
 
-## Unreleased (0.2.0)
+## 0.2.0 - 2026-11-20
+
+- **Speaks protocol versions:** 2.
 
 ### Format
 
@@ -18,7 +20,7 @@ Each release lists its API breaks with a migration note, its format version bump
 - **`segment-log-server repair`:** a class F plan whose only proof is a close frame first copies it past the seal run, and then seals, instead of refusing when the run does not fit. The printed plan names the copy; the JSON is unchanged.
 - **Go client: a vsock `Dial` no longer fails with `interrupted system call`** when a signal reaches the dialing thread during the connect, as the Go runtime's own `SIGURG` can under a burst of dials ([issue 187](https://github.com/ironflowx/segment-log/issues/187)). The connect is now non-blocking and waits on Go's poller, as `net.Dial` does.
 
-No API change. Format version 4. The protocol versions are unchanged.
+No API change. Format version 4 (one-way upgrade). The protocol versions are unchanged.
 
 ## 0.1.1 - 2026-11-20
 
